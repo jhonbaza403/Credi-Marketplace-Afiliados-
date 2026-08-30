@@ -1,1 +1,25 @@
-24.20.0
+node_modules/
+.next/
+out/
+coverage/
+playwright-report/
+test-results/
+*.tsbuildinfo
+.env
+.env.*
+!.env.example
+.vercel/
+.DS_Store
+Thumbs.db
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.log
+.vscode/
+.idea/
+
+# Local Supabase
+supabase/.branches/
+supabase/.temp/
+supabase/.env
