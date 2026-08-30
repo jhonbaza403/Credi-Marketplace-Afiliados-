@@ -1,0 +1,7 @@
+Contact: security@credi-marketplace.com
+
+Expires: 2027-08-15
+
+Preferred-Languages: es,en
+
+Canonical: https://credi-marketplace.com/security.txt

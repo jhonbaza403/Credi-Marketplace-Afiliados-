@@ -1,0 +1,27 @@
+# ============================================================
+# CREDI MARKETPLACE
+# Robots Configuration
+# Next.js 16.3
+# ============================================================
+
+
+User-agent: *
+
+
+Allow: /
+
+
+Disallow: /api/
+
+Disallow: /dashboard/
+
+Disallow: /admin/
+
+Disallow: /checkout/
+
+Disallow: /account/
+
+
+Sitemap:
+
+https://credi-marketplace.com/sitemap.xml
