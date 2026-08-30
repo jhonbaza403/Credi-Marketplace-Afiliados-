@@ -1,84 +1,33 @@
-// ==========================================================
-// ARCHIVO: src/lib/supabase/client.ts
-// Credi Marketplace
-//
-// Supabase Browser Client
-//
-// Next.js 16
-// React 19
-// Supabase SSR
-// ==========================================================
+'use client';
 
+import { useState } from 'react';
+import { useAuth } from '@/context/AuthContext';
+import { createClient } from '@/lib/supabase/client';
 
-import {
-  createBrowserClient,
-} from "@supabase/ssr";
+export default function CreateJobPage() {
+  const { user } = useAuth();
+  const supabase = createClient();
 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Ejemplo de inserción en Supabase
+    const { data, error } = await supabase
+      .from('jobs')
+      .insert([{ title: 'Nuevo Empleo', created_by: user?.id }]);
 
+    if (error) {
+      console.error('Error al crear el trabajo:', error.message);
+      return;
+    }
 
+    console.log('Trabajo creado con éxito:', data);
+  };
 
-
-// ==========================================================
-// VARIABLES
-// ==========================================================
-
-
-const supabaseUrl =
-process.env.NEXT_PUBLIC_SUPABASE_URL;
-
-
-const supabasePublishableKey =
-process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-
-
-
-
-
-
-// ==========================================================
-// CLIENT FACTORY
-// ==========================================================
-
-
-export function createClient(){
-
-
-if(!supabaseUrl){
-
-
-throw new Error(
-
-"NEXT_PUBLIC_SUPABASE_URL no está configurada"
-
-);
-
-
-}
-
-
-
-if(!supabasePublishableKey){
-
-
-throw new Error(
-
-"NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY no está configurada"
-
-);
-
-
-}
-
-
-
-
-return createBrowserClient(
-
-supabaseUrl,
-
-supabasePublishableKey
-
-);
-
-
+  return (
+    <form onSubmit={handleSubmit}>
+      {/* Tu formulario aquí */}
+      <button type="submit">Crear Empleo</button>
+    </form>
+  );
 }
