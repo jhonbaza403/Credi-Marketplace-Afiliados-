@@ -1,3 +1,0 @@
-import { redirect } from "next/navigation";
-interface SearchPageProps { searchParams: Promise<{ q?: string }> }
-export default async function SearchPage({ searchParams }: SearchPageProps) { const q=(await searchParams).q?.trim(); if(q) redirect(`/marketplace?search=${encodeURIComponent(q)}`); return <main className="mx-auto min-h-screen max-w-4xl px-4 py-12"><h1 className="text-4xl font-black">Buscar</h1><form action="/search" className="mt-8 flex gap-3"><input name="q" aria-label="Buscar" className="min-w-0 flex-1 rounded-xl border px-4 py-3" placeholder="Productos, servicios o vendedores"/><button className="rounded-xl bg-brand-600 px-5 py-3 font-bold text-white">Buscar</button></form></main>; }
