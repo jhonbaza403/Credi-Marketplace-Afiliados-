@@ -1,34 +1,16 @@
-import { createServerClient } from "@supabase/ssr";
-import type { SupabaseClient } from "@supabase/supabase-js";
-import { cookies } from "next/headers";
+import { createClient } from '@/lib/supabase/server';
 
-function requiredEnv(name: string): string {
-  const value = process.env[name];
-  if (!value) throw new Error(`Falta ${name}`);
-  return value;
-}
+export default async function ServerPage() {
+  // Nota: En el servidor requiere 'await'
+  const supabase = await createClient(); 
+  
+  const { data: jobs } = await supabase.from('jobs').select('*');
 
-export async function createClient(): Promise<SupabaseClient> {
-  const cookieStore = await cookies();
-
-  return createServerClient(
-    requiredEnv("NEXT_PUBLIC_SUPABASE_URL"),
-    requiredEnv("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY"),
-    {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll();
-        },
-        setAll(cookiesToSet) {
-          try {
-            cookiesToSet.forEach(({ name, value, options }) => {
-              cookieStore.set(name, value, options);
-            });
-          } catch {
-            // Server Components cannot always mutate cookies; proxy handles refresh persistence.
-          }
-        }
-      }
-    }
+  return (
+    <div>
+      {jobs?.map((job) => (
+        <p key={job.id}>{job.title}</p>
+      ))}
+    </div>
   );
 }
