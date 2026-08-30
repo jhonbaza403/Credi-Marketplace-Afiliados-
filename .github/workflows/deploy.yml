@@ -1,0 +1,13 @@
+name: Credi Marketplace Deployment Gate
+on:
+  workflow_run:
+    workflows: ["Credi Marketplace CI"]
+    types: [completed]
+permissions:
+  contents: read
+jobs:
+  deployment-gate:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "CI passed. Production deployment is handled by Vercel Git integration."
