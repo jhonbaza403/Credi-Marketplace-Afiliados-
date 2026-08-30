@@ -1,66 +1,42 @@
-# Credi Marketplace — Auditoría técnica
+# Credi Marketplace — Exhaustive structural audit
 
-## Resultado
+## Corrected
 
-La base fuente fue reconstruida desde el archivo recibido, corrigiendo incompatibilidades de Next.js 16/Tailwind 4, errores sintácticos detectados por TypeScript, rutas inconsistentes, configuración de Supabase y estructura de CI.
+- Canonical root package and `src/` architecture preserved.
+- Node 24.20.0 / npm 11.19.0 contract fixed.
+- Next.js 16.3.3 / React 19.2.8 / TypeScript 7.0.2 / Tailwind 4.3.3 aligned.
+- Tailwind v3 configuration removed from the architecture; Tailwind v4 is CSS-first.
+- Duplicate `src/features` domain layer removed after consolidating reusable code.
+- Broken aliases in marketplace, affiliate and B2B code corrected.
+- Supabase server client corrected to use the publishable key.
+- Admin Supabase client uses the modern secret key first, with service-role fallback for compatibility.
+- Authentication context and RBAC roles made internally consistent.
+- `/admin` added to protected routing.
+- Health, auth, products, sellers, recommendations and webhook readiness endpoints added.
+- Dashboard and admin route structure completed with deploy-safe pages where business implementations were not yet present.
+- Unit/integration/E2E test structure normalized.
+- GitHub Actions quality and security gates normalized around `npm ci`.
+- Vercel deployment kept native; OpenNext is not used.
+- Non-source artefacts removed from the repository root.
 
-## Correcciones principales
+## Deliberate external dependency
 
-- Node.js fijado en 24.20.0 LTS mediante `.nvmrc`.
-- npm 11.x requerido mediante `packageManager` y `engines`.
-- Next.js 16.3.3.
-- React 19.2.8.
-- TypeScript 7.0.2.
-- Tailwind CSS 4.3.3 con configuración CSS-first.
-- Eliminado `tailwind.config.ts` heredado de Tailwind 3.
-- `postcss.config.mjs` preparado para `@tailwindcss/postcss`.
-- `tsconfig.json` creado con alias `@/* -> src/*`.
-- `next-env.d.ts` corregido.
-- Eliminado `src/middleware.ts` duplicado; se conserva `src/proxy.ts` para Next.js 16.
-- Corregida la clave Supabase del cliente: `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`.
-- Corregidas rutas de autenticación y redirects.
-- Corregida validación de `DATABASE_URL` para no tratar una cadena PostgreSQL como URL HTTP.
-- Añadidas páginas globales de loading, error, global-error, not-found, robots y sitemap.
-- Añadido `admin` protegido mediante `requireAdmin()`.
-- Añadidos Vitest y Playwright.
-- Añadidos smoke test unitario y E2E inicial.
-- CI ordenada como: install -> lint -> typecheck -> unit -> E2E -> build.
-- Security workflow separado para `npm audit`.
-- Deploy workflow convertido en gate para Vercel Git Integration; no se introduce OpenNext ni Vercel CLI innecesariamente.
-- Eliminados fences Markdown y bloques de escritura que habían quedado incrustados dentro de archivos TypeScript/TSX.
-- Corregidos varios archivos con errores sintácticos que impedían incluso el análisis de TypeScript.
-- Estructura raíz preparada para que `package.json` esté directamente en la raíz del repositorio.
+`package-lock.json` is not fabricated. It must be produced by npm 11 on Node 24 from this exact `package.json` and committed before CI runs.
 
-## Bloqueo pendiente
+## Final deployment invariant
 
-`package-lock.json` NO se incluye artificialmente.
+`package.json` and `package-lock.json` must live in the repository root that Vercel uses as `/vercel/path0`.
 
-El archivo recibido contenía únicamente una plantilla con `...`, por lo que no era un lockfile válido. El entorno de auditoría no dispone de acceso funcional al registry npm para resolver el árbol completo de dependencias con npm 11.
+## Validation performed in the available build environment
 
-Un `package-lock.json` inventado o incompleto haría fallar `npm ci` y sería peor que no tenerlo.
+- ZIP extracted and inspected: 306 source/root files before consolidation.
+- Final archive rebuilt after consolidation.
+- Zero empty directories in final tree.
+- Zero unresolved `@/` imports detected by static path audit.
+- Zero legacy `@/features/*` imports remain.
+- No `middleware.ts` remains; `src/proxy.ts` is the route interception entrypoint.
+- Root `package.json` is present and parses as valid JSON.
+- `tsconfig.json` parses as valid JSON.
+- Structural verification script passes.
 
-Para producir el lockfile definitivo, con Node 24.20.0 y npm 11.x:
-
-```bash
-nvm use
-npm install
-npm ci
-```
-
-Después de `npm install`, el `package-lock.json` generado debe ser incluido en el repositorio y el CI queda listo para utilizar `npm ci`.
-
-## Vercel
-
-La raíz del repositorio debe ser exactamente la carpeta que contiene:
-
-- `package.json`
-- `src/`
-- `public/`
-- `next.config.ts`
-- `tsconfig.json`
-
-No debe existir una carpeta contenedora adicional `credi-marketplace/credi-marketplace/`.
-
-## Verificación local de sintaxis
-
-Se ejecutó TypeScript contra la fuente disponible y se eliminaron los errores sintácticos. La comprobación completa de tipos, lint, tests y build requiere instalar las dependencias con Node 24/npm 11.
+A full `npm ci`, ESLint, TypeScript, Playwright and Next build could not be executed here because the runtime container is Node 22/npm 10 and the npm registry is unreachable. Therefore the archive is structurally prepared, but the real npm lockfile still has to be generated with Node 24/npm 11 and committed.

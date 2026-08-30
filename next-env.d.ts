@@ -2,4 +2,4 @@
 /// <reference types="next/image-types/global" />
 
 // NOTE: This file should not be edited manually.
-// It is generated and maintained by Next.js.
+// See https://nextjs.org/docs/app/api-reference/config/typescript for details.
