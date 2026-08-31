@@ -1,4 +1,3 @@
-```typescript
 import type { NextConfig } from "next";
 
 const securityHeaders = [
@@ -133,4 +132,3 @@ const nextConfig: NextConfig = {
 };
 
 export default nextConfig;
-```
