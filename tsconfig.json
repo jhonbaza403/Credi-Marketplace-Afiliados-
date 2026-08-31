@@ -1,136 +1,27 @@
-```json
 {
   "compilerOptions": {
-    /* ======================================================
-       JAVASCRIPT / ECMASCRIPT
-       ====================================================== */
-
-    "target": "ES2022",
-
-    "lib": [
-      "dom",
-      "dom.iterable",
-      "esnext"
-    ],
-
-    /* ======================================================
-       TYPESCRIPT
-       ====================================================== */
-
-    "strict": true,
-
-    "noEmit": true,
-
-    "allowJs": false,
-
-    "checkJs": false,
-
+    "target": "ES2017",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": true,
     "skipLibCheck": true,
-
-    /* ======================================================
-       MÓDULOS
-       ====================================================== */
-
-    "module": "esnext",
-
-    "moduleResolution": "bundler",
-
+    "strict": true,
+    "noEmit": true,
     "esModuleInterop": true,
-
-    "allowSyntheticDefaultImports": true,
-
+    "module": "esnext",
+    "moduleResolution": "bundler",
     "resolveJsonModule": true,
-
     "isolatedModules": true,
-
-    /* ======================================================
-       JSX / REACT
-       ====================================================== */
-
     "jsx": "preserve",
-
-    /* ======================================================
-       RESOLUCIÓN DE RUTAS
-       ====================================================== */
-
-    "baseUrl": ".",
-
-    "paths": {
-      "@/*": [
-        "./src/*"
-      ]
-    },
-
-    /* ======================================================
-       TYPES
-       ====================================================== */
-
-    "types": [
-      "node",
-      "vitest/globals"
-    ],
-
-    /* ======================================================
-       CALIDAD Y SEGURIDAD DEL CÓDIGO
-       ====================================================== */
-
-    "forceConsistentCasingInFileNames": true,
-
-    "noFallthroughCasesInSwitch": true,
-
-    "noImplicitReturns": true,
-
-    "noImplicitOverride": true,
-
-    "noPropertyAccessFromIndexSignature": true,
-
-    "noUncheckedIndexedAccess": true,
-
-    /* ======================================================
-       VARIABLES / DECLARACIONES
-       ====================================================== */
-
-    "useDefineForClassFields": true,
-
-    "useUnknownInCatchVariables": true,
-
-    /* ======================================================
-       PERFORMANCE
-       ====================================================== */
-
     "incremental": true,
-
-    /* ======================================================
-       NEXT.JS
-       ====================================================== */
-
     "plugins": [
       {
         "name": "next"
       }
-    ]
+    ],
+    "paths": {
+      "@/*": ["./*"]
+    }
   },
-
-  /* ========================================================
-     ARCHIVOS INCLUIDOS
-     ======================================================== */
-
-  "include": [
-    "next-env.d.ts",
-    "**/*.ts",
-    "**/*.tsx",
-    ".next/types/**/*.ts"
-  ],
-
-  /* ========================================================
-     ARCHIVOS EXCLUIDOS
-     ======================================================== */
-
-  "exclude": [
-    "node_modules",
-    ".next",
-    "coverage",
-    "dist"
-  ]
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+  "exclude": ["node_modules"]
 }
-```
