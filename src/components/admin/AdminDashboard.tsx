@@ -14,7 +14,9 @@
 // Tailwind CSS v4
 // ==========================================================
 
+import type { ReactNode } from "react";
 import Link from "next/link";
+
 import {
   Activity,
   ArrowRight,
@@ -39,14 +41,14 @@ interface AdminCardProps {
   href: string;
   title: string;
   description: string;
-  icon: React.ReactNode;
+  icon: ReactNode;
 }
 
 interface AdminStatProps {
   label: string;
   value: string;
   description: string;
-  icon: React.ReactNode;
+  icon: ReactNode;
 }
 
 // ==========================================================
@@ -346,6 +348,7 @@ export default function AdminDashboard() {
                   Sistema protegido
                 </span>
               </div>
+
             </div>
           </div>
         </section>
@@ -524,6 +527,7 @@ export default function AdminDashboard() {
           "
         >
           <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+
             <div>
               <p
                 className="
@@ -545,7 +549,10 @@ export default function AdminDashboard() {
               <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">
                 Esta interfaz no debe considerarse una barrera de seguridad
                 por sí misma. El acceso administrativo debe validarse en el
-                servidor mediante <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">requireAdmin()</code>
+                servidor mediante{" "}
+                <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
+                  requireAdmin()
+                </code>{" "}
                 y las operaciones de datos deben permanecer protegidas por
                 autorización del servidor y políticas RLS de Supabase.
               </p>
@@ -574,6 +581,7 @@ export default function AdminDashboard() {
                 Server Side Auth
               </span>
             </div>
+
           </div>
         </section>
 
@@ -583,6 +591,7 @@ export default function AdminDashboard() {
 
         <section className="mt-8">
           <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+
             <Link
               href="/dashboard"
               className="
@@ -632,11 +641,13 @@ export default function AdminDashboard() {
               "
             >
               Ver Marketplace
+
               <ArrowRight
                 className="ml-2 h-4 w-4"
                 aria-hidden="true"
               />
             </Link>
+
           </div>
         </section>
 
