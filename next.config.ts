@@ -23,6 +23,10 @@ const securityHeaders = [
     value: "same-origin",
   },
   {
+    key: "Cross-Origin-Resource-Policy",
+    value: "same-origin",
+  },
+  {
     key: "X-Frame-Options",
     value: "SAMEORIGIN",
   },
