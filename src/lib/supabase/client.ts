@@ -1,16 +1,12 @@
-import { createBrowserClient } from "@supabase/ssr";
-import type { SupabaseClient } from "@supabase/supabase-js";
+import { createBrowserClient } from '@supabase/ssr'
 
-function getRequiredPublicEnv(name: string): string {
-  const value = process.env[name];
-  if (!value) throw new Error(`${name} no está configurada`);
-  return value;
-}
+export function createClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 
-/** Creates a Supabase browser client for Client Components. */
-export function createClient(): SupabaseClient {
-  return createBrowserClient(
-    getRequiredPublicEnv("NEXT_PUBLIC_SUPABASE_URL"),
-    getRequiredPublicEnv("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY"),
-  );
+  if (!supabaseUrl || !supabaseKey) {
+    throw new Error('Faltan las variables de entorno de Supabase en el cliente.')
+  }
+
+  return createBrowserClient(supabaseUrl, supabaseKey)
 }
