@@ -1,3 +1,4 @@
+```tsx
 // ==========================================================
 // ARCHIVO:
 // src/app/dashboard/admin/page.tsx
@@ -9,32 +10,14 @@
 // Next.js 16 App Router
 // ==========================================================
 
-
-import {
-  requireAdmin,
-} from "@/lib/auth/guards";
-
+import type { ReactElement } from "react";
 
 import AdminDashboard from "@/components/admin/AdminDashboard";
+import { requireAdmin } from "@/lib/auth/guards";
 
-
-
-// ==========================================================
-// PAGE
-// ==========================================================
-
-export default async function AdminPage() {
-
-
+export default async function AdminPage(): Promise<ReactElement> {
   await requireAdmin();
 
-
-
-  return (
-
-    <AdminDashboard />
-
-  );
-
-
+  return <AdminDashboard />;
 }
+```
