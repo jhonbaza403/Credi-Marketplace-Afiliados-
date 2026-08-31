@@ -1,25 +1,20 @@
 ```tsx
 // ==========================================================
 // ARCHIVO:
-// src/app/dashboard/admin/page.tsx
+// src/app/dashboard/page.tsx
 //
 // Credi Marketplace
 //
-// Entrada administrativa secundaria
-//
-// Protección Server Side
+// Dashboard general del usuario
 //
 // Next.js 16 App Router
 // ==========================================================
 
 import type { ReactElement } from "react";
 
-import AdminDashboard from "@/components/admin/AdminDashboard";
-import { requireAdmin } from "@/lib/auth/guards";
+import DashboardPage from "@/components/dashboard/DashboardPage";
 
-export default async function AdminPage(): Promise<ReactElement> {
-  await requireAdmin();
-
-  return <AdminDashboard />;
+export default function DashboardRoute(): ReactElement {
+  return <DashboardPage />;
 }
 ```
