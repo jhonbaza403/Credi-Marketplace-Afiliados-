@@ -1,5 +1,4 @@
-import type { NextConfig } from "next";
-
+```javascript
 const securityHeaders = [
   {
     key: "X-Content-Type-Options",
@@ -46,7 +45,7 @@ const contentSecurityPolicy = [
   "upgrade-insecure-requests",
 ].join("; ");
 
-const nextConfig: NextConfig = {
+const nextConfig = {
   reactStrictMode: true,
 
   poweredByHeader: false,
@@ -56,10 +55,6 @@ const nextConfig: NextConfig = {
   productionBrowserSourceMaps: false,
 
   output: "standalone",
-
-  typescript: {
-    ignoreBuildErrors: false,
-  },
 
   images: {
     formats: ["image/avif", "image/webp"],
@@ -132,3 +127,4 @@ const nextConfig: NextConfig = {
 };
 
 export default nextConfig;
+```
