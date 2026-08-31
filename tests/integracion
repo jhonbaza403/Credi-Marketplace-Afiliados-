@@ -1,0 +1,6 @@
+tests/
+└── integration/
+    ├── auth.test.ts
+    ├── products.test.ts
+    ├── orders.test.ts
+    └── README.md
