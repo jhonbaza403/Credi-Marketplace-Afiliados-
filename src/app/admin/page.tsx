@@ -1,17 +1,4 @@
 ```tsx
-// ==========================================================
-// ARCHIVO:
-// src/app/admin/page.tsx
-//
-// Credi Marketplace
-//
-// Página administrativa
-//
-// Protección Server Side
-//
-// Next.js 16 App Router
-// ==========================================================
-
 import type { Metadata } from "next";
 import type { ReactElement } from "react";
 
