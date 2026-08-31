@@ -1,6 +1,9 @@
+```text
 MIT License
 
 Copyright (c) 2026 Jhon Baza
+
+Project: Credi Marketplace
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -9,8 +12,9 @@ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 copies of the Software, and to permit persons to whom the Software is
 furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+The above copyright notice, this permission notice, and the following
+disclaimer shall be included in all copies or substantial portions of the
+Software.
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -19,3 +23,50 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+
+THIRD-PARTY COMPONENTS
+
+This project may include software, libraries, frameworks, fonts, icons,
+services, or other components distributed by third parties under their own
+licenses.
+
+Those components remain subject to their respective licenses and terms.
+Nothing in this license grants rights to third-party software beyond the
+rights provided by their applicable licenses.
+
+
+TRADEMARKS
+
+The MIT License applies to the copyrightable Software covered by this
+license. It does not grant permission to use names, trademarks, service
+marks, logos, or other branding associated with Credi Marketplace, Jhon Baza,
+or any third party, except as required for reasonable identification of the
+Software.
+
+
+SECURITY
+
+Security vulnerabilities should not be disclosed through public issues,
+pull requests, or other public communication channels when doing so could
+expose credentials, personal information, security weaknesses, or other
+sensitive material.
+
+Security reporting procedures are described in:
+
+SECURITY.md
+
+
+NO WARRANTY FOR EXTERNAL SERVICES
+
+Credi Marketplace may integrate with third-party services, including
+authentication, databases, payment providers, storage providers, hosting
+providers, analytics services, APIs, and other external infrastructure.
+
+This license does not provide any warranty regarding the availability,
+security, reliability, functionality, pricing, policies, or continued
+operation of third-party services.
+
+Use of third-party services remains subject to their respective terms,
+licenses, privacy policies, and security requirements.
+```
