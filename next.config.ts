@@ -29,7 +29,6 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   compress: true,
   productionBrowserSourceMaps: false,
-  output: "standalone",
   typescript: {
     ignoreBuildErrors: false
   },
@@ -38,7 +37,7 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       {
         protocol: "https",
-        hostname: "**.supabase.co"
+        hostname: "*.supabase.co"
       },
       {
         protocol: "https",
