@@ -15,7 +15,7 @@ const contentSecurityPolicy = [
   "form-action 'self'",
   "frame-ancestors 'self'",
   "object-src 'none'",
-  "script-src 'self' 'unsafe-inline'",
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data: https:",
@@ -36,8 +36,14 @@ const nextConfig: NextConfig = {
   images: {
     formats: ["image/avif", "image/webp"],
     remotePatterns: [
-      { protocol: "https", hostname: "*.supabase.co" },
-      { protocol: "https", hostname: "images.unsplash.com" }
+      {
+        protocol: "https",
+        hostname: "**.supabase.co"
+      },
+      {
+        protocol: "https",
+        hostname: "images.unsplash.com"
+      }
     ]
   },
   async headers() {
