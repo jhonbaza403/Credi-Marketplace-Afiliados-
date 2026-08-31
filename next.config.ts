@@ -58,10 +58,6 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: false,
   },
 
-  eslint: {
-    ignoreDuringBuilds: false,
-  },
-
   images: {
     formats: ["image/avif", "image/webp"],
 
@@ -89,7 +85,6 @@ const nextConfig: NextConfig = {
           },
         ],
       },
-
       {
         source: "/api/:path*",
         headers: [
@@ -103,7 +98,6 @@ const nextConfig: NextConfig = {
           },
         ],
       },
-
       {
         source: "/admin/:path*",
         headers: [
@@ -117,7 +111,6 @@ const nextConfig: NextConfig = {
           },
         ],
       },
-
       {
         source: "/dashboard/admin/:path*",
         headers: [
