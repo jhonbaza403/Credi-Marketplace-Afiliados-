@@ -1,10 +1,8 @@
 ```tsx
-import type { Metadata } from "next";
-
 import AdminDashboard from "@/components/admin/AdminDashboard";
 import { requireAdmin } from "@/lib/auth/guards";
 
-export const metadata: Metadata = {
+export const metadata = {
   title: "Administración",
   robots: {
     index: false,
@@ -12,7 +10,7 @@ export const metadata: Metadata = {
   },
 };
 
-export default async function AdminPage(): Promise<React.ReactElement> {
+export default async function AdminPage() {
   await requireAdmin();
 
   return <AdminDashboard />;
