@@ -1,7 +1,7 @@
 // Credi Marketplace - Core Library Exports
 
 // Browser Supabase client.
-export { createClient, supabase, supabaseClient } from './supabase/client';
+export { createClient } from './supabase/client';
 
 // Server Supabase clients.
 export {
