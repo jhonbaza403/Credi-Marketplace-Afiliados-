@@ -1,55 +1,145 @@
-'use client'
+```tsx
+"use client";
 
-import { createContext, useContext, useState, ReactNode } from 'react'
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 
-interface CartItem {
-  id: string
-  name: string
-  price: number
-  quantity: number
+// ==========================================================
+// TIPOS
+// ==========================================================
+
+export interface CartItem {
+  id: string;
+  name: string;
+  price: number;
+  quantity: number;
 }
 
 interface CartContextType {
-  cart: CartItem[]
-  addToCart: (item: CartItem) => void
-  removeFromCart: (id: string) => void
-  clearCart: () => void
+  cart: CartItem[];
+  addToCart: (item: CartItem) => void;
+  removeFromCart: (id: string) => void;
+  clearCart: () => void;
 }
 
-const CartContext = createContext<CartContextType | undefined>(undefined)
+// ==========================================================
+// CONTEXTO
+// ==========================================================
 
-export function CartProvider({ children }: { children: ReactNode }) {
-  const [cart, setCart] = useState<CartItem[]>([])
+const CartContext = createContext<CartContextType | undefined>(
+  undefined,
+);
 
-  const addToCart = (item: CartItem) => {
-    setCart((prev) => {
-      const existing = prev.find((i) => i.id === item.id)
-      if (existing) {
-        return prev.map((i) =>
-          i.id === item.id ? { ...i, quantity: i.quantity + item.quantity } : i
-        )
+// ==========================================================
+// PROVIDER
+// ==========================================================
+
+export function CartProvider({
+  children,
+}: {
+  children: ReactNode;
+}) {
+  const [cart, setCart] = useState<CartItem[]>([]);
+
+  // ========================================================
+  // AGREGAR PRODUCTO
+  // ========================================================
+
+  const addToCart = useCallback((item: CartItem) => {
+    if (!item.id || item.quantity <= 0) {
+      return;
+    }
+
+    setCart((previousCart) => {
+      const existingItem = previousCart.find(
+        (cartItem) => cartItem.id === item.id,
+      );
+
+      if (existingItem) {
+        return previousCart.map((cartItem) =>
+          cartItem.id === item.id
+            ? {
+                ...cartItem,
+                quantity:
+                  cartItem.quantity + item.quantity,
+              }
+            : cartItem,
+        );
       }
-      return [...prev, item]
-    })
-  }
 
-  const removeFromCart = (id: string) => {
-    setCart((prev) => prev.filter((item) => item.id !== id))
-  }
+      return [...previousCart, { ...item }];
+    });
+  }, []);
 
-  const clearCart = () => setCart([])
+  // ========================================================
+  // ELIMINAR PRODUCTO
+  // ========================================================
+
+  const removeFromCart = useCallback((id: string) => {
+    if (!id) {
+      return;
+    }
+
+    setCart((previousCart) =>
+      previousCart.filter(
+        (item) => item.id !== id,
+      ),
+    );
+  }, []);
+
+  // ========================================================
+  // VACIAR CARRITO
+  // ========================================================
+
+  const clearCart = useCallback(() => {
+    setCart([]);
+  }, []);
+
+  // ========================================================
+  // VALOR DEL CONTEXTO
+  // ========================================================
+
+  const value = useMemo<CartContextType>(
+    () => ({
+      cart,
+      addToCart,
+      removeFromCart,
+      clearCart,
+    }),
+    [
+      cart,
+      addToCart,
+      removeFromCart,
+      clearCart,
+    ],
+  );
 
   return (
-    <CartContext.Provider value={{ cart, addToCart, removeFromCart, clearCart }}>
+    <CartContext.Provider value={value}>
       {children}
     </CartContext.Provider>
-  )
+  );
 }
 
-export function useCart() {
-  const context = useContext(CartContext)
+// ==========================================================
+// HOOK
+// ==========================================================
+
+export function useCart(): CartContextType {
+  const context = useContext(CartContext);
+
   if (!context) {
-    throw new Error('useCart debe ser usado dentro de un CartProvider')
+    throw new Error(
+      "useCart debe ser usado dentro de un CartProvider",
+    );
   }
-  return context
+
+  return context;
 }
+```
