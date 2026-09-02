@@ -1,0 +1,3 @@
+git add -f src/lib/supabase/client.ts src/context/CartContext.tsx
+git commit -m "Add missing Supabase client and CartContext files"
+git push origin main
