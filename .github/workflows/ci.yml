@@ -25,6 +25,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "22"
+          cache: npm
 
       - name: Verify Node.js and npm
         run: |
@@ -32,8 +33,11 @@ jobs:
           echo "npm:  $(npm --version)"
           node -e "const major=Number(process.versions.node.split('.')[0]); if (major !== 22) { console.error('Expected Node.js 22.x'); process.exit(1); }"
 
-      - name: Install dependencies
-        run: npm install --no-audit --no-fund
+      - name: Install dependencies from lockfile
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Verify dependency tree
+        run: npm ls esbuild postcss sharp vite vitest --depth=10
 
       - name: Run Linter
         run: npm run lint
