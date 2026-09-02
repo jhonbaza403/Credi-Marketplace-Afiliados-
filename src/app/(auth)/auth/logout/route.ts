@@ -16,7 +16,7 @@ export const dynamic = 'force-dynamic'
  * - Las cookies de sesión son actualizadas por Supabase SSR.
  * - No se exponen tokens ni información sensible.
  */
-export async function POST(request: Request) {
+export async function POST() {
   const requestId = crypto.randomUUID()
 
   try {
@@ -94,10 +94,6 @@ export async function POST(request: Request) {
       )
     }
 
-    /*
-     * Permitimos que el cliente navegue posteriormente a login.
-     * No devolvemos información del usuario ni tokens.
-     */
     return NextResponse.json(
       {
         success: true,
