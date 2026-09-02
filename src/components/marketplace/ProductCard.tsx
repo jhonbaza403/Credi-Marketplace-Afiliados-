@@ -1,4 +1,3 @@
-```tsx
 // ==========================================================
 // ARCHIVO: src/components/marketplace/ProductCard.tsx
 // Credi Marketplace
