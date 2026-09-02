@@ -1,37 +1,27 @@
-import { FlatCompat } from "@eslint/eslintrc";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { defineConfig, globalIgnores } from "eslint/config";
+import nextVitals from "eslint-config-next/core-web-vitals";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const compat = new FlatCompat({
-  baseDirectory: __dirname,
-});
-
-const eslintConfig = [
-  ...compat.extends("next/core-web-vitals"),
-  {
-    ignores: [
-      ".next/**",
-      "node_modules/**",
-      "coverage/**",
-      "playwright-report/**",
-      "test-results/**",
-      "dist/**",
-      "build/**",
-      ".vercel/**",
-      "*.log",
-      "**/*.log",
-      ".env",
-      ".env.*",
-      "!.env.example",
-      ".cache/**",
-      ".turbo/**",
-      "supabase/.branches/**",
-      "supabase/.temp/**",
-    ],
-  },
+export default defineConfig([
+  ...nextVitals,
+  globalIgnores([
+    ".next/**",
+    "node_modules/**",
+    "coverage/**",
+    "playwright-report/**",
+    "test-results/**",
+    "dist/**",
+    "build/**",
+    ".vercel/**",
+    "*.log",
+    "**/*.log",
+    ".env",
+    ".env.*",
+    "!.env.example",
+    ".cache/**",
+    ".turbo/**",
+    "supabase/.branches/**",
+    "supabase/.temp/**",
+  ]),
   {
     files: ["**/*.js", "**/*.jsx", "**/*.ts", "**/*.tsx"],
     rules: {
@@ -69,6 +59,4 @@ const eslintConfig = [
       "no-console": "off",
     },
   },
-];
-
-export default eslintConfig;
+]);
