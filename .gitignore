@@ -1,399 +1,46 @@
-# ============================================================
-# Credi Marketplace
-# Git ignore
-#
-# Next.js 16
-# React 19
-# TypeScript
-# Tailwind CSS 4
-# Supabase
-# Vitest
-# Playwright
-# Vercel
-# Node.js 22.x LTS
-# npm 10.x / 11.x
-# ============================================================
-
-
-# ============================================================
-# DEPENDENCIAS
-# ============================================================
-
-node_modules/
-.pnp/
+# Dependencies
+/node_modules
+/.pnp
 .pnp.js
-.pnpm-store/
-.yarn/
-.yarn-cache/
 
-# npm local configuration
-.npmrc.local
+# Next.js build output
+/.next/
+/out/
 
+# Production build
+/build
+/dist
 
-# ============================================================
-# NEXT.JS
-# ============================================================
-
-.next/
-out/
-
-# Next.js generated cache
-.next/cache/
-
-# Vercel local build/output
-.vercel/
-.vercel-output/
-
-
-# ============================================================
-# BUILD / DISTRIBUTION
-# ============================================================
-
-dist/
-build/
-
-# Mantener código fuente y archivos de configuración.
-# No ignorar package.json ni package-lock.json.
-
-
-# ============================================================
-# TURBOPACK / SWC / TOOLING CACHE
-# ============================================================
-
-.turbo/
-.turborepo/
-.swc/
-.vite/
-.cache/
-.parcel-cache/
-
-
-# ============================================================
-# TYPESCRIPT
-# ============================================================
-
-*.tsbuildinfo
-
-
-# ============================================================
-# ENVIRONMENT VARIABLES / SECRETS
-# ============================================================
-
-.env
-.env.*
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-.env.development
-.env.test
-.env.production
-
-# Plantillas permitidas en Git
-!.env.example
-!.env.template
-
-
-# ============================================================
-# CREDENCIALES Y SECRETOS
-# ============================================================
-
-credentials.json
-service-account.json
-service-account-key.json
-
-secrets.json
-secrets.local.json
-
-*.pem
-*.key
-*.p12
-*.pfx
-
-# Los certificados públicos pueden necesitar versionarse.
-# No ignorar *.crt automáticamente si forman parte del proyecto.
-
-
-# ============================================================
-# SUPABASE LOCAL
-# ============================================================
-
-supabase/.branches/
-supabase/.temp/
-supabase/.cache/
-
-# NO ignorar:
-#
-# supabase/config.toml
-# supabase/migrations/
-# supabase/functions/
-# supabase/tests/
-# supabase/seed.sql
-#
-# Si existe supabase/.gitignore y forma parte del proyecto,
-# debe permanecer versionado.
-
-
-# ============================================================
-# LOGS
-# ============================================================
-
-*.log
-*.log.*
-logs/
-
+# Debug & Logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
-debug.log
-
-
-# ============================================================
-# TESTING / COVERAGE
-# ============================================================
-
-coverage/
-.nyc_output/
-.vitest/
-
-*.lcov
-coverage-final.json
-
-
-# ============================================================
-# PLAYWRIGHT
-# ============================================================
-
-playwright-report/
-test-results/
-blob-report/
-playwright/.cache/
-
-
-# ============================================================
-# JEST
-# ============================================================
-
-jest-results/
-jest-coverage/
-
-
-# ============================================================
-# CYPRESS
-# ============================================================
-
-cypress/videos/
-cypress/screenshots/
-cypress/downloads/
-
-
-# ============================================================
-# TEST ARTIFACTS
-# ============================================================
-
-test-output/
-reports/
-
-
-# ============================================================
-# TEMPORARY FILES
-# ============================================================
-
-tmp/
-temp/
-*.tmp
-*.temp
-*.bak
-*.backup
-*.old
-
-
-# ============================================================
-# ESLINT / FORMATTER CACHE
-# ============================================================
-
-.eslintcache
-.stylelintcache
-.prettiercache
-
-
-# ============================================================
-# STORYBOOK
-# ============================================================
-
-storybook-static/
-
-
-# ============================================================
-# GENERATED DOCUMENTATION
-# ============================================================
-
-typedoc/
-
-
-# ============================================================
-# LOCAL DATABASES
-# ============================================================
-
-*.sqlite
-*.sqlite3
-*.db
-*.db-journal
-
-
-# ============================================================
-# LOCAL DEVELOPMENT
-# ============================================================
-
-.dev.vars
-.dev.vars.*
-.local/
-.local-data/
-.local.env
-.local.env.*
-
-# Nunca almacenar secretos de desarrollo en Git.
-
-
-# ============================================================
-# GENERATED / LOCAL FILES
-# ============================================================
-
-*.pid
-*.seed
-*.lockb
-*.generated.*
-
-generated/
-
-
-# ============================================================
-# DOCKER LOCAL OVERRIDES
-# ============================================================
-
-docker-compose.override.yml
-docker-compose.local.yml
-
-
-# ============================================================
-# ARCHIVES / BACKUPS
-# ============================================================
-
-*.zip
-*.tar
-*.tar.gz
-*.tgz
-*.rar
-*.7z
-
-
-# ============================================================
-# EDITORS / IDE
-# ============================================================
-
-.vscode/*
-!.vscode/settings.json
-!.vscode/extensions.json
-!.vscode/tasks.json
-!.vscode/launch.json
-
-.idea/
-*.iml
-*.iws
-*.ipr
-
-*.sublime-project
-*.sublime-workspace
-
-
-# ============================================================
-# EDITOR TEMPORARY FILES
-# ============================================================
-
-*.swp
-*.swo
-*.swn
-*~
-
-
-# ============================================================
-# OPERATING SYSTEM
-# ============================================================
-
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100/
-.Trashes/
-
-Thumbs.db
-Thumbs.db:encryptable
-ehthumbs.db
-Desktop.ini
-
-$RECYCLE.BIN/
-*.lnk
-.directory
-
-
-# ============================================================
-# PATCH / MERGE TEMPORARIES
-# ============================================================
-
-*.orig
-*.rej
-*.patch~
-
-
-# ============================================================
-# IMPORTANT — FILES THAT MUST REMAIN VERSIONED
-# ============================================================
-
-!package.json
-!package-lock.json
-
-!.nvmrc
-!next.config.ts
-!tsconfig.json
-!next-env.d.ts
-
-!eslint.config.mjs
-!postcss.config.mjs
-!playwright.config.ts
-!vitest.config.ts
-
+.pnpm-debug.log*
+*.log
+
+# Environment variables
+.env
+.env*.local
+.env.development
+.env.test
+.env.production
 !.env.example
-!.env.template
 
-!src/
-!public/
+# Testing & Coverage
+/coverage
+/playwright-report
+/test-results
+/blob-report
 
-!supabase/
-!supabase/config.toml
-!supabase/migrations/
-!supabase/functions/
-!supabase/tests/
+# Cache & Build Tools
+/.cache
+/.turbo
+*.tsbuildinfo
+tsconfig.tsbuildinfo
 
+# Vercel
+/.vercel
 
-# ============================================================
-# SECURITY REMINDER
-# ============================================================
-#
-# NUNCA subir:
-#
-# - SUPABASE_SECRET_KEY
-# - SUPABASE_SERVICE_ROLE_KEY
-# - GEMINI_API_KEY
-# - DATABASE_URL con credenciales
-# - tokens
-# - contraseñas
-# - claves privadas
-# - certificados privados
-# - secretos de Vercel
-#
-# Las variables públicas NEXT_PUBLIC_* solo deben contener
-# información que realmente pueda exponerse al navegador.
-#
-# ============================================================
+# System files
+.DS_Store
+*.pem
