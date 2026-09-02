@@ -2,11 +2,13 @@ import type { NextConfig } from "next";
 
 const securityHeaders = [
   { key: "X-Content-Type-Options", value: "nosniff" },
+  { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), usb=()" },
+  { key: "X-DNS-Prefetch-Control", value: "on" },
   { key: "X-Permitted-Cross-Domain-Policies", value: "none" },
   { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
-  { key: "X-Frame-Options", value: "SAMEORIGIN" }
+  { key: "X-Frame-Options", value: "SAMEORIGIN" },
 ];
 
 const contentSecurityPolicy = [
@@ -21,7 +23,7 @@ const contentSecurityPolicy = [
   "font-src 'self' data: https:",
   "connect-src 'self' https://*.supabase.co wss://*.supabase.co https:",
   "frame-src 'self' https://*.supabase.co",
-  "upgrade-insecure-requests"
+  "upgrade-insecure-requests",
 ].join("; ");
 
 const nextConfig: NextConfig = {
@@ -30,20 +32,22 @@ const nextConfig: NextConfig = {
   compress: true,
   productionBrowserSourceMaps: false,
   typescript: {
-    ignoreBuildErrors: false
+    ignoreBuildErrors: false,
   },
   images: {
     formats: ["image/avif", "image/webp"],
     remotePatterns: [
       {
         protocol: "https",
-        hostname: "*.supabase.co"
+        hostname: "*.supabase.co",
+        pathname: "/**",
       },
       {
         protocol: "https",
-        hostname: "images.unsplash.com"
-      }
-    ]
+        hostname: "images.unsplash.com",
+        pathname: "/**",
+      },
+    ],
   },
   async headers() {
     return [
@@ -51,25 +55,25 @@ const nextConfig: NextConfig = {
         source: "/:path*",
         headers: [
           ...securityHeaders,
-          { key: "Content-Security-Policy", value: contentSecurityPolicy }
-        ]
+          { key: "Content-Security-Policy", value: contentSecurityPolicy },
+        ],
       },
       {
         source: "/api/:path*",
         headers: [
           { key: "Cache-Control", value: "private, no-store" },
-          { key: "X-Content-Type-Options", value: "nosniff" }
-        ]
+          { key: "X-Content-Type-Options", value: "nosniff" },
+        ],
       },
       {
         source: "/admin/:path*",
         headers: [
           { key: "Cache-Control", value: "private, no-store" },
-          { key: "X-Frame-Options", value: "DENY" }
-        ]
-      }
+          { key: "X-Frame-Options", value: "DENY" },
+        ],
+      },
     ];
-  }
+  },
 };
 
 export default nextConfig;
