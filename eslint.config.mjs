@@ -1,8 +1,3 @@
-// ==========================================================
-// ARCHIVO: eslint.config.mjs
-// Credi Marketplace - ESLint 9 Flat Config
-// ==========================================================
-
 import { FlatCompat } from "@eslint/eslintrc";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -15,14 +10,7 @@ const compat = new FlatCompat({
 });
 
 const eslintConfig = [
-  // ========================================================
-  // CONFIGURACIÓN OFICIAL DE NEXT.JS
-  // ========================================================
   ...compat.extends("next/core-web-vitals"),
-
-  // ========================================================
-  // ARCHIVOS Y DIRECTORIOS IGNORADOS
-  // ========================================================
   {
     ignores: [
       ".next/**",
@@ -44,10 +32,6 @@ const eslintConfig = [
       "supabase/.temp/**",
     ],
   },
-
-  // ========================================================
-  // REGLAS DEL PROYECTO
-  // ========================================================
   {
     files: ["**/*.js", "**/*.jsx", "**/*.ts", "**/*.tsx"],
     rules: {
@@ -66,20 +50,12 @@ const eslintConfig = [
       "prefer-const": "error",
     },
   },
-
-  // ========================================================
-  // ARCHIVOS DE CONFIGURACIÓN NODE
-  // ========================================================
   {
     files: ["*.config.js", "*.config.mjs", "*.config.cjs", "*.config.ts"],
     rules: {
       "no-console": "off",
     },
   },
-
-  // ========================================================
-  // ARCHIVOS DE TEST
-  // ========================================================
   {
     files: [
       "tests/**/*.ts",
