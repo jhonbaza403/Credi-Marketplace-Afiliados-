@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+
 import { useAuth } from "@/context/AuthContext";
 
 interface DashboardCardProps {
@@ -73,7 +74,6 @@ export default function DashboardPage() {
               aria-label="Cargando"
               role="status"
             />
-
             <p className="text-sm font-medium text-muted-foreground">
               Preparando tu panel de control...
             </p>
@@ -92,18 +92,15 @@ export default function DashboardPage() {
               <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-primary text-2xl font-black text-primary-foreground shadow-lg">
                 C
               </div>
-
               <p className="mt-6 text-xs font-bold uppercase tracking-[0.2em] text-primary">
                 Credi Marketplace
               </p>
-
               <h1 className="mt-3 text-3xl font-black tracking-tight text-foreground sm:text-4xl">
                 Tu centro de operaciones
               </h1>
-
               <p className="mx-auto mt-4 max-w-xl text-sm leading-7 text-muted-foreground sm:text-base">
-                Inicia sesión para administrar tu perfil, compras,
-                productos, servicios y actividad dentro de la plataforma.
+                Inicia sesión para administrar tu perfil, compras, productos,
+                servicios y actividad dentro de la plataforma.
               </p>
             </div>
 
@@ -114,7 +111,6 @@ export default function DashboardPage() {
               >
                 Iniciar sesión
               </Link>
-
               <Link
                 href="/register"
                 className="inline-flex items-center justify-center rounded-xl border border-border bg-background px-6 py-3 text-sm font-bold text-foreground transition-colors hover:bg-muted"
@@ -129,10 +125,7 @@ export default function DashboardPage() {
   }
 
   const displayName =
-    profile?.fullName?.trim() ||
-    user.email?.split("@")[0] ||
-    "Usuario";
-
+    profile?.fullName?.trim() || user.email?.split("@")[0] || "Usuario";
   const email = profile?.email || user.email || "";
 
   const roleLabel = (() => {
@@ -140,7 +133,6 @@ export default function DashboardPage() {
     if (hasRole("vendor")) return "Vendedor";
     if (hasRole("professional")) return "Profesional";
     if (hasRole("company")) return "Empresa";
-
     return "Cliente";
   })();
 
@@ -168,6 +160,7 @@ export default function DashboardPage() {
                       src={profile.avatarUrl}
                       alt={`Avatar de ${displayName}`}
                       fill
+                      unoptimized
                       sizes="(max-width: 640px) 56px, 64px"
                       className="object-cover"
                     />
@@ -181,7 +174,6 @@ export default function DashboardPage() {
                     <span className="inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-primary">
                       Panel de control
                     </span>
-
                     <span className="inline-flex items-center rounded-full border border-border bg-muted px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
                       {roleLabel}
                     </span>
@@ -196,8 +188,8 @@ export default function DashboardPage() {
                   </p>
 
                   <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">
-                    Gestiona tu actividad, compras, productos,
-                    servicios y configuración desde un único lugar.
+                    Gestiona tu actividad, compras, productos, servicios y
+                    configuración desde un único lugar.
                   </p>
                 </div>
               </div>
@@ -209,7 +201,6 @@ export default function DashboardPage() {
                 >
                   Mi perfil
                 </Link>
-
                 <Link
                   href="/marketplace"
                   className="inline-flex items-center justify-center rounded-xl bg-primary px-5 py-3 text-sm font-bold text-primary-foreground shadow-sm transition-opacity hover:opacity-90"
@@ -226,7 +217,6 @@ export default function DashboardPage() {
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">
               Acceso rápido
             </p>
-
             <h2 className="mt-1 text-xl font-black tracking-tight text-foreground">
               Administra tu cuenta
             </h2>
@@ -239,21 +229,18 @@ export default function DashboardPage() {
               title="Mi perfil"
               description="Actualiza tus datos personales, información pública y configuración."
             />
-
             <DashboardCard
               href="/dashboard/orders"
               icon="▣"
               title="Mis órdenes"
               description="Consulta compras, pedidos, estados, pagos y seguimiento."
             />
-
             <DashboardCard
               href="/marketplace"
               icon="◆"
               title="Marketplace"
               description="Explora productos, servicios y oportunidades."
             />
-
             <DashboardCard
               href="/services"
               icon="✦"
@@ -269,7 +256,6 @@ export default function DashboardPage() {
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">
                 Área comercial
               </p>
-
               <h2 className="mt-1 text-xl font-black tracking-tight text-foreground">
                 Herramientas para crecer
               </h2>
@@ -319,14 +305,12 @@ export default function DashboardPage() {
                   <span className="inline-flex rounded-full border border-amber-500/20 bg-amber-500/10 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
                     Administración
                   </span>
-
                   <h2 className="mt-3 text-xl font-black text-foreground">
                     Centro administrativo
                   </h2>
-
                   <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-                    Las funciones administrativas están protegidas
-                    mediante autorización del servidor y políticas RLS.
+                    Las funciones administrativas están protegidas mediante
+                    autorización del servidor y políticas RLS.
                   </p>
                 </div>
 
@@ -346,11 +330,9 @@ export default function DashboardPage() {
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">
               Estado de cuenta
             </p>
-
             <h2 className="mt-2 text-xl font-black text-foreground">
               Cuenta activa
             </h2>
-
             <p className="mt-2 text-sm text-muted-foreground">
               Tu sesión está autenticada y tu perfil está disponible.
             </p>
@@ -360,4 +342,3 @@ export default function DashboardPage() {
     </main>
   );
 }
-```
