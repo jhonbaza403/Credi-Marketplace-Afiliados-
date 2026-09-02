@@ -10,10 +10,6 @@ import {
   type ReactNode,
 } from "react";
 
-// ==========================================================
-// TIPOS
-// ==========================================================
-
 export interface Region {
   code: string;
   name: string;
@@ -24,18 +20,14 @@ export interface Region {
 
 interface RegionContextValue {
   region: Region;
-  availableRegions: Region[];
+  availableRegions: readonly Region[];
   currency: string;
   setRegion: (region: Region) => void;
   changeRegion: (code: string) => void;
   formatCurrency: (value: number) => string;
 }
 
-// ==========================================================
-// REGIONES DISPONIBLES
-// ==========================================================
-
-export const regions: Region[] = [
+export const regions: readonly Region[] = [
   {
     code: "VE",
     name: "Venezuela",
@@ -66,62 +58,39 @@ export const regions: Region[] = [
   },
 ];
 
-// ==========================================================
-// CONFIGURACIÓN
-// ==========================================================
-
 const STORAGE_KEY = "credi-marketplace-region";
 
 const defaultRegion =
   regions.find((item) => item.code === "VE") ?? regions[0];
 
-const RegionContext =
-  createContext<RegionContextValue | undefined>(undefined);
-
-// ==========================================================
-// PROVIDER
-// ==========================================================
+const RegionContext = createContext<
+  RegionContextValue | undefined
+>(undefined);
 
 export function RegionProvider({
   children,
 }: {
   children: ReactNode;
 }) {
-  const [region, setRegionState] =
-    useState<Region>(defaultRegion);
-
-  // ========================================================
-  // CARGAR REGIÓN PERSISTIDA
-  // ========================================================
+  const [region, setRegionState] = useState<Region>(defaultRegion);
 
   useEffect(() => {
     try {
-      const stored =
-        window.localStorage.getItem(STORAGE_KEY);
-
-      const selected = regions.find(
-        (item) => item.code === stored,
-      );
+      const stored = window.localStorage.getItem(STORAGE_KEY);
+      const selected = regions.find((item) => item.code === stored);
 
       if (selected) {
         setRegionState(selected);
-        document.documentElement.dataset.region =
-          selected.code;
+        document.documentElement.dataset.region = selected.code;
         return;
       }
 
-      document.documentElement.dataset.region =
-        defaultRegion.code;
+      document.documentElement.dataset.region = defaultRegion.code;
     } catch {
       setRegionState(defaultRegion);
-      document.documentElement.dataset.region =
-        defaultRegion.code;
+      document.documentElement.dataset.region = defaultRegion.code;
     }
   }, []);
-
-  // ========================================================
-  // ESTABLECER REGIÓN
-  // ========================================================
 
   const setRegion = useCallback((next: Region) => {
     const selected = regions.find(
@@ -135,28 +104,16 @@ export function RegionProvider({
     setRegionState(selected);
 
     try {
-      window.localStorage.setItem(
-        STORAGE_KEY,
-        selected.code,
-      );
-
-      document.documentElement.dataset.region =
-        selected.code;
+      window.localStorage.setItem(STORAGE_KEY, selected.code);
+      document.documentElement.dataset.region = selected.code;
     } catch {
       // La persistencia local es opcional.
-      // El estado de React continúa funcionando.
     }
   }, []);
 
-  // ========================================================
-  // CAMBIAR REGIÓN POR CÓDIGO
-  // ========================================================
-
   const changeRegion = useCallback(
     (code: string) => {
-      const selected = regions.find(
-        (item) => item.code === code,
-      );
+      const selected = regions.find((item) => item.code === code);
 
       if (selected) {
         setRegion(selected);
@@ -164,10 +121,6 @@ export function RegionProvider({
     },
     [setRegion],
   );
-
-  // ========================================================
-  // FORMATEAR MONEDA
-  // ========================================================
 
   const formatCurrency = useCallback(
     (value: number) =>
@@ -178,10 +131,6 @@ export function RegionProvider({
     [region.locale, region.currency],
   );
 
-  // ========================================================
-  // VALOR DEL CONTEXTO
-  // ========================================================
-
   const value = useMemo<RegionContextValue>(
     () => ({
       region,
@@ -191,12 +140,7 @@ export function RegionProvider({
       changeRegion,
       formatCurrency,
     }),
-    [
-      region,
-      setRegion,
-      changeRegion,
-      formatCurrency,
-    ],
+    [region, setRegion, changeRegion, formatCurrency],
   );
 
   return (
@@ -206,19 +150,12 @@ export function RegionProvider({
   );
 }
 
-// ==========================================================
-// HOOK
-// ==========================================================
-
 export function useRegion(): RegionContextValue {
   const context = useContext(RegionContext);
 
   if (!context) {
-    throw new Error(
-      "useRegion debe utilizarse dentro de RegionProvider",
-    );
+    throw new Error("useRegion debe utilizarse dentro de RegionProvider");
   }
 
   return context;
 }
-```
