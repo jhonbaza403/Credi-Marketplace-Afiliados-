@@ -52,111 +52,77 @@ export interface AuthContextType {
   logout: () => Promise<void>;
 }
 
-export const AuthContext =
-  createContext<AuthContextType | undefined>(
-    undefined,
-  );
+export const AuthContext = createContext<AuthContextType | undefined>(
+  undefined,
+);
 
-export function AuthProvider({
-  children,
-}: {
-  children: ReactNode;
-}) {
-  const [user, setUser] =
-    useState<User | null>(null);
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<User | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const [profile, setProfile] =
-    useState<Profile | null>(null);
+  const loadProfile = useCallback(async (userId: string) => {
+    const supabase = createClient();
 
-  const [loading, setLoading] =
-    useState(true);
+    const { data, error } = await supabase
+      .from("profiles")
+      .select(
+        [
+          "id",
+          "email",
+          "full_name",
+          "avatar_url",
+          "role",
+          "is_active",
+          "created_at",
+          "updated_at",
+        ].join(","),
+      )
+      .eq("id", userId)
+      .maybeSingle();
 
-  const loadProfile = useCallback(
-    async (userId: string) => {
-      const supabase = createClient();
+    if (error) {
+      console.error("Error cargando perfil:", error.message);
+      setProfile(null);
+      return;
+    }
 
-      const { data, error } = await supabase
-        .from("profiles")
-        .select(
-          [
-            "id",
-            "email",
-            "full_name",
-            "avatar_url",
-            "role",
-            "is_active",
-            "created_at",
-            "updated_at",
-          ].join(","),
-        )
-        .eq("id", userId)
-        .maybeSingle();
+    if (!data) {
+      setProfile(null);
+      return;
+    }
 
-      if (error) {
-        console.error(
-          "Error cargando perfil:",
-          error.message,
-        );
+    const nextProfile: Profile = {
+      id: data.id,
+      email: data.email ?? null,
+      fullName: data.full_name ?? null,
+      full_name: data.full_name ?? null,
+      avatarUrl: data.avatar_url ?? null,
+      avatar_url: data.avatar_url ?? null,
+      role: data.role as UserRole,
+      isActive: data.is_active ?? true,
+      is_active: data.is_active ?? true,
+      createdAt: data.created_at ?? undefined,
+      created_at: data.created_at ?? undefined,
+      updatedAt: data.updated_at ?? undefined,
+      updated_at: data.updated_at ?? undefined,
+    };
 
-        setProfile(null);
-        return;
-      }
-
-      if (!data) {
-        setProfile(null);
-        return;
-      }
-
-      const nextProfile: Profile = {
-        id: data.id,
-        email: data.email ?? null,
-
-        fullName: data.full_name ?? null,
-        full_name: data.full_name ?? null,
-
-        avatarUrl: data.avatar_url ?? null,
-        avatar_url: data.avatar_url ?? null,
-
-        role: data.role as UserRole,
-
-        isActive: data.is_active ?? true,
-        is_active: data.is_active ?? true,
-
-        createdAt: data.created_at ?? undefined,
-        created_at: data.created_at ?? undefined,
-
-        updatedAt: data.updated_at ?? undefined,
-        updated_at: data.updated_at ?? undefined,
-      };
-
-      setProfile(nextProfile);
-    },
-    [],
-  );
+    setProfile(nextProfile);
+  }, []);
 
   useEffect(() => {
     let mounted = true;
-
     const supabase = createClient();
 
     async function initialize() {
       try {
-        const {
-          data,
-          error,
-        } = await supabase.auth.getUser();
+        const { data, error } = await supabase.auth.getUser();
 
-        if (!mounted) {
-          return;
-        }
+        if (!mounted) return;
+        if (error) throw error;
 
-        if (error) {
-          throw error;
-        }
-
-        const currentUser =
-          data.user ?? null;
-
+        const currentUser = data.user ?? null;
         setUser(currentUser);
 
         if (currentUser) {
@@ -165,10 +131,7 @@ export function AuthProvider({
           setProfile(null);
         }
       } catch (error) {
-        console.error(
-          "Error inicializando autenticación:",
-          error,
-        );
+        console.error("Error inicializando autenticación:", error);
 
         if (mounted) {
           setUser(null);
@@ -183,29 +146,20 @@ export function AuthProvider({
 
     void initialize();
 
-    const {
-      data: authState,
-    } =
-      supabase.auth.onAuthStateChange(
-        (_event, session) => {
-          if (!mounted) {
-            return;
-          }
+    const { data: authState } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        if (!mounted) return;
 
-          const currentUser =
-            session?.user ?? null;
+        const currentUser = session?.user ?? null;
+        setUser(currentUser);
 
-          setUser(currentUser);
-
-          if (currentUser) {
-            void loadProfile(
-              currentUser.id,
-            );
-          } else {
-            setProfile(null);
-          }
-        },
-      );
+        if (currentUser) {
+          void loadProfile(currentUser.id);
+        } else {
+          setProfile(null);
+        }
+      },
+    );
 
     return () => {
       mounted = false;
@@ -213,27 +167,19 @@ export function AuthProvider({
     };
   }, [loadProfile]);
 
-  const isAdmin =
-    profile?.role === "admin";
+  const isAdmin = profile?.role === "admin";
 
   const hasRole = useCallback(
-    (role: UserRole) =>
-      profile?.role === role || isAdmin,
+    (role: UserRole) => profile?.role === role || isAdmin,
     [profile?.role, isAdmin],
   );
 
   const logout = useCallback(async () => {
     const supabase = createClient();
-
-    const { error } =
-      await supabase.auth.signOut();
+    const { error } = await supabase.auth.signOut();
 
     if (error) {
-      console.error(
-        "Error cerrando sesión:",
-        error.message,
-      );
-
+      console.error("Error cerrando sesión:", error.message);
       throw error;
     }
 
@@ -250,14 +196,7 @@ export function AuthProvider({
       hasRole,
       logout,
     }),
-    [
-      user,
-      profile,
-      loading,
-      isAdmin,
-      hasRole,
-      logout,
-    ],
+    [user, profile, loading, isAdmin, hasRole, logout],
   );
 
   return (
@@ -268,8 +207,7 @@ export function AuthProvider({
 }
 
 export function useAuth(): AuthContextType {
-  const context =
-    useContext(AuthContext);
+  const context = useContext(AuthContext);
 
   if (!context) {
     throw new Error(
@@ -279,4 +217,3 @@ export function useAuth(): AuthContextType {
 
   return context;
 }
-```
