@@ -94,9 +94,9 @@ export function ProductCard({
     typeof product.images[0] === 'string' &&
     product.images[0].trim().length > 0;
 
-  const isAvailable =
-    product.is_active &&
-    product.stock > 0;
+ const isAvailable =
+  product.isActive &&
+  product.stock > 0;
 
   const isOutOfStock =
     product.stock <= 0;
