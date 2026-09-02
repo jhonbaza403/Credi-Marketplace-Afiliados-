@@ -1,123 +1,54 @@
-```ts
-// ==========================================================
-// ARCHIVO: src/proxy.ts
-// Credi Marketplace
-//
-// Route Protection Layer
-//
-// Next.js 16 Proxy
-// Supabase Auth
-// RBAC Security
-// ==========================================================
+import { createServerClient } from '@supabase/ssr';
+import { NextResponse, type NextRequest } from 'next/server';
 
-import { createServerClient } from "@supabase/ssr";
-import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
+export async function proxy(request: NextRequest) {
+  const response = NextResponse.next({ request });
 
-// ==========================================================
-// PROXY PRINCIPAL
-// ==========================================================
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 
-export async function proxy(
-  request: NextRequest,
-): Promise<NextResponse> {
-  const response = NextResponse.next({
-    request,
-  });
+  if (!supabaseUrl || !supabaseKey) {
+    return response;
+  }
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll();
-        },
-
-        setAll(cookiesToSet) {
-          for (const {
-            name,
-            value,
-          } of cookiesToSet) {
-            request.cookies.set(name, value);
-            response.cookies.set(name, value);
-          }
-        },
+  const supabase = createServerClient(supabaseUrl, supabaseKey, {
+    cookies: {
+      getAll() {
+        return request.cookies.getAll();
+      },
+      setAll(cookiesToSet: Array<{ name: string; value: string; options?: Parameters<typeof response.cookies.set>[2] }>) {
+        for (const { name, value, options } of cookiesToSet) {
+          request.cookies.set(name, value);
+          response.cookies.set(name, value, options);
+        }
       },
     },
-  );
+  });
 
-  // ========================================================
-  // OBTENER USUARIO AUTENTICADO
-  // ========================================================
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
+  const { data: { user } } = await supabase.auth.getUser();
   const { pathname } = request.nextUrl;
 
-  // ========================================================
-  // RUTAS PROTEGIDAS
-  // ========================================================
-
-  const protectedRoutes = [
-    "/dashboard",
-    "/checkout",
-    "/cart",
-  ];
-
-  const requiresAuth = protectedRoutes.some(
-    (route) => pathname.startsWith(route),
-  );
-
-  if (requiresAuth && !user) {
-    return NextResponse.redirect(
-      new URL("/login", request.url),
-    );
+  const protectedRoutes = ['/dashboard', '/checkout', '/cart'];
+  if (protectedRoutes.some((route) => pathname.startsWith(route)) && !user) {
+    return NextResponse.redirect(new URL('/login', request.url));
   }
 
-  // ========================================================
-  // RUTAS SOLO PARA INVITADOS
-  // ========================================================
-
-  const guestOnlyRoutes = [
-    "/login",
-    "/register",
-    "/forgot-password",
-    "/reset-password",
-  ];
-
-  const guestRoute = guestOnlyRoutes.some(
-    (route) => pathname.startsWith(route),
-  );
-
-  if (guestRoute && user) {
-    return NextResponse.redirect(
-      new URL("/dashboard", request.url),
-    );
+  const guestOnlyRoutes = ['/login', '/register', '/forgot-password', '/reset-password'];
+  if (guestOnlyRoutes.some((route) => pathname.startsWith(route)) && user) {
+    return NextResponse.redirect(new URL('/dashboard', request.url));
   }
-
-  // ========================================================
-  // RESPUESTA FINAL
-  // ========================================================
 
   return response;
 }
 
-// ==========================================================
-// CONFIGURACIÓN DE EJECUCIÓN
-// ==========================================================
-
 export const config = {
   matcher: [
-    "/dashboard/:path*",
-    "/checkout/:path*",
-    "/cart/:path*",
-    "/login",
-    "/register",
-    "/forgot-password",
-    "/reset-password",
+    '/dashboard/:path*',
+    '/checkout/:path*',
+    '/cart/:path*',
+    '/login',
+    '/register',
+    '/forgot-password',
+    '/reset-password',
   ],
 };
-```
