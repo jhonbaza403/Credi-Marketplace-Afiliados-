@@ -1,16 +1,3 @@
-```tsx id="r1tq8m"
-// ==========================================================
-// ARCHIVO: src/context/LanguageContext.tsx
-// Credi Marketplace
-//
-// Global Language Context
-//
-// Next.js 16
-// React 19
-// TypeScript
-// i18n Ready
-// ==========================================================
-
 "use client";
 
 import {
@@ -32,114 +19,48 @@ import {
   type LocaleConfig,
 } from "@/i18n/config";
 
-// ==========================================================
-// TIPOS
-// ==========================================================
-
 export interface LanguageContextValue {
   locale: Locale;
   localeConfig: LocaleConfig;
   availableLocales: readonly Locale[];
-
   setLocale(locale: Locale): void;
   changeLanguage(locale: Locale): void;
 }
 
-// ==========================================================
-// CONSTANTES
-// ==========================================================
+export const LanguageContext = createContext<LanguageContextValue | undefined>(undefined);
 
 const LANGUAGE_STORAGE_KEY = "credi-marketplace-locale";
 
-// ==========================================================
-// CONTEXTO
-// ==========================================================
-
-const LanguageContext = createContext<
-  LanguageContextValue | undefined
->(undefined);
-
-// ==========================================================
-// PROVIDER
-// ==========================================================
-
-export function LanguageProvider({
-  children,
-}: {
-  children: ReactNode;
-}) {
-  const [locale, setLocaleState] =
-    useState<Locale>(defaultLocale);
-
-  // ========================================================
-  // CARGAR IDIOMA PERSISTIDO
-  // ========================================================
+export function LanguageProvider({ children }: { children: ReactNode }) {
+  const [locale, setLocaleState] = useState<Locale>(defaultLocale);
 
   useEffect(() => {
     try {
-      const stored = localStorage.getItem(
-        LANGUAGE_STORAGE_KEY,
-      );
-
-      if (stored && isLocale(stored)) {
-        setLocaleState(stored);
-        document.documentElement.lang = stored;
-        return;
-      }
-
-      document.documentElement.lang = defaultLocale;
+      const stored = localStorage.getItem(LANGUAGE_STORAGE_KEY);
+      const nextLocale = stored && isLocale(stored) ? stored : defaultLocale;
+      setLocaleState(nextLocale);
+      document.documentElement.lang = nextLocale;
     } catch {
-      setLocaleState(defaultLocale);
       document.documentElement.lang = defaultLocale;
     }
   }, []);
 
-  // ========================================================
-  // CAMBIAR IDIOMA
-  // ========================================================
-
-  const setLocale = useCallback(
-    (newLocale: Locale) => {
-      setLocaleState(newLocale);
-
-      try {
-        localStorage.setItem(
-          LANGUAGE_STORAGE_KEY,
-          newLocale,
-        );
-
-        document.documentElement.lang = newLocale;
-      } catch {
-        // La persistencia local es opcional.
-        // El estado de React continúa funcionando.
-      }
-    },
-    [],
-  );
-
-  // ========================================================
-  // API DE CAMBIO DE IDIOMA
-  // ========================================================
+  const setLocale = useCallback((newLocale: Locale) => {
+    setLocaleState(newLocale);
+    try {
+      localStorage.setItem(LANGUAGE_STORAGE_KEY, newLocale);
+      document.documentElement.lang = newLocale;
+    } catch {
+      document.documentElement.lang = newLocale;
+    }
+  }, []);
 
   const changeLanguage = useCallback(
-    (newLocale: Locale) => {
-      setLocale(newLocale);
-    },
+    (newLocale: Locale) => setLocale(newLocale),
     [setLocale],
   );
 
-  // ========================================================
-  // CONFIGURACIÓN DEL IDIOMA ACTUAL
-  // ========================================================
-
-  const localeConfig = useMemo(
-    () => getLocaleConfig(locale),
-    [locale],
-  );
-
-  // ========================================================
-  // VALOR DEL CONTEXTO
-  // ========================================================
+  const localeConfig = useMemo(() => getLocaleConfig(locale), [locale]);
 
   const value = useMemo<LanguageContextValue>(
     () => ({
@@ -149,12 +70,7 @@ export function LanguageProvider({
       setLocale,
       changeLanguage,
     }),
-    [
-      locale,
-      localeConfig,
-      setLocale,
-      changeLanguage,
-    ],
+    [locale, localeConfig, setLocale, changeLanguage],
   );
 
   return (
@@ -164,19 +80,10 @@ export function LanguageProvider({
   );
 }
 
-// ==========================================================
-// HOOK
-// ==========================================================
-
 export function useLanguage(): LanguageContextValue {
   const context = useContext(LanguageContext);
-
   if (!context) {
-    throw new Error(
-      "useLanguage debe utilizarse dentro de LanguageProvider",
-    );
+    throw new Error("useLanguage debe utilizarse dentro de LanguageProvider");
   }
-
   return context;
 }
-```
