@@ -14,86 +14,89 @@ export interface CartItem {
   name: string;
   price: number;
   quantity: number;
+  image?: string | null;
+  slug?: string | null;
+  currency?: string | null;
 }
 
-interface CartContextType {
+export interface CartContextType {
+  items: CartItem[];
   cart: CartItem[];
+  subtotal: number;
   addToCart: (item: CartItem) => void;
+  updateQuantity: (id: string, quantity: number) => void;
+  removeItem: (id: string) => void;
   removeFromCart: (id: string) => void;
   clearCart: () => void;
 }
 
-const CartContext = createContext<CartContextType | undefined>(undefined);
+export const CartContext = createContext<CartContextType | undefined>(undefined);
 
-export function CartProvider({
-  children,
-}: {
-  children: ReactNode;
-}) {
-  const [cart, setCart] = useState<CartItem[]>([]);
+export function CartProvider({ children }: { children: ReactNode }) {
+  const [items, setItems] = useState<CartItem[]>([]);
 
   const addToCart = useCallback((item: CartItem) => {
-    if (!item.id || item.quantity <= 0 || !Number.isFinite(item.price)) {
-      return;
-    }
+    if (!item.id || item.quantity <= 0 || !Number.isFinite(item.price)) return;
 
-    setCart((previousCart) => {
-      const existingItem = previousCart.find(
-        (cartItem) => cartItem.id === item.id,
+    setItems((current) => {
+      const existing = current.find((entry) => entry.id === item.id);
+      if (!existing) return [...current, { ...item }];
+
+      return current.map((entry) =>
+        entry.id === item.id
+          ? { ...entry, quantity: entry.quantity + item.quantity }
+          : entry,
       );
-
-      if (existingItem) {
-        return previousCart.map((cartItem) =>
-          cartItem.id === item.id
-            ? {
-                ...cartItem,
-                quantity: cartItem.quantity + item.quantity,
-              }
-            : cartItem,
-        );
-      }
-
-      return [...previousCart, { ...item }];
     });
   }, []);
 
-  const removeFromCart = useCallback((id: string) => {
-    if (!id) {
+  const updateQuantity = useCallback((id: string, quantity: number) => {
+    if (!id) return;
+    if (!Number.isFinite(quantity) || quantity <= 0) {
+      setItems((current) => current.filter((item) => item.id !== id));
       return;
     }
 
-    setCart((previousCart) =>
-      previousCart.filter((item) => item.id !== id),
+    setItems((current) =>
+      current.map((item) =>
+        item.id === id ? { ...item, quantity: Math.floor(quantity) } : item,
+      ),
     );
   }, []);
 
-  const clearCart = useCallback(() => {
-    setCart([]);
+  const removeItem = useCallback((id: string) => {
+    if (!id) return;
+    setItems((current) => current.filter((item) => item.id !== id));
   }, []);
+
+  const clearCart = useCallback(() => setItems([]), []);
+
+  const subtotal = useMemo(
+    () => items.reduce((total, item) => total + item.price * item.quantity, 0),
+    [items],
+  );
 
   const value = useMemo<CartContextType>(
     () => ({
-      cart,
+      items,
+      cart: items,
+      subtotal,
       addToCart,
-      removeFromCart,
+      updateQuantity,
+      removeItem,
+      removeFromCart: removeItem,
       clearCart,
     }),
-    [cart, addToCart, removeFromCart, clearCart],
+    [items, subtotal, addToCart, updateQuantity, removeItem, clearCart],
   );
 
-  return (
-    <CartContext.Provider value={value}>
-      {children}
-    </CartContext.Provider>
-  );
+  return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }
 
 export function useCart(): CartContextType {
   const context = useContext(CartContext);
-
   if (!context) {
     throw new Error("useCart debe ser usado dentro de un CartProvider");
   }
-
   return context;
 }
