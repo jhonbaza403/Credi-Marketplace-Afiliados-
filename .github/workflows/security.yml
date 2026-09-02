@@ -1,4 +1,5 @@
 name: Credi Marketplace Security
+
 on:
   push:
     branches: [main]
@@ -6,16 +7,27 @@ on:
     branches: [main]
   schedule:
     - cron: "17 4 * * 1"
+
 permissions:
   contents: read
+
 jobs:
   audit:
+    name: Security & Vulnerability Audit
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
-          cache: npm
-      - run: npm ci
-      - run: npm audit --audit-level=high
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run Security Audit
+        run: npm audit --audit-level=high
