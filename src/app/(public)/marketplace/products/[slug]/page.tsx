@@ -1,4 +1,3 @@
-```tsx
 // ==========================================================
 // ARCHIVO:
 // src/app/(public)/marketplace/products/[slug]/page.tsx
