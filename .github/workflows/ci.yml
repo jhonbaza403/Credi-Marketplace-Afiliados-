@@ -2,9 +2,11 @@ name: Credi Marketplace CI
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
   pull_request:
-    branches: [main]
+    branches:
+      - main
 
 permissions:
   contents: read
@@ -14,20 +16,24 @@ jobs:
     name: Install → Lint → Typecheck → Unit → E2E → Build
     runs-on: ubuntu-latest
     timeout-minutes: 30
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Setup Node.js 22
         uses: actions/setup-node@v4
         with:
-          node-version-file: .nvmrc
+          node-version: "22"
 
-      - name: Print Node & npm versions
-        run: node --version && npm --version
+      - name: Verify Node.js and npm
+        run: |
+          echo "Node: $(node --version)"
+          echo "npm:  $(npm --version)"
+          node -e "const major=Number(process.versions.node.split('.')[0]); if (major !== 22) { console.error('Expected Node.js 22.x'); process.exit(1); }"
 
       - name: Install dependencies
-        run: npm install
+        run: npm install --no-audit --no-fund
 
       - name: Run Linter
         run: npm run lint
