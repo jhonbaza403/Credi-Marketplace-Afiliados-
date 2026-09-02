@@ -1,8 +1,13 @@
 import { defineConfig, globalIgnores } from "eslint/config";
-import nextVitals from "eslint-config-next/core-web-vitals";
+import nextPlugin from "@next/eslint-plugin-next";
+import tseslint from "typescript-eslint";
+
+const nextRules = {
+  ...nextPlugin.configs.recommended.rules,
+  ...nextPlugin.configs["core-web-vitals"].rules,
+};
 
 export default defineConfig([
-  ...nextVitals,
   globalIgnores([
     ".next/**",
     "node_modules/**",
@@ -22,13 +27,17 @@ export default defineConfig([
     "supabase/.branches/**",
     "supabase/.temp/**",
   ]),
+  ...tseslint.configs.recommended,
   {
-    files: ["**/*.js", "**/*.jsx", "**/*.ts", "**/*.tsx"],
+    files: ["**/*.{js,jsx,ts,tsx}"],
+    plugins: {
+      "@next/next": nextPlugin,
+    },
     rules: {
+      ...nextRules,
       "no-console": ["warn", { allow: ["warn", "error"] }],
       "no-debugger": "error",
       "no-unused-vars": "off",
-      "react/jsx-no-target-blank": "error",
       "no-eval": "error",
       "no-implied-eval": "error",
       "no-new-func": "error",
