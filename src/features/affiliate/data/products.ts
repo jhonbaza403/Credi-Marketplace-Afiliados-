@@ -63,6 +63,13 @@ readonly AffiliateProduct[] =
   affiliateUrl:
   'https://amzn.to/4bJJq22',
 
+  buttonText:{
+    es:'Ver producto',
+    en:'View product',
+    pt:'Ver produto',
+    fr:'Voir le produit',
+  },
+
 
 
   tracking:{
@@ -132,6 +139,13 @@ readonly AffiliateProduct[] =
 
   affiliateUrl:
   'https://onelink.shein.com/44/5wyleaujbj2iI',
+
+  buttonText:{
+    es:'Ver producto',
+    en:'View product',
+    pt:'Ver produto',
+    fr:'Voir le produit',
+  },
 
 
   tracking:{

@@ -92,20 +92,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    type ProfileRow = {
+      id: string;
+      email: string | null;
+      full_name: string | null;
+      avatar_url: string | null;
+      role: UserRole;
+      is_active: boolean | null;
+      created_at: string | null;
+      updated_at: string | null;
+    };
+
+    const row = data as unknown as ProfileRow;
+
     const nextProfile: Profile = {
-      id: data.id,
-      email: data.email ?? null,
-      fullName: data.full_name ?? null,
-      full_name: data.full_name ?? null,
-      avatarUrl: data.avatar_url ?? null,
-      avatar_url: data.avatar_url ?? null,
-      role: data.role as UserRole,
-      isActive: data.is_active ?? true,
-      is_active: data.is_active ?? true,
-      createdAt: data.created_at ?? undefined,
-      created_at: data.created_at ?? undefined,
-      updatedAt: data.updated_at ?? undefined,
-      updated_at: data.updated_at ?? undefined,
+      id: row.id,
+      email: row.email ?? null,
+      fullName: row.full_name ?? null,
+      full_name: row.full_name ?? null,
+      avatarUrl: row.avatar_url ?? null,
+      avatar_url: row.avatar_url ?? null,
+      role: row.role,
+      isActive: row.is_active ?? true,
+      is_active: row.is_active ?? true,
+      createdAt: row.created_at ?? undefined,
+      created_at: row.created_at ?? undefined,
+      updatedAt: row.updated_at ?? undefined,
+      updated_at: row.updated_at ?? undefined,
     };
 
     setProfile(nextProfile);

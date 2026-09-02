@@ -262,7 +262,7 @@ function ProductDetailContent() {
   // ========================================================
 
   const isAvailable =
-    Boolean(product) &&
+    product !== null &&
     product.stock > 0;
 
   // ========================================================

@@ -295,7 +295,7 @@ function calculateProductScore(
   // Estado
   // --------------------------------------------------------
 
-  if (product.isactive) {
+  if (product.isActive) {
     score +=
       RECOMMENDATION_WEIGHTS.activeProduct;
   }
@@ -365,11 +365,11 @@ export function rankProductsForUser(
 
       // Desempate por fecha de creación.
       const dateA = Date.parse(
-        a.product.created_at,
+        a.product.createdAt ?? "",
       );
 
       const dateB = Date.parse(
-        b.product.created_at,
+        b.product.createdAt ?? "",
       );
 
       if (
