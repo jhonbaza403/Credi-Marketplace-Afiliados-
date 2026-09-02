@@ -38,21 +38,12 @@ import { createClient } from '@/lib/supabase/server'
  */
 
 export const runtime = 'nodejs'
-
 export const dynamic = 'force-dynamic'
 
 type CheckoutRequestBody = {
   order_id?: unknown
   payment_method?: unknown
   region?: unknown
-}
-
-type OrderRecord = {
-  id: string
-  buyer_id: string
-  total_amount: number
-  status: string
-  currency?: string | null
 }
 
 const ALLOWED_PAYMENT_METHODS = new Set([
@@ -90,9 +81,7 @@ function isValidUUID(value: string): boolean {
   )
 }
 
-function normalizePaymentMethod(
-  value: unknown,
-): string | null {
+function normalizePaymentMethod(value: unknown): string | null {
   if (typeof value !== 'string') {
     return null
   }
@@ -103,14 +92,10 @@ function normalizePaymentMethod(
     return null
   }
 
-  return ALLOWED_PAYMENT_METHODS.has(normalized)
-    ? normalized
-    : null
+  return ALLOWED_PAYMENT_METHODS.has(normalized) ? normalized : null
 }
 
-function normalizeRegion(
-  value: unknown,
-): string {
+function normalizeRegion(value: unknown): string {
   if (typeof value !== 'string') {
     return 'GLOBAL'
   }
@@ -132,14 +117,7 @@ export async function POST(request: Request) {
   const requestId = crypto.randomUUID()
 
   try {
-    /*
-     * ---------------------------------------------------------
-     * 1. Validar Content-Type
-     * ---------------------------------------------------------
-     */
-
-    const contentType =
-      request.headers.get('content-type') ?? ''
+    const contentType = request.headers.get('content-type') ?? ''
 
     if (!contentType.toLowerCase().includes('application/json')) {
       return jsonError(
@@ -149,14 +127,7 @@ export async function POST(request: Request) {
       )
     }
 
-    /*
-     * ---------------------------------------------------------
-     * 2. Protección básica contra payload excesivo
-     * ---------------------------------------------------------
-     */
-
-    const contentLength =
-      request.headers.get('content-length')
+    const contentLength = request.headers.get('content-length')
 
     if (
       contentLength &&
@@ -169,12 +140,6 @@ export async function POST(request: Request) {
         'PAYLOAD_TOO_LARGE',
       )
     }
-
-    /*
-     * ---------------------------------------------------------
-     * 3. Obtener usuario autenticado
-     * ---------------------------------------------------------
-     */
 
     const supabase = await createClient()
 
@@ -204,12 +169,6 @@ export async function POST(request: Request) {
       )
     }
 
-    /*
-     * ---------------------------------------------------------
-     * 4. Parsear JSON
-     * ---------------------------------------------------------
-     */
-
     let body: CheckoutRequestBody
 
     try {
@@ -222,16 +181,8 @@ export async function POST(request: Request) {
       )
     }
 
-    /*
-     * ---------------------------------------------------------
-     * 5. Validar order_id
-     * ---------------------------------------------------------
-     */
-
     const orderId =
-      typeof body.order_id === 'string'
-        ? body.order_id.trim()
-        : ''
+      typeof body.order_id === 'string' ? body.order_id.trim() : ''
 
     if (!orderId || !isValidUUID(orderId)) {
       return jsonError(
@@ -241,14 +192,7 @@ export async function POST(request: Request) {
       )
     }
 
-    /*
-     * ---------------------------------------------------------
-     * 6. Validar método de pago
-     * ---------------------------------------------------------
-     */
-
-    const paymentMethod =
-      normalizePaymentMethod(body.payment_method)
+    const paymentMethod = normalizePaymentMethod(body.payment_method)
 
     if (!paymentMethod) {
       return jsonError(
@@ -258,40 +202,14 @@ export async function POST(request: Request) {
       )
     }
 
-    /*
-     * ---------------------------------------------------------
-     * 7. Región
-     * ---------------------------------------------------------
-     */
-
     const region = normalizeRegion(body.region)
-
-    /*
-     * ---------------------------------------------------------
-     * 8. Obtener la orden desde servidor
-     * ---------------------------------------------------------
-     *
-     * IMPORTANTE:
-     *
-     * Aquí NO aceptamos:
-     *
-     * customerId
-     * sellerId
-     * price
-     * totalAmount
-     * commissionAmount
-     *
-     * del navegador.
-     */
 
     const {
       data: order,
       error: orderError,
     } = await supabase
       .from('orders')
-      .select(
-        'id, buyer_id, total_amount, status, currency',
-      )
+      .select('id, buyer_id, total_amount, status, currency')
       .eq('id', orderId)
       .eq('buyer_id', user.id)
       .maybeSingle()
@@ -317,12 +235,6 @@ export async function POST(request: Request) {
       )
     }
 
-    /*
-     * ---------------------------------------------------------
-     * 9. Validar estado de la orden
-     * ---------------------------------------------------------
-     */
-
     if (order.status === 'paid' || order.status === 'completed') {
       return jsonError(
         'Esta orden ya fue pagada.',
@@ -339,25 +251,13 @@ export async function POST(request: Request) {
       )
     }
 
-    /*
-     * ---------------------------------------------------------
-     * 10. Validar total almacenado
-     * ---------------------------------------------------------
-     */
-
     const totalAmount = Number(order.total_amount)
 
-    if (
-      !Number.isFinite(totalAmount) ||
-      totalAmount <= 0
-    ) {
-      console.error(
-        `[checkout:${requestId}] Invalid order total`,
-        {
-          orderId: order.id,
-          totalAmount: order.total_amount,
-        },
-      )
+    if (!Number.isFinite(totalAmount) || totalAmount <= 0) {
+      console.error(`[checkout:${requestId}] Invalid order total`, {
+        orderId: order.id,
+        totalAmount: order.total_amount,
+      })
 
       return jsonError(
         'La orden contiene un importe inválido.',
@@ -366,96 +266,20 @@ export async function POST(request: Request) {
       )
     }
 
-    /*
-     * ---------------------------------------------------------
-     * 11. Moneda
-     * ---------------------------------------------------------
-     */
-
     const currency =
-      typeof order.currency === 'string' &&
-      order.currency.trim()
+      typeof order.currency === 'string' && order.currency.trim()
         ? order.currency.trim().toUpperCase()
         : 'USD'
-
-    /*
-     * ---------------------------------------------------------
-     * 12. Crear referencia de checkout
-     * ---------------------------------------------------------
-     *
-     * En esta etapa todavía NO confirmamos el pago.
-     *
-     * La implementación definitiva debe crear aquí una
-     * Payment Intent / Checkout Session dependiendo del
-     * proveedor seleccionado.
-     */
-
-    /*
-     * TODO:
-     *
-     * const paymentSession =
-     *   await createPaymentSession({
-     *     orderId: order.id,
-     *     userId: user.id,
-     *     amount: totalAmount,
-     *     currency,
-     *     paymentMethod,
-     *     region,
-     *   })
-     *
-     * El proveedor de pagos nunca debe recibir un precio
-     * proveniente directamente del navegador.
-     *
-     * Debe recibir el importe validado de la orden.
-     */
-
-    /*
-     * ---------------------------------------------------------
-     * 13. Registrar intención de pago
-     * ---------------------------------------------------------
-     *
-     * Si existe una tabla payment_attempts/payment_transactions,
-     * este es el punto adecuado para crear el intento.
-     *
-     * Ejemplo:
-     *
-     * await supabase
-     *   .from('payment_attempts')
-     *   .insert({
-     *     order_id: order.id,
-     *     user_id: user.id,
-     *     provider: paymentMethod,
-     *     amount: totalAmount,
-     *     currency,
-     *     status: 'created',
-     *   })
-     *
-     * La tabla debe tener restricciones de integridad e
-     * idempotencia en PostgreSQL.
-     */
-
-    /*
-     * ---------------------------------------------------------
-     * 14. Respuesta
-     * ---------------------------------------------------------
-     *
-     * Actualmente devolvemos la información necesaria para
-     * conectar el proveedor de pagos.
-     *
-     * NO devolvemos credenciales privadas.
-     */
 
     return NextResponse.json(
       {
         success: true,
-
         order: {
           id: order.id,
           status: 'pending',
           amount: totalAmount,
           currency,
         },
-
         checkout: {
           provider: paymentMethod,
           region,
@@ -463,18 +287,7 @@ export async function POST(request: Request) {
           message:
             'La orden está validada y preparada para iniciar el proceso de pago.',
         },
-
-        /*
-         * Cuando integremos el gateway real:
-         *
-         * payment_url
-         * client_secret
-         * session_id
-         *
-         * se generarán exclusivamente en servidor.
-         */
         payment: null,
-
         message:
           'Checkout preparado correctamente. El pago debe confirmarse mediante el proveedor y su webhook.',
       },
