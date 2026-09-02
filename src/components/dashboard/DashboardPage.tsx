@@ -1,6 +1,7 @@
 ```tsx
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 
@@ -61,13 +62,7 @@ function DashboardCard({
 }
 
 export default function DashboardPage() {
-  const {
-    user,
-    profile,
-    loading,
-    isAdmin,
-    hasRole,
-  } = useAuth();
+  const { user, profile, loading, isAdmin, hasRole } = useAuth();
 
   if (loading) {
     return (
@@ -77,6 +72,7 @@ export default function DashboardPage() {
             <div
               className="h-10 w-10 animate-spin rounded-full border-4 border-border border-t-primary"
               aria-label="Cargando"
+              role="status"
             />
 
             <p className="text-sm font-medium text-muted-foreground">
@@ -138,10 +134,7 @@ export default function DashboardPage() {
     user.email?.split("@")[0] ||
     "Usuario";
 
-  const email =
-    profile?.email ||
-    user.email ||
-    "";
+  const email = profile?.email || user.email || "";
 
   const roleLabel = (() => {
     if (isAdmin) return "Administrador";
@@ -161,9 +154,6 @@ export default function DashboardPage() {
   return (
     <main className="min-h-[calc(100vh-4rem)] bg-background">
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
-
-        {/* HEADER */}
-
         <section className="relative overflow-hidden rounded-3xl border border-border bg-card shadow-sm">
           <div
             aria-hidden="true"
@@ -173,12 +163,14 @@ export default function DashboardPage() {
           <div className="relative p-6 sm:p-8 lg:p-10">
             <div className="flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
               <div className="flex items-start gap-4 sm:gap-5">
-                <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-primary text-lg font-black text-primary-foreground shadow-lg sm:h-16 sm:w-16">
+                <div className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-primary text-lg font-black text-primary-foreground shadow-lg sm:h-16 sm:w-16">
                   {profile?.avatarUrl ? (
-                    <img
+                    <Image
                       src={profile.avatarUrl}
                       alt={`Avatar de ${displayName}`}
-                      className="h-full w-full object-cover"
+                      fill
+                      sizes="(max-width: 640px) 56px, 64px"
+                      className="object-cover"
                     />
                   ) : (
                     displayName.charAt(0).toUpperCase()
@@ -230,8 +222,6 @@ export default function DashboardPage() {
           </div>
         </section>
 
-        {/* ACCESOS PRINCIPALES */}
-
         <section className="mt-8">
           <div className="mb-5">
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">
@@ -273,8 +263,6 @@ export default function DashboardPage() {
             />
           </div>
         </section>
-
-        {/* ÁREA COMERCIAL */}
 
         {hasCommercialRole && (
           <section className="mt-10">
@@ -324,8 +312,6 @@ export default function DashboardPage() {
           </section>
         )}
 
-        {/* ADMINISTRACIÓN */}
-
         {isAdmin && (
           <section className="mt-10">
             <div className="rounded-3xl border border-amber-500/20 bg-amber-500/[0.04] p-6 sm:p-8">
@@ -356,8 +342,6 @@ export default function DashboardPage() {
           </section>
         )}
 
-        {/* ESTADO */}
-
         <section className="mt-10">
           <div className="rounded-3xl border border-border bg-card p-6 shadow-sm sm:p-8">
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">
@@ -373,7 +357,6 @@ export default function DashboardPage() {
             </p>
           </div>
         </section>
-
       </div>
     </main>
   );
