@@ -1,18 +1,17 @@
-```gitignore
 # ============================================================
 # Credi Marketplace
 # Git ignore
 #
 # Next.js 16
 # React 19
-# TypeScript 7
+# TypeScript
 # Tailwind CSS 4
 # Supabase
 # Vitest
 # Playwright
 # Vercel
-# Node.js 24.20.0 LTS
-# npm 11.x
+# Node.js 22.x LTS
+# npm 10.x / 11.x
 # ============================================================
 
 
@@ -351,11 +350,6 @@ $RECYCLE.BIN/
 # ============================================================
 # IMPORTANT — FILES THAT MUST REMAIN VERSIONED
 # ============================================================
-#
-# Git no puede "forzar" estos archivos desde .gitignore si ya
-# existe una regla externa que los excluya. Estas excepciones
-# documentan los archivos fundamentales del proyecto.
-#
 
 !package.json
 !package-lock.json
@@ -403,4 +397,3 @@ $RECYCLE.BIN/
 # información que realmente pueda exponerse al navegador.
 #
 # ============================================================
-```
