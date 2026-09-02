@@ -9,10 +9,6 @@ import {
   type ReactNode,
 } from "react";
 
-// ==========================================================
-// TIPOS
-// ==========================================================
-
 export interface CartItem {
   id: string;
   name: string;
@@ -27,17 +23,7 @@ interface CartContextType {
   clearCart: () => void;
 }
 
-// ==========================================================
-// CONTEXTO
-// ==========================================================
-
-const CartContext = createContext<CartContextType | undefined>(
-  undefined,
-);
-
-// ==========================================================
-// PROVIDER
-// ==========================================================
+const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export function CartProvider({
   children,
@@ -46,12 +32,8 @@ export function CartProvider({
 }) {
   const [cart, setCart] = useState<CartItem[]>([]);
 
-  // ========================================================
-  // AGREGAR PRODUCTO
-  // ========================================================
-
   const addToCart = useCallback((item: CartItem) => {
-    if (!item.id || item.quantity <= 0) {
+    if (!item.id || item.quantity <= 0 || !Number.isFinite(item.price)) {
       return;
     }
 
@@ -65,8 +47,7 @@ export function CartProvider({
           cartItem.id === item.id
             ? {
                 ...cartItem,
-                quantity:
-                  cartItem.quantity + item.quantity,
+                quantity: cartItem.quantity + item.quantity,
               }
             : cartItem,
         );
@@ -76,33 +57,19 @@ export function CartProvider({
     });
   }, []);
 
-  // ========================================================
-  // ELIMINAR PRODUCTO
-  // ========================================================
-
   const removeFromCart = useCallback((id: string) => {
     if (!id) {
       return;
     }
 
     setCart((previousCart) =>
-      previousCart.filter(
-        (item) => item.id !== id,
-      ),
+      previousCart.filter((item) => item.id !== id),
     );
   }, []);
-
-  // ========================================================
-  // VACIAR CARRITO
-  // ========================================================
 
   const clearCart = useCallback(() => {
     setCart([]);
   }, []);
-
-  // ========================================================
-  // VALOR DEL CONTEXTO
-  // ========================================================
 
   const value = useMemo<CartContextType>(
     () => ({
@@ -111,12 +78,7 @@ export function CartProvider({
       removeFromCart,
       clearCart,
     }),
-    [
-      cart,
-      addToCart,
-      removeFromCart,
-      clearCart,
-    ],
+    [cart, addToCart, removeFromCart, clearCart],
   );
 
   return (
@@ -126,19 +88,12 @@ export function CartProvider({
   );
 }
 
-// ==========================================================
-// HOOK
-// ==========================================================
-
 export function useCart(): CartContextType {
   const context = useContext(CartContext);
 
   if (!context) {
-    throw new Error(
-      "useCart debe ser usado dentro de un CartProvider",
-    );
+    throw new Error("useCart debe ser usado dentro de un CartProvider");
   }
 
   return context;
 }
-```
