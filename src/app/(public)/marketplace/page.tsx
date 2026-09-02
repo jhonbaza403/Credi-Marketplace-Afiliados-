@@ -1,3 +1,4 @@
+```tsx
 // ==========================================================
 // ARCHIVO: src/app/marketplace/page.tsx
 // Credi Marketplace
@@ -21,8 +22,8 @@
 // - La seguridad real depende de RLS.
 // ==========================================================
 
-import type { Metadata } from 'next';
-import Link from 'next/link';
+import type { Metadata } from "next";
+import Link from "next/link";
 import {
   ArrowRight,
   CheckCircle2,
@@ -30,33 +31,26 @@ import {
   ShieldCheck,
   Sparkles,
   Store,
-} from 'lucide-react';
+} from "lucide-react";
 
-import { ProductCard } from '@/features/marketplace/components/ProductCard';
-import { createClient } from '@/lib/supabase/server';
+import ProductCard from "@/features/marketplace/components/ProductCard";
+import { createClient } from "@/lib/supabase/server";
 
-import type { Product } from '@/types/product';
+import type { Product } from "@/types/product";
 
 // ==========================================================
 // 1. METADATA
 // ==========================================================
 
 export const metadata: Metadata = {
-  title: 'Marketplace | Credi Marketplace',
+  title: "Marketplace | Credi Marketplace",
   description:
-    'Explora productos de vendedores verificados en Credi Marketplace.',
+    "Explora productos de vendedores verificados en Credi Marketplace.",
 };
 
 // ==========================================================
 // 2. CONFIGURACIÓN DE REVALIDACIÓN
 // ==========================================================
-//
-// Mantiene el catálogo actualizado sin consultar la base de
-// datos en cada solicitud.
-//
-// Puede ajustarse posteriormente según la frecuencia real
-// de publicación de productos.
-//
 
 export const revalidate = 60;
 
@@ -77,27 +71,24 @@ async function getProducts(): Promise<ProductsResult> {
   try {
     const supabase = await createClient();
 
-    const {
-      data,
-      error,
-    } = await supabase
-      .from('products')
-      .select('*')
-      .eq('is_active', true)
-      .order('created_at', {
+    const { data, error } = await supabase
+      .from("products")
+      .select("*")
+      .eq("is_active", true)
+      .order("created_at", {
         ascending: false,
       });
 
     if (error) {
       console.error(
-        '[MarketplacePage] Error cargando productos:',
-        error.message
+        "[MarketplacePage] Error cargando productos:",
+        error.message,
       );
 
       return {
         products: [],
         error:
-          'No fue posible cargar el catálogo en este momento.',
+          "No fue posible cargar el catálogo en este momento.",
       };
     }
 
@@ -107,14 +98,14 @@ async function getProducts(): Promise<ProductsResult> {
     };
   } catch (error: unknown) {
     console.error(
-      '[MarketplacePage] Error inesperado:',
-      error
+      "[MarketplacePage] Error inesperado:",
+      error,
     );
 
     return {
       products: [],
       error:
-        'Ocurrió un error inesperado al cargar el catálogo.',
+        "Ocurrió un error inesperado al cargar el catálogo.",
     };
   }
 }
@@ -124,24 +115,15 @@ async function getProducts(): Promise<ProductsResult> {
 // ==========================================================
 
 export default async function MarketplacePage() {
-  const {
-    products,
-    error,
-  } = await getProducts();
+  const { products, error } = await getProducts();
 
   const productCount = products.length;
 
   return (
     <main className="min-h-screen bg-[var(--background)]">
-
-      {/* ==================================================
-          HERO
-      ================================================== */}
+      {/* HERO */}
 
       <section className="relative overflow-hidden border-b border-[var(--border)]">
-
-        {/* Decoración */}
-
         <div
           aria-hidden="true"
           className="
@@ -171,11 +153,7 @@ export default async function MarketplacePage() {
         />
 
         <div className="relative mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-16 lg:px-8 lg:py-20">
-
           <div className="max-w-3xl">
-
-            {/* ETIQUETA */}
-
             <div className="inline-flex items-center gap-2 rounded-full border border-[var(--primary)]/20 bg-[var(--primary)]/5 px-3 py-1.5 text-xs font-black uppercase tracking-[0.14em] text-[var(--primary)]">
               <Sparkles
                 aria-hidden="true"
@@ -185,8 +163,6 @@ export default async function MarketplacePage() {
               Marketplace
             </div>
 
-            {/* TÍTULO */}
-
             <h1 className="mt-5 text-4xl font-black tracking-tight text-[var(--foreground)] sm:text-5xl lg:text-6xl lg:leading-[1.05]">
               Compra y descubre
               <span className="block bg-linear-to-r from-brand-600 to-cyan-500 bg-clip-text text-transparent">
@@ -194,18 +170,13 @@ export default async function MarketplacePage() {
               </span>
             </h1>
 
-            {/* DESCRIPCIÓN */}
-
             <p className="mt-5 max-w-2xl text-base leading-7 text-[var(--muted)] sm:text-lg">
               Explora productos publicados por vendedores
               y comercios que forman parte de Credi
               Marketplace.
             </p>
 
-            {/* INDICADORES */}
-
             <div className="mt-8 flex flex-wrap gap-3">
-
               <div className="inline-flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-2.5 shadow-sm">
                 <Package
                   aria-hidden="true"
@@ -218,8 +189,8 @@ export default async function MarketplacePage() {
 
                 <span className="text-sm text-[var(--muted)]">
                   {productCount === 1
-                    ? 'producto'
-                    : 'productos'}
+                    ? "producto"
+                    : "productos"}
                 </span>
               </div>
 
@@ -233,25 +204,18 @@ export default async function MarketplacePage() {
                   Vendedores verificados
                 </span>
               </div>
-
             </div>
           </div>
         </div>
       </section>
 
-      {/* ==================================================
-          CONTENIDO
-      ================================================== */}
+      {/* CONTENIDO */}
 
       <section
         aria-labelledby="catalog-title"
         className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8 lg:py-12"
       >
-
-        {/* CABECERA */}
-
         <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-
           <div>
             <div className="flex items-center gap-2">
               <Store
@@ -272,8 +236,6 @@ export default async function MarketplacePage() {
               necesitas.
             </p>
           </div>
-
-          {/* ACCIÓN */}
 
           <Link
             href="/productos"
@@ -309,10 +271,6 @@ export default async function MarketplacePage() {
             />
           </Link>
         </div>
-
-        {/* ==================================================
-            ERROR
-        ================================================== */}
 
         {error ? (
           <div
@@ -368,13 +326,7 @@ export default async function MarketplacePage() {
             </Link>
           </div>
         ) : productCount === 0 ? (
-
-          /* =================================================
-             ESTADO VACÍO
-          ================================================= */
-
           <div className="rounded-3xl border border-dashed border-[var(--border)] bg-[var(--surface-secondary)] px-6 py-16 text-center sm:px-12">
-
             <div className="mx-auto flex size-16 items-center justify-center rounded-2xl bg-[var(--primary)]/10 text-[var(--primary)]">
               <Package
                 aria-hidden="true"
@@ -393,7 +345,6 @@ export default async function MarketplacePage() {
             </p>
 
             <div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row">
-
               <Link
                 href="/"
                 className="
@@ -445,16 +396,9 @@ export default async function MarketplacePage() {
                   className="size-4"
                 />
               </Link>
-
             </div>
           </div>
-
         ) : (
-
-          /* =================================================
-             CATÁLOGO
-          ================================================= */
-
           <div
             className="
               grid
@@ -474,13 +418,8 @@ export default async function MarketplacePage() {
           </div>
         )}
 
-        {/* ==================================================
-            CONFIANZA
-        ================================================== */}
-
         {!error && productCount > 0 && (
           <div className="mt-12 grid grid-cols-1 gap-4 border-t border-[var(--border)] pt-8 sm:grid-cols-3">
-
             <div className="flex items-center gap-3 rounded-2xl bg-[var(--surface-secondary)] p-4">
               <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-500">
                 <CheckCircle2
@@ -537,10 +476,10 @@ export default async function MarketplacePage() {
                 </p>
               </div>
             </div>
-
           </div>
         )}
       </section>
     </main>
   );
 }
+```
