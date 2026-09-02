@@ -16,10 +16,6 @@ import type { UserRole } from "@/types/user";
 
 export type { UserRole };
 
-// ==========================================================
-// TIPOS
-// ==========================================================
-
 export interface Profile {
   id: string;
   email?: string | null;
@@ -29,8 +25,6 @@ export interface Profile {
   isActive?: boolean;
   createdAt?: string;
   updatedAt?: string;
-
-  // Backward-compatible database naming.
   full_name?: string | null;
   avatar_url?: string | null;
   created_at?: string;
@@ -46,17 +40,7 @@ interface AuthContextType {
   logout: () => Promise<void>;
 }
 
-// ==========================================================
-// CONTEXTO
-// ==========================================================
-
-const AuthContext = createContext<AuthContextType | undefined>(
-  undefined,
-);
-
-// ==========================================================
-// PROVIDER
-// ==========================================================
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({
   children,
@@ -67,26 +51,19 @@ export function AuthProvider({
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // ========================================================
-  // CARGAR PERFIL
-  // ========================================================
-
   const loadProfile = useCallback(async (userId: string) => {
     const supabase = createClient();
 
-    const {
-      data,
-      error,
-    } = await supabase
+    const { data, error } = await supabase
       .from("profiles")
       .select(
-        "id, email, full_name, avatar_url, role, is_active, created_at, updated_at",
+        "id,email,full_name,avatar_url,role,is_active,created_at,updated_at",
       )
       .eq("id", userId)
       .maybeSingle();
 
     if (error) {
-      console.error("Error cargando perfil:", error);
+      console.error("Error cargando perfil:", error.message);
       setProfile(null);
       return;
     }
@@ -96,7 +73,7 @@ export function AuthProvider({
       return;
     }
 
-    setProfile({
+    const nextProfile: Profile = {
       id: data.id,
       email: data.email ?? null,
       fullName: data.full_name ?? null,
@@ -105,18 +82,14 @@ export function AuthProvider({
       isActive: data.is_active ?? true,
       createdAt: data.created_at ?? undefined,
       updatedAt: data.updated_at ?? undefined,
-
-      // Backward-compatible database naming.
       full_name: data.full_name ?? null,
       avatar_url: data.avatar_url ?? null,
       created_at: data.created_at ?? undefined,
       updated_at: data.updated_at ?? undefined,
-    });
-  }, []);
+    };
 
-  // ========================================================
-  // INICIALIZACIÓN Y CAMBIOS DE AUTENTICACIÓN
-  // ========================================================
+    setProfile(nextProfile);
+  }, []);
 
   useEffect(() => {
     const supabase = createClient();
@@ -124,10 +97,7 @@ export function AuthProvider({
 
     async function initialize() {
       try {
-        const {
-          data,
-          error,
-        } = await supabase.auth.getUser();
+        const { data, error } = await supabase.auth.getUser();
 
         if (!mounted) {
           return;
@@ -138,7 +108,6 @@ export function AuthProvider({
         }
 
         const currentUser = data.user ?? null;
-
         setUser(currentUser);
 
         if (currentUser) {
@@ -147,10 +116,7 @@ export function AuthProvider({
           setProfile(null);
         }
       } catch (error) {
-        console.error(
-          "Error inicializando autenticación:",
-          error,
-        );
+        console.error("Error inicializando autenticación:", error);
 
         if (mounted) {
           setUser(null);
@@ -165,16 +131,13 @@ export function AuthProvider({
 
     void initialize();
 
-    const {
-      data: authState,
-    } = supabase.auth.onAuthStateChange(
+    const { data: authState } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         if (!mounted) {
           return;
         }
 
         const currentUser = session?.user ?? null;
-
         setUser(currentUser);
 
         if (currentUser) {
@@ -191,47 +154,25 @@ export function AuthProvider({
     };
   }, [loadProfile]);
 
-  // ========================================================
-  // ROL ADMINISTRADOR
-  // ========================================================
-
   const isAdmin = profile?.role === "admin";
 
-  // ========================================================
-  // VALIDACIÓN DE ROL
-  // ========================================================
-
   const hasRole = useCallback(
-    (role: UserRole) => {
-      return profile?.role === role || isAdmin;
-    },
+    (role: UserRole) => profile?.role === role || isAdmin,
     [profile?.role, isAdmin],
   );
 
-  // ========================================================
-  // CERRAR SESIÓN
-  // ========================================================
-
   const logout = useCallback(async () => {
     const supabase = createClient();
-
     const { error } = await supabase.auth.signOut();
 
     if (error) {
-      console.error(
-        "Error cerrando sesión:",
-        error,
-      );
+      console.error("Error cerrando sesión:", error.message);
       throw error;
     }
 
     setUser(null);
     setProfile(null);
   }, []);
-
-  // ========================================================
-  // VALOR DEL CONTEXTO
-  // ========================================================
 
   const value = useMemo<AuthContextType>(
     () => ({
@@ -242,14 +183,7 @@ export function AuthProvider({
       hasRole,
       logout,
     }),
-    [
-      user,
-      profile,
-      loading,
-      isAdmin,
-      hasRole,
-      logout,
-    ],
+    [user, profile, loading, isAdmin, hasRole, logout],
   );
 
   return (
@@ -259,19 +193,12 @@ export function AuthProvider({
   );
 }
 
-// ==========================================================
-// HOOK
-// ==========================================================
-
 export function useAuth(): AuthContextType {
   const context = useContext(AuthContext);
 
   if (!context) {
-    throw new Error(
-      "useAuth debe utilizarse dentro de AuthProvider",
-    );
+    throw new Error("useAuth debe utilizarse dentro de AuthProvider");
   }
 
   return context;
 }
-```
