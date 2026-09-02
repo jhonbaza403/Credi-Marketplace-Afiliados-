@@ -4,8 +4,6 @@
 
 # .vercelignore
 
-#
-
 # Next.js 16
 
 # React 19
@@ -21,6 +19,8 @@
 # Playwright
 
 # Vercel
+
+# Node.js 22.x LTS
 
 # ==========================================================
 
