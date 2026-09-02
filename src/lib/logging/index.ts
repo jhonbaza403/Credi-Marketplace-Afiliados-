@@ -1,6 +1,8 @@
-import type { LogContext } from "./types";
+import "server-only";
 
-type LogLevel = "info" | "warn" | "error";
+import type { LogContext, LogLevel } from "./types";
+
+export type { LogContext, LogLevel } from "./types";
 
 function serializeLog(
   level: LogLevel,
@@ -22,12 +24,7 @@ function write(
 ): void {
   const output = `${serializeLog(level, message, context)}\n`;
 
-  if (level === "error") {
-    process.stderr.write(output);
-    return;
-  }
-
-  if (level === "warn") {
+  if (level === "error" || level === "warn") {
     process.stderr.write(output);
     return;
   }
@@ -36,25 +33,15 @@ function write(
 }
 
 export const logger = {
-  info: (
-    message: string,
-    context?: LogContext,
-  ): void => {
+  info(message: string, context?: LogContext): void {
     write("info", message, context);
   },
 
-  warn: (
-    message: string,
-    context?: LogContext,
-  ): void => {
+  warn(message: string, context?: LogContext): void {
     write("warn", message, context);
   },
 
-  error: (
-    message: string,
-    context?: LogContext,
-  ): void => {
+  error(message: string, context?: LogContext): void {
     write("error", message, context);
   },
 };
-```
