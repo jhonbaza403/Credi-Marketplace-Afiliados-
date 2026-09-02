@@ -1,4 +1,3 @@
-```tsx
 // ==========================================================
 // ARCHIVO: src/components/marketplace/ShortsFeed.tsx
 // Credi Marketplace
