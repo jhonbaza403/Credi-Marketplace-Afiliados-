@@ -25,9 +25,13 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
+          cache: npm
 
-      - name: Install dependencies
-        run: npm install
+      - name: Install dependencies from lockfile
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Verify dependency tree
+        run: npm ls esbuild postcss sharp vite vitest --depth=10
 
       - name: Run Security Audit
         run: npm audit --audit-level=high
