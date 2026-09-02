@@ -295,7 +295,7 @@ function calculateProductScore(
   // Estado
   // --------------------------------------------------------
 
-  if (product.is_active) {
+  if (product.isactive) {
     score +=
       RECOMMENDATION_WEIGHTS.activeProduct;
   }
