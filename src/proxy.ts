@@ -5,7 +5,7 @@
 //
 // Route Protection Layer
 //
-// Next.js Proxy
+// Next.js 16 Proxy
 // Supabase Auth
 // RBAC Security
 // ==========================================================
@@ -18,7 +18,9 @@ import type { NextRequest } from "next/server";
 // PROXY PRINCIPAL
 // ==========================================================
 
-export async function proxy(request: NextRequest) {
+export async function proxy(
+  request: NextRequest,
+): Promise<NextResponse> {
   const response = NextResponse.next({
     request,
   });
@@ -33,10 +35,13 @@ export async function proxy(request: NextRequest) {
         },
 
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) => {
+          for (const {
+            name,
+            value,
+          } of cookiesToSet) {
             request.cookies.set(name, value);
             response.cookies.set(name, value);
-          });
+          }
         },
       },
     },
@@ -50,7 +55,7 @@ export async function proxy(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const pathname = request.nextUrl.pathname;
+  const { pathname } = request.nextUrl;
 
   // ========================================================
   // RUTAS PROTEGIDAS
@@ -62,8 +67,8 @@ export async function proxy(request: NextRequest) {
     "/cart",
   ];
 
-  const requiresAuth = protectedRoutes.some((route) =>
-    pathname.startsWith(route),
+  const requiresAuth = protectedRoutes.some(
+    (route) => pathname.startsWith(route),
   );
 
   if (requiresAuth && !user) {
@@ -83,8 +88,8 @@ export async function proxy(request: NextRequest) {
     "/reset-password",
   ];
 
-  const guestRoute = guestOnlyRoutes.some((route) =>
-    pathname.startsWith(route),
+  const guestRoute = guestOnlyRoutes.some(
+    (route) => pathname.startsWith(route),
   );
 
   if (guestRoute && user) {
