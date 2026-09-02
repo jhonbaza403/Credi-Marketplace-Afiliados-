@@ -1,65 +1,40 @@
 // ==========================================================
 // Input Sanitization
+// Credi Marketplace
 // ==========================================================
 
-
-
 export function sanitizeInput(
- value:string
-){
-
- return value
-
- .trim()
-
- .replace(
-  /<script.*?>.*?<\/script>/gi,
-  ''
- )
-
- .replace(
-  /[<>]/g,
-  ''
-
- );
-
+  value: string,
+): string {
+  return value
+    .trim()
+    .replace(
+      /<script.*?>.*?<\/script>/gis,
+      "",
+    )
+    .replace(
+      /[<>]/g,
+      "",
+    );
 }
 
-
-
-
-
 export function sanitizeObject<
-T extends Record<string,unknown>
+  T extends Record<string, unknown>,
 >(
- object:T
-){
+  object: T,
+): T {
+  const result: Partial<T> = {};
 
- const result = {} as T;
+  for (const key of Object.keys(object) as Array<
+    Extract<keyof T, string>
+  >) {
+    const value = object[key];
 
+    result[key] =
+      typeof value === "string"
+        ? (sanitizeInput(value) as T[typeof key])
+        : (value as T[typeof key]);
+  }
 
-
- for(
-  const key
-  in object
- ){
-
-  const value =
-  object[key];
-
-
-
-  result[key] =
-   typeof value === 'string'
-
-   ? sanitizeInput(value)
-
-   : value as T[Extract<keyof T,string>];
-
- }
-
-
-
- return result;
-
+  return result as T;
 }
