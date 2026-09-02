@@ -1,4 +1,3 @@
-```ts
 import {
   createServerClient,
 } from "@supabase/ssr";
