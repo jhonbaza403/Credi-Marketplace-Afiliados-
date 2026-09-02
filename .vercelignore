@@ -1,70 +1,89 @@
-```gitignore
 # ==========================================================
+
 # Credi Marketplace
-# .gitignore
+
+# .vercelignore
+
 #
+
 # Next.js 16
+
 # React 19
+
 # TypeScript
+
 # Tailwind CSS 4
+
 # Supabase
+
 # Vitest
+
 # Playwright
+
 # Vercel
-# ==========================================================
-
 
 # ==========================================================
-# DEPENDENCIAS
+
+# ==========================================================
+
+# DEPENDENCIAS Y BUILDS LOCALES
+
 # ==========================================================
 
 node_modules/
-.pnp/
-.pnp.js
-
-
-# ==========================================================
-# NEXT.JS
-# ==========================================================
-
 .next/
 out/
-.vercel/
-
+dist/
+build/
 
 # ==========================================================
+
+# VERCEL
+
+# ==========================================================
+
+.vercel/
+
+# ==========================================================
+
 # TYPESCRIPT
+
 # ==========================================================
 
 *.tsbuildinfo
 
-
 # ==========================================================
+
 # TESTING
+
 # ==========================================================
 
 coverage/
+.nyc_output/
 playwright-report/
 test-results/
-
-.nyc_output/
-
+blob-report/
+.vitest/
 
 # ==========================================================
+
 # SUPABASE LOCAL
+
 # ==========================================================
 
 supabase/.branches/
 supabase/.temp/
 
-# Archivos locales generados por Supabase CLI
-supabase/.gitignore
-
-
 # ==========================================================
-# ENVIRONMENT VARIABLES
+
+# VARIABLES DE ENTORNO
+
 #
-# Nunca subir secretos al repositorio.
+
+# Nunca enviar secretos al deployment.
+
+# .env.example sí debe permanecer disponible.
+
 # ==========================================================
 
 .env
@@ -72,34 +91,31 @@ supabase/.gitignore
 .env.development.local
 .env.test.local
 .env.production.local
-
-# Archivos de entorno alternativos
 .env.*.local
 
-# Mantener la plantilla pública
 !.env.example
 
-
 # ==========================================================
-# SECRETOS / CREDENCIALES
+
+# SECRETOS Y CREDENCIALES
+
 # ==========================================================
 
 *.pem
 *.key
-*.crt
 *.p12
 *.pfx
 
 credentials.json
 service-account.json
 service-account-key.json
-
 secrets.json
 secrets.local.json
 
-
 # ==========================================================
+
 # LOGS
+
 # ==========================================================
 
 *.log
@@ -110,21 +126,11 @@ pnpm-debug.log*
 lerna-debug.log*
 
 logs/
-*.log.*
-
 
 # ==========================================================
-# DEBUG / REPORTES
-# ==========================================================
 
-debug/
-reports/
-tmp/
-temp/
-
-
-# ==========================================================
 # CACHE
+
 # ==========================================================
 
 .cache/
@@ -133,9 +139,26 @@ temp/
 .turbo/
 .vite/
 
+# ==========================================================
+
+# DEBUG Y ARCHIVOS TEMPORALES LOCALES
 
 # ==========================================================
-# OS / SISTEMA
+
+debug/
+tmp/
+temp/
+
+*.tmp
+*.temp
+*.bak
+*.backup
+*.old
+
+# ==========================================================
+
+# SISTEMA OPERATIVO
+
 # ==========================================================
 
 .DS_Store
@@ -150,9 +173,10 @@ $RECYCLE.BIN/
 *.swo
 *~
 
-
 # ==========================================================
+
 # EDITORES / IDE
+
 # ==========================================================
 
 .vscode/*
@@ -163,75 +187,22 @@ $RECYCLE.BIN/
 
 .idea/
 *.iml
-
 *.sublime-project
 *.sublime-workspace
 
-
-# ==========================================================
-# ARCHIVOS TEMPORALES
 # ==========================================================
 
-*.tmp
-*.temp
-*.bak
-*.backup
-*.old
+# DOCKER — OVERRIDES LOCALES
 
-
-# ==========================================================
-# ARCHIVOS GENERADOS
-# ==========================================================
-
-dist/
-build/
-
-*.generated.*
-generated/
-
-
-# ==========================================================
-# COBERTURA Y TEST ARTIFACTS
-# ==========================================================
-
-*.lcov
-.nyc_output/
-coverage-final.json
-
-
-# ==========================================================
-# PLAYWRIGHT
-# ==========================================================
-
-playwright-report/
-test-results/
-blob-report/
-
-
-# ==========================================================
-# VITEST
-# ==========================================================
-
-.vitest/
-
-
-# ==========================================================
-# VERCEL
-# ==========================================================
-
-.vercel/
-
-
-# ==========================================================
-# DOCKER / LOCAL OVERRIDES
 # ==========================================================
 
 docker-compose.override.yml
 docker-compose.local.yml
 
-
 # ==========================================================
-# BACKUPS Y ARCHIVOS COMPRIMIDOS LOCALES
+
+# ARCHIVOS COMPRIMIDOS LOCALES
+
 # ==========================================================
 
 *.zip
@@ -240,9 +211,10 @@ docker-compose.local.yml
 *.tgz
 *.rar
 
-
 # ==========================================================
+
 # BASES DE DATOS LOCALES
+
 # ==========================================================
 
 *.sqlite
@@ -250,9 +222,10 @@ docker-compose.local.yml
 *.db
 *.db-journal
 
-
 # ==========================================================
-# ARCHIVOS DE SISTEMA / SECRETOS LOCALES
+
+# SECRETOS / CONFIGURACIÓN LOCAL
+
 # ==========================================================
 
 .local/
@@ -260,39 +233,57 @@ docker-compose.local.yml
 .secret/
 .secret.*
 
-
-# ==========================================================
-# CREDI MARKETPLACE — ARCHIVOS LOCALES
-# ==========================================================
-
 .dev.vars
 .dev.vars.*
 .local.env
 .local.env.*
 
+# ==========================================================
+
+# IMPORTANTE
+
+#
+
+# NO ignorar:
+
+#
+
+# package.json
+
+# package-lock.json
+
+# next.config.ts
+
+# tsconfig.json
+
+# eslint.config.mjs
+
+# postcss.config.mjs
+
+# playwright.config.ts
+
+# vitest.config.ts
+
+# .nvmrc
+
+# .env.example
+
+# supabase/config.toml
+
+# supabase/migrations/
+
+# supabase/tests/
+
+# src/
+
+# public/
+
+#
+
+# Estos archivos pueden ser necesarios para el proyecto,
+
+# el build, las pruebas o las migraciones y no deben quedar
+
+# excluidos accidentalmente por .vercelignore.
 
 # ==========================================================
-# IMPORTANTE
-#
-# NO ignorar:
-#
-# package.json
-# package-lock.json
-# next.config.ts
-# tsconfig.json
-# eslint.config.mjs
-# postcss.config.mjs
-# playwright.config.ts
-# vitest.config.ts
-# .nvmrc
-# .env.example
-# supabase/config.toml
-# supabase/migrations/
-# supabase/tests/
-# src/
-# public/
-#
-# Estos archivos forman parte del proyecto y deben permanecer
-# versionados cuando corresponda.
-# ==========================================================
-```
