@@ -2,10 +2,7 @@
 
 import { useCallback, useState } from "react";
 
-import type {
-  Product,
-  ProductSummary,
-} from "@/types/product";
+import type { ProductSummary } from "@/types/product";
 
 interface UseProductsOptions {
   initialProducts?: ProductSummary[];
@@ -21,15 +18,12 @@ interface UseProductsResult {
 export function useProducts(
   options: UseProductsOptions = {},
 ): UseProductsResult {
-  const [products, setProducts] = useState<
-    ProductSummary[]
-  >(options.initialProducts ?? []);
+  const [products, setProducts] = useState<ProductSummary[]>(
+    options.initialProducts ?? [],
+  );
 
   const [loading, setLoading] = useState(false);
-
-  const [error, setError] = useState<string | null>(
-    null,
-  );
+  const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -45,9 +39,7 @@ export function useProducts(
       });
 
       if (!response.ok) {
-        throw new Error(
-          "No fue posible cargar los productos",
-        );
+        throw new Error("No fue posible cargar los productos");
       }
 
       const data: unknown = await response.json();
@@ -56,23 +48,17 @@ export function useProducts(
         typeof data === "object" &&
         data !== null &&
         "products" in data &&
-        Array.isArray(
-          (data as { products?: unknown }).products,
-        )
+        Array.isArray((data as { products?: unknown }).products)
       ) {
         setProducts(
-          (data as {
-            products: ProductSummary[];
-          }).products,
+          (data as { products: ProductSummary[] }).products,
         );
       } else {
         setProducts([]);
       }
     } catch (err) {
       setError(
-        err instanceof Error
-          ? err.message
-          : "Error desconocido",
+        err instanceof Error ? err.message : "Error desconocido",
       );
     } finally {
       setLoading(false);
