@@ -4,12 +4,14 @@
 //
 // Credi Marketplace
 //
-// Configuración de Vitest
+// Configuración de Vitest para pruebas unitarias
 //
-// Next.js 16
-// React 19
-// TypeScript
-// Tailwind CSS 4
+// Stack:
+// - Next.js 16
+// - React 19
+// - TypeScript
+// - Tailwind CSS 4
+// - Supabase
 // ==========================================================
 
 import { defineConfig } from "vitest/config";
@@ -18,107 +20,174 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 // ==========================================================
-// RUTA DEL PROYECTO
+// RUTAS
 // ==========================================================
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+const rootDir = __dirname;
+const srcDir = path.resolve(rootDir, "src");
+const testsDir = path.resolve(rootDir, "tests");
 
 // ==========================================================
 // CONFIGURACIÓN
 // ==========================================================
 
 export default defineConfig({
-  // --------------------------------------------------------
-  // React / TSX
-  // --------------------------------------------------------
+// --------------------------------------------------------
+// Directorio raíz
+// --------------------------------------------------------
 
-  plugins: [
-    react(),
+root: rootDir,
+
+// --------------------------------------------------------
+// React / TSX
+// --------------------------------------------------------
+
+plugins: [
+react(),
+],
+
+// --------------------------------------------------------
+// Resolución de módulos
+// --------------------------------------------------------
+
+resolve: {
+alias: {
+"@": srcDir,
+},
+},
+
+// --------------------------------------------------------
+// TEST
+// --------------------------------------------------------
+
+test: {
+// Entorno DOM para componentes React.
+environment: "jsdom",
+
+```
+// Permite utilizar describe(), it(), expect(), etc.
+// sin importarlos manualmente.
+globals: true,
+
+// ------------------------------------------------------
+// Inicialización
+// ------------------------------------------------------
+
+setupFiles: [
+  path.resolve(testsDir, "unit/setup.ts"),
+],
+
+// ------------------------------------------------------
+// Archivos incluidos
+// ------------------------------------------------------
+
+include: [
+  "tests/unit/**/*.test.ts",
+  "tests/unit/**/*.test.tsx",
+],
+
+// ------------------------------------------------------
+// Exclusiones
+// ------------------------------------------------------
+
+exclude: [
+  "node_modules/**",
+  ".git/**",
+  ".next/**",
+  ".vercel/**",
+  "coverage/**",
+  "dist/**",
+  "build/**",
+  "out/**",
+  "playwright-report/**",
+  "test-results/**",
+],
+
+// ------------------------------------------------------
+// Aislamiento
+// ------------------------------------------------------
+
+isolate: true,
+
+// ------------------------------------------------------
+// Mocks
+// ------------------------------------------------------
+
+clearMocks: true,
+mockReset: true,
+restoreMocks: true,
+
+// ------------------------------------------------------
+// Reportes
+// ------------------------------------------------------
+
+reporters: [
+  "default",
+],
+
+// ------------------------------------------------------
+// Cobertura
+// ------------------------------------------------------
+
+coverage: {
+  provider: "v8",
+
+  reporter: [
+    "text",
+    "html",
+    "lcov",
   ],
 
-  // --------------------------------------------------------
-  // Resolución de módulos
-  // --------------------------------------------------------
+  reportsDirectory: path.resolve(
+    rootDir,
+    "coverage",
+  ),
 
-  resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./src"),
-    },
+  // ----------------------------------------------------
+  // Archivos excluidos de cobertura
+  // ----------------------------------------------------
+
+  exclude: [
+    "**/*.d.ts",
+    "**/index.ts",
+    "**/index.tsx",
+
+    // Configuración
+    "**/*.config.{ts,js,mjs,cjs}",
+
+    // Next.js
+    "**/next-env.d.ts",
+    "**/.next/**",
+
+    // Dependencias
+    "**/node_modules/**",
+
+    // Tests
+    "**/*.test.{ts,tsx}",
+    "**/*.spec.{ts,tsx}",
+    "tests/**",
+
+    // Tipos / mocks
+    "**/__mocks__/**",
+    "**/*.types.ts",
+    "**/*.types.tsx",
+  ],
+
+  // ----------------------------------------------------
+  // Umbrales mínimos
+  // ----------------------------------------------------
+
+  thresholds: {
+    lines: 70,
+    functions: 70,
+    branches: 60,
+    statements: 70,
   },
+},
+```
 
-  // --------------------------------------------------------
-  // TEST
-  // --------------------------------------------------------
-
-  test: {
-    environment: "jsdom",
-
-    globals: true,
-
-    setupFiles: [
-      "./tests/unit/setup.ts",
-    ],
-
-    include: [
-      "tests/unit/**/*.test.{ts,tsx}",
-    ],
-
-    exclude: [
-      "node_modules",
-      ".git",
-      ".next",
-      "coverage",
-      "dist",
-    ],
-
-    // ------------------------------------------------------
-    // Limpieza entre pruebas
-    // ------------------------------------------------------
-
-    clearMocks: true,
-    mockReset: true,
-    restoreMocks: true,
-
-    // ------------------------------------------------------
-    // Reporte
-    // ------------------------------------------------------
-
-    reporters: [
-      "default",
-    ],
-
-    // ------------------------------------------------------
-    // Cobertura
-    // ------------------------------------------------------
-
-    coverage: {
-      provider: "v8",
-
-      reporter: [
-        "text",
-        "html",
-        "lcov",
-      ],
-
-      reportsDirectory: "./coverage",
-
-      exclude: [
-        "**/*.d.ts",
-        "**/index.ts",
-        "**/index.tsx",
-        "**/*.config.{ts,js,mjs,cjs}",
-        "**/next-env.d.ts",
-        "**/.next/**",
-        "**/node_modules/**",
-      ],
-
-      thresholds: {
-        lines: 70,
-        functions: 70,
-        branches: 60,
-        statements: 70,
-      },
-    },
-  },
+},
 });
