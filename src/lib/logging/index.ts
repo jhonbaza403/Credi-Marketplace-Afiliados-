@@ -1,4 +1,3 @@
-```ts
 import type { LogContext } from "./types";
 
 type LogLevel = "info" | "warn" | "error";
