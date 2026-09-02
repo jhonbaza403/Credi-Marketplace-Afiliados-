@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 
-import type {
-  PaymentProvider,
-} from "@/lib/payments/types";
+import type { PaymentProvider } from "@/lib/payments/types";
+import { logger } from "@/lib/logging";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -16,9 +15,7 @@ interface WebhookPayload {
   status?: unknown;
 }
 
-function isPaymentProvider(
-  value: unknown,
-): value is PaymentProvider {
+function isPaymentProvider(value: unknown): value is PaymentProvider {
   return (
     value === "paypal" ||
     value === "binance_pay" ||
@@ -31,8 +28,7 @@ export async function POST(request: Request) {
   const requestId = crypto.randomUUID();
 
   try {
-    const body =
-      (await request.json()) as WebhookPayload;
+    const body = (await request.json()) as WebhookPayload;
 
     if (!isPaymentProvider(body.provider)) {
       return NextResponse.json(
@@ -44,7 +40,7 @@ export async function POST(request: Request) {
       );
     }
 
-    if (typeof body.event_id !== "string") {
+    if (typeof body.event_id !== "string" || body.event_id.trim() === "") {
       return NextResponse.json(
         {
           success: false,
@@ -54,46 +50,15 @@ export async function POST(request: Request) {
       );
     }
 
-    /*
-     * MUY IMPORTANTE:
-     *
-     * Esta implementación NO debe marcar pagos
-     * como completados todavía.
-     *
-     * Cada proveedor requiere una verificación
-     * criptográfica distinta.
-     *
-     * Ejemplo:
-     *
-     * PayPal:
-     *   verificar firma/evento contra API de PayPal.
-     *
-     * Binance Pay:
-     *   verificar autenticidad según su mecanismo
-     *   oficial.
-     *
-     * USDT:
-     *   verificar on-chain la transacción,
-     *   blockchain, token, cantidad,
-     *   dirección receptora y confirmations.
-     */
-
-    console.warn(
-      `[payment-webhook:${requestId}] Evento recibido pendiente de verificación`,
-      {
+    logger.warn("Webhook de pago recibido pendiente de verificación", {
+      requestId,
+      action: "payment_webhook_received",
+      metadata: {
         provider: body.provider,
         eventId: body.event_id,
         eventType: body.event_type,
       },
-    );
-
-    /*
-     * Próximo paso:
-     *
-     * process_verified_payment_webhook(...)
-     *
-     * mediante RPC idempotente.
-     */
+    });
 
     return NextResponse.json(
       {
@@ -108,20 +73,18 @@ export async function POST(request: Request) {
       },
     );
   } catch (error) {
-    console.error(
-      `[payment-webhook:${requestId}] Error procesando webhook`,
-      error,
-    );
+    logger.error("Error procesando webhook de pago", {
+      requestId,
+      action: "payment_webhook_error",
+      metadata: error instanceof Error ? error.message : "Unknown error",
+    });
 
     return NextResponse.json(
       {
         success: false,
         error: "Webhook inválido.",
       },
-      {
-        status: 400,
-      },
+      { status: 400 },
     );
   }
 }
-```
