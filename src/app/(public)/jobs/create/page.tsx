@@ -6,8 +6,6 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { createClient } from '@/lib/supabase/client';
 
-const supabase = createClient();
-
 interface JobFormData {
   title: string;
   company: string;
@@ -120,6 +118,10 @@ export default function CreateJobPage() {
     setLoading(true);
 
     try {
+      // Crear el cliente únicamente en respuesta a una acción del usuario.
+      // Esto evita ejecutar createBrowserClient durante el prerender del build.
+      const supabase = createClient();
+
       const { error: insertError } = await supabase
         .from('jobs')
         .insert({
@@ -140,10 +142,6 @@ export default function CreateJobPage() {
         'La oferta de empleo fue publicada correctamente.'
       );
 
-      /*
-       * Dejamos un pequeño margen para que el usuario
-       * pueda ver el mensaje de confirmación.
-       */
       window.setTimeout(() => {
         router.push('/jobs');
         router.refresh();
@@ -183,7 +181,6 @@ export default function CreateJobPage() {
   return (
     <main className="min-h-screen bg-background px-4 py-10 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-3xl">
-        {/* Encabezado */}
         <header className="mb-8">
           <div className="mb-3 inline-flex items-center rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-primary">
             Credi Marketplace · Empleo
@@ -200,7 +197,6 @@ export default function CreateJobPage() {
           </p>
         </header>
 
-        {/* Formulario */}
         <section
           aria-labelledby="job-form-title"
           className="overflow-hidden rounded-3xl border border-border bg-card text-card-foreground shadow-sm"
@@ -223,7 +219,6 @@ export default function CreateJobPage() {
             className="space-y-6 px-6 py-6 sm:px-8 sm:py-8"
             noValidate
           >
-            {/* Mensaje de error */}
             {error && (
               <div
                 role="alert"
@@ -239,7 +234,6 @@ export default function CreateJobPage() {
               </div>
             )}
 
-            {/* Mensaje de éxito */}
             {success && (
               <div
                 role="status"
@@ -255,7 +249,6 @@ export default function CreateJobPage() {
               </div>
             )}
 
-            {/* Título */}
             <div>
               <label
                 htmlFor="job-title"
@@ -287,7 +280,6 @@ export default function CreateJobPage() {
               />
             </div>
 
-            {/* Empresa */}
             <div>
               <label
                 htmlFor="company"
@@ -315,7 +307,6 @@ export default function CreateJobPage() {
               />
             </div>
 
-            {/* Ubicación + salario */}
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
               <div>
                 <label
@@ -368,7 +359,6 @@ export default function CreateJobPage() {
               </div>
             </div>
 
-            {/* Descripción */}
             <div>
               <div className="flex items-center justify-between gap-4">
                 <label
@@ -407,7 +397,6 @@ export default function CreateJobPage() {
               />
             </div>
 
-            {/* Información de seguridad */}
             <div className="rounded-2xl border border-border bg-muted/40 px-4 py-4">
               <div className="flex gap-3">
                 <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
@@ -429,7 +418,6 @@ export default function CreateJobPage() {
               </div>
             </div>
 
-            {/* Acciones */}
             <div className="flex flex-col-reverse gap-3 border-t border-border pt-6 sm:flex-row sm:justify-end">
               <button
                 type="button"
@@ -455,7 +443,6 @@ export default function CreateJobPage() {
           </form>
         </section>
 
-        {/* Nota inferior */}
         <p className="mt-5 text-center text-xs leading-5 text-muted-foreground">
           Al publicar una oferta confirmas que la información
           proporcionada es correcta y corresponde a una
