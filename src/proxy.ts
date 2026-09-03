@@ -2,7 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import type { CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-import { env } from "@/lib/env";
+import { env } from "@/env";
 
 const PROTECTED_PREFIXES = [
   "/dashboard",
@@ -17,9 +17,13 @@ const GUEST_ONLY_PREFIXES = [
   "/forgot-password",
 ] as const;
 
-function matchesPrefix(pathname: string, prefixes: readonly string[]): boolean {
+function matchesPrefix(
+  pathname: string,
+  prefixes: readonly string[],
+): boolean {
   return prefixes.some(
-    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+    (prefix) =>
+      pathname === prefix || pathname.startsWith(`${prefix}/`),
   );
 }
 
@@ -38,8 +42,8 @@ export async function proxy(request: NextRequest) {
   const response = NextResponse.next({ request });
 
   const supabase = createServerClient(
-    env.supabaseUrl,
-    env.supabasePublishableKey,
+    env.NEXT_PUBLIC_SUPABASE_URL,
+    env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
     {
       cookies: {
         getAll() {
@@ -66,13 +70,13 @@ export async function proxy(request: NextRequest) {
     error,
   } = await supabase.auth.getUser();
 
+  const { pathname } = request.nextUrl;
+
   if (error) {
-    return matchesPrefix(request.nextUrl.pathname, PROTECTED_PREFIXES)
+    return matchesPrefix(pathname, PROTECTED_PREFIXES)
       ? buildLoginRedirect(request)
       : response;
   }
-
-  const { pathname } = request.nextUrl;
 
   if (matchesPrefix(pathname, PROTECTED_PREFIXES) && !user) {
     return buildLoginRedirect(request);
