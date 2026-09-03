@@ -23,27 +23,15 @@ import type { AuthResponse, User } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/client';
 import type { UserRole } from '@/types/user';
 
-const supabase = createClient();
-
-// ==========================================================
-// CONSTANTES
-// ==========================================================
+const getSupabase = () => createClient();
 
 const DEFAULT_USER_ROLE: UserRole = 'customer';
-
-// ==========================================================
-// TIPOS
-// ==========================================================
 
 export interface SignUpUserResult {
   user: User | null;
   session: AuthResponse['data']['session'];
   needsEmailConfirmation: boolean;
 }
-
-// ==========================================================
-// VALIDACIÓN INTERNA
-// ==========================================================
 
 function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
@@ -53,23 +41,6 @@ function normalizeFullName(fullName: string): string {
   return fullName.trim().replace(/\s+/g, ' ');
 }
 
-// ==========================================================
-// REGISTRO
-// ==========================================================
-
-/**
- * Registra un nuevo usuario en Supabase Auth.
- *
- * El usuario se crea inicialmente con el rol `customer`.
- *
- * IMPORTANTE:
- * El rol enviado en metadata es solamente informativo.
- * La autorización real debe depender de:
- *
- * public.profiles.role
- *
- * y de las políticas RLS de Supabase.
- */
 export async function signUpUser(
   email: string,
   password: string,
@@ -95,25 +66,15 @@ export async function signUpUser(
       ? window.location.origin
       : undefined;
 
-  const { data, error } = await supabase.auth.signUp({
+  const { data, error } = await getSupabase().auth.signUp({
     email: normalizedEmail,
     password,
     options: {
       emailRedirectTo: origin
         ? `${origin}/auth/callback`
         : undefined,
-
       data: {
         full_name: normalizedFullName,
-
-        /**
-         * Este valor NO constituye una autorización.
-         *
-         * El trigger de Supabase crea el perfil con:
-         * role = 'customer'
-         *
-         * según el esquema de base de datos.
-         */
         initial_role: DEFAULT_USER_ROLE,
       },
     },
@@ -131,15 +92,6 @@ export async function signUpUser(
   };
 }
 
-// ==========================================================
-// INICIO DE SESIÓN
-// ==========================================================
-
-/**
- * Inicia sesión mediante correo electrónico y contraseña.
- *
- * Supabase administra la sesión y las cookies correspondientes.
- */
 export async function signInUser(
   email: string,
   password: string,
@@ -155,7 +107,7 @@ export async function signInUser(
   }
 
   const { data, error } =
-    await supabase.auth.signInWithPassword({
+    await getSupabase().auth.signInWithPassword({
       email: normalizedEmail,
       password,
     });
@@ -167,45 +119,21 @@ export async function signInUser(
   return data;
 }
 
-// ==========================================================
-// CIERRE DE SESIÓN
-// ==========================================================
-
-/**
- * Cierra la sesión actual.
- */
 export async function signOutUser(): Promise<void> {
-  const { error } = await supabase.auth.signOut();
+  const { error } = await getSupabase().auth.signOut();
 
   if (error) {
     throw error;
   }
 }
 
-// ==========================================================
-// USUARIO ACTUAL
-// ==========================================================
-
-/**
- * Obtiene el usuario autenticado actualmente.
- *
- * Se utiliza getUser() y no getSession() para obtener
- * información autenticada validada por Supabase Auth.
- */
 export async function getCurrentUser(): Promise<User | null> {
   const {
     data: { user },
     error,
-  } = await supabase.auth.getUser();
+  } = await getSupabase().auth.getUser();
 
   if (error) {
-    /**
-     * Una sesión inexistente no debe convertirse
-     * automáticamente en una excepción de aplicación.
-     *
-     * Supabase puede devolver AuthSessionMissingError
-     * cuando no existe una sesión activa.
-     */
     if (error.name === 'AuthSessionMissingError') {
       return null;
     }
@@ -216,24 +144,11 @@ export async function getCurrentUser(): Promise<User | null> {
   return user;
 }
 
-// ==========================================================
-// SESIÓN ACTUAL
-// ==========================================================
-
-/**
- * Obtiene la sesión actual del navegador.
- *
- * Esta función está pensada principalmente para componentes
- * de interfaz donde se necesita conocer el estado de sesión.
- *
- * Para decisiones sensibles de autorización se debe utilizar
- * getUser() y las políticas RLS correspondientes.
- */
 export async function getCurrentSession() {
   const {
     data: { session },
     error,
-  } = await supabase.auth.getSession();
+  } = await getSupabase().auth.getSession();
 
   if (error) {
     throw error;
@@ -242,17 +157,6 @@ export async function getCurrentSession() {
   return session;
 }
 
-// ==========================================================
-// ROL DEL USUARIO
-// ==========================================================
-
-/**
- * Obtiene el rol real almacenado en public.profiles.
- *
- * NO utiliza user_metadata para determinar privilegios.
- *
- * La base de datos es la fuente de verdad del RBAC.
- */
 export async function getCurrentUserRole(): Promise<UserRole | null> {
   const user = await getCurrentUser();
 
@@ -260,7 +164,7 @@ export async function getCurrentUserRole(): Promise<UserRole | null> {
     return null;
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from('profiles')
     .select('role')
     .eq('id', user.id)
@@ -273,15 +177,6 @@ export async function getCurrentUserRole(): Promise<UserRole | null> {
   return (data?.role as UserRole | null) ?? null;
 }
 
-// ==========================================================
-// PERFIL ACTUAL
-// ==========================================================
-
-/**
- * Obtiene el perfil completo del usuario autenticado.
- *
- * El registro procede de public.profiles.
- */
 export async function getCurrentUserProfile() {
   const user = await getCurrentUser();
 
@@ -289,7 +184,7 @@ export async function getCurrentUserProfile() {
     return null;
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from('profiles')
     .select(
       `
