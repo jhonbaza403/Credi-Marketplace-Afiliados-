@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="520" viewBox="0 0 1200 520" role="img" aria-labelledby="title desc">
+  <title id="title">Credi Marketplace robots policy</title>
+  <desc id="desc">Vector overview of public crawling and protected application paths.</desc>
+  <rect width="1200" height="520" fill="#f8fafc"/>
+  <g font-family="Arial, Helvetica, sans-serif">
+    <text x="600" y="65" text-anchor="middle" font-size="28" font-weight="700" fill="#0f172a">Credi Marketplace — Robots Policy</text>
+    <text x="600" y="95" text-anchor="middle" font-size="15" fill="#475569">Indexación pública controlada · áreas privadas excluidas</text>
+    <rect x="90" y="150" width="300" height="250" rx="18" fill="#fff" stroke="#0f172a" stroke-width="2"/>
+    <text x="240" y="200" text-anchor="middle" font-size="22" font-weight="700" fill="#0f172a">Public</text>
+    <text x="115" y="240" font-size="15" fill="#475569">User-agent: *</text>
+    <text x="115" y="270" font-size="15" fill="#475569">Allow: /</text>
+    <text x="115" y="315" font-size="15" fill="#475569">Sitemap:</text>
+    <text x="115" y="342" font-size="13" fill="#475569">credi-marketplace.com/</text>
+    <text x="115" y="364" font-size="13" fill="#475569">sitemap.xml</text>
+    <rect x="450" y="150" width="300" height="250" rx="18" fill="#fff" stroke="#0f172a" stroke-width="2"/>
+    <text x="600" y="200" text-anchor="middle" font-size="22" font-weight="700" fill="#0f172a">Protected</text>
+    <text x="480" y="240" font-size="15" fill="#475569">/admin/</text>
+    <text x="480" y="268" font-size="15" fill="#475569">/dashboard/</text>
+    <text x="480" y="296" font-size="15" fill="#475569">/account/</text>
+    <text x="480" y="324" font-size="15" fill="#475569">/checkout/</text>
+    <text x="480" y="352" font-size="15" fill="#475569">/api/</text>
+    <text x="480" y="380" font-size="15" fill="#475569">/auth/ · /_next/</text>
+    <rect x="810" y="150" width="300" height="250" rx="18" fill="#fff" stroke="#0f172a" stroke-width="2"/>
+    <text x="960" y="200" text-anchor="middle" font-size="22" font-weight="700" fill="#0f172a">Purpose</text>
+    <text x="835" y="245" font-size="15" fill="#475569">Reduce indexing of private</text>
+    <text x="835" y="272" font-size="15" fill="#475569">application surfaces and</text>
+    <text x="835" y="299" font-size="15" fill="#475569">keep the public catalog</text>
+    <text x="835" y="326" font-size="15" fill="#475569">discoverable.</text>
+    <text x="835" y="365" font-size="14" fill="#475569">Security is enforced by auth/RLS,</text>
+    <text x="835" y="388" font-size="14" fill="#475569">not by robots.txt alone.</text>
+  </g>
+</svg>
