@@ -21,7 +21,7 @@
     "test:e2e:debug": "playwright test --debug",
     "test:e2e:report": "playwright show-report",
     "verify:structure": "node scripts-verify.mjs",
-    "check": "npm run lint && npm run typecheck && npm run test",
+    "check": "npm run verify:structure && npm run lint && npm run typecheck && npm run test",
     "check:all": "npm run check && npm run test:e2e && npm run build",
     "security:audit": "npm audit --audit-level=high"
   },
