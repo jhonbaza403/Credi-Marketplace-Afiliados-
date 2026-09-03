@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="520" viewBox="0 0 1200 520" role="img" aria-labelledby="title desc">
+  <title id="title">Credi Marketplace API architecture</title>
+  <desc id="desc">Browser requests pass through Next.js, authentication and authorization, domain services, Supabase and PostgreSQL, then return a safe response.</desc>
+  <rect width="1200" height="520" fill="#f8fafc"/>
+  <g font-family="Arial, Helvetica, sans-serif" text-anchor="middle">
+    <rect x="60" y="190" width="170" height="90" rx="16" fill="#ffffff" stroke="#0f172a" stroke-width="2"/>
+    <text x="145" y="230" font-size="22" fill="#0f172a">Browser</text>
+    <text x="145" y="257" font-size="14" fill="#475569">Input no confiable</text>
+
+    <rect x="300" y="160" width="190" height="150" rx="16" fill="#ffffff" stroke="#0f172a" stroke-width="2"/>
+    <text x="395" y="202" font-size="21" fill="#0f172a">Next.js</text>
+    <text x="395" y="229" font-size="14" fill="#475569">App Router</text>
+    <text x="395" y="254" font-size="14" fill="#475569">Route Handlers</text>
+    <text x="395" y="279" font-size="14" fill="#475569">Server boundary</text>
+
+    <rect x="560" y="135" width="210" height="200" rx="16" fill="#ffffff" stroke="#0f172a" stroke-width="2"/>
+    <text x="665" y="177" font-size="21" fill="#0f172a">Security</text>
+    <text x="665" y="207" font-size="14" fill="#475569">Authentication</text>
+    <text x="665" y="233" font-size="14" fill="#475569">Authorization</text>
+    <text x="665" y="259" font-size="14" fill="#475569">Validation</text>
+    <text x="665" y="285" font-size="14" fill="#475569">Rate / abuse controls</text>
+    <text x="665" y="311" font-size="14" fill="#475569">Request ID</text>
+
+    <rect x="840" y="135" width="190" height="200" rx="16" fill="#ffffff" stroke="#0f172a" stroke-width="2"/>
+    <text x="935" y="177" font-size="21" fill="#0f172a">Domain</text>
+    <text x="935" y="207" font-size="14" fill="#475569">Orders</text>
+    <text x="935" y="233" font-size="14" fill="#475569">Checkout</text>
+    <text x="935" y="259" font-size="14" fill="#475569">Payments</text>
+    <text x="935" y="285" font-size="14" fill="#475569">B2B / Affiliates</text>
+    <text x="935" y="311" font-size="14" fill="#475569">AI</text>
+
+    <rect x="310" y="390" width="250" height="85" rx="16" fill="#ffffff" stroke="#0f172a" stroke-width="2"/>
+    <text x="435" y="426" font-size="20" fill="#0f172a">Supabase</text>
+    <text x="435" y="451" font-size="14" fill="#475569">Auth · Storage · RPC</text>
+
+    <rect x="650" y="390" width="250" height="85" rx="16" fill="#ffffff" stroke="#0f172a" stroke-width="2"/>
+    <text x="775" y="426" font-size="20" fill="#0f172a">PostgreSQL</text>
+    <text x="775" y="451" font-size="14" fill="#475569">RLS · Constraints · Transactions</text>
+
+    <g stroke="#334155" stroke-width="3" fill="none" marker-end="url(#arrow)">
+      <path d="M230 235 H300"/>
+      <path d="M490 235 H560"/>
+      <path d="M770 235 H840"/>
+      <path d="M935 335 V390"/>
+      <path d="M560 432 H650"/>
+      <path d="M775 390 V335"/>
+    </g>
+
+    <text x="600" y="70" font-size="26" fill="#0f172a" font-weight="700">Credi Marketplace — API Flow</text>
+    <text x="600" y="105" font-size="15" fill="#475569">Cliente solicita · servidor decide · base de datos garantiza consistencia</text>
+  </g>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#334155"/>
+    </marker>
+  </defs>
+</svg>
