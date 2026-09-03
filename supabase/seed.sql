@@ -1,3 +1,4 @@
+```sql
 -- ============================================================
 -- CREDI MARKETPLACE
 -- SUPABASE SEED
@@ -104,6 +105,7 @@ BEGIN
   -- ----------------------------------------------------------
   -- 5.1. Categorías raíz obligatorias
   -- ----------------------------------------------------------
+
   SELECT COUNT(*)
     INTO root_count
     FROM public.categories
@@ -126,6 +128,7 @@ BEGIN
   -- ----------------------------------------------------------
   -- 5.2. Subcategorías obligatorias
   -- ----------------------------------------------------------
+
   SELECT COUNT(*)
     INTO child_count
     FROM public.categories
@@ -144,6 +147,7 @@ BEGIN
   -- ----------------------------------------------------------
   -- 5.3. Relación padre-hijo
   -- ----------------------------------------------------------
+
   SELECT COUNT(*)
     INTO invalid_child_links
     FROM public.categories
@@ -162,6 +166,7 @@ BEGIN
   -- ----------------------------------------------------------
   -- 5.4. Todas las categorías del seed deben estar activas
   -- ----------------------------------------------------------
+
   SELECT COUNT(*)
     INTO inactive_seed_categories
     FROM public.categories
@@ -191,3 +196,4 @@ COMMIT;
 -- ============================================================
 -- FIN seed.sql
 -- ============================================================
+```
