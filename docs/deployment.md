@@ -1,1037 +1,243 @@
-# Credi Marketplace — Guía Profesional de Despliegue
+# Credi Marketplace — Guía de Despliegue
 
-**Next.js 16.3 · React 19.2 · React Compiler · Node.js 24 · Supabase · Cloudflare**
+> Runbook oficial de despliegue. La plataforma objetivo es **Vercel** y el backend es **Supabase**.
 
----
+## 1. Stack de producción
 
-## 1. Objetivo
+| Componente | Estándar |
+|---|---|
+| Framework | Next.js 16.3.x + App Router |
+| UI | React 19.x |
+| Runtime | Node.js 22.x |
+| npm | 10.x |
+| CSS | Tailwind CSS 4 |
+| Backend | Supabase |
+| Database | PostgreSQL |
+| Auth | Supabase Auth / SSR |
+| Deploy | Vercel |
 
-Esta guía establece el procedimiento recomendado para desplegar **Credi Marketplace**, una aplicación full-stack construida con:
+El proyecto declara Node 22.x y npm 10.x en `package.json`, y `.nvmrc` contiene `22`. fileciteturn363file0
 
-* Next.js 16.3
-* React 19.2
-* React Compiler
-* Node.js 24
-* Supabase Auth
-* Supabase PostgreSQL
-* Supabase Storage
-* Supabase RPC
-* APIs Route Handlers de Next.js
-* Integración de inteligencia artificial
-* Marketplace B2C
-* Mercado B2B
-* Sistema de afiliados
-* Checkout
-* Órdenes
-* Procesamiento de pagos mediante proveedores externos
+## 2. Pipeline obligatorio
 
-La arquitectura debe separar estrictamente:
+Ningún despliegue de producción debe saltarse la línea de validación:
 
 ```text
-CLIENTE
-   │
-   ▼
-NEXT.JS
-   │
-   ├── páginas
-   ├── Server Components
-   ├── Client Components
-   ├── Route Handlers
-   └── Server Actions
-   │
-   ▼
-SUPABASE
-   ├── Auth
-   ├── PostgreSQL
-   ├── Storage
-   └── RPC
+Git push / Pull Request
+        ↓
+Credi Marketplace CI
+        ↓
+Security Audit
+        ↓
+Deployment Gate
+        ↓
+Vercel
 ```
 
-Las operaciones críticas deben ejecutarse siempre en servidor.
+El CI valida estructura, dependencias, ESLint, TypeScript, pruebas unitarias, E2E y build. Security valida vulnerabilidades de dependencias. El Deployment Gate solo autoriza un CI exitoso de `main`.
 
----
+## 3. Instalación reproducible
 
-# 2. Requisitos previos
-
-Antes de desplegar, disponer de:
-
-* Cuenta de GitHub o GitLab.
-* Cuenta de Cloudflare.
-* Proyecto de Supabase.
-* Dominio configurado, si corresponde.
-* Credenciales de Supabase.
-* Clave privada del proveedor de IA.
-* Credenciales de los proveedores de pago, cuando estén integrados.
-* Node.js 24 para desarrollo y validación local.
-* Git instalado.
-* Proyecto correctamente compilable con:
-
-```bash
-npm run build
-```
-
----
-
-# 3. Compatibilidad de Node.js
-
-El proyecto utiliza:
-
-```text
-Node.js 24
-```
-
-La versión utilizada localmente debe coincidir con la versión configurada en CI/CD y en el entorno de despliegue siempre que la plataforma lo permita.
-
-Se recomienda declarar explícitamente la versión en `package.json`:
-
-```json
-{
-  "engines": {
-    "node": "24.x"
-  }
-}
-```
-
-También puede utilizarse `.nvmrc`:
-
-```text
-24
-```
-
-La versión debe verificarse antes de cada despliegue:
-
-```bash
-node --version
-npm --version
-```
-
----
-
-# 4. Instalación y validación local
-
-Clonar el proyecto:
-
-```bash
-git clone <REPOSITORY_URL>
-cd <PROJECT_DIRECTORY>
-```
-
-Instalar dependencias:
+Usar el lockfile como fuente de resolución:
 
 ```bash
 npm ci
 ```
 
-Ejecutar el entorno de desarrollo:
+No reemplazar `npm ci` por `npm install` en CI.
 
-```bash
-npm run dev
-```
+## 4. Validación local previa
 
-Antes de desplegar:
+Antes de publicar:
 
 ```bash
 npm run lint
+npm run typecheck
+npm run test
+npm run test:e2e
 npm run build
+npm audit --audit-level=high
 ```
 
-Si el proyecto utiliza TypeScript estricto, cualquier error de compilación debe corregirse antes del despliegue.
+El comando oficial de validación completa definido por el proyecto es `npm run check:all` cuando las variables y servicios requeridos están disponibles.
 
----
+## 5. Vercel
 
-# 5. Arquitectura de variables de entorno
+Conectar el repositorio de GitHub con el proyecto de Vercel y mantener producción vinculada a `main`.
 
-## 5.1 Variables públicas
-
-Estas variables pueden utilizarse en componentes cliente cuando la arquitectura de Supabase así lo requiera:
-
-```env
-NEXT_PUBLIC_SUPABASE_URL=https://TU-PROYECTO.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=TU_CLAVE_PUBLICA
-```
-
-Estas variables **no deben contener secretos administrativos**.
-
----
-
-# 6. Variables exclusivamente servidor
-
-Las siguientes variables nunca deben utilizarse con el prefijo:
+La configuración de Vercel debe respetar:
 
 ```text
-NEXT_PUBLIC_
+Node.js 22.x
+npm 10.x
+Next.js App Router
 ```
 
-Ejemplo:
+No utilizar OpenNext para un despliegue Vercel de este proyecto.
+
+## 6. Variables de entorno
+
+Separar estrictamente variables públicas de secretos.
+
+### Públicas
 
 ```env
-GEMINI_API_KEY=...
+NEXT_PUBLIC_APP_URL=https://tu-dominio.example
+NEXT_PUBLIC_SUPABASE_URL=https://tu-proyecto.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 ```
 
-Nunca:
-
-```env
-NEXT_PUBLIC_GEMINI_API_KEY=...
-```
-
-La clave de Gemini debe permanecer exclusivamente en el servidor.
-
----
-
-## 6.1 Supabase
-
-Cuando una operación requiera privilegios administrativos, utilizar una variable exclusivamente servidor:
+### Solo servidor
 
 ```env
 SUPABASE_SERVICE_ROLE_KEY=...
+GEMINI_API_KEY=...
+PAYMENT_PROVIDER_SECRET=...
+PAYMENT_WEBHOOK_SECRET=...
 ```
 
-### ADVERTENCIA CRÍTICA
+Los secretos nunca deben tener prefijo `NEXT_PUBLIC_`, almacenarse en Git o aparecer en logs.
 
-`SUPABASE_SERVICE_ROLE_KEY`:
+## 7. Supabase
 
-* No debe aparecer en componentes cliente.
-* No debe comenzar por `NEXT_PUBLIC_`.
-* No debe enviarse al navegador.
-* No debe almacenarse en el repositorio.
-* No debe aparecer en logs.
-* No debe enviarse como respuesta de una API.
-
-Esta clave tiene privilegios elevados y debe utilizarse únicamente cuando exista una razón arquitectónica concreta.
-
-Siempre que sea posible, las operaciones normales deben utilizar el contexto autenticado del usuario y las políticas RLS.
-
----
-
-# 7. Variables de inteligencia artificial
-
-Para el asistente:
-
-```env
-GEMINI_API_KEY=TU_CLAVE_PRIVADA
-GEMINI_MODEL=gemini-2.5-flash
-```
-
-La clave solo debe ser accesible desde:
+Supabase permanece como backend/base de datos. Antes de una liberación revisar:
 
 ```text
-src/app/api/ai/*
-```
-
-o desde servicios de servidor.
-
-Nunca desde:
-
-```text
-'use client'
-```
-
----
-
-# 8. Variables de pagos
-
-Cuando se incorporen proveedores de pago, todas las credenciales privadas deberán permanecer exclusivamente en servidor.
-
-Ejemplo:
-
-```env
-STRIPE_SECRET_KEY=...
-STRIPE_WEBHOOK_SECRET=...
-```
-
-Para Binance Pay:
-
-```env
-BINANCE_PAY_API_KEY=...
-BINANCE_PAY_SECRET_KEY=...
-BINANCE_PAY_CERTIFICATE=...
-```
-
-Los nombres exactos dependerán del proveedor finalmente seleccionado.
-
-Nunca utilizar:
-
-```env
-NEXT_PUBLIC_STRIPE_SECRET_KEY
-NEXT_PUBLIC_BINANCE_PAY_SECRET_KEY
-```
-
----
-
-# 9. Variables de aplicación
-
-Las variables generales pueden incluir:
-
-```env
-NEXT_PUBLIC_APP_URL=https://tu-dominio.com
-```
-
-Para producción:
-
-```env
-NODE_ENV=production
-```
-
-No se deben introducir valores sensibles dentro de variables públicas.
-
----
-
-# 10. Base de datos
-
-## Regla fundamental
-
-La aplicación no debe depender de una conexión directa desde el navegador hacia PostgreSQL.
-
-La arquitectura recomendada es:
-
-```text
-Browser
-   │
-   ▼
-Next.js
-   │
-   ▼
-Supabase
-   │
-   ▼
-PostgreSQL
-```
-
-Las operaciones complejas y sensibles deben utilizar:
-
-* Supabase RPC.
-* Route Handlers.
-* Server Actions.
-* funciones PostgreSQL.
-* RLS.
-
----
-
-# 11. DATABASE_URL
-
-No agregar automáticamente:
-
-```env
-DATABASE_URL=postgresql://...
-```
-
-a las variables de Cloudflare.
-
-Solo debe utilizarse si existe una dependencia real que requiera una conexión PostgreSQL directa desde el servidor.
-
-Para Credi Marketplace, las operaciones de negocio deben preferentemente utilizar Supabase y RPC.
-
-Si posteriormente se incorpora un ORM como Prisma, Drizzle u otra capa de acceso directo a PostgreSQL, entonces deberá definirse específicamente la estrategia de conexión compatible con el runtime elegido.
-
----
-
-# 12. Seguridad de Supabase
-
-Las tablas críticas deben utilizar Row Level Security.
-
-Como mínimo:
-
-```text
-profiles
-products
-orders
-b2b_products
-b2b_orders
-affiliate relationships
-payments
-```
-
-deben analizarse individualmente para determinar:
-
-* SELECT permitido.
-* INSERT permitido.
-* UPDATE permitido.
-* DELETE permitido.
-
-Nunca debe asumirse que ocultar una ruta del frontend constituye seguridad.
-
-La seguridad real debe estar en:
-
-```text
+migrations
 RLS
-+
-PostgreSQL
-+
 RPC
-+
-Server-side authorization
+índices
+triggers
+constraints
+webhooks
 ```
 
----
+Las migraciones deben estar versionadas en Git. Los cambios de esquema hechos manualmente en producción deben evitarse.
 
-# 13. Órdenes
+## 8. Preview vs Production
 
-La creación de órdenes debe seguir:
-
-```text
-Cliente
-   │
-   ▼
-POST /api/orders
-   │
-   ▼
-Autenticación Supabase
-   │
-   ▼
-Validación
-   │
-   ▼
-RPC PostgreSQL
-   │
-   ├── bloqueo de producto
-   ├── validación de stock
-   ├── precio real
-   ├── cantidad
-   ├── afiliado
-   ├── creación de orden
-   └── reserva/descuento de inventario
-```
-
-Nunca confiar en:
+Mantener separados los entornos.
 
 ```text
-price
-total
-stock
-seller_id
-buyer_id
-status
-```
-
-enviados desde el navegador.
-
----
-
-# 14. Pagos
-
-Una orden no debe convertirse en:
-
-```text
-completed
-```
-
-porque el navegador haya presionado un botón.
-
-El flujo correcto será:
-
-```text
-Crear orden
-     │
-     ▼
-pending
-     │
-     ▼
-Crear intención/sesión de pago
-     │
-     ▼
-Proveedor de pago
-     │
-     ▼
-Webhook
-     │
-     ▼
-Verificación criptográfica
-     │
-     ▼
-Confirmación servidor
-     │
-     ▼
-paid / completed
-```
-
-El webhook será la fuente de verdad del pago.
-
----
-
-# 15. Cloudflare
-
-Antes de elegir Cloudflare Pages como plataforma definitiva debe verificarse que la configuración concreta soporte correctamente todas las capacidades utilizadas por la aplicación:
-
-* Next.js 16.3.
-* Route Handlers.
-* Runtime Node.js.
-* APIs server-side.
-* Variables de entorno.
-* Middleware/proxy.
-* Supabase SSR.
-* Streaming, si se utiliza.
-* Webhooks.
-* Integraciones externas.
-
-Si una función requiere APIs completas de Node.js o compatibilidad específica de runtime, debe evaluarse Cloudflare Workers/Pages frente a un entorno Node.js completo.
-
-No debe asumirse compatibilidad únicamente porque el frontend compile.
-
----
-
-# 16. Configuración de producción
-
-En Cloudflare se deben configurar por separado:
-
-```text
-Production
 Preview
-```
+  ├── datos de prueba
+  └── secretos de preview
 
-Las variables de producción nunca deben copiarse indiscriminadamente a previews.
-
-Ejemplo:
-
-```text
 Production
-    NEXT_PUBLIC_SUPABASE_URL
-    NEXT_PUBLIC_SUPABASE_ANON_KEY
-    SUPABASE_SERVICE_ROLE_KEY
-    GEMINI_API_KEY
-    GEMINI_MODEL
-    NEXT_PUBLIC_APP_URL
-    PAYMENT_SECRETS
-
-Preview
-    NEXT_PUBLIC_SUPABASE_URL
-    NEXT_PUBLIC_SUPABASE_ANON_KEY
-    GEMINI_API_KEY
-    GEMINI_MODEL
-    NEXT_PUBLIC_APP_URL
+  ├── datos reales
+  └── secretos de producción
 ```
 
-Preferiblemente, Preview debe utilizar un proyecto Supabase separado.
+No copiar secretos de producción a previews sin una necesidad explícita y controlada.
 
----
+## 9. Build de producción
 
-# 17. Dominio
+El build oficial es:
 
-Configurar:
+```bash
+npm run build
+```
+
+Un build exitoso no reemplaza las pruebas ni la auditoría de seguridad.
+
+## 10. Caché y datos privados
+
+Los assets estáticos pueden aprovechar el CDN. Las rutas transaccionales y privadas deben evitar caché público accidental:
 
 ```text
-https://www.tudominio.com
-```
-
-y/o:
-
-```text
-https://tudominio.com
-```
-
-La URL canónica debe definirse claramente.
-
-Ejemplo:
-
-```env
-NEXT_PUBLIC_APP_URL=https://tudominio.com
-```
-
-No utilizar:
-
-```text
-http://
-```
-
-en producción.
-
----
-
-# 18. HTTPS
-
-Toda la aplicación debe ejecutarse mediante HTTPS.
-
-Las cookies de autenticación deben utilizar las propiedades de seguridad apropiadas:
-
-```text
-Secure
-HttpOnly
-SameSite
-```
-
-La configuración exacta dependerá del mecanismo de autenticación utilizado por Supabase SSR.
-
----
-
-# 19. Headers de seguridad
-
-La aplicación debe implementar las cabeceras de seguridad desde la configuración real de Next.js o desde la capa Edge/CDN.
-
-Como mínimo:
-
-```text
-X-Content-Type-Options: nosniff
-X-Frame-Options: SAMEORIGIN
-Referrer-Policy: strict-origin-when-cross-origin
-Strict-Transport-Security
-Permissions-Policy
-```
-
-No utilizar:
-
-```text
-X-XSS-Protection
-```
-
-como mecanismo moderno de seguridad.
-
----
-
-# 20. Content Security Policy
-
-La CSP debe configurarse cuidadosamente.
-
-No copiar una política genérica sin analizar:
-
-* Next.js.
-* Supabase.
-* imágenes.
-* fuentes.
-* Analytics.
-* Gemini.
-* proveedores de pago.
-* CDN.
-* scripts externos.
-
-Una CSP demasiado restrictiva puede romper funcionalidades legítimas.
-
-Una CSP demasiado permisiva:
-
-```text
-script-src 'unsafe-inline' *
-```
-
-reduce considerablemente la protección.
-
-La CSP definitiva debe construirse a partir de los dominios realmente utilizados por Credi Marketplace.
-
----
-
-# 21. Caché
-
-Los assets generados por Next.js pueden utilizar:
-
-```text
-Cache-Control:
-public, max-age=31536000, immutable
-```
-
-para recursos versionados de:
-
-```text
-/_next/static/*
-```
-
-Las respuestas dinámicas y las APIs de negocio deben evitar caché público accidental.
-
-Especialmente:
-
-```text
+/api/auth/*
 /api/orders/*
 /api/checkout/*
 /api/payments/*
 /api/ai/*
 ```
 
-deben tratarse como datos dinámicos y sensibles.
+## 11. Dominio y HTTPS
 
----
+Producción debe usar HTTPS y un dominio canónico definido. No almacenar URLs de producción como secretos.
 
-# 22. IA
-
-El endpoint:
-
-```text
-/api/ai/assistant
-```
-
-debe:
-
-* validar el cuerpo.
-* limitar tamaño del mensaje.
-* utilizar únicamente `GEMINI_API_KEY`.
-* aplicar timeout.
-* controlar errores.
-* evitar exponer secretos.
-* registrar `request_id`.
-* evitar almacenar información sensible innecesaria.
-
-La IA no debe tener acceso directo e ilimitado a PostgreSQL.
-
-La arquitectura futura recomendada es:
-
-```text
-AI
- │
- ├── consultar_producto()
- ├── consultar_stock()
- ├── consultar_orden()
- ├── consultar_politica()
- └── consultar_b2b()
-```
-
-mediante herramientas explícitamente autorizadas.
-
-Nunca:
-
-```text
-AI → SQL directo → producción
-```
-
----
-
-# 23. Build de producción
-
-Antes del despliegue:
-
-```bash
-npm ci
-npm run lint
-npm run build
-```
-
-Si todo es correcto:
-
-```text
-✓ TypeScript
-✓ React
-✓ Next.js
-✓ Server Components
-✓ Client Components
-✓ Route Handlers
-✓ Build production
-```
-
-El despliegue no debe realizarse mientras existan errores de compilación.
-
----
-
-# 24. Verificación posterior al despliegue
-
-Después del despliegue comprobar:
-
-## Aplicación
-
-```text
-/
- /marketplace
- /b2b
- /cart
- /checkout
- /dashboard
-```
-
-## Autenticación
-
-```text
-registro
-login
-logout
-refresh de sesión
-rutas protegidas
-```
-
-## Marketplace
-
-```text
-productos
-stock
-carrito
-checkout
-```
-
-## B2B
-
-```text
-catálogo
-producto B2B
-MOQ
-stock
-checkout B2B
-```
-
-## API
-
-```text
-/api/orders
-/api/checkout
-/api/ai/assistant
-```
-
-## Seguridad
-
-Comprobar que:
-
-```text
-SUPABASE_SERVICE_ROLE_KEY
-GEMINI_API_KEY
-PAYMENT_SECRET_KEYS
-```
-
-nunca aparezcan en:
-
-```text
-HTML
-JavaScript del navegador
-logs públicos
-Git
-responses JSON
-```
-
----
-
-# 25. Verificación de secretos
-
-Antes de realizar:
-
-```bash
-git push
-```
-
-comprobar:
-
-```bash
-git status
-```
-
-y revisar:
-
-```text
-.env
-.env.local
-.env.production
-```
-
-Nunca subir:
-
-```text
-.env
-.env.local
-.env.production
-```
-
-al repositorio cuando contengan secretos.
-
-El `.gitignore` debe incluir:
-
-```gitignore
-.env
-.env.*
-!.env.example
-```
-
----
-
-# 26. Archivo .env.example
-
-El repositorio debe contener únicamente una plantilla:
+Ejemplo:
 
 ```env
-NEXT_PUBLIC_APP_URL=https://example.com
-
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
-
-SUPABASE_SERVICE_ROLE_KEY=
-
-GEMINI_API_KEY=
-GEMINI_MODEL=gemini-2.5-flash
-
-STRIPE_SECRET_KEY=
-STRIPE_WEBHOOK_SECRET=
-
-BINANCE_PAY_API_KEY=
-BINANCE_PAY_SECRET_KEY=
+NEXT_PUBLIC_APP_URL=https://tu-dominio.example
 ```
 
-Nunca colocar valores reales.
+## 12. Webhooks
 
----
+Los webhooks de proveedores externos deben apuntar al endpoint público correcto de producción y validar autenticidad antes de modificar órdenes o pagos.
 
-# 27. Git y CI/CD
+Un webhook recibido no implica confianza automática en su contenido.
 
-El flujo recomendado:
+## 13. Rollback
+
+Ante una regresión:
 
 ```text
-feature/*
-    │
-    ▼
-Pull Request
-    │
-    ├── lint
-    ├── typecheck
-    ├── build
-    └── security checks
-    │
-    ▼
-main
-    │
-    ▼
-Production
+detectar
+  ↓
+bloquear nueva promoción
+  ↓
+identificar commit/deployment
+  ↓
+rollback en Vercel
+  ↓
+verificar salud
+  ↓
+registrar incidente
 ```
 
-Las modificaciones directas sobre producción deben evitarse.
+El rollback debe identificar claramente el commit desplegado.
 
----
-
-# 28. Migraciones de Supabase
-
-Las modificaciones de base de datos deben mantenerse versionadas.
-
-Ejemplo conceptual:
+## 14. Checklist de liberación
 
 ```text
-supabase/
-└── migrations/
-    ├── 001_initial_schema.sql
-    ├── 002_profiles.sql
-    ├── 003_products.sql
-    ├── 004_orders.sql
-    ├── 005_affiliates.sql
-    ├── 006_b2b.sql
-    └── 007_order_rpc.sql
+[ ] CI verde
+[ ] Security verde
+[ ] Deployment Gate aprobado
+[ ] Variables correctas
+[ ] Supabase/migraciones verificadas
+[ ] RLS verificado
+[ ] Webhooks verificados
+[ ] Build exitoso
+[ ] Smoke test posterior al deploy
 ```
 
-Nunca modificar producción manualmente sin registrar posteriormente el cambio en las migraciones.
+## 15. Smoke test posterior
 
----
-
-# 29. Principio de fuente de verdad
-
-Para operaciones financieras:
+Comprobar al menos:
 
 ```text
-Browser ≠ fuente de verdad
-```
-
-La fuente de verdad debe ser:
-
-```text
-PostgreSQL
-+
-RPC
-+
-Payment Provider
-+
-Webhook verificado
-```
-
-El frontend solamente presenta información.
-
----
-
-# 30. Checklist de producción
-
-Antes de marcar el proyecto como producción:
-
-```text
-[ ] Node.js 24 configurado
-[ ] Next.js 16.3 compilando correctamente
-[ ] React 19.2 funcionando
-[ ] React Compiler configurado correctamente
-[ ] Supabase Auth funcionando
-[ ] RLS activado
-[ ] RPC de órdenes probado
-[ ] Stock protegido contra race conditions
-[ ] Precio validado en servidor
-[ ] Checkout validado en servidor
-[ ] Webhooks configurados
-[ ] Pagos verificados desde servidor
-[ ] GEMINI_API_KEY protegida
-[ ] SUPABASE_SERVICE_ROLE_KEY protegida
-[ ] Variables de entorno separadas entre Preview y Production
-[ ] HTTPS activo
-[ ] Headers de seguridad activos
-[ ] Caché revisada
-[ ] API sin caché público accidental
-[ ] Logs sin secretos
-[ ] .env excluido de Git
-[ ] Build de producción exitoso
-[ ] Dominio personalizado funcionando
-[ ] Supabase Redirect URLs configuradas
-[ ] CORS revisado
-[ ] Recuperación de errores probada
-[ ] Rutas protegidas probadas
-[ ] Checkout probado con stock concurrente
-[ ] Pago probado mediante webhook
-```
-
----
-
-# 31. Arquitectura definitiva
-
-La arquitectura objetivo de Credi Marketplace debe aproximarse a:
-
-```text
-                         INTERNET
-                            │
-                            ▼
-                    CLOUDFLARE / EDGE
-                            │
-                            ▼
-                     NEXT.JS 16.3
-                            │
-          ┌─────────────────┼─────────────────┐
-          │                 │                 │
-          ▼                 ▼                 ▼
-       FRONTEND          API SERVER          AI
-          │                 │                 │
-          │                 │                 ▼
-          │                 │              GEMINI
-          │                 │
-          │                 ▼
-          │             SUPABASE
-          │                 │
-          │       ┌─────────┼─────────┐
-          │       ▼         ▼         ▼
-          │      AUTH    POSTGRES   STORAGE
-          │                 │
-          │                 ▼
-          │                RPC
-          │                 │
-          │       ┌─────────┼──────────┐
-          │       ▼         ▼          ▼
-          │     Orders    Stock      Affiliates
-          │
-          ▼
-       Browser
-```
-
-## Regla arquitectónica fundamental
-
-> **El navegador solicita; el servidor valida; PostgreSQL decide; el proveedor de pagos confirma; el webhook certifica; y la interfaz solamente representa el estado verdadero del sistema.**
-
-Esta regla debe mantenerse en todo el proyecto.
-
----
-
-## 32. Resultado esperado
-
-Un despliegue correctamente configurado debe proporcionar:
-
-```text
-Next.js 16.3
-        +
-React 19.2
-        +
-React Compiler
-        +
-Node.js 24
-        +
-Supabase
-        +
-Cloudflare
-        +
-IA
-        +
-Marketplace
-        +
-B2B
-        +
-Afiliados
-        +
+Inicio
+Registro/Login
+Catálogo
+Producto
+Carrito
 Checkout
-        +
-Pagos
+Orden
+Autenticación
+API principal
+Webhook cuando aplique
 ```
 
-sin colocar secretos en el cliente y sin confiar en datos financieros enviados desde el navegador.
+## 16. No hacer
+
+No introducir en el pipeline de despliegue:
+
+```text
+Cloudflare como plataforma principal
+OpenNext
+Node 24
+Pages Router
+credenciales en el repositorio
+secretos NEXT_PUBLIC_*
+```
+
+La plataforma oficial documentada es **Vercel + Supabase + Node.js 22.x**.
+
+## 17. Diagrama
+
+![Flujo de despliegue](deployment.svg)
+
+## 18. Principio final
+
+**Solo se despliega el código que haya superado CI, Security y el Deployment Gate sobre el commit validado.**
