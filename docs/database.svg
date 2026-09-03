@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="650" viewBox="0 0 1200 650" role="img" aria-labelledby="title desc">
+  <title id="title">Credi Marketplace database architecture</title>
+  <desc id="desc">Supabase services connect to PostgreSQL with RLS, constraints, indexes and transactional RPCs for commerce data.</desc>
+  <rect width="1200" height="650" fill="#f8fafc"/>
+  <g font-family="Arial, Helvetica, sans-serif" text-anchor="middle">
+    <text x="600" y="55" font-size="28" font-weight="700" fill="#0f172a">Credi Marketplace — Datos</text>
+    <rect x="70" y="110" width="250" height="110" rx="18" fill="#fff" stroke="#0f172a" stroke-width="2"/>
+    <text x="195" y="152" font-size="22" fill="#0f172a">Next.js</text>
+    <text x="195" y="180" font-size="14" fill="#475569">Server-side access</text>
+    <text x="195" y="203" font-size="14" fill="#475569">Auth · Domain · API</text>
+
+    <rect x="440" y="90" width="320" height="160" rx="18" fill="#fff" stroke="#0f172a" stroke-width="2"/>
+    <text x="600" y="130" font-size="23" fill="#0f172a">Supabase</text>
+    <text x="600" y="160" font-size="14" fill="#475569">Auth</text>
+    <text x="600" y="184" font-size="14" fill="#475569">Storage</text>
+    <text x="600" y="208" font-size="14" fill="#475569">RPC</text>
+    <text x="600" y="232" font-size="14" fill="#475569">RLS integration</text>
+
+    <rect x="880" y="75" width="250" height="190" rx="18" fill="#fff" stroke="#0f172a" stroke-width="2"/>
+    <text x="1005" y="115" font-size="23" fill="#0f172a">PostgreSQL</text>
+    <text x="1005" y="145" font-size="14" fill="#475569">Constraints</text>
+    <text x="1005" y="169" font-size="14" fill="#475569">RLS Policies</text>
+    <text x="1005" y="193" font-size="14" fill="#475569">Indexes</text>
+    <text x="1005" y="217" font-size="14" fill="#475569">Transactions</text>
+    <text x="1005" y="241" font-size="14" fill="#475569">Atomic inventory</text>
+
+    <rect x="95" y="350" width="1010" height="170" rx="18" fill="#fff" stroke="#0f172a" stroke-width="2"/>
+    <text x="600" y="390" font-size="22" fill="#0f172a">Domain data</text>
+    <text x="210" y="430" font-size="14" fill="#475569">profiles</text>
+    <text x="360" y="430" font-size="14" fill="#475569">products</text>
+    <text x="510" y="430" font-size="14" fill="#475569">orders</text>
+    <text x="660" y="430" font-size="14" fill="#475569">order_items</text>
+    <text x="810" y="430" font-size="14" fill="#475569">inventory</text>
+    <text x="980" y="430" font-size="14" fill="#475569">payments</text>
+    <text x="350" y="470" font-size="14" fill="#475569">affiliates</text>
+    <text x="520" y="470" font-size="14" fill="#475569">B2B</text>
+    <text x="680" y="470" font-size="14" fill="#475569">audit</text>
+    <text x="835" y="470" font-size="14" fill="#475569">relaciones</text>
+
+    <text x="600" y="585" font-size="16" fill="#334155">Integridad: constraints + RLS + transacciones + RPC</text>
+
+    <g stroke="#334155" stroke-width="3" fill="none" marker-end="url(#arrow)">
+      <path d="M320 165 H440"/>
+      <path d="M760 170 H880"/>
+      <path d="M1005 265 V350"/>
+      <path d="M600 250 V350"/>
+    </g>
+  </g>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#334155"/>
+    </marker>
+  </defs>
+</svg>
