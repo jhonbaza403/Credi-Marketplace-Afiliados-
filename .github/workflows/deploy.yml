@@ -2,30 +2,128 @@ name: Credi Marketplace Deployment Gate
 
 on:
   workflow_run:
-    workflows: ["Credi Marketplace CI"]
-    branches: [main]
-    types: [completed]
+    workflows:
+      - "Credi Marketplace CI"
+    branches:
+      - main
+    types:
+      - completed
 
 permissions:
   contents: read
   deployments: write
 
+concurrency:
+  group: credi-marketplace-deployment-gate-main
+  cancel-in-progress: true
+
+env:
+  CI_WORKFLOW_NAME: "Credi Marketplace CI"
+  TARGET_BRANCH: "main"
+
 jobs:
   deployment-gate:
     name: Validate CI & Authorize Deployment
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    if: >-
+      ${{
+        github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.head_branch == 'main'
+      }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
     steps:
-      - name: Verify CI Run Details
+      # ==========================================================
+      # 1. Validate triggering workflow
+      # ==========================================================
+      - name: Validate CI run
+        shell: bash
         run: |
-          echo "CI Workflow: ${{ github.event.workflow_run.name }}"
-          echo "Branch: ${{ github.event.workflow_run.head_branch }}"
-          echo "Commit SHA: ${{ github.event.workflow_run.head_sha }}"
-          echo "CI Status: ${{ github.event.workflow_run.conclusion }}"
+          set -euo pipefail
 
-      - name: Approve Deployment Gate
+          CI_NAME="${{ github.event.workflow_run.name }}"
+          CI_BRANCH="${{ github.event.workflow_run.head_branch }}"
+          CI_SHA="${{ github.event.workflow_run.head_sha }}"
+          CI_CONCLUSION="${{ github.event.workflow_run.conclusion }}"
+          CI_RUN_ID="${{ github.event.workflow_run.id }}"
+
+          echo "=========================================="
+          echo "Credi Marketplace Deployment Gate"
+          echo "=========================================="
+          echo "CI Workflow : ${CI_NAME}"
+          echo "Branch      : ${CI_BRANCH}"
+          echo "Commit SHA  : ${CI_SHA}"
+          echo "Conclusion  : ${CI_CONCLUSION}"
+          echo "Run ID      : ${CI_RUN_ID}"
+          echo "=========================================="
+
+          if [ "${CI_NAME}" != "${CI_WORKFLOW_NAME}" ]; then
+            echo "::error::Unexpected CI workflow: ${CI_NAME}"
+            exit 1
+          fi
+
+          if [ "${CI_BRANCH}" != "${TARGET_BRANCH}" ]; then
+            echo "::error::Deployment gate only accepts main."
+            exit 1
+          fi
+
+          if [ "${CI_CONCLUSION}" != "success" ]; then
+            echo "::error::CI did not complete successfully."
+            exit 1
+          fi
+
+          if [ -z "${CI_SHA}" ]; then
+            echo "::error::Missing CI commit SHA."
+            exit 1
+          fi
+
+          echo "CI validation: PASSED"
+
+      # ==========================================================
+      # 2. Expose immutable deployment metadata
+      # ==========================================================
+      - name: Record deployment metadata
+        shell: bash
         run: |
-          echo "CI check passed successfully on main branch."
+          set -euo pipefail
+
+          {
+            echo "## Credi Marketplace Deployment Gate"
+            echo ""
+            echo "| Property | Value |"
+            echo "|---|---|"
+            echo "| Workflow | ${{ github.event.workflow_run.name }} |"
+            echo "| Branch | ${{ github.event.workflow_run.head_branch }} |"
+            echo "| Commit | \`${{ github.event.workflow_run.head_sha }}\` |"
+            echo "| CI Run | ${{ github.event.workflow_run.id }} |"
+            echo "| CI Conclusion | ${{ github.event.workflow_run.conclusion }} |"
+            echo "| Gate | APPROVED |"
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+      # ==========================================================
+      # 3. Authorize deployment
+      # ==========================================================
+      - name: Approve deployment gate
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "CI check passed successfully."
+          echo "Target branch: main"
+          echo "Validated commit: ${{ github.event.workflow_run.head_sha }}"
           echo "Gate status: APPROVED"
+
+      # ==========================================================
+      # 4. Final gate summary
+      # ==========================================================
+      - name: Deployment gate passed
+        if: success()
+        shell: bash
+        run: |
+          echo "=========================================="
+          echo "DEPLOYMENT GATE: PASSED"
+          echo "=========================================="
+          echo "The validated CI run on main completed successfully."
+          echo "Deployment may proceed using the validated commit."
+          echo "Commit: ${{ github.event.workflow_run.head_sha }}"
+          echo "=========================================="
