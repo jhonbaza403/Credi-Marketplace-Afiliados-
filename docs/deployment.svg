@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="560" viewBox="0 0 1200 560" role="img" aria-labelledby="title desc">
+  <title id="title">Credi Marketplace deployment pipeline</title>
+  <desc id="desc">GitHub main flows through CI, security audit and deployment gate before reaching Vercel, with Supabase as backend.</desc>
+  <rect width="1200" height="560" fill="#f8fafc"/>
+  <g font-family="Arial, Helvetica, sans-serif" text-anchor="middle">
+    <text x="600" y="55" font-size="28" font-weight="700" fill="#0f172a">Credi Marketplace — Deployment</text>
+    <rect x="55" y="145" width="190" height="115" rx="18" fill="#fff" stroke="#0f172a" stroke-width="2"/>
+    <text x="150" y="188" font-size="21" fill="#0f172a">GitHub</text>
+    <text x="150" y="215" font-size="14" fill="#475569">main</text>
+    <text x="150" y="239" font-size="14" fill="#475569">Push / PR</text>
+
+    <rect x="300" y="125" width="220" height="155" rx="18" fill="#fff" stroke="#0f172a" stroke-width="2"/>
+    <text x="410" y="168" font-size="21" fill="#0f172a">CI</text>
+    <text x="410" y="196" font-size="14" fill="#475569">Lint</text>
+    <text x="410" y="218" font-size="14" fill="#475569">Typecheck</text>
+    <text x="410" y="240" font-size="14" fill="#475569">Unit + E2E</text>
+    <text x="410" y="262" font-size="14" fill="#475569">Production build</text>
+
+    <rect x="575" y="125" width="220" height="155" rx="18" fill="#fff" stroke="#0f172a" stroke-width="2"/>
+    <text x="685" y="168" font-size="21" fill="#0f172a">Security</text>
+    <text x="685" y="198" font-size="14" fill="#475569">Dependency tree</text>
+    <text x="685" y="222" font-size="14" fill="#475569">npm audit</text>
+    <text x="685" y="246" font-size="14" fill="#475569">High/Critical gate</text>
+
+    <rect x="850" y="125" width="220" height="155" rx="18" fill="#fff" stroke="#0f172a" stroke-width="2"/>
+    <text x="960" y="168" font-size="21" fill="#0f172a">Deployment Gate</text>
+    <text x="960" y="198" font-size="14" fill="#475569">main branch</text>
+    <text x="960" y="222" font-size="14" fill="#475569">CI success</text>
+    <text x="960" y="246" font-size="14" fill="#475569">validated commit SHA</text>
+
+    <rect x="360" y="370" width="250" height="105" rx="18" fill="#fff" stroke="#0f172a" stroke-width="2"/>
+    <text x="485" y="412" font-size="22" fill="#0f172a">Vercel</text>
+    <text x="485" y="440" font-size="14" fill="#475569">Next.js production</text>
+    <text x="485" y="462" font-size="14" fill="#475569">Node.js 22.x</text>
+
+    <rect x="720" y="370" width="250" height="105" rx="18" fill="#fff" stroke="#0f172a" stroke-width="2"/>
+    <text x="845" y="412" font-size="22" fill="#0f172a">Supabase</text>
+    <text x="845" y="440" font-size="14" fill="#475569">Auth · PostgreSQL · Storage</text>
+    <text x="845" y="462" font-size="14" fill="#475569">RPC · RLS</text>
+
+    <g stroke="#334155" stroke-width="3" fill="none" marker-end="url(#arrow)">
+      <path d="M245 202 H300"/>
+      <path d="M520 202 H575"/>
+      <path d="M795 202 H850"/>
+      <path d="M960 280 V330 H485 V370"/>
+      <path d="M610 422 H720"/>
+    </g>
+
+    <text x="600" y="520" font-size="16" fill="#334155">Solo se promociona a producción el commit que supera toda la cadena de controles.</text>
+  </g>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#334155"/>
+    </marker>
+  </defs>
+</svg>
