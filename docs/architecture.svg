@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="620" viewBox="0 0 1200 620" role="img" aria-labelledby="title desc">
+  <title id="title">Credi Marketplace system architecture</title>
+  <desc id="desc">Next.js presents the application layer, Supabase provides backend capabilities, PostgreSQL provides persistence, and Vercel runs deployment.</desc>
+  <rect width="1200" height="620" fill="#f8fafc"/>
+  <g font-family="Arial, Helvetica, sans-serif" text-anchor="middle">
+    <text x="600" y="55" font-size="28" font-weight="700" fill="#0f172a">Credi Marketplace — Arquitectura</text>
+    <rect x="70" y="100" width="250" height="120" rx="18" fill="#fff" stroke="#0f172a" stroke-width="2"/>
+    <text x="195" y="145" font-size="22" fill="#0f172a">Usuario</text>
+    <text x="195" y="173" font-size="14" fill="#475569">Browser / Mobile Web</text>
+    <text x="195" y="197" font-size="14" fill="#475569">Interfaz e interacción</text>
+
+    <rect x="400" y="85" width="330" height="200" rx="18" fill="#fff" stroke="#0f172a" stroke-width="2"/>
+    <text x="565" y="128" font-size="24" fill="#0f172a">Next.js 16</text>
+    <text x="565" y="157" font-size="14" fill="#475569">App Router</text>
+    <text x="565" y="181" font-size="14" fill="#475569">Server Components</text>
+    <text x="565" y="205" font-size="14" fill="#475569">Client Components mínimos</text>
+    <text x="565" y="229" font-size="14" fill="#475569">Route Handlers / Server Actions</text>
+    <text x="565" y="253" font-size="14" fill="#475569">TypeScript + Tailwind CSS 4</text>
+
+    <rect x="810" y="85" width="320" height="200" rx="18" fill="#fff" stroke="#0f172a" stroke-width="2"/>
+    <text x="970" y="128" font-size="24" fill="#0f172a">Supabase</text>
+    <text x="970" y="157" font-size="14" fill="#475569">Auth</text>
+    <text x="970" y="181" font-size="14" fill="#475569">PostgreSQL</text>
+    <text x="970" y="205" font-size="14" fill="#475569">Storage</text>
+    <text x="970" y="229" font-size="14" fill="#475569">RPC / RLS</text>
+    <text x="970" y="253" font-size="14" fill="#475569">Transacciones</text>
+
+    <rect x="260" y="355" width="300" height="145" rx="18" fill="#fff" stroke="#0f172a" stroke-width="2"/>
+    <text x="410" y="398" font-size="22" fill="#0f172a">Dominio</text>
+    <text x="410" y="425" font-size="14" fill="#475569">Orders · Checkout · Payments</text>
+    <text x="410" y="449" font-size="14" fill="#475569">Marketplace · B2B · Affiliates</text>
+    <text x="410" y="473" font-size="14" fill="#475569">AI · Notifications</text>
+
+    <rect x="640" y="355" width="300" height="145" rx="18" fill="#fff" stroke="#0f172a" stroke-width="2"/>
+    <text x="790" y="398" font-size="22" fill="#0f172a">Vercel</text>
+    <text x="790" y="425" font-size="14" fill="#475569">Build + Deployment</text>
+    <text x="790" y="449" font-size="14" fill="#475569">Node.js 22.x</text>
+    <text x="790" y="473" font-size="14" fill="#475569">Production / Preview</text>
+
+    <text x="600" y="560" font-size="16" fill="#334155">Principio: frontend presenta · servidor decide · PostgreSQL garantiza · proveedor confirma</text>
+
+    <g stroke="#334155" stroke-width="3" fill="none" marker-end="url(#arrow)">
+      <path d="M320 160 H400"/>
+      <path d="M730 160 H810"/>
+      <path d="M565 285 V355"/>
+      <path d="M970 285 V330 H790 V355"/>
+      <path d="M560 428 H640"/>
+    </g>
+  </g>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#334155"/>
+    </marker>
+  </defs>
+</svg>
