@@ -1,11 +1,13 @@
 name: Sync npm lockfile
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
     paths:
       - package.json
+      - .github/workflows/sync-lockfile.yml
 
 permissions:
   contents: write
@@ -30,10 +32,30 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "22"
-          cache: npm
+          cache: false
 
-      - name: Regenerate lockfile
-        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+      - name: Verify runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --version
+          npm --version
+          node -e 'const major=Number(process.versions.node.split(".")[0]); if (major !== 22) process.exit(1)'
+          npm -e 'const major=Number(process.versions.npm.split(".")[0]); if (major !== 10) process.exit(1)'
+
+      - name: Rebuild lockfile from package.json
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f package-lock.json
+          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+
+      - name: Validate regenerated lockfile
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f package-lock.json
+          npm ci --ignore-scripts --no-audit --no-fund --dry-run
 
       - name: Commit synchronized lockfile
         shell: bash
@@ -48,5 +70,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add package-lock.json
-          git commit -m "chore: synchronize npm lockfile"
+          git commit -m "chore: regenerate npm lockfile"
           git push
