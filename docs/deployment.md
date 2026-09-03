@@ -16,7 +16,7 @@
 | Auth | Supabase Auth / SSR |
 | Deploy | Vercel |
 
-El proyecto declara Node 22.x y npm 10.x en `package.json`, y `.nvmrc` contiene `22`. fileciteturn363file0
+El proyecto declara Node 22.x y npm 10.x en `package.json`, y `.nvmrc` contiene `22`.
 
 ## 2. Pipeline obligatorio
 
