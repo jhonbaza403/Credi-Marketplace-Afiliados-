@@ -1,14 +1,15 @@
-const SVG_FORBIDDEN = /<script|javascript:|on[a-z]+\s*=|<foreignObject/i;
+const SVG_DANGEROUS_CONTENT = /<\/?(script|foreignObject|iframe|object|embed|frame|frameset)\b|\b(?:href|xlink:href|src|srcdoc)\s*=\s*["']\s*(?:javascript:|data:)|\bon[a-z]+\s*=|@import|url\s*\(\s*["']?javascript:/i;
 
 export function isSafeSvgMarkup(value: string): boolean {
-  return !SVG_FORBIDDEN.test(value);
+  return typeof value === "string" && !SVG_DANGEROUS_CONTENT.test(value);
 }
 
 export function sanitizeSvgMarkup(value: string): string {
-  if (!isSafeSvgMarkup(value)) throw new Error("SVG no permitido: contiene contenido activo o inseguro.");
-  return value
-    .replace(/<!--([\s\S]*?)-->/g, "")
-    .replace(/\s+xmlns:[^=]+="[^"]*"/gi, "");
+  if (!isSafeSvgMarkup(value)) {
+    throw new Error("SVG rechazado: contiene contenido activo o referencias inseguras.");
+  }
+
+  return value.replace(/<!--[\s\S]*?-->/g, "").trim();
 }
 
 export function svgDataUri(markup: string): string {
