@@ -2,14 +2,26 @@ name: Credi Marketplace Security
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+
   pull_request:
-    branches: [main]
+    branches:
+      - main
+
   schedule:
     - cron: "17 4 * * 1"
 
 permissions:
   contents: read
+
+concurrency:
+  group: credi-marketplace-security-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CI: true
+  NODE_ENV: test
 
 jobs:
   audit:
@@ -18,20 +30,97 @@ jobs:
     timeout-minutes: 15
 
     steps:
+      # ==========================================================
+      # 1. Checkout
+      # ==========================================================
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
 
-      - name: Setup Node.js
+      # ==========================================================
+      # 2. Node.js 22 + npm 10
+      # ==========================================================
+      - name: Setup Node.js 22
         uses: actions/setup-node@v4
         with:
-          node-version-file: .nvmrc
+          node-version: "22"
           cache: npm
+          cache-dependency-path: package-lock.json
 
+      # ==========================================================
+      # 3. Verify runtime
+      # ==========================================================
+      - name: Verify Node.js and npm
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          NODE_VERSION="$(node --version)"
+          NPM_VERSION="$(npm --version)"
+          NODE_MAJOR="$(node -p "process.versions.node.split('.')[0]")"
+          NPM_MAJOR="$(npm --version | cut -d. -f1)"
+
+          echo "Node.js: ${NODE_VERSION}"
+          echo "npm:     ${NPM_VERSION}"
+
+          if [ "${NODE_MAJOR}" != "22" ]; then
+            echo "::error::Expected Node.js 22.x but found ${NODE_VERSION}"
+            exit 1
+          fi
+
+          if [ "${NPM_MAJOR}" != "10" ]; then
+            echo "::error::Expected npm 10.x but found ${NPM_VERSION}"
+            exit 1
+          fi
+
+      # ==========================================================
+      # 4. Validate lockfile
+      # ==========================================================
+      - name: Validate lockfile
+        run: npm ci --dry-run --ignore-scripts --no-audit --no-fund
+
+      # ==========================================================
+      # 5. Install exact dependency tree
+      # ==========================================================
       - name: Install dependencies from lockfile
         run: npm ci --ignore-scripts --no-audit --no-fund
 
+      # ==========================================================
+      # 6. Verify critical dependency tree
+      # ==========================================================
       - name: Verify dependency tree
-        run: npm ls esbuild postcss sharp vite vitest --depth=10
+        run: |
+          npm ls \
+            esbuild \
+            postcss \
+            sharp \
+            vite \
+            vitest \
+            --depth=10
 
+      # ==========================================================
+      # 7. Production security audit
+      # ==========================================================
       - name: Run Security Audit
         run: npm audit --audit-level=high
+
+      # ==========================================================
+      # 8. Security summary
+      # ==========================================================
+      - name: Security audit passed
+        if: success()
+        shell: bash
+        run: |
+          echo "=========================================="
+          echo "Credi Marketplace Security: PASSED"
+          echo "=========================================="
+          echo "Node.js: $(node --version)"
+          echo "npm:     $(npm --version)"
+          echo ""
+          echo "✓ Runtime validation"
+          echo "✓ Lockfile validation"
+          echo "✓ Dependency installation"
+          echo "✓ Critical dependency tree"
+          echo "✓ High/Critical vulnerability audit"
+          echo "=========================================="
