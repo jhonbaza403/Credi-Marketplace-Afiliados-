@@ -22,12 +22,6 @@ BEGIN;
 -- ============================================================
 -- 1. CATEGORÍAS RAÍZ
 -- ============================================================
---
--- Los UUID son estables y forman parte del dataset base del seed.
--- En caso de que el registro exista, se sincronizan únicamente
--- los campos canónicos del seed para evitar drift entre entornos.
---
--- ============================================================
 
 INSERT INTO public.categories (
   id,
@@ -37,48 +31,12 @@ INSERT INTO public.categories (
   is_active
 )
 VALUES
-  (
-    '10000000-0000-4000-8000-000000000001',
-    NULL,
-    'Tecnología',
-    'tecnologia',
-    TRUE
-  ),
-  (
-    '10000000-0000-4000-8000-000000000002',
-    NULL,
-    'Hogar',
-    'hogar',
-    TRUE
-  ),
-  (
-    '10000000-0000-4000-8000-000000000003',
-    NULL,
-    'Electrónica',
-    'electronica',
-    TRUE
-  ),
-  (
-    '10000000-0000-4000-8000-000000000004',
-    NULL,
-    'Servicios Profesionales',
-    'servicios-profesionales',
-    TRUE
-  ),
-  (
-    '10000000-0000-4000-8000-000000000005',
-    NULL,
-    'Empleo',
-    'empleo',
-    TRUE
-  ),
-  (
-    '10000000-0000-4000-8000-000000000006',
-    NULL,
-    'Mayoristas B2B',
-    'mayoristas-b2b',
-    TRUE
-  )
+  ('10000000-0000-4000-8000-000000000001', NULL, 'Tecnología', 'tecnologia', TRUE),
+  ('10000000-0000-4000-8000-000000000002', NULL, 'Hogar', 'hogar', TRUE),
+  ('10000000-0000-4000-8000-000000000003', NULL, 'Electrónica', 'electronica', TRUE),
+  ('10000000-0000-4000-8000-000000000004', NULL, 'Servicios Profesionales', 'servicios-profesionales', TRUE),
+  ('10000000-0000-4000-8000-000000000005', NULL, 'Empleo', 'empleo', TRUE),
+  ('10000000-0000-4000-8000-000000000006', NULL, 'Mayoristas B2B', 'mayoristas-b2b', TRUE)
 ON CONFLICT (id) DO UPDATE
 SET
   parent_id = EXCLUDED.parent_id,
@@ -98,27 +56,9 @@ INSERT INTO public.categories (
   is_active
 )
 VALUES
-  (
-    '10000000-0000-4000-8000-000000000011',
-    '10000000-0000-4000-8000-000000000001',
-    'Computación',
-    'computacion',
-    TRUE
-  ),
-  (
-    '10000000-0000-4000-8000-000000000012',
-    '10000000-0000-4000-8000-000000000001',
-    'Celulares',
-    'celulares',
-    TRUE
-  ),
-  (
-    '10000000-0000-4000-8000-000000000013',
-    '10000000-0000-4000-8000-000000000001',
-    'Accesorios',
-    'accesorios',
-    TRUE
-  )
+  ('10000000-0000-4000-8000-000000000011', '10000000-0000-4000-8000-000000000001', 'Computación', 'computacion', TRUE),
+  ('10000000-0000-4000-8000-000000000012', '10000000-0000-4000-8000-000000000001', 'Celulares', 'celulares', TRUE),
+  ('10000000-0000-4000-8000-000000000013', '10000000-0000-4000-8000-000000000001', 'Accesorios', 'accesorios', TRUE)
 ON CONFLICT (id) DO UPDATE
 SET
   parent_id = EXCLUDED.parent_id,
@@ -131,9 +71,8 @@ SET
 -- ============================================================
 --
 -- No se crean usuarios, perfiles ni credenciales ficticias.
--- profiles.id depende de auth.users(id), por lo que cualquier
--- fixture de usuarios debe generarse mediante Auth o tests
--- controlados que conozcan las identidades creadas.
+-- profiles.id depende de auth.users(id). Los fixtures de usuarios
+-- deben generarse mediante Auth o mediante tests controlados.
 --
 -- ============================================================
 
@@ -208,12 +147,12 @@ BEGIN
   SELECT COUNT(*)
     INTO invalid_child_links
     FROM public.categories
-   WHERE id = '10000000-0000-4000-8000-000000000011'
-     AND parent_id <> '10000000-0000-4000-8000-000000000001'
-     OR id = '10000000-0000-4000-8000-000000000012'
-     AND parent_id <> '10000000-0000-4000-8000-000000000001'
-     OR id = '10000000-0000-4000-8000-000000000013'
-     AND parent_id <> '10000000-0000-4000-8000-000000000001';
+   WHERE (id = '10000000-0000-4000-8000-000000000011'
+          AND parent_id IS DISTINCT FROM '10000000-0000-4000-8000-000000000001')
+      OR (id = '10000000-0000-4000-8000-000000000012'
+          AND parent_id IS DISTINCT FROM '10000000-0000-4000-8000-000000000001')
+      OR (id = '10000000-0000-4000-8000-000000000013'
+          AND parent_id IS DISTINCT FROM '10000000-0000-4000-8000-000000000001');
 
   IF invalid_child_links <> 0 THEN
     RAISE EXCEPTION
