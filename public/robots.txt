@@ -1,27 +1,19 @@
-# ============================================================
-# CREDI MARKETPLACE
-# Robots Configuration
-# Next.js 16.3
-# ============================================================
-
+# Credi Marketplace
+# Robots policy for public search crawling.
 
 User-agent: *
-
-
 Allow: /
 
-
-Disallow: /api/
-
-Disallow: /dashboard/
-
+# Private application areas
 Disallow: /admin/
-
-Disallow: /checkout/
-
+Disallow: /dashboard/
 Disallow: /account/
+Disallow: /checkout/
+Disallow: /api/
+Disallow: /auth/
 
+# Internal framework assets should not be indexed as pages.
+Disallow: /_next/
 
-Sitemap:
-
-https://credi-marketplace.com/sitemap.xml
+# Canonical sitemap
+Sitemap: https://credi-marketplace.com/sitemap.xml
