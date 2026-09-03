@@ -1,46 +1,54 @@
 # Dependencies
-/node_modules
-/.pnp
+/node_modules/
+/.pnp/
 .pnp.js
+/.pnpm-store/
 
 # Next.js build output
 /.next/
 /out/
 
-# Production build
-/build
-/dist
+# Production build artifacts
+/build/
+/dist/
 
-# Debug & Logs
+# Vercel local state
+/.vercel/
+
+# Debug & logs
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-.pnpm-debug.log*
-*.log
+pnpm-debug.log*
 
-# Environment variables
+# Environment files
 .env
-.env*.local
-.env.development
-.env.test
-.env.production
+.env.*
 !.env.example
 
-# Testing & Coverage
-/coverage
-/playwright-report
-/test-results
-/blob-report
+# Testing & coverage
+/coverage/
+/playwright-report/
+/test-results/
+/blob-report/
 
-# Cache & Build Tools
-/.cache
-/.turbo
+# Caches
+/.cache/
+/.turbo/
 *.tsbuildinfo
-tsconfig.tsbuildinfo
 
-# Vercel
-/.vercel
+# Local tooling
+.eslintcache
 
-# System files
+# OS / editor files
 .DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/settings.json
+
+# Certificates / private material
 *.pem
+*.key
+*.crt
