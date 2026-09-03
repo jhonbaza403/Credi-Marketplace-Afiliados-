@@ -1,9 +1,23 @@
+# Local/development tooling not required by the Vercel deployment
 .github/
+.vercel/
+
+# Tests and generated reports
 tests/
 playwright-report/
 test-results/
 coverage/
-*.md
-!README.md
+blob-report/
+
+# Documentation not required to build the application
+docs/
+AUDIT-REPAIR-NOTES.md
+AUDIT-REPORT.md
+BUILD-INSTRUCTIONS.md
+BUILD-VERIFICATION.md
+SECURITY.md
+
+# Local verification configuration
 vitest.config.ts
 playwright.config.ts
+scripts-verify.mjs
