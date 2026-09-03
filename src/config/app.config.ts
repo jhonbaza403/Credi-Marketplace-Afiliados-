@@ -1,42 +1,14 @@
-// ==========================================================
-// Application Configuration
-// ==========================================================
+import { SITE_CONFIG } from "./site";
 
-
+/**
+ * Backwards-compatible application configuration facade.
+ * Canonical public identity/configuration lives in SITE_CONFIG.
+ */
 export const APP_CONFIG = {
-
- name:
-  'Credi Marketplace',
-
-
- version:
-  '1.0.0',
-
-
- environment:
-  process.env.NODE_ENV
-  ??
-  'development',
-
-
- url:
-  process.env.NEXT_PUBLIC_APP_URL
-  ??
-  'http://localhost:3000',
-
-
- supportedLocales:[
-
-  'es',
-  'en',
-  'pt',
-  'fr'
-
- ] as const,
-
-
- defaultLocale:
-  'es',
-
-
+  name: SITE_CONFIG.name,
+  version: "1.0.0",
+  environment: process.env.NODE_ENV ?? "development",
+  url: SITE_CONFIG.url,
+  supportedLocales: SITE_CONFIG.supportedLocales,
+  defaultLocale: SITE_CONFIG.locale,
 } as const;
