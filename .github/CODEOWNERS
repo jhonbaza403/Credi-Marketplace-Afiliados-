@@ -1,1 +1,33 @@
-# Define repository owners before enabling required reviews.
+# Credi Marketplace
+# CODEOWNERS
+#
+# Propietario principal de las revisiones del repositorio.
+# Este archivo habilita posteriormente los required reviews del repositorio.
+
+# Todo el repositorio
+* @jhonbaza403
+
+# Aplicación Next.js
+/src/ @jhonbaza403
+
+# CI/CD y automatización
+/.github/ @jhonbaza403
+
+# Supabase / base de datos
+/supabase/ @jhonbaza403
+
+# Dependencias
+/package.json @jhonbaza403
+/package-lock.json @jhonbaza403
+
+# TypeScript
+/tsconfig.json @jhonbaza403
+
+# Next.js
+/next.config.ts @jhonbaza403
+
+# ESLint
+/eslint.config.mjs @jhonbaza403
+
+# Tailwind / PostCSS
+/postcss.config.mjs @jhonbaza403
