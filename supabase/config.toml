@@ -1,3 +1,6 @@
+# Credi Marketplace — Supabase local configuration
+# Keep this file aligned with the repository's local development/test contract.
+
 project_id = "credi-marketplace"
 
 [api]
@@ -28,7 +31,14 @@ file_size_limit = "50MiB"
 [auth]
 enabled = true
 site_url = "http://127.0.0.1:3000"
-additional_redirect_urls = ["http://localhost:3000/**"]
+additional_redirect_urls = [
+  "http://localhost:3000/**",
+  "http://127.0.0.1:3000/**",
+]
 
 [analytics]
 enabled = false
+
+# Health is a public liveness endpoint and does not require a user JWT.
+[functions.health]
+verify_jwt = false
