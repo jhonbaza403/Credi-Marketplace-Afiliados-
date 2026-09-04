@@ -1,40 +1,23 @@
 // ==========================================================
-// Payment Configuration
+// Credi Marketplace — Payment Configuration
 // ==========================================================
 
-
 export const PAYMENT_CONFIG = {
+  provider: process.env.PAYMENT_PROVIDER ?? "manual",
 
+  supportedMethods: [
+    "card",
+    "bank_transfer",
+    "stablecoin",
+  ] as const,
 
- provider:
+  crypto: {
+    provider: process.env.CRYPTO_PAYMENT_PROVIDER ?? "stripe",
+    currencies: ["USDC", "USDP", "USDG"] as const,
+    settlementCurrency: "USD" as const,
+    custody: false,
+  },
 
-  process.env.PAYMENT_PROVIDER
-  ??
-  'manual',
-
-
-
- supportedMethods:[
-
-  'binance_pay',
-
-  'usdt_trc20',
-
-  'bank_transfer'
-
- ] as const,
-
-
-
- webhookTimeout:
-
-  30000,
-
-
-
- retryAttempts:
-
-  5,
-
-
+  webhookTimeout: 30000,
+  retryAttempts: 5,
 } as const;
