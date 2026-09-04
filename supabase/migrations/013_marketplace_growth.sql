@@ -96,3 +96,71 @@ CREATE TRIGGER trg_b2b_crypto_payment_updated_at
 BEFORE UPDATE ON public.b2b_crypto_payment_intents
 FOR EACH ROW
 EXECUTE FUNCTION public.set_b2b_crypto_payment_updated_at();
+
+CREATE OR REPLACE FUNCTION public.create_affiliate_commission_ledger_entry()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    affiliate_rate numeric(7,4);
+    commission_value numeric(20,8);
+BEGIN
+    IF NEW.affiliate_id IS NULL
+       OR NEW.payment_status <> 'paid'
+       OR NEW.affiliate_commission <= 0
+    THEN
+        RETURN NEW;
+    END IF;
+
+    SELECT commission_rate
+      INTO affiliate_rate
+      FROM public.affiliates
+     WHERE id = NEW.affiliate_id
+       AND is_active = true;
+
+    IF affiliate_rate IS NULL THEN
+        RETURN NEW;
+    END IF;
+
+    commission_value := NEW.affiliate_commission;
+
+    INSERT INTO public.affiliate_commission_ledger (
+        affiliate_id,
+        order_id,
+        currency,
+        gross_amount,
+        commission_rate,
+        commission_amount,
+        status,
+        source,
+        settled_at
+    )
+    SELECT
+        NEW.affiliate_id,
+        NEW.id,
+        NEW.currency,
+        NEW.subtotal_amount,
+        affiliate_rate,
+        commission_value,
+        'approved',
+        'marketplace',
+        NULL
+    WHERE NOT EXISTS (
+        SELECT 1
+          FROM public.affiliate_commission_ledger
+         WHERE order_id = NEW.id
+           AND source = 'marketplace'
+    );
+
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_create_affiliate_commission_ledger
+ON public.orders;
+
+CREATE TRIGGER trg_create_affiliate_commission_ledger
+AFTER INSERT OR UPDATE OF payment_status, affiliate_id, affiliate_commission
+ON public.orders
+FOR EACH ROW
+EXECUTE FUNCTION public.create_affiliate_commission_ledger_entry();
