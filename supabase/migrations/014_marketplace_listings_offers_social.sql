@@ -2,41 +2,16 @@
 -- Credi Marketplace
 -- MIGRATION 014: listings, offers and social publishing foundation
 -- ============================================================
--- This migration is intentionally provider-agnostic. External
--- social APIs still require each platform's OAuth/app approval.
+-- Migration 010 is responsible for adding order_status.expired.
+-- Keeping that enum change isolated avoids same-transaction enum
+-- visibility problems on PostgreSQL versions that enforce them.
+-- External social APIs still require each platform's OAuth/app approval.
 -- Secrets/tokens are never hard-coded in the repository.
 
 BEGIN;
 
 -- ------------------------------------------------------------
--- 1. Repair order_status before any constraint references it.
--- ------------------------------------------------------------
-DO $$
-BEGIN
-    IF EXISTS (
-        SELECT 1
-        FROM pg_type t
-        JOIN pg_namespace n ON n.oid = t.typnamespace
-        WHERE t.typname = 'order_status'
-          AND n.nspname = 'public'
-    ) THEN
-        IF NOT EXISTS (
-            SELECT 1
-            FROM pg_enum e
-            JOIN pg_type t ON t.oid = e.enumtypid
-            JOIN pg_namespace n ON n.oid = t.typnamespace
-            WHERE t.typname = 'order_status'
-              AND n.nspname = 'public'
-              AND e.enumlabel = 'expired'
-        ) THEN
-            ALTER TYPE public.order_status ADD VALUE 'expired';
-        END IF;
-    END IF;
-END
-$$;
-
--- ------------------------------------------------------------
--- 2. Marketplace listings: one flexible model for goods/services.
+-- 1. Marketplace listings: one flexible model for goods/services.
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.listings (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -97,7 +72,7 @@ BEFORE UPDATE ON public.listings
 FOR EACH ROW EXECUTE FUNCTION public.set_listings_updated_at();
 
 -- ------------------------------------------------------------
--- 3. Offers: separate from advertising/sponsored placement.
+-- 2. Offers: separate from advertising/sponsored placement.
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.listing_offers (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -144,7 +119,7 @@ BEFORE UPDATE ON public.listing_offers
 FOR EACH ROW EXECUTE FUNCTION public.set_listing_offers_updated_at();
 
 -- ------------------------------------------------------------
--- 4. Social accounts and publishing queue.
+-- 3. Social accounts and publishing queue.
 -- credential_ciphertext must contain application-encrypted data.
 -- Never store plaintext OAuth tokens.
 -- ------------------------------------------------------------
@@ -228,7 +203,7 @@ BEFORE UPDATE ON public.social_publications
 FOR EACH ROW EXECUTE FUNCTION public.set_social_updated_at();
 
 -- ------------------------------------------------------------
--- 5. RLS: users can only manage their own listings/offers/social data.
+-- 4. RLS: users manage only their own listings/offers/social data.
 -- Public marketplace reads only published listings and active offers.
 -- ------------------------------------------------------------
 ALTER TABLE public.listings ENABLE ROW LEVEL SECURITY;
