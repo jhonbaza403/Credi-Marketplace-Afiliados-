@@ -19,6 +19,15 @@ const serverEnvSchema = z.object({
   SUPABASE_SERVICE_ROLE_KEY: nonEmptyString.optional(),
   DATABASE_URL: nonEmptyString.optional(),
   GEMINI_API_KEY: nonEmptyString.optional(),
+  STRIPE_SECRET_KEY: nonEmptyString.optional(),
+  STRIPE_WEBHOOK_SECRET: nonEmptyString.optional(),
+  B2B_CRYPTO_ENABLED: z.enum(["true", "false"]).default("false"),
+  B2B_CRYPTO_MERCHANT_COUNTRY: z
+    .string()
+    .trim()
+    .length(2)
+    .transform((value) => value.toUpperCase())
+    .default("US"),
 });
 
 const publicEnvSchema = z.object({
@@ -66,6 +75,10 @@ const serverEnv = serverEnvSchema.parse({
   SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
   DATABASE_URL: process.env.DATABASE_URL,
   GEMINI_API_KEY: process.env.GEMINI_API_KEY,
+  STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
+  STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
+  B2B_CRYPTO_ENABLED: process.env.B2B_CRYPTO_ENABLED,
+  B2B_CRYPTO_MERCHANT_COUNTRY: process.env.B2B_CRYPTO_MERCHANT_COUNTRY,
 });
 
 const publicEnv = publicEnvSchema.parse({
