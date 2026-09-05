@@ -56,6 +56,37 @@ jobs:
           test -f package-lock.json
           npm ci --ignore-scripts --no-audit --no-fund --dry-run
 
+      - name: Verify resolved security-sensitive packages
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ls --all --json > /tmp/npm-tree.json
+          node <<'NODE'
+          const fs = require("node:fs");
+          const tree = JSON.parse(fs.readFileSync("/tmp/npm-tree.json", "utf8"));
+          const seen = new Map();
+          function walk(node) {
+            if (!node || !node.dependencies) return;
+            for (const [name, dep] of Object.entries(node.dependencies)) {
+              if (dep?.version) seen.set(`${name}@${dep.version}`, true);
+              walk(dep);
+            }
+          }
+          walk(tree);
+          const forbidden = [
+            /^esbuild@(0\.24\.|0\.23\.|0\.22\.|0\.21\.|0\.20\.)/,
+            /^postcss@8\.(?:0|1|2|3|4|5\.(?:[0-1]?[0-9]|2[0-2]))(?:\.|$)/,
+            /^sharp@0\.3(?:[0-4])\./,
+          ];
+          const bad = [...seen.keys()].filter((entry) => forbidden.some((re) => re.test(entry)));
+          if (bad.length) {
+            console.error("::error::Vulnerable package versions remain in the resolved tree:");
+            for (const entry of bad) console.error(` - ${entry}`);
+            process.exit(1);
+          }
+          console.log("Security-sensitive dependency versions are outside the known vulnerable ranges.");
+          NODE
+
       - name: Commit synchronized lockfile
         shell: bash
         run: |
