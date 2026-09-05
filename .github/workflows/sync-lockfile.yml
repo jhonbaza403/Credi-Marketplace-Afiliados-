@@ -40,7 +40,7 @@ jobs:
           node --version
           npm --version
           node -e 'const major=Number(process.versions.node.split(".")[0]); if (major !== 22) process.exit(1)'
-          npm -e 'const major=Number(process.versions.npm.split(".")[0]); if (major !== 10) process.exit(1)'
+          node -e 'const major=Number(process.versions.npm.split(".")[0]); if (major !== 10) process.exit(1)'
 
       - name: Rebuild lockfile from package.json
         shell: bash
