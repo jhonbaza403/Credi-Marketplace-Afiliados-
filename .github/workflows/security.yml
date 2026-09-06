@@ -40,6 +40,13 @@ jobs:
           check-latest: true
           package-manager-cache: false
 
+      - name: Install exact npm version
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --global npm@11.19.1
+          hash -r
+
       - name: Verify Node.js and npm
         shell: bash
         run: |
@@ -63,11 +70,25 @@ jobs:
             exit 1
           fi
 
+          if [ "${NPM_VERSION}" != "11.19.1" ]; then
+            echo "::error::Expected npm 11.19.1 but found ${NPM_VERSION}"
+            exit 1
+          fi
+
       - name: Validate package-lock.json
         shell: bash
         run: |
           set -euo pipefail
-          test -f package-lock.json
+          test -s package-lock.json
+          node <<'NODE'
+          const fs = require("node:fs");
+          const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
+          const lock = JSON.parse(fs.readFileSync("package-lock.json", "utf8"));
+          if (lock.lockfileVersion !== 3) throw new Error(`Expected lockfileVersion 3, got ${lock.lockfileVersion}`);
+          if (lock.name !== pkg.name) throw new Error("package-lock.json name differs from package.json");
+          if (lock.version !== pkg.version) throw new Error("package-lock.json version differs from package.json");
+          if (!lock.packages || !lock.packages[""]) throw new Error("package-lock.json package tree is missing");
+          NODE
           npm ci --dry-run --ignore-scripts --no-audit --no-fund
 
       - name: Install dependencies from lockfile
