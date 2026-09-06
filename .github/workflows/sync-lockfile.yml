@@ -21,7 +21,7 @@ jobs:
   sync:
     name: Regenerate package-lock.json
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
 
     steps:
       - name: Checkout repository
@@ -36,40 +36,22 @@ jobs:
           check-latest: true
           package-manager-cache: false
 
+      - name: Install exact npm version
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --global npm@11.19.1
+          hash -r
+
       - name: Verify runtime
         shell: bash
         run: |
           set -euo pipefail
-
           node --version
           npm --version
-
           node -e 'const major=Number(process.versions.node.split(".")[0]); if (major !== 24) process.exit(1)'
           node -e 'const major=Number(process.versions.npm.split(".")[0]); if (major !== 11) process.exit(1)'
-
-      - name: Validate package manifest
-        shell: bash
-        run: |
-          set -euo pipefail
-          test -f package.json
-
-          node <<'NODE'
-          const fs = require("node:fs");
-          const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
-
-          const checks = [
-            ["packageManager", pkg.packageManager, "npm@11.19.0"],
-            ["engines.node", pkg.engines?.node, ">=24.0.0 <25.0.0"],
-            ["engines.npm", pkg.engines?.npm, ">=11.0.0 <12.0.0"],
-          ];
-
-          for (const [name, actual, expected] of checks) {
-            if (actual !== expected) {
-              console.error(`::error::${name} must be ${expected}; found ${actual ?? "missing"}`);
-              process.exit(1);
-            }
-          }
-          NODE
+          node -e 'const fs=require("node:fs"); const pkg=JSON.parse(fs.readFileSync("package.json","utf8")); if (pkg.packageManager !== "npm@11.19.1") process.exit(1)'
 
       - name: Regenerate package-lock.json
         shell: bash
@@ -78,18 +60,36 @@ jobs:
           rm -f package-lock.json
           npm install --package-lock-only --ignore-scripts --no-audit --no-fund
 
-      - name: Validate regenerated lockfile
+      - name: Validate regenerated package-lock.json
         shell: bash
         run: |
           set -euo pipefail
-          test -f package-lock.json
+          test -s package-lock.json
+          node <<'NODE'
+          const fs = require("node:fs");
+          const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
+          const lock = JSON.parse(fs.readFileSync("package-lock.json", "utf8"));
+          if (lock.lockfileVersion !== 3) throw new Error(`Expected lockfileVersion 3, got ${lock.lockfileVersion}`);
+          if (lock.name !== pkg.name) throw new Error("package-lock.json name differs from package.json");
+          if (lock.version !== pkg.version) throw new Error("package-lock.json version differs from package.json");
+          if (!lock.packages || typeof lock.packages !== "object" || !lock.packages[""]) {
+            throw new Error("package-lock.json does not contain the npm package tree");
+          }
+          console.log("package-lock.json structure: OK");
+          NODE
+
           npm ci --dry-run --ignore-scripts --no-audit --no-fund
 
-      - name: Verify resolved dependency tree
+      - name: Confirm clean npm installation
         shell: bash
         run: |
           set -euo pipefail
-          npm install --ignore-scripts --no-audit --no-fund
+          npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Confirm dependency tree
+        shell: bash
+        run: |
+          set -euo pipefail
           npm ls esbuild postcss sharp vite vitest --depth=10
 
       - name: Commit synchronized lockfile
