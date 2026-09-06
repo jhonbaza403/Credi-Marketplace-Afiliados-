@@ -8,15 +8,15 @@
 |---|---|
 | Framework | Next.js 16.3.x + App Router |
 | UI | React 19.x |
-| Runtime | Node.js 22.x |
-| npm | 10.x |
+| Runtime | Node.js 24.x LTS |
+| npm | 11.x |
 | CSS | Tailwind CSS 4 |
 | Backend | Supabase |
 | Database | PostgreSQL |
 | Auth | Supabase Auth / SSR |
 | Deploy | Vercel |
 
-El proyecto declara Node 22.x y npm 10.x en `package.json`, y `.nvmrc` contiene `22`.
+El proyecto declara Node.js 24.x y npm 11.x en `package.json`, y `.nvmrc` contiene `24`.
 
 ## 2. Pipeline obligatorio
 
@@ -68,8 +68,8 @@ Conectar el repositorio de GitHub con el proyecto de Vercel y mantener producci�
 La configuración de Vercel debe respetar:
 
 ```text
-Node.js 22.x
-npm 10.x
+Node.js 24.x LTS
+npm 11.x
 Next.js App Router
 ```
 
@@ -79,24 +79,7 @@ No utilizar OpenNext para un despliegue Vercel de este proyecto.
 
 Separar estrictamente variables públicas de secretos.
 
-### Públicas
-
-```env
-NEXT_PUBLIC_APP_URL=https://tu-dominio.example
-NEXT_PUBLIC_SUPABASE_URL=https://tu-proyecto.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=...
-```
-
-### Solo servidor
-
-```env
-SUPABASE_SERVICE_ROLE_KEY=...
-GEMINI_API_KEY=...
-PAYMENT_PROVIDER_SECRET=...
-PAYMENT_WEBHOOK_SECRET=...
-```
-
-Los secretos nunca deben tener prefijo `NEXT_PUBLIC_`, almacenarse en Git o aparecer en logs.
+Las variables públicas de Supabase son `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. Las credenciales privilegiadas permanecen server-only y nunca se colocan en el cliente.
 
 ## 7. Supabase
 
@@ -116,19 +99,7 @@ Las migraciones deben estar versionadas en Git. Los cambios de esquema hechos ma
 
 ## 8. Preview vs Production
 
-Mantener separados los entornos.
-
-```text
-Preview
-  ├── datos de prueba
-  └── secretos de preview
-
-Production
-  ├── datos reales
-  └── secretos de producción
-```
-
-No copiar secretos de producción a previews sin una necesidad explícita y controlada.
+Mantener separados los entornos y sus secretos.
 
 ## 9. Build de producción
 
@@ -142,7 +113,7 @@ Un build exitoso no reemplaza las pruebas ni la auditoría de seguridad.
 
 ## 10. Caché y datos privados
 
-Los assets estáticos pueden aprovechar el CDN. Las rutas transaccionales y privadas deben evitar caché público accidental:
+Las rutas transaccionales y privadas deben evitar caché público accidental:
 
 ```text
 /api/auth/*
@@ -154,39 +125,15 @@ Los assets estáticos pueden aprovechar el CDN. Las rutas transaccionales y priv
 
 ## 11. Dominio y HTTPS
 
-Producción debe usar HTTPS y un dominio canónico definido. No almacenar URLs de producción como secretos.
-
-Ejemplo:
-
-```env
-NEXT_PUBLIC_APP_URL=https://tu-dominio.example
-```
+Producción debe usar HTTPS y un dominio canónico definido.
 
 ## 12. Webhooks
 
 Los webhooks de proveedores externos deben apuntar al endpoint público correcto de producción y validar autenticidad antes de modificar órdenes o pagos.
 
-Un webhook recibido no implica confianza automática en su contenido.
-
 ## 13. Rollback
 
-Ante una regresión:
-
-```text
-detectar
-  ↓
-bloquear nueva promoción
-  ↓
-identificar commit/deployment
-  ↓
-rollback en Vercel
-  ↓
-verificar salud
-  ↓
-registrar incidente
-```
-
-El rollback debe identificar claramente el commit desplegado.
+Ante una regresión, identificar el commit/deployment, ejecutar rollback en Vercel, verificar salud y registrar el incidente.
 
 ## 14. Checklist de liberación
 
@@ -204,20 +151,7 @@ El rollback debe identificar claramente el commit desplegado.
 
 ## 15. Smoke test posterior
 
-Comprobar al menos:
-
-```text
-Inicio
-Registro/Login
-Catálogo
-Producto
-Carrito
-Checkout
-Orden
-Autenticación
-API principal
-Webhook cuando aplique
-```
+Comprobar al menos inicio, autenticación, catálogo, producto, carrito, checkout, orden, API principal y webhooks cuando apliquen.
 
 ## 16. No hacer
 
@@ -226,13 +160,14 @@ No introducir en el pipeline de despliegue:
 ```text
 Cloudflare como plataforma principal
 OpenNext
-Node 24
 Pages Router
+Node.js 22.x
+npm 10.x
 credenciales en el repositorio
 secretos NEXT_PUBLIC_*
 ```
 
-La plataforma oficial documentada es **Vercel + Supabase + Node.js 22.x**.
+La plataforma oficial documentada es **Vercel + Supabase + Node.js 24.x LTS + npm 11.x**.
 
 ## 17. Diagrama
 
