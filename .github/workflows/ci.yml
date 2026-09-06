@@ -31,27 +31,16 @@ jobs:
     timeout-minutes: 35
 
     steps:
-      # ==========================================================
-      # 1. Checkout
-      # ==========================================================
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
 
-      # ==========================================================
-      # 2. Node.js 22 + npm
-      # ==========================================================
       - name: Setup Node.js 22
         uses: actions/setup-node@v4
         with:
           node-version: "22"
-          cache: npm
-          cache-dependency-path: package-lock.json
 
-      # ==========================================================
-      # 3. Verificar runtime real
-      # ==========================================================
       - name: Verify Node.js and npm
         shell: bash
         run: |
@@ -81,9 +70,6 @@ jobs:
 
           echo "Runtime validation: OK"
 
-      # ==========================================================
-      # 4. Validar existencia de archivos críticos
-      # ==========================================================
       - name: Validate repository contract
         shell: bash
         run: |
@@ -107,15 +93,9 @@ jobs:
 
           echo "Required repository files: OK"
 
-      # ==========================================================
-      # 5. Instalar EXACTAMENTE desde package-lock.json
-      # ==========================================================
       - name: Install dependencies from lockfile
         run: npm ci --ignore-scripts --no-audit --no-fund
 
-      # ==========================================================
-      # 6. Verificar árbol de dependencias
-      # ==========================================================
       - name: Verify dependency tree
         shell: bash
         run: |
@@ -131,9 +111,6 @@ jobs:
             vitest \
             --depth=10
 
-      # ==========================================================
-      # 7. Verificar que el lockfile está sincronizado
-      # ==========================================================
       - name: Verify lockfile integrity
         shell: bash
         run: |
@@ -143,51 +120,27 @@ jobs:
 
           echo "package-lock.json is synchronized with package.json"
 
-      # ==========================================================
-      # 8. Validar estructura del proyecto
-      # ==========================================================
       - name: Verify project structure
         run: npm run verify:structure
 
-      # ==========================================================
-      # 9. ESLint
-      # ==========================================================
       - name: Run Linter
         run: npm run lint
 
-      # ==========================================================
-      # 10. TypeScript
-      # ==========================================================
       - name: Run Typecheck
         run: npm run typecheck
 
-      # ==========================================================
-      # 11. Unit Tests
-      # ==========================================================
       - name: Run Unit Tests
         run: npm run test
 
-      # ==========================================================
-      # 12. Playwright dependencies
-      # ==========================================================
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium
 
-      # ==========================================================
-      # 13. E2E Tests
-      # ==========================================================
       - name: Run E2E Tests
         run: npm run test:e2e
 
-      # ==========================================================
-      # 14. Production Build
-      # ==========================================================
       - name: Build Project
         run: npm run build
 
-      # ==========================================================
-      # 15. Final summary
-      # ==========================================================
       - name: CI success summary
         if: success()
         shell: bash
