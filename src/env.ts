@@ -3,7 +3,7 @@
 // Credi Marketplace
 //
 // Validación centralizada y tipada de variables de entorno
-// Next.js 16.3 + React 19 + Node.js 22 + Supabase
+// Next.js 16.3 + React 19 + Node.js 24 + Supabase
 // ==========================================================
 
 import "server-only";
