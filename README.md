@@ -8,12 +8,14 @@ Plataforma de marketplace orientada a producción para comercio electrónico, ve
 - **React 19**
 - **TypeScript**
 - **Tailwind CSS 4**
-- **Node.js 22.x / npm 10.x**
+- **Node.js 24.x LTS / npm 11.x**
 - **Supabase**: PostgreSQL, Auth, RLS, Storage y funciones
 - **Vercel**
 - **Vitest + Playwright**
 
-No se utiliza Pages Router, OpenNext ni un backend .NET como parte de la aplicación principal.
+Node.js 24 es el runtime objetivo del proyecto. Next.js 16 usa Turbopack de forma predeterminada para desarrollo y build, por lo que no se mantiene un script duplicado para activar Turbopack manualmente.
+
+No se utiliza Pages Router ni un backend .NET como parte de la aplicación principal. OpenNext no forma parte del despliegue de Vercel.
 
 ## Arquitectura
 
@@ -26,7 +28,7 @@ Next.js App Router
    ├── Server Components
    ├── Client Components
    ├── Route Handlers / Server Actions
-   ├── Auth / Authorization
+   └── Auth / Authorization
    │
    ▼
 Features / Services
@@ -75,7 +77,7 @@ src/lib/supabase/admin.ts
 src/proxy.ts
 ```
 
-La aplicación usa `@supabase/ssr` para el flujo SSR basado en cookies y `@supabase/supabase-js`. No se debe crear `src/utils/supabase/` ni duplicar clientes.
+La aplicación usa `@supabase/ssr` para SSR basado en cookies y `@supabase/supabase-js` para el acceso al servicio. No se debe crear `src/utils/supabase/` ni duplicar clientes.
 
 ### Variables públicas
 
@@ -91,9 +93,11 @@ SUPABASE_SECRET_KEY
 SUPABASE_SERVICE_ROLE_KEY
 DATABASE_URL
 GEMINI_API_KEY
+STRIPE_SECRET_KEY
+STRIPE_WEBHOOK_SECRET
 ```
 
-Nunca incluir valores secretos en el repositorio, README, logs o código cliente. Si una clave `sb_secret_*`, service-role key, contraseña PostgreSQL o token OAuth queda expuesto, debe rotarse inmediatamente.
+Nunca incluir valores secretos en el repositorio, README, logs o código cliente. Las claves privilegiadas y tokens OAuth deben permanecer exclusivamente del lado servidor.
 
 ## Supabase CLI
 
@@ -119,33 +123,11 @@ Antes de modificar enums, constraints, triggers o funciones, revisar el orden co
 
 La Data API de Supabase puede utilizarse para tablas que estén explícitamente diseñadas para ello. Toda tabla expuesta debe tener una política RLS apropiada y permisos mínimos.
 
-El ejemplo `instruments` de la documentación de Supabase es un **quickstart**, no una tabla de producción de Credi Marketplace. No se añade al esquema productivo solo por seguir el tutorial.
-
-Ejemplo aislado del quickstart, si se necesita para una prueba:
-
-```sql
-create table instruments (
-  id bigint primary key generated always as identity,
-  name text not null
-);
-
-insert into instruments (name)
-values ('violin'), ('viola'), ('cello');
-
-alter table public.instruments enable row level security;
-
-grant select on public.instruments to anon;
-
-create policy "public can read instruments"
-on public.instruments
-for select
-to anon
-using (true);
-```
+El ejemplo `instruments` de la documentación de Supabase es un quickstart, no una tabla de producción de Credi Marketplace. No se añade al esquema productivo solo por seguir el tutorial.
 
 ## Conexión PostgreSQL
 
-Supabase proporciona una conexión PostgreSQL directa/pooled para herramientas que realmente necesiten acceso SQL. Los parámetros del proyecto no deben convertirse en una cadena con contraseña dentro del repositorio.
+Supabase proporciona conexión PostgreSQL directa/pooled para herramientas que realmente necesiten acceso SQL. Los parámetros del proyecto no deben convertirse en una cadena con contraseña dentro del repositorio.
 
 Para Next.js, el acceso normal debe pasar por los clientes Supabase canónicos, RPC o servicios server-side. Drizzle es opcional y no debe introducirse como segundo ORM sin una decisión arquitectónica explícita.
 
@@ -175,30 +157,18 @@ No asumir que una comisión externa de Amazon, SHEIN, AliExpress, Alibaba u otro
 La publicación original pertenece a Credi Marketplace y puede distribuirse a canales autorizados:
 
 ```text
-                    CREDI MARKETPLACE
-                           │
-                     PUBLICACIÓN
-                           │
-              ┌────────────┴────────────┐
-              │                         │
-          Marketplace                 Oferta
-              │                         │
-              └────────────┬────────────┘
-                           │
-                    Content Composer
-                           │
-                    Social Queue
-                           │
-       ┌──────────┬────────┼────────┬──────────┐
-       ↓          ↓        ↓        ↓          ↓
-    TikTok     YouTube Instagram Facebook   Threads
-       │
-   TikTok Shop
-       │
- Pinterest / LinkedIn / otros
+Listing / Offer
+      ↓
+Content Composer
+      ↓
+Social Queue
+      ↓
+Adapter/API por plataforma
+      ↓
+Canales autorizados
 ```
 
-La infraestructura de publicaciones sociales no implica que todas las plataformas permitan publicación automática sin requisitos adicionales. Cada proveedor puede exigir OAuth, scopes, aplicaciones registradas, auditoría, límites, formatos o permisos comerciales específicos.
+La infraestructura social no implica que todas las plataformas permitan publicación automática sin requisitos adicionales. Cada proveedor puede exigir OAuth, scopes, aplicaciones registradas, auditoría, límites, formatos o permisos comerciales específicos.
 
 Nunca almacenar tokens OAuth en texto plano.
 
@@ -219,7 +189,7 @@ codex mcp add supabase --url "https://mcp.supabase.com/mcp?project_ref=PROJECT_R
 codex mcp login supabase
 ```
 
-Comprobar posteriormente la conexión desde el cliente de Codex. No incluir tokens de autenticación ni credenciales del MCP en el repositorio.
+No incluir tokens de autenticación ni credenciales del MCP en el repositorio.
 
 ## Instalación
 
@@ -230,7 +200,7 @@ npm ci
 ## Desarrollo
 
 ```bash
-npm run dev:turbo
+npm run dev
 ```
 
 ## Verificación completa
@@ -246,11 +216,11 @@ npm run security:audit
 npm run build
 ```
 
-No utilizar `npm audit fix --force` de forma ciega. Primero se debe identificar el árbol vulnerable y actualizar dependencias de forma controlada, manteniendo compatibilidad con Next.js, Vite, Vitest y Node.js objetivo.
+No utilizar `npm audit fix --force` de forma ciega. Primero se debe identificar el árbol vulnerable y actualizar dependencias de forma controlada.
 
 ## Vercel
 
-El proyecto está preparado para Vercel con Node.js 22.x y npm 10.x.
+El proyecto está preparado para Vercel con Node.js 24.x y npm 11.x. Next.js 16 usa Turbopack de forma predeterminada.
 
 Las variables públicas mínimas para Supabase son:
 
