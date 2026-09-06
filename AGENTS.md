@@ -10,14 +10,15 @@ Credi Marketplace es un marketplace abierto para productos, bienes, servicios, o
 - React 19
 - TypeScript
 - Tailwind CSS 4
-- Node.js 22.x
-- npm 10.x
+- Node.js 24.x LTS
+- npm 11.x
 - Supabase PostgreSQL/Auth/Storage
 - `@supabase/ssr` y `@supabase/supabase-js`
 - Vercel
 - Vitest + Playwright
 
-No migrar a Next.js Pages Router, Node 24, Tailwind 3, Redux, microservicios, Kubernetes, Elasticsearch u OpenNext sin una decisión arquitectónica explícita.
+Node 24 y npm 11 son el runtime y gestor de paquetes canónicos del repositorio. No reintroducir Node 20/22 ni npm 10.
+No migrar a Next.js Pages Router, Tailwind 3, Redux, microservicios, Kubernetes, Elasticsearch u OpenNext sin una decisión arquitectónica explícita.
 
 ## Supabase: reglas obligatorias
 
