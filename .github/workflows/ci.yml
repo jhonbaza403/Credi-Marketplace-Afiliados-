@@ -1,164 +1,303 @@
 name: Credi Marketplace CI
 
 on:
-  push:
-    branches:
-      - main
+push:
+branches:
+- main
 
-  pull_request:
-    branches:
-      - main
+pull_request:
+branches:
+- main
 
-# Evita ejecutar varias CI simultáneas sobre el mismo branch/PR.
-# Si llega un nuevo commit, cancela la ejecución anterior.
 concurrency:
-  group: credi-marketplace-ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+group: credi-marketplace-ci-${{ github.workflow }}-${{ github.ref }}
+cancel-in-progress: true
 
-# Mínimos permisos necesarios para este workflow.
 permissions:
-  contents: read
+contents: read
 
 env:
-  CI: true
-  NEXT_TELEMETRY_DISABLED: "1"
-  NODE_ENV: test
+CI: "true"
+NEXT_TELEMETRY_DISABLED: "1"
+NODE_ENV: test
 
 jobs:
-  quality:
-    name: Install → Validate → Lint → Typecheck → Unit → E2E → Build
-    runs-on: ubuntu-latest
-    timeout-minutes: 35
+quality:
+name: Validate → Install → Lint → Typecheck → Unit → E2E → Build
+runs-on: ubuntu-latest
+timeout-minutes: 35
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
+```
+steps:
+  # ==========================================================
+  # CHECKOUT
+  # ==========================================================
 
-      - name: Setup Node.js 22
-        uses: actions/setup-node@v4
-        with:
-          node-version: "22"
+  - name: Checkout repository
+    uses: actions/checkout@v4
+    with:
+      fetch-depth: 1
 
-      - name: Verify Node.js and npm
-        shell: bash
-        run: |
-          set -euo pipefail
+  # ==========================================================
+  # NODE.JS 24
+  # ==========================================================
 
-          echo "=========================================="
-          echo "Credi Marketplace CI - Runtime"
-          echo "=========================================="
+  - name: Setup Node.js 24
+    uses: actions/setup-node@v4
+    with:
+      node-version: "24"
+      cache: npm
+      cache-dependency-path: package-lock.json
 
-          NODE_VERSION="$(node --version)"
-          NPM_VERSION="$(npm --version)"
-          NODE_MAJOR="$(node -p "process.versions.node.split('.')[0]")"
-          NPM_MAJOR="$(npm --version | cut -d. -f1)"
+  # ==========================================================
+  # RUNTIME VALIDATION
+  # ==========================================================
 
-          echo "Node.js: ${NODE_VERSION}"
-          echo "npm:     ${NPM_VERSION}"
+  - name: Verify Node.js and npm
+    shell: bash
+    run: |
+      set -euo pipefail
 
-          if [ "${NODE_MAJOR}" != "22" ]; then
-            echo "::error::Expected Node.js 22.x but found ${NODE_VERSION}"
-            exit 1
-          fi
+      echo "=========================================="
+      echo "Credi Marketplace CI - Runtime"
+      echo "=========================================="
 
-          if [ "${NPM_MAJOR}" != "10" ]; then
-            echo "::error::Expected npm 10.x but found ${NPM_VERSION}"
-            exit 1
-          fi
+      NODE_VERSION="$(node --version)"
+      NPM_VERSION="$(npm --version)"
+      NODE_MAJOR="$(node -p "process.versions.node.split('.')[0]")"
+      NPM_MAJOR="$(npm --version | cut -d. -f1)"
 
-          echo "Runtime validation: OK"
+      echo "Node.js: ${NODE_VERSION}"
+      echo "npm:     ${NPM_VERSION}"
 
-      - name: Validate repository contract
-        shell: bash
-        run: |
-          set -euo pipefail
+      if [ "${NODE_MAJOR}" != "24" ]; then
+        echo "::error::Expected Node.js 24.x but found ${NODE_VERSION}"
+        exit 1
+      fi
 
-          required_files=(
-            "package.json"
-            "package-lock.json"
-            "tsconfig.json"
-            "next.config.ts"
-            "eslint.config.mjs"
-            "postcss.config.mjs"
-          )
+      if [ "${NPM_MAJOR}" != "11" ]; then
+        echo "::error::Expected npm 11.x but found ${NPM_VERSION}"
+        exit 1
+      fi
 
-          for file in "${required_files[@]}"; do
-            if [ ! -f "$file" ]; then
-              echo "::error::Required file missing: $file"
-              exit 1
-            fi
-          done
+      echo "Runtime validation: OK"
 
-          echo "Required repository files: OK"
+  # ==========================================================
+  # REPOSITORY CONTRACT
+  # ==========================================================
 
-      - name: Install dependencies from lockfile
-        run: npm ci --ignore-scripts --no-audit --no-fund
+  - name: Validate repository contract
+    shell: bash
+    run: |
+      set -euo pipefail
 
-      - name: Verify dependency tree
-        shell: bash
-        run: |
-          set -euo pipefail
+      required_files=(
+        "package.json"
+        "package-lock.json"
+        ".nvmrc"
+        "tsconfig.json"
+        "next.config.ts"
+        "eslint.config.mjs"
+        "postcss.config.mjs"
+      )
 
-          echo "Checking critical dependency versions..."
+      for file in "${required_files[@]}"; do
+        if [ ! -f "$file" ]; then
+          echo "::error::Required file missing: $file"
+          exit 1
+        fi
+      done
 
-          npm ls \
-            esbuild \
-            postcss \
-            sharp \
-            vite \
-            vitest \
-            --depth=10
+      echo "Required repository files: OK"
 
-      - name: Verify lockfile integrity
-        shell: bash
-        run: |
-          set -euo pipefail
+  # ==========================================================
+  # VERIFY .NVMRC
+  # ==========================================================
 
-          npm ci --dry-run --ignore-scripts --no-audit --no-fund
+  - name: Verify .nvmrc
+    shell: bash
+    run: |
+      set -euo pipefail
 
-          echo "package-lock.json is synchronized with package.json"
+      NVM_VERSION="$(tr -d '[:space:]' < .nvmrc)"
 
-      - name: Verify project structure
-        run: npm run verify:structure
+      if [ "${NVM_VERSION}" != "24" ]; then
+        echo "::error::.nvmrc must contain exactly: 24"
+        echo "::error::Found: ${NVM_VERSION}"
+        exit 1
+      fi
 
-      - name: Run Linter
-        run: npm run lint
+      echo ".nvmrc validation: OK"
 
-      - name: Run Typecheck
-        run: npm run typecheck
+  # ==========================================================
+  # VERIFY PACKAGE ENGINES
+  # ==========================================================
 
-      - name: Run Unit Tests
-        run: npm run test
+  - name: Verify package.json engines
+    shell: bash
+    run: |
+      set -euo pipefail
 
-      - name: Install Playwright Chromium
-        run: npx playwright install --with-deps chromium
+      node <<'NODE'
+      const fs = require("node:fs");
 
-      - name: Run E2E Tests
-        run: npm run test:e2e
+      const packageJson = JSON.parse(
+        fs.readFileSync("package.json", "utf8")
+      );
 
-      - name: Build Project
-        run: npm run build
+      const engines = packageJson.engines;
 
-      - name: CI success summary
-        if: success()
-        shell: bash
-        run: |
-          echo "=========================================="
-          echo "Credi Marketplace CI: PASSED"
-          echo "=========================================="
-          echo "Node.js: $(node --version)"
-          echo "npm:     $(npm --version)"
-          echo ""
-          echo "Validated:"
-          echo "✓ Repository contract"
-          echo "✓ Lockfile integrity"
-          echo "✓ Dependency tree"
-          echo "✓ Project structure"
-          echo "✓ ESLint"
-          echo "✓ TypeScript"
-          echo "✓ Unit tests"
-          echo "✓ Playwright E2E"
-          echo "✓ Production build"
-          echo "=========================================="
+      if (!engines?.node) {
+        console.error("::error::package.json is missing engines.node");
+        process.exit(1);
+      }
+
+      if (!engines?.npm) {
+        console.error("::error::package.json is missing engines.npm");
+        process.exit(1);
+      }
+
+      if (engines.node !== ">=24.0.0 <25.0.0") {
+        console.error(
+          `::error::Expected engines.node to be >=24.0.0 <25.0.0 but found ${engines.node}`
+        );
+        process.exit(1);
+      }
+
+      if (engines.npm !== ">=11.0.0 <12.0.0") {
+        console.error(
+          `::error::Expected engines.npm to be >=11.0.0 <12.0.0 but found ${engines.npm}`
+        );
+        process.exit(1);
+      }
+
+      console.log("package.json engines validation: OK");
+      NODE
+
+  # ==========================================================
+  # LOCKFILE VALIDATION
+  # ==========================================================
+
+  - name: Validate package-lock.json
+    shell: bash
+    run: |
+      set -euo pipefail
+
+      test -f package-lock.json
+
+      echo "Validating package-lock.json..."
+
+      npm ci \
+        --dry-run \
+        --ignore-scripts \
+        --no-audit \
+        --no-fund
+
+      echo "package-lock.json validation: OK"
+
+  # ==========================================================
+  # INSTALL
+  # ==========================================================
+
+  - name: Install dependencies
+    shell: bash
+    run: |
+      set -euo pipefail
+
+      npm ci \
+        --ignore-scripts \
+        --no-audit \
+        --no-fund
+
+  # ==========================================================
+  # DEPENDENCY TREE
+  # ==========================================================
+
+  - name: Verify dependency tree
+    shell: bash
+    run: |
+      set -euo pipefail
+
+      echo "Checking critical dependency versions..."
+
+      npm ls \
+        esbuild \
+        postcss \
+        sharp \
+        vite \
+        vitest \
+        --depth=10
+
+  # ==========================================================
+  # PROJECT STRUCTURE
+  # ==========================================================
+
+  - name: Verify project structure
+    run: npm run verify:structure
+
+  # ==========================================================
+  # ESLINT
+  # ==========================================================
+
+  - name: Run ESLint
+    run: npm run lint
+
+  # ==========================================================
+  # TYPESCRIPT
+  # ==========================================================
+
+  - name: Run TypeScript typecheck
+    run: npm run typecheck
+
+  # ==========================================================
+  # UNIT TESTS
+  # ==========================================================
+
+  - name: Run unit tests
+    run: npm run test
+
+  # ==========================================================
+  # PLAYWRIGHT
+  # ==========================================================
+
+  - name: Install Playwright Chromium
+    run: npx playwright install --with-deps chromium
+
+  - name: Run E2E tests
+    run: npm run test:e2e
+
+  # ==========================================================
+  # PRODUCTION BUILD
+  # ==========================================================
+
+  - name: Build project
+    run: npm run build
+
+  # ==========================================================
+  # SUCCESS SUMMARY
+  # ==========================================================
+
+  - name: CI success summary
+    if: success()
+    shell: bash
+    run: |
+      echo "=========================================="
+      echo "Credi Marketplace CI: PASSED"
+      echo "=========================================="
+      echo "Node.js: $(node --version)"
+      echo "npm:     $(npm --version)"
+      echo ""
+      echo "Validated:"
+      echo "✓ Repository contract"
+      echo "✓ .nvmrc"
+      echo "✓ package.json engines"
+      echo "✓ package-lock.json"
+      echo "✓ npm dependency installation"
+      echo "✓ Dependency tree"
+      echo "✓ Project structure"
+      echo "✓ ESLint"
+      echo "✓ TypeScript"
+      echo "✓ Unit tests"
+      echo "✓ Playwright E2E"
+      echo "✓ Production build"
+      echo "=========================================="
