@@ -15,7 +15,8 @@ BEGIN
         'delivered',
         'cancelled',
         'failed',
-        'refunded'
+        'refunded',
+        'expired'
     );
 EXCEPTION
     WHEN duplicate_object THEN NULL;
