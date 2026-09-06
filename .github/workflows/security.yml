@@ -30,27 +30,16 @@ jobs:
     timeout-minutes: 15
 
     steps:
-      # ==========================================================
-      # 1. Checkout
-      # ==========================================================
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
 
-      # ==========================================================
-      # 2. Node.js 22 + npm 10
-      # ==========================================================
       - name: Setup Node.js 22
         uses: actions/setup-node@v4
         with:
           node-version: "22"
-          cache: npm
-          cache-dependency-path: package-lock.json
 
-      # ==========================================================
-      # 3. Verify runtime
-      # ==========================================================
       - name: Verify Node.js and npm
         shell: bash
         run: |
@@ -74,22 +63,13 @@ jobs:
             exit 1
           fi
 
-      # ==========================================================
-      # 4. Validate lockfile
-      # ==========================================================
       - name: Validate lockfile
         run: npm ci --dry-run --ignore-scripts --no-audit --no-fund
 
-      # ==========================================================
-      # 5. Install exact dependency tree
-      # ==========================================================
       - name: Install dependencies from lockfile
         run: npm ci --ignore-scripts --no-audit --no-fund
 
-      # ==========================================================
-      # 6. Verify critical dependency tree
-      # ==========================================================
-      - name: Verify dependency tree
+      - name: Verify critical dependency tree
         run: |
           npm ls \
             esbuild \
@@ -99,15 +79,9 @@ jobs:
             vitest \
             --depth=10
 
-      # ==========================================================
-      # 7. Production security audit
-      # ==========================================================
       - name: Run Security Audit
         run: npm audit --audit-level=high
 
-      # ==========================================================
-      # 8. Security summary
-      # ==========================================================
       - name: Security audit passed
         if: success()
         shell: bash
