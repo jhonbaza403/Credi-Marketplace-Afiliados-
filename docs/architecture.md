@@ -9,16 +9,16 @@
 | Framework | Next.js 16.3.x — App Router |
 | UI | React 19.x |
 | Lenguaje | TypeScript |
-| Runtime CI/producción | Node.js 22.x |
-| Gestor de paquetes | npm 10.x |
-| Build/dev | Turbopack en desarrollo; `next build` en CI |
+| Runtime CI/producción | Node.js 24.x LTS |
+| Gestor de paquetes | npm 11.x |
+| Build/dev | Turbopack mediante `next dev`; `next build` en CI |
 | Estilos | Tailwind CSS 4 |
 | Backend / DB | Supabase + PostgreSQL |
 | Auth | Supabase Auth + SSR |
 | Pruebas | Vitest + Testing Library + Playwright |
 | Deploy | Vercel |
 
-La versión concreta instalada debe provenir del lockfile. No se deben documentar tecnologías que no formen parte del despliegue oficial.
+La versión concreta de las dependencias debe provenir del lockfile. La documentación no sustituye las validaciones ejecutables.
 
 ## 2. Principio rector
 
@@ -58,7 +58,7 @@ Supabase
 
 ## 3. Aplicación Next.js
 
-La aplicación usa App Router. Las páginas y layouts deben permanecer en el árbol `src/app/`. Los componentes deben clasificarse por responsabilidad.
+La aplicación usa App Router. Las páginas y layouts deben permanecer en `src/app/`. Los componentes deben clasificarse por responsabilidad.
 
 ```text
 src/
@@ -147,15 +147,7 @@ La IA es una integración de servidor. Las credenciales de proveedores externos 
 
 ## 9. Seguridad de datos
 
-Las operaciones sensibles deben usar:
-
-- autenticación de servidor;
-- autorización por rol/propiedad;
-- RLS;
-- validación de entrada;
-- respuestas sin detalles internos;
-- `Cache-Control: no-store` para datos privados;
-- trazabilidad mediante identificadores de solicitud cuando corresponda.
+Las operaciones sensibles deben usar autenticación de servidor, autorización por rol/propiedad, RLS, validación de entrada, respuestas sin detalles internos y `Cache-Control: no-store` para datos privados.
 
 ## 10. Caché
 
@@ -187,7 +179,7 @@ Los logs deben registrar eventos útiles para diagnóstico sin incluir tokens, c
 
 1. TypeScript como lenguaje del proyecto.
 2. App Router; no Pages Router.
-3. Node.js 22.x y npm 10.x en la línea CI/CD.
+3. Node.js 24.x LTS y npm 11.x en la línea CI/CD.
 4. Tailwind CSS 4.
 5. Supabase como backend/base de datos.
 6. Vercel como plataforma de despliegue.
@@ -202,4 +194,4 @@ Los logs deben registrar eventos útiles para diagnóstico sin incluir tokens, c
 
 ## 15. Fuente de verdad
 
-Cuando este documento entre en conflicto con la configuración ejecutable, la corrección debe hacerse en código/configuración y después actualizar esta documentación. La documentación no sustituye las validaciones de CI ni las políticas reales de Supabase/Vercel.
+Cuando este documento entre en conflicto con la configuración ejecutable, la corrección debe hacerse en código/configuración y después actualizar esta documentación. La documentación no sustituye las validaciones reales de CI, Vercel o Supabase.
