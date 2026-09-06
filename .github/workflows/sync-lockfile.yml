@@ -102,3 +102,7 @@ jobs:
           git add package-lock.json
           git commit -m "chore: regenerate npm lockfile"
           git push
+
+      # Touching this workflow intentionally retriggers the lockfile sync when
+      # CI/security configuration changes need a fresh dependency resolution.
+      # The lockfile itself remains the single source of truth for npm ci.
