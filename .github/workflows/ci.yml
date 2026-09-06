@@ -39,6 +39,13 @@ jobs:
           check-latest: true
           package-manager-cache: false
 
+      - name: Install exact npm version
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --global npm@11.19.1
+          hash -r
+
       - name: Verify Node.js and npm
         shell: bash
         run: |
@@ -59,6 +66,11 @@ jobs:
 
           if [ "${NPM_MAJOR}" != "11" ]; then
             echo "::error::Expected npm 11.x but found ${NPM_VERSION}"
+            exit 1
+          fi
+
+          if [ "${NPM_VERSION}" != "11.19.1" ]; then
+            echo "::error::Expected npm 11.19.1 but found ${NPM_VERSION}"
             exit 1
           fi
 
@@ -98,14 +110,12 @@ jobs:
           const expected = {
             node: ">=24.0.0 <25.0.0",
             npm: ">=11.0.0 <12.0.0",
-            packageManager: "npm@11.19.0",
+            packageManager: "npm@11.19.1",
           };
 
-          for (const [key, value] of Object.entries(expected)) {
-            if (pkg[key] !== value && !(key === "node" || key === "npm")) {
-              console.error(`::error::Expected ${key}=${value}; found ${pkg[key] ?? "missing"}`);
-              process.exit(1);
-            }
+          if (pkg.packageManager !== expected.packageManager) {
+            console.error(`::error::Expected packageManager=${expected.packageManager}; found ${pkg.packageManager ?? "missing"}`);
+            process.exit(1);
           }
 
           if (pkg.engines?.node !== expected.node) {
