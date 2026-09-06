@@ -92,6 +92,7 @@ jobs:
           set -euo pipefail
           npm ls esbuild postcss sharp vite vitest --depth=10
 
+      # Deliberately keeps package-lock regeneration deterministic on main.
       - name: Commit synchronized lockfile
         shell: bash
         run: |
