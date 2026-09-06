@@ -1,108 +1,193 @@
-name: Sync npm lockfile
+name: Validate npm lockfile
 
 on:
-  workflow_dispatch:
-  push:
-    branches:
-      - main
-    paths:
-      - package.json
-      - .github/workflows/sync-lockfile.yml
+workflow_dispatch:
+push:
+branches:
+- main
+paths:
+- package.json
+- package-lock.json
+- .nvmrc
+- .github/workflows/sync-lockfile.yml
 
 permissions:
-  contents: write
+contents: read
 
 concurrency:
-  group: credi-marketplace-lockfile
-  cancel-in-progress: true
+group: credi-marketplace-lockfile
+cancel-in-progress: true
 
 jobs:
-  sync:
-    name: Regenerate package-lock.json
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
+validate:
+name: Validate package-lock.json
+runs-on: ubuntu-latest
+timeout-minutes: 15
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
+```
+steps:
+  - name: Checkout repository
+    uses: actions/checkout@v4
 
-      - name: Setup Node.js 22
-        uses: actions/setup-node@v4
-        with:
-          node-version: "22"
+  - name: Setup Node.js 24
+    uses: actions/setup-node@v4
+    with:
+      node-version: "24"
+      cache: npm
+      cache-dependency-path: package-lock.json
 
-      - name: Verify runtime
-        shell: bash
-        run: |
-          set -euo pipefail
-          node --version
-          npm --version
-          node -e 'const major=Number(process.versions.node.split(".")[0]); if (major !== 22) process.exit(1)'
-          node -e 'const major=Number(process.versions.npm.split(".")[0]); if (major !== 10) process.exit(1)'
+  - name: Verify runtime
+    shell: bash
+    run: |
+      set -euo pipefail
 
-      - name: Rebuild lockfile from package.json
-        shell: bash
-        run: |
-          set -euo pipefail
-          rm -f package-lock.json
-          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+      echo "Node:"
+      node --version
 
-      - name: Validate regenerated lockfile
-        shell: bash
-        run: |
-          set -euo pipefail
-          test -f package-lock.json
-          npm ci --ignore-scripts --no-audit --no-fund --dry-run
+      echo "npm:"
+      npm --version
 
-      - name: Verify resolved security-sensitive packages
-        shell: bash
-        run: |
-          set -euo pipefail
-          npm ls --all --json > /tmp/npm-tree.json
-          node <<'NODE'
-          const fs = require("node:fs");
-          const tree = JSON.parse(fs.readFileSync("/tmp/npm-tree.json", "utf8"));
-          const seen = new Map();
-          function walk(node) {
-            if (!node || !node.dependencies) return;
-            for (const [name, dep] of Object.entries(node.dependencies)) {
-              if (dep?.version) seen.set(`${name}@${dep.version}`, true);
-              walk(dep);
-            }
+      node -e '
+        const major = Number(process.versions.node.split(".")[0]);
+
+        if (major !== 24) {
+          console.error(`Expected Node.js 24.x, received ${process.versions.node}`);
+          process.exit(1);
+        }
+      '
+
+      node -e '
+        const major = Number(process.versions.npm.split(".")[0]);
+
+        if (major !== 11) {
+          console.error(`Expected npm 11.x, received ${process.versions.npm}`);
+          process.exit(1);
+        }
+      '
+
+  - name: Verify package manifest
+    shell: bash
+    run: |
+      set -euo pipefail
+
+      test -f package.json
+      test -f package-lock.json
+
+      node -e '
+        const fs = require("node:fs");
+
+        const pkg = JSON.parse(
+          fs.readFileSync("package.json", "utf8")
+        );
+
+        if (!pkg.name) {
+          throw new Error("package.json is missing name");
+        }
+
+        if (!pkg.version) {
+          throw new Error("package.json is missing version");
+        }
+
+        if (!pkg.engines?.node) {
+          throw new Error("package.json must define engines.node");
+        }
+
+        if (!pkg.engines?.npm) {
+          throw new Error("package.json must define engines.npm");
+        }
+
+        console.log(`Package: ${pkg.name}@${pkg.version}`);
+        console.log(`Node engine: ${pkg.engines.node}`);
+        console.log(`npm engine: ${pkg.engines.npm}`);
+      '
+
+  - name: Validate lockfile consistency
+    shell: bash
+    run: |
+      set -euo pipefail
+
+      npm install \
+        --package-lock-only \
+        --ignore-scripts \
+        --no-audit \
+        --no-fund \
+        --dry-run
+
+  - name: Validate clean npm installation
+    shell: bash
+    run: |
+      set -euo pipefail
+
+      npm ci \
+        --ignore-scripts \
+        --no-audit \
+        --no-fund
+
+  - name: Verify resolved dependency tree
+    shell: bash
+    run: |
+      set -euo pipefail
+
+      npm ls --all --json > /tmp/npm-tree.json
+
+      node <<'NODE'
+      const fs = require("node:fs");
+
+      const tree = JSON.parse(
+        fs.readFileSync("/tmp/npm-tree.json", "utf8")
+      );
+
+      const seen = new Map();
+
+      function walk(node) {
+        if (!node || !node.dependencies) {
+          return;
+        }
+
+        for (const [name, dependency] of Object.entries(node.dependencies)) {
+          if (dependency?.version) {
+            seen.set(`${name}@${dependency.version}`, true);
           }
-          walk(tree);
-          const forbidden = [
-            /^esbuild@(0\.24\.|0\.23\.|0\.22\.|0\.21\.|0\.20\.)/,
-            /^postcss@8\.(?:0|1|2|3|4|5\.(?:[0-1]?[0-9]|2[0-2]))(?:\.|$)/,
-            /^sharp@0\.3(?:[0-4])\./,
-          ];
-          const bad = [...seen.keys()].filter((entry) => forbidden.some((re) => re.test(entry)));
-          if (bad.length) {
-            console.error("::error::Vulnerable package versions remain in the resolved tree:");
-            for (const entry of bad) console.error(` - ${entry}`);
-            process.exit(1);
-          }
-          console.log("Security-sensitive dependency versions are outside the known vulnerable ranges.");
-          NODE
 
-      - name: Commit synchronized lockfile
-        shell: bash
-        run: |
-          set -euo pipefail
+          walk(dependency);
+        }
+      }
 
-          if git diff --quiet -- package-lock.json; then
-            echo "package-lock.json is already synchronized."
-            exit 0
-          fi
+      walk(tree);
 
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add package-lock.json
-          git commit -m "chore: regenerate npm lockfile"
-          git push
+      const forbidden = [
+        /^esbuild@(0\.24\.|0\.23\.|0\.22\.|0\.21\.|0\.20\.)/,
+        /^postcss@8\.(?:0|1|2|3|4|5\.(?:[0-1]?[0-9]|2[0-2]))(?:\.|$)/,
+        /^sharp@0\.3(?:[0-4])\./,
+      ];
 
-      # Touching this workflow intentionally retriggers the lockfile sync when
-      # CI/security configuration changes need a fresh dependency resolution.
-      # The lockfile itself remains the single source of truth for npm ci.
+      const bad = [...seen.keys()].filter((entry) =>
+        forbidden.some((pattern) => pattern.test(entry))
+      );
+
+      if (bad.length > 0) {
+        console.error(
+          "::error::Vulnerable package versions remain in the resolved dependency tree:"
+        );
+
+        for (const entry of bad) {
+          console.error(` - ${entry}`);
+        }
+
+        process.exit(1);
+      }
+
+      console.log(
+        "Security-sensitive dependency versions are outside the configured vulnerable ranges."
+      );
+      NODE
+
+  - name: Verify required lockfile
+    shell: bash
+    run: |
+      set -euo pipefail
+
+      test -f package-lock.json
+
+      echo "package-lock.json is present and valid."
+      echo "npm ci completed successfully."
