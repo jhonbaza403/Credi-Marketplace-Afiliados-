@@ -83,9 +83,9 @@ const packageJson = JSON.parse(
   fs.readFileSync(path.resolve(root, "package.json"), "utf8"),
 );
 
-if (packageJson.packageManager !== "npm@11.19.0") {
+if (packageJson.packageManager !== "npm@11.19.1") {
   errors.push(
-    `packageManager esperado: npm@11.19.0; detectado: ${packageJson.packageManager ?? "ausente"}`,
+    `packageManager esperado: npm@11.19.1; detectado: ${packageJson.packageManager ?? "ausente"}`,
   );
 }
 
@@ -125,6 +125,14 @@ if (packageLock.lockfileVersion !== 3) {
   errors.push(
     `package-lock.json debe usar lockfileVersion 3; detectado: ${packageLock.lockfileVersion ?? "ausente"}`,
   );
+}
+
+if (!packageLock.packages || typeof packageLock.packages !== "object") {
+  errors.push("package-lock.json debe contener el árbol packages completo");
+}
+
+if (!packageLock.packages?.[""]) {
+  errors.push("package-lock.json no contiene el paquete raíz");
 }
 
 if (errors.length > 0) {
