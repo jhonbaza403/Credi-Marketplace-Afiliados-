@@ -2,7 +2,7 @@
 
 ## Estado
 
-Este documento registra criterios de verificación para la configuración y el árbol fuente del proyecto.
+Este documento registra los criterios de verificación para la configuración y el árbol fuente del proyecto.
 
 > Una comprobación estática o de estructura no constituye una prueba de build de producción. El build real debe completarse con `npm run build`.
 
@@ -10,8 +10,8 @@ Este documento registra criterios de verificación para la configuración y el �
 
 | Componente | Objetivo |
 |---|---|
-| Node.js | 22.x LTS |
-| npm | 10.x |
+| Node.js | 24.x LTS |
+| npm | 11.x |
 | Next.js | 16.3.4 |
 | React | 19.0.0 |
 | TypeScript | 5.6.x |
@@ -29,7 +29,7 @@ Ejecutar:
 npm run verify:structure
 ```
 
-El script comprueba archivos críticos, directorios esenciales, Node.js 22.x, `.nvmrc`, engines, versiones base y coherencia básica del lockfile.
+El script comprueba archivos críticos, directorios esenciales, Node.js 24.x, `.nvmrc`, engines, `packageManager`, versiones base y coherencia básica del lockfile.
 
 ## Calidad estática
 
@@ -47,7 +47,7 @@ npm run test
 npm run test:e2e
 ```
 
-Vitest usa `tests/unit` y `tests/integracion`. Playwright usa `tests/e2e` y `PLAYWRIGHT_BASE_URL`, con `next dev --turbo` para el servidor local.
+Vitest usa `tests/unit` y `tests/integracion`. Playwright usa `tests/e2e` y `PLAYWRIGHT_BASE_URL`, iniciando el servidor mediante el comando canónico `npm run dev`.
 
 ## Supabase
 
@@ -108,14 +108,16 @@ npm run build
 
 ## Estado de producción
 
+El estado debe actualizarse únicamente con evidencia de GitHub Actions y Vercel del commit concreto que se esté evaluando.
+
 ```text
-STRUCTURE VERIFICATION   NOT YET EXECUTED IN THIS COMMIT
-LINT                     NOT YET EXECUTED IN THIS COMMIT
-TYPECHECK                NOT YET EXECUTED IN THIS COMMIT
-UNIT TESTS               NOT YET EXECUTED IN THIS COMMIT
-E2E TESTS                NOT YET EXECUTED IN THIS COMMIT
-SECURITY AUDIT           NOT YET EXECUTED IN THIS COMMIT
+STRUCTURE VERIFICATION   NOT CONFIRMED
+LINT                     NOT CONFIRMED
+TYPECHECK                NOT CONFIRMED
+UNIT TESTS               NOT CONFIRMED
+E2E TESTS                NOT CONFIRMED
+SECURITY AUDIT           NOT CONFIRMED
 PRODUCTION BUILD         NOT CONFIRMED
 ```
 
-No se debe cambiar `PRODUCTION BUILD` a `PASS` hasta ejecutar realmente `npm run build` y verificar un resultado exitoso.
+No se debe marcar ningún elemento como PASS sin una ejecución real y verificable.
