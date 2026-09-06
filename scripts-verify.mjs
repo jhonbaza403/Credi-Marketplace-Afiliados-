@@ -66,37 +66,47 @@ for (const file of requiredFiles) checkFile(file);
 for (const directory of requiredDirectories) checkDirectory(directory);
 
 const nodeMajor = Number.parseInt(process.versions.node.split(".")[0] ?? "0", 10);
-if (nodeMajor !== 22) {
-  errors.push(`Node.js debe ser 22.x; versión detectada: ${process.versions.node}`);
+if (nodeMajor !== 24) {
+  errors.push(`Node.js debe ser 24.x; versión detectada: ${process.versions.node}`);
 } else {
   console.log(`✅ Node.js ${process.versions.node}`);
 }
 
 const nvmrc = fs.readFileSync(path.resolve(root, ".nvmrc"), "utf8").trim();
-if (nvmrc !== "22") {
-  errors.push(`.nvmrc debe declarar 22; valor detectado: ${nvmrc || "vacío"}`);
+if (nvmrc !== "24") {
+  errors.push(`.nvmrc debe declarar 24; valor detectado: ${nvmrc || "vacío"}`);
 } else {
-  console.log("✅ .nvmrc = 22");
+  console.log("✅ .nvmrc = 24");
 }
 
 const packageJson = JSON.parse(
   fs.readFileSync(path.resolve(root, "package.json"), "utf8"),
 );
 
-if (packageJson.engines?.node !== ">=22.0.0 <23.0.0") {
-  errors.push("package.json debe declarar engines.node >=22.0.0 <23.0.0");
+if (packageJson.packageManager !== "npm@11.19.0") {
+  errors.push(
+    `packageManager esperado: npm@11.19.0; detectado: ${packageJson.packageManager ?? "ausente"}`,
+  );
 }
 
-if (packageJson.engines?.npm !== ">=10.0.0 <11.0.0") {
-  errors.push("package.json debe declarar engines.npm >=10.0.0 <11.0.0");
+if (packageJson.engines?.node !== ">=24.0.0 <25.0.0") {
+  errors.push("package.json debe declarar engines.node >=24.0.0 <25.0.0");
+}
+
+if (packageJson.engines?.npm !== ">=11.0.0 <12.0.0") {
+  errors.push("package.json debe declarar engines.npm >=11.0.0 <12.0.0");
 }
 
 if (packageJson.dependencies?.next !== "16.3.4") {
-  errors.push(`Next.js esperado: 16.3.4; detectado: ${packageJson.dependencies?.next ?? "ausente"}`);
+  errors.push(
+    `Next.js esperado: 16.3.4; detectado: ${packageJson.dependencies?.next ?? "ausente"}`,
+  );
 }
 
 if (packageJson.dependencies?.react !== "19.0.0") {
-  errors.push(`React esperado: 19.0.0; detectado: ${packageJson.dependencies?.react ?? "ausente"}`);
+  errors.push(
+    `React esperado: 19.0.0; detectado: ${packageJson.dependencies?.react ?? "ausente"}`,
+  );
 }
 
 const packageLock = JSON.parse(
@@ -109,6 +119,12 @@ if (packageLock.name !== packageJson.name) {
 
 if (packageLock.version !== packageJson.version) {
   errors.push("package-lock.json no coincide con package.json en version");
+}
+
+if (packageLock.lockfileVersion !== 3) {
+  errors.push(
+    `package-lock.json debe usar lockfileVersion 3; detectado: ${packageLock.lockfileVersion ?? "ausente"}`,
+  );
 }
 
 if (errors.length > 0) {
