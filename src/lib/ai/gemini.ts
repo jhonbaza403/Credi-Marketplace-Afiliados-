@@ -1,6 +1,6 @@
 import "server-only";
 
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 
 const DEFAULT_MODEL = "gemini-2.5-flash";
 
@@ -24,6 +24,7 @@ export function isGeminiConfigured(): boolean {
 
 export async function generateGeminiText(
   prompt: string,
+  options: { maxOutputTokens?: number } = {},
 ): Promise<string> {
   const normalizedPrompt = prompt.trim();
 
@@ -31,13 +32,17 @@ export async function generateGeminiText(
     throw new Error("El prompt de Gemini no puede estar vacío");
   }
 
-  const client = new GoogleGenerativeAI(getApiKey());
-  const model = client.getGenerativeModel({
+  const ai = new GoogleGenAI({ apiKey: getApiKey() });
+  const response = await ai.models.generateContent({
     model: getModelName(),
+    contents: normalizedPrompt,
+    config:
+      typeof options.maxOutputTokens === "number"
+        ? { maxOutputTokens: options.maxOutputTokens }
+        : undefined,
   });
 
-  const result = await model.generateContent(normalizedPrompt);
-  const text = result.response.text().trim();
+  const text = response.text?.trim() ?? "";
 
   if (!text) {
     throw new Error("Gemini no devolvió contenido de texto");
