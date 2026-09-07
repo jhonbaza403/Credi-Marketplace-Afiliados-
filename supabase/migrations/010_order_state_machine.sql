@@ -1,43 +1,9 @@
 -- ============================================================
 -- 010_order_state_machine.sql
--- Máquina de estados de órdenes
+-- Order status history
 -- ============================================================
-
--- Migration 003 creates order_status without `expired`.
--- Add the enum value before the CHECK constraint references it.
-DO $$
-BEGIN
-    IF NOT EXISTS (
-        SELECT 1
-        FROM pg_enum e
-        JOIN pg_type t ON t.oid = e.enumtypid
-        JOIN pg_namespace n ON n.oid = t.typnamespace
-        WHERE t.typname = 'order_status'
-          AND n.nspname = 'public'
-          AND e.enumlabel = 'expired'
-    ) THEN
-        ALTER TYPE public.order_status ADD VALUE 'expired';
-    END IF;
-END
-$$;
-
-ALTER TABLE public.orders
-DROP CONSTRAINT IF EXISTS orders_status_check;
-
-ALTER TABLE public.orders
-ADD CONSTRAINT orders_status_check
-CHECK (
-    status IN (
-        'pending',
-        'paid',
-        'processing',
-        'shipped',
-        'delivered',
-        'cancelled',
-        'refunded',
-        'expired'
-    )
-);
+-- Migration 003 already contains the complete order_status enum,
+-- including `expired`. Keep enum changes out of this migration.
 
 CREATE TABLE IF NOT EXISTS public.order_status_history (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
