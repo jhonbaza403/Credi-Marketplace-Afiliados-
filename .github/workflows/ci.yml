@@ -83,6 +83,7 @@ jobs:
             "package.json"
             "package-lock.json"
             ".nvmrc"
+            ".node-version"
             "tsconfig.json"
             "next.config.ts"
             "eslint.config.mjs"
@@ -96,12 +97,13 @@ jobs:
             }
           done
 
-      - name: Validate .nvmrc and package engines
+      - name: Validate runtime contract
         shell: bash
         run: |
           set -euo pipefail
 
           test "$(tr -d '[:space:]' < .nvmrc)" = "24"
+          test "$(tr -d '[:space:]v' < .node-version)" = "24"
 
           node <<'NODE'
           const fs = require("node:fs");
@@ -129,18 +131,30 @@ jobs:
           }
           NODE
 
-      - name: Validate package-lock.json
+      - name: Regenerate and validate npm lockfile
         shell: bash
         run: |
           set -euo pipefail
+          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+          node <<'NODE'
+          const fs = require("node:fs");
+          const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
+          const lock = JSON.parse(fs.readFileSync("package-lock.json", "utf8"));
+          if (lock.lockfileVersion !== 3) throw new Error(`Expected lockfileVersion 3, got ${lock.lockfileVersion}`);
+          if (lock.name !== pkg.name) throw new Error("package-lock.json name differs from package.json");
+          if (lock.version !== pkg.version) throw new Error("package-lock.json version differs from package.json");
+          if (!lock.packages || typeof lock.packages !== "object" || !lock.packages[""]) {
+            throw new Error("package-lock.json does not contain the npm package tree");
+          }
+          console.log("package-lock.json structure: OK");
+          NODE
           npm ci --dry-run --ignore-scripts --no-audit --no-fund
 
       - name: Install dependencies
         run: npm ci --ignore-scripts --no-audit --no-fund
 
       - name: Verify dependency tree
-        run: |
-          npm ls esbuild postcss sharp vite vitest --depth=10
+        run: npm ls esbuild postcss sharp vite vitest --depth=10
 
       - name: Verify project structure
         run: npm run verify:structure
