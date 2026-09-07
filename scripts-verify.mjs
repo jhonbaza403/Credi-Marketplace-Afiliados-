@@ -7,6 +7,7 @@ const root = process.cwd();
 const requiredFiles = [
   ".gitignore",
   ".nvmrc",
+  ".node-version",
   ".vercelignore",
   ".env.example",
   "package.json",
@@ -72,11 +73,13 @@ if (nodeMajor !== 24) {
   console.log(`✅ Node.js ${process.versions.node}`);
 }
 
-const nvmrc = fs.readFileSync(path.resolve(root, ".nvmrc"), "utf8").trim();
-if (nvmrc !== "24") {
-  errors.push(`.nvmrc debe declarar 24; valor detectado: ${nvmrc || "vacío"}`);
-} else {
-  console.log("✅ .nvmrc = 24");
+for (const runtimeFile of [".nvmrc", ".node-version"]) {
+  const value = fs.readFileSync(path.resolve(root, runtimeFile), "utf8").trim().replace(/^v/, "");
+  if (value !== "24") {
+    errors.push(`${runtimeFile} debe declarar Node.js 24; valor detectado: ${value || "vacío"}`);
+  } else {
+    console.log(`✅ ${runtimeFile} = 24`);
+  }
 }
 
 const packageJson = JSON.parse(
@@ -103,9 +106,9 @@ if (packageJson.dependencies?.next !== "16.3.4") {
   );
 }
 
-if (packageJson.dependencies?.react !== "19.0.0") {
+if (packageJson.dependencies?.react !== "19.2.7") {
   errors.push(
-    `React esperado: 19.0.0; detectado: ${packageJson.dependencies?.react ?? "ausente"}`,
+    `React esperado: 19.2.7; detectado: ${packageJson.dependencies?.react ?? "ausente"}`,
   );
 }
 
