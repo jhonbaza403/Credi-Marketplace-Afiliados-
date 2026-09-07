@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -21,11 +22,9 @@ export const dynamic = 'force-dynamic'
  *   - Nunca confiar en commissionAmount del cliente.
  *   - Precios calculados exclusivamente por PostgreSQL.
  *   - Inventario validado/bloqueado por RPC.
- *   - Creación transaccional mediante:
- *
- *       create_pending_order_batch
- *
- * El pago NO se confirma aquí.
+ *   - Creación transaccional mediante RPC server-only.
+ *   - El RPC privilegiado no está expuesto a anon/authenticated.
+ *   - El pago NO se confirma aquí.
  * ============================================================
  */
 
@@ -106,14 +105,7 @@ export async function POST(request: Request) {
   const requestId = getRequestId(request)
 
   try {
-    /*
-     * ---------------------------------------------------------
-     * 1. Content-Type
-     * ---------------------------------------------------------
-     */
-
-    const contentType =
-      request.headers.get('content-type') ?? ''
+    const contentType = request.headers.get('content-type') ?? ''
 
     if (!contentType.toLowerCase().includes('application/json')) {
       return jsonError(
@@ -122,17 +114,6 @@ export async function POST(request: Request) {
         'UNSUPPORTED_MEDIA_TYPE',
       )
     }
-
-    /*
-     * ---------------------------------------------------------
-     * 2. Autenticación
-     * ---------------------------------------------------------
-     *
-     * El customerId NO viene del frontend.
-     *
-     * La identidad verdadera es auth.uid().
-     * ---------------------------------------------------------
-     */
 
     const supabase = await createClient()
 
@@ -162,12 +143,6 @@ export async function POST(request: Request) {
       )
     }
 
-    /*
-     * ---------------------------------------------------------
-     * 3. Parsear JSON
-     * ---------------------------------------------------------
-     */
-
     let rawBody: unknown
 
     try {
@@ -179,12 +154,6 @@ export async function POST(request: Request) {
         'INVALID_JSON',
       )
     }
-
-    /*
-     * ---------------------------------------------------------
-     * 4. Validación estricta
-     * ---------------------------------------------------------
-     */
 
     const parsed = checkoutSchema.safeParse(rawBody)
 
@@ -198,32 +167,11 @@ export async function POST(request: Request) {
 
     const payload: CheckoutPayload = parsed.data
 
-    /*
-     * ---------------------------------------------------------
-     * 5. Normalizar productos duplicados
-     * ---------------------------------------------------------
-     *
-     * Si el frontend accidentalmente envía:
-     *
-     * product A × 2
-     * product A × 3
-     *
-     * lo convertimos en:
-     *
-     * product A × 5
-     *
-     * antes de enviarlo a PostgreSQL.
-     * ---------------------------------------------------------
-     */
-
     const quantityByProduct = new Map<string, number>()
 
     for (const item of payload.items) {
-      const current =
-        quantityByProduct.get(item.product_id) ?? 0
-
-      const nextQuantity =
-        current + item.quantity
+      const current = quantityByProduct.get(item.product_id) ?? 0
+      const nextQuantity = current + item.quantity
 
       if (nextQuantity > MAX_QUANTITY_PER_ITEM) {
         return jsonError(
@@ -233,72 +181,29 @@ export async function POST(request: Request) {
         )
       }
 
-      quantityByProduct.set(
-        item.product_id,
-        nextQuantity,
-      )
+      quantityByProduct.set(item.product_id, nextQuantity)
     }
 
-    const normalizedItems = Array.from(
-      quantityByProduct.entries(),
-    )
+    const normalizedItems = Array.from(quantityByProduct.entries())
       .map(([product_id, quantity]) => ({
         product_id,
         quantity,
       }))
-      /*
-       * Orden determinista.
-       *
-       * Esto ayuda a que PostgreSQL adquiera bloqueos
-       * en un orden consistente y reduce el riesgo de
-       * deadlocks cuando varios compradores intentan
-       * adquirir los mismos productos.
-       */
-      .sort((a, b) =>
-        a.product_id.localeCompare(b.product_id),
-      )
+      .sort((a, b) => a.product_id.localeCompare(b.product_id))
 
-    /*
-     * ---------------------------------------------------------
-     * 6. Affiliate reference
-     * ---------------------------------------------------------
-     */
+    const affiliateRef = payload.affiliate_ref?.trim() || null
 
-    const affiliateRef =
-      payload.affiliate_ref?.trim() || null
+    const admin = createAdminClient()
 
-    /*
-     * ---------------------------------------------------------
-     * 7. RPC transaccional
-     * ---------------------------------------------------------
-     *
-     * IMPORTANTE:
-     *
-     * NO enviamos:
-     *
-     *   customerId
-     *   price
-     *   totalAmount
-     *   commission
-     *   sellerAmount
-     *
-     * porque ninguno de esos valores debe proceder
-     * del navegador.
-     */
-
-    const { data: rpcData, error: rpcError } =
-      await supabase.rpc(
-        'create_pending_order_batch',
-        {
-          p_buyer_id: user.id,
-
-          p_items: normalizedItems,
-
-          p_affiliate_ref: affiliateRef,
-
-          p_region: payload.region,
-        },
-      )
+    const { data: rpcData, error: rpcError } = await admin.rpc(
+      'create_pending_order_batch',
+      {
+        p_buyer_id: user.id,
+        p_items: normalizedItems,
+        p_affiliate_ref: affiliateRef,
+        p_region: payload.region,
+      },
+    )
 
     if (rpcError) {
       console.error(
@@ -306,14 +211,7 @@ export async function POST(request: Request) {
         rpcError,
       )
 
-      const message =
-        rpcError.message?.toLowerCase() ?? ''
-
-      /*
-       * -------------------------------------------------------
-       * Inventario
-       * -------------------------------------------------------
-       */
+      const message = rpcError.message?.toLowerCase() ?? ''
 
       if (
         message.includes('insufficient_stock') ||
@@ -327,12 +225,6 @@ export async function POST(request: Request) {
         )
       }
 
-      /*
-       * -------------------------------------------------------
-       * Producto
-       * -------------------------------------------------------
-       */
-
       if (
         message.includes('product_not_found') ||
         message.includes('product_inactive')
@@ -344,27 +236,13 @@ export async function POST(request: Request) {
         )
       }
 
-      /*
-       * -------------------------------------------------------
-       * Afiliado
-       * -------------------------------------------------------
-       */
-
-      if (
-        message.includes('invalid_affiliate')
-      ) {
+      if (message.includes('invalid_affiliate')) {
         return jsonError(
           'La referencia de afiliado no es válida.',
           400,
           'INVALID_AFFILIATE',
         )
       }
-
-      /*
-       * -------------------------------------------------------
-       * Autenticación
-       * -------------------------------------------------------
-       */
 
       if (
         message.includes('unauthenticated') ||
@@ -376,12 +254,6 @@ export async function POST(request: Request) {
           'INVALID_SESSION',
         )
       }
-
-      /*
-       * -------------------------------------------------------
-       * Payload
-       * -------------------------------------------------------
-       */
 
       if (
         message.includes('invalid_payload') ||
@@ -395,12 +267,6 @@ export async function POST(request: Request) {
         )
       }
 
-      /*
-       * -------------------------------------------------------
-       * Error genérico
-       * -------------------------------------------------------
-       */
-
       return jsonError(
         'No fue posible crear la orden. Inténtalo nuevamente.',
         500,
@@ -408,16 +274,7 @@ export async function POST(request: Request) {
       )
     }
 
-    /*
-     * ---------------------------------------------------------
-     * 8. Normalizar respuesta RPC
-     * ---------------------------------------------------------
-     */
-
-    const result =
-      Array.isArray(rpcData)
-        ? rpcData[0]
-        : rpcData
+    const result = Array.isArray(rpcData) ? rpcData[0] : rpcData
 
     if (
       !result ||
@@ -436,55 +293,33 @@ export async function POST(request: Request) {
       )
     }
 
-    /*
-     * ---------------------------------------------------------
-     * 9. Respuesta pública
-     * ---------------------------------------------------------
-     *
-     * El servidor devuelve el total calculado por PostgreSQL.
-     *
-     * Nunca utilizamos un total enviado por el cliente.
-     */
-
     const responseBody = {
       success: true,
-
       orderId: result.order_id,
-
       status:
         typeof result.status === 'string'
           ? result.status
           : 'pending',
-
       totalAmount:
         typeof result.total_amount === 'number'
           ? result.total_amount
-          : Number(result.total_amount ?? 0),
-
+          : Number(result.total_amount),
+      commissionAmount:
+        typeof result.commission_amount === 'number'
+          ? result.commission_amount
+          : Number(result.commission_amount),
       currency:
         typeof result.currency === 'string'
           ? result.currency
           : 'USD',
-
-      itemCount:
-        typeof result.item_count === 'number'
-          ? result.item_count
-          : normalizedItems.length,
-
-      message:
-        'Orden creada correctamente. Continúa con el proceso de pago.',
     }
 
-    return NextResponse.json(
-      responseBody,
-      {
-        status: 201,
-        headers: {
-          'Cache-Control': 'no-store',
-          'X-Request-ID': requestId,
-        },
+    return NextResponse.json(responseBody, {
+      status: 201,
+      headers: {
+        'Cache-Control': 'no-store',
       },
-    )
+    })
   } catch (error: unknown) {
     console.error(
       `[checkout:${requestId}] Unexpected error`,
