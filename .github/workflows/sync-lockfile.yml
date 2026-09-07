@@ -5,10 +5,6 @@ on:
   push:
     branches:
       - main
-    paths:
-      - package.json
-      - .nvmrc
-      - .github/workflows/sync-lockfile.yml
 
 permissions:
   contents: write
@@ -19,6 +15,7 @@ concurrency:
 
 jobs:
   sync:
+    if: github.actor != 'github-actions[bot]'
     name: Regenerate package-lock.json
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -50,7 +47,8 @@ jobs:
           node --version
           npm --version
           node -e 'const major=Number(process.versions.node.split(".")[0]); if (major !== 24) process.exit(1)'
-          node -e 'const major=Number(process.versions.npm.split(".")[0]); if (major !== 11) process.exit(1)'
+          node -e 'const { execFileSync } = require("node:child_process"); const major=Number(execFileSync("npm", ["--version"], {encoding:"utf8"}).trim().split(".")[0]); if (major !== 11) process.exit(1)'
+          node -e 'const { execFileSync } = require("node:child_process"); const version=execFileSync("npm", ["--version"], {encoding:"utf8"}).trim(); if (version !== "11.19.1") process.exit(1)'
           node -e 'const fs=require("node:fs"); const pkg=JSON.parse(fs.readFileSync("package.json","utf8")); if (pkg.packageManager !== "npm@11.19.1") process.exit(1)'
 
       - name: Regenerate package-lock.json
@@ -92,7 +90,6 @@ jobs:
           set -euo pipefail
           npm ls esbuild postcss sharp vite vitest --depth=10
 
-      # Deliberately keeps package-lock regeneration deterministic on main.
       - name: Commit synchronized lockfile
         shell: bash
         run: |
