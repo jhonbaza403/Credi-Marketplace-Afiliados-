@@ -1,6 +1,6 @@
 -- ============================================================
 -- 012_create_pending_order_batch.sql
--- CHECKOUT MULTIPRODUCTO TRANSACCIONAL
+-- Transactional multi-product checkout
 -- ============================================================
 
 CREATE OR REPLACE FUNCTION public.create_pending_order_batch(
@@ -18,66 +18,58 @@ RETURNS TABLE (
 )
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = ''
 AS $$
 DECLARE
     v_order_id uuid;
-
     v_item jsonb;
-
     v_product_id uuid;
     v_quantity integer;
-
     v_title text;
     v_unit_price numeric(20,2);
-    v_stock integer;
     v_store_id uuid;
-
+    v_stock integer;
+    v_available integer;
+    v_reserved integer;
     v_subtotal numeric(20,2);
-
     v_total numeric(20,2) := 0;
-
     v_affiliate_id uuid;
-    v_affiliate_user_id uuid;
-    v_commission_rate numeric(7,4);
-
+    v_commission_rate numeric(7,4) := 0;
     v_commission_amount numeric(20,2) := 0;
-
-    v_existing_idempotency idempotency_keys%ROWTYPE;
-
+    v_existing public.idempotency_keys%ROWTYPE;
     v_request_hash text;
 BEGIN
-
-    -- ========================================================
-    -- 1. Validaciones básicas
-    -- ========================================================
-
     IF p_buyer_id IS NULL THEN
-        RAISE EXCEPTION 'buyer_required'
-            USING ERRCODE = '22023';
+        RAISE EXCEPTION 'buyer_required' USING ERRCODE = '22023';
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM public.profiles WHERE id = p_buyer_id
+    ) THEN
+        RAISE EXCEPTION 'buyer_not_found' USING ERRCODE = '23503';
     END IF;
 
     IF p_items IS NULL
        OR jsonb_typeof(p_items) <> 'array'
        OR jsonb_array_length(p_items) = 0
+       OR jsonb_array_length(p_items) > 100
     THEN
-        RAISE EXCEPTION 'items_required'
-            USING ERRCODE = '22023';
+        RAISE EXCEPTION 'invalid_items' USING ERRCODE = '22023';
     END IF;
 
-    IF jsonb_array_length(p_items) > 100 THEN
-        RAISE EXCEPTION 'too_many_items'
-            USING ERRCODE = '22023';
-    END IF;
-
-    -- ========================================================
-    -- 2. Idempotencia
-    -- ========================================================
+    v_request_hash := encode(
+        extensions.digest(
+            jsonb_build_object(
+                'items', p_items,
+                'affiliate_ref', NULLIF(btrim(p_affiliate_ref), '')
+            )::text,
+            'sha256'
+        ),
+        'hex'
+    );
 
     IF p_idempotency_key IS NOT NULL THEN
-
-        SELECT *
-        INTO v_existing_idempotency
+        SELECT * INTO v_existing
         FROM public.idempotency_keys
         WHERE user_id = p_buyer_id
           AND endpoint = '/api/checkout'
@@ -85,313 +77,192 @@ BEGIN
         FOR UPDATE;
 
         IF FOUND THEN
-
-            IF v_existing_idempotency.expires_at < now() THEN
-
-                DELETE FROM public.idempotency_keys
-                WHERE id = v_existing_idempotency.id;
-
-            ELSE
-
-                IF v_existing_idempotency.resource_id IS NOT NULL THEN
-
-                    SELECT
-                        o.id,
-                        o.total_amount,
-                        COALESCE(o.admin_commission, 0),
-                        COALESCE(o.currency, 'USD'),
-                        o.status
-                    INTO
-                        order_id,
-                        total_amount,
-                        commission_amount,
-                        currency,
-                        status
-                    FROM public.orders o
-                    WHERE o.id =
-                        v_existing_idempotency.resource_id;
-
-                    IF FOUND THEN
-                        RETURN NEXT;
-                        RETURN;
-                    END IF;
-
-                END IF;
-
-                RAISE EXCEPTION 'idempotency_in_progress'
-                    USING ERRCODE = '23505';
+            IF v_existing.request_hash <> v_request_hash THEN
+                RAISE EXCEPTION 'idempotency_key_reuse' USING ERRCODE = '23505';
             END IF;
+
+            IF v_existing.expires_at >= now()
+               AND v_existing.resource_id IS NOT NULL
+            THEN
+                SELECT o.id, o.total_amount, o.affiliate_commission, o.currency, o.status::text
+                INTO order_id, total_amount, commission_amount, currency, status
+                FROM public.orders o
+                WHERE o.id = v_existing.resource_id;
+
+                IF FOUND THEN
+                    RETURN NEXT;
+                    RETURN;
+                END IF;
+            END IF;
+
+            IF v_existing.expires_at >= now() THEN
+                RAISE EXCEPTION 'idempotency_in_progress' USING ERRCODE = '23505';
+            END IF;
+
+            DELETE FROM public.idempotency_keys WHERE id = v_existing.id;
         END IF;
 
-        v_request_hash :=
-            encode(
-                extensions.digest(
-                    p_items::text,
-                    'sha256'
-                ),
-                'hex'
-            );
-
         INSERT INTO public.idempotency_keys (
-            user_id,
-            idempotency_key,
-            request_hash,
-            endpoint,
-            locked_at,
-            expires_at
+            user_id, idempotency_key, request_hash, endpoint,
+            locked_at, expires_at
         )
         VALUES (
-            p_buyer_id,
-            p_idempotency_key,
-            v_request_hash,
-            '/api/checkout',
-            now(),
-            now() + interval '24 hours'
+            p_buyer_id, p_idempotency_key, v_request_hash, '/api/checkout',
+            now(), now() + interval '24 hours'
         );
     END IF;
 
-    -- ========================================================
-    -- 3. Validar afiliado
-    -- ========================================================
-
-    IF p_affiliate_ref IS NOT NULL
-       AND btrim(p_affiliate_ref) <> ''
-    THEN
-
-        SELECT
-            r.affiliate_id,
-            r.affiliate_user_id,
-            r.commission_rate
-        INTO
-            v_affiliate_id,
-            v_affiliate_user_id,
-            v_commission_rate
-        FROM public.resolve_affiliate(
-            p_affiliate_ref,
-            p_buyer_id
-        ) r
+    IF p_affiliate_ref IS NOT NULL AND btrim(p_affiliate_ref) <> '' THEN
+        SELECT a.id, a.commission_rate
+        INTO v_affiliate_id, v_commission_rate
+        FROM public.affiliates a
+        WHERE a.code = btrim(p_affiliate_ref)
+          AND a.is_active = true
+          AND a.user_id <> p_buyer_id
         LIMIT 1;
 
         IF v_affiliate_id IS NULL THEN
-            RAISE EXCEPTION 'invalid_affiliate'
-                USING ERRCODE = '23514';
+            RAISE EXCEPTION 'invalid_affiliate' USING ERRCODE = '23514';
         END IF;
-
     END IF;
 
-    -- ========================================================
-    -- 4. Crear orden
-    -- ========================================================
-
     INSERT INTO public.orders (
-        customer_id,
-        status,
-        currency,
-        total_amount,
-        admin_commission
+        buyer_id, status, currency, subtotal_amount, total_amount,
+        platform_commission, seller_amount, affiliate_id,
+        affiliate_commission, region, payment_status, expires_at
     )
     VALUES (
-        p_buyer_id,
-        'pending',
-        'USD',
-        0,
-        0
+        p_buyer_id, 'pending', 'USD', 0, 0,
+        0, 0, v_affiliate_id,
+        0, 'GLOBAL', 'pending', now() + interval '24 hours'
     )
-    RETURNING id
-    INTO v_order_id;
+    RETURNING id INTO v_order_id;
 
-    -- ========================================================
-    -- 5. Procesar productos
-    -- ========================================================
-
-    FOR v_item IN
-        SELECT value
-        FROM jsonb_array_elements(p_items)
+    FOR v_item IN SELECT value FROM jsonb_array_elements(p_items)
     LOOP
-
         BEGIN
-            v_product_id :=
-                (v_item ->> 'product_id')::uuid;
-
-            v_quantity :=
-                (v_item ->> 'quantity')::integer;
-
+            v_product_id := (v_item ->> 'product_id')::uuid;
+            v_quantity := (v_item ->> 'quantity')::integer;
         EXCEPTION WHEN invalid_text_representation THEN
-
-            RAISE EXCEPTION 'invalid_product_item'
-                USING ERRCODE = '22023';
-
+            RAISE EXCEPTION 'invalid_product_item' USING ERRCODE = '22023';
         END;
 
-        IF v_quantity IS NULL
-           OR v_quantity < 1
-           OR v_quantity > 100
-        THEN
-            RAISE EXCEPTION 'invalid_quantity'
-                USING ERRCODE = '22023';
+        IF v_product_id IS NULL OR v_quantity IS NULL OR v_quantity < 1 OR v_quantity > 100 THEN
+            RAISE EXCEPTION 'invalid_product_item' USING ERRCODE = '22023';
         END IF;
 
-        -- ====================================================
-        -- BLOQUEO DE INVENTARIO
-        -- ====================================================
-
-        SELECT
-            p.title,
-            p.price,
-            p.stock,
-            p.store_id
-        INTO
-            v_title,
-            v_unit_price,
-            v_stock,
-            v_store_id
+        SELECT p.title, p.price, p.stock, p.store_id
+        INTO v_title, v_unit_price, v_stock, v_store_id
         FROM public.products p
         WHERE p.id = v_product_id
           AND p.is_active = true
         FOR UPDATE;
 
         IF NOT FOUND THEN
-            RAISE EXCEPTION 'product_not_available'
-                USING ERRCODE = 'P0002';
+            RAISE EXCEPTION 'product_not_available' USING ERRCODE = 'P0002';
         END IF;
 
-        IF v_stock < v_quantity THEN
-            RAISE EXCEPTION 'insufficient_stock'
-                USING ERRCODE = '23514';
-        END IF;
-
-        IF v_unit_price IS NULL
-           OR v_unit_price < 0
-        THEN
-            RAISE EXCEPTION 'invalid_product_price'
-                USING ERRCODE = '22023';
-        END IF;
-
-        -- ====================================================
-        -- SUBTOTAL CALCULADO EXCLUSIVAMENTE EN DB
-        -- ====================================================
-
-        v_subtotal :=
-            public.money_round(
-                v_unit_price * v_quantity
-            );
-
-        v_total :=
-            public.money_round(
-                v_total + v_subtotal
-            );
-
-        -- ====================================================
-        -- ORDER ITEM
-        -- ====================================================
-
-        INSERT INTO public.order_items (
-            order_id,
-            product_id,
-            quantity,
-            unit_price,
-            subtotal
+        INSERT INTO public.inventory (
+            product_id, available_quantity, reserved_quantity
         )
         VALUES (
-            v_order_id,
-            v_product_id,
-            v_quantity,
-            v_unit_price,
-            v_subtotal
+            v_product_id, v_stock, 0
+        )
+        ON CONFLICT (product_id) DO NOTHING;
+
+        SELECT i.available_quantity, i.reserved_quantity
+        INTO v_available, v_reserved
+        FROM public.inventory i
+        WHERE i.product_id = v_product_id
+        FOR UPDATE;
+
+        IF v_available < v_quantity THEN
+            RAISE EXCEPTION 'insufficient_stock' USING ERRCODE = '23514';
+        END IF;
+
+        v_subtotal := public.money_round(v_unit_price * v_quantity);
+        v_total := public.money_round(v_total + v_subtotal);
+
+        INSERT INTO public.order_items (
+            order_id, product_id, store_id, product_title,
+            quantity, unit_price, subtotal
+        )
+        VALUES (
+            v_order_id, v_product_id, v_store_id, v_title,
+            v_quantity, v_unit_price, v_subtotal
         );
 
-        -- ====================================================
-        -- RESERVA / DESCUENTO DE INVENTARIO
-        -- ====================================================
+        UPDATE public.inventory
+        SET available_quantity = available_quantity - v_quantity,
+            reserved_quantity = reserved_quantity + v_quantity,
+            updated_at = now()
+        WHERE product_id = v_product_id
+          AND available_quantity >= v_quantity;
+
+        IF NOT FOUND THEN
+            RAISE EXCEPTION 'inventory_race_condition' USING ERRCODE = '40001';
+        END IF;
 
         UPDATE public.products
-        SET
-            stock = stock - v_quantity,
+        SET stock = stock - v_quantity,
             updated_at = now()
         WHERE id = v_product_id
           AND stock >= v_quantity;
 
         IF NOT FOUND THEN
-            RAISE EXCEPTION 'inventory_race_condition'
-                USING ERRCODE = '40001';
+            RAISE EXCEPTION 'product_stock_race_condition' USING ERRCODE = '40001';
         END IF;
 
-    END LOOP;
-
-    -- ========================================================
-    -- 6. Comisión
-    -- ========================================================
-
-    IF v_affiliate_id IS NOT NULL THEN
-
-        v_commission_amount :=
-            public.calculate_commission(
-                v_total,
-                v_commission_rate
-            );
-
-        INSERT INTO public.affiliate_attributions (
-            affiliate_id,
-            order_id,
-            buyer_id,
-            referral_code,
-            commission_rate,
-            commission_base,
-            commission_amount,
-            status
+        INSERT INTO public.inventory_reservations (
+            order_id, product_id, quantity, status, expires_at
         )
         VALUES (
-            v_affiliate_id,
-            v_order_id,
-            p_buyer_id,
-            p_affiliate_ref,
-            v_commission_rate,
-            v_total,
-            v_commission_amount,
-            'pending'
+            v_order_id, v_product_id, v_quantity, 'reserved',
+            now() + interval '24 hours'
         );
 
+        INSERT INTO public.inventory_movements (
+            product_id, order_id, movement_type, quantity,
+            quantity_before, quantity_after, reason, created_by
+        )
+        VALUES (
+            v_product_id, v_order_id, 'reservation', v_quantity,
+            v_available, v_available - v_quantity,
+            'Checkout reservation', p_buyer_id
+        );
+    END LOOP;
+
+    IF v_affiliate_id IS NOT NULL THEN
+        v_commission_amount := public.calculate_commission(v_total, v_commission_rate);
+
+        INSERT INTO public.affiliate_attributions (
+            affiliate_id, order_id, buyer_id, referral_code,
+            commission_rate, commission_base, commission_amount, status
+        )
+        VALUES (
+            v_affiliate_id, v_order_id, p_buyer_id, btrim(p_affiliate_ref),
+            v_commission_rate, v_total, v_commission_amount, 'pending'
+        );
     END IF;
 
-    -- ========================================================
-    -- 7. Actualizar orden
-    -- ========================================================
-
     UPDATE public.orders
-    SET
+    SET subtotal_amount = v_total,
         total_amount = v_total,
-        admin_commission = v_commission_amount,
+        affiliate_commission = v_commission_amount,
+        seller_amount = public.calculate_seller_amount(v_total, v_commission_amount),
         updated_at = now()
     WHERE id = v_order_id;
 
-    -- ========================================================
-    -- 8. Historial inicial
-    -- ========================================================
-
     INSERT INTO public.order_status_history (
-        order_id,
-        from_status,
-        to_status,
-        changed_by,
-        reason
+        order_id, from_status, to_status, changed_by, reason
     )
     VALUES (
-        v_order_id,
-        NULL,
-        'pending',
-        p_buyer_id,
-        'Order created'
+        v_order_id, NULL, 'pending', p_buyer_id, 'Order created'
     );
 
-    -- ========================================================
-    -- 9. Completar idempotencia
-    -- ========================================================
-
     IF p_idempotency_key IS NOT NULL THEN
-
         UPDATE public.idempotency_keys
-        SET
-            status_code = 201,
+        SET status_code = 201,
             response_body = jsonb_build_object(
                 'success', true,
                 'order_id', v_order_id,
@@ -405,20 +276,13 @@ BEGIN
         WHERE user_id = p_buyer_id
           AND endpoint = '/api/checkout'
           AND idempotency_key = p_idempotency_key;
-
     END IF;
-
-    -- ========================================================
-    -- 10. Respuesta
-    -- ========================================================
 
     order_id := v_order_id;
     total_amount := v_total;
     commission_amount := v_commission_amount;
     currency := 'USD';
     status := 'pending';
-
     RETURN NEXT;
-
 END;
 $$;
