@@ -76,8 +76,18 @@ const publicEnvSchema = z.object({
     .default("development"),
 });
 
-function readServerEnv() {
-  return serverEnvSchema.parse({
+type ServerEnv = z.infer<typeof serverEnvSchema>;
+type PublicEnv = z.infer<typeof publicEnvSchema>;
+
+let serverEnvCache: ServerEnv | undefined;
+let publicEnvCache: PublicEnv | undefined;
+
+function readServerEnv(): ServerEnv {
+  if (serverEnvCache) {
+    return serverEnvCache;
+  }
+
+  serverEnvCache = serverEnvSchema.parse({
     SUPABASE_SECRET_KEY: process.env.SUPABASE_SECRET_KEY,
     SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
     DATABASE_URL: process.env.DATABASE_URL,
@@ -87,10 +97,16 @@ function readServerEnv() {
     B2B_CRYPTO_ENABLED: process.env.B2B_CRYPTO_ENABLED,
     B2B_CRYPTO_MERCHANT_COUNTRY: process.env.B2B_CRYPTO_MERCHANT_COUNTRY,
   });
+
+  return serverEnvCache;
 }
 
-function readPublicEnv() {
-  return publicEnvSchema.parse({
+function readPublicEnv(): PublicEnv {
+  if (publicEnvCache) {
+    return publicEnvCache;
+  }
+
+  publicEnvCache = publicEnvSchema.parse({
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
     NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:
       process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
@@ -101,6 +117,8 @@ function readPublicEnv() {
     NEXT_PUBLIC_DEFAULT_COUNTRY: process.env.NEXT_PUBLIC_DEFAULT_COUNTRY,
     NEXT_PUBLIC_ENV: process.env.NEXT_PUBLIC_ENV,
   });
+
+  return publicEnvCache;
 }
 
 // Getters garantizan que ninguna variable sea evaluada durante la
