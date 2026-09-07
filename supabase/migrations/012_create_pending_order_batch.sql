@@ -30,7 +30,6 @@ DECLARE
     v_store_id uuid;
     v_stock integer;
     v_available integer;
-    v_reserved integer;
     v_subtotal numeric(20,2);
     v_total numeric(20,2) := 0;
     v_affiliate_id uuid;
@@ -162,16 +161,16 @@ BEGIN
             RAISE EXCEPTION 'product_not_available' USING ERRCODE = 'P0002';
         END IF;
 
-        INSERT INTO public.inventory (
-            product_id, available_quantity, reserved_quantity
-        )
-        VALUES (
-            v_product_id, v_stock, 0
-        )
+        IF v_unit_price IS NULL OR v_unit_price < 0 THEN
+            RAISE EXCEPTION 'invalid_product_price' USING ERRCODE = '22023';
+        END IF;
+
+        INSERT INTO public.inventory (product_id, available_quantity, reserved_quantity)
+        VALUES (v_product_id, v_stock, 0)
         ON CONFLICT (product_id) DO NOTHING;
 
-        SELECT i.available_quantity, i.reserved_quantity
-        INTO v_available, v_reserved
+        SELECT i.available_quantity
+        INTO v_available
         FROM public.inventory i
         WHERE i.product_id = v_product_id
         FOR UPDATE;
@@ -286,3 +285,6 @@ BEGIN
     RETURN NEXT;
 END;
 $$;
+
+REVOKE EXECUTE ON FUNCTION public.create_pending_order_batch(uuid, jsonb, text, text) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.create_pending_order_batch(uuid, jsonb, text, text) TO service_role;
