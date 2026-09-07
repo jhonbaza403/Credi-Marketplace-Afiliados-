@@ -1,9 +1,23 @@
 -- ============================================================
 -- 010_order_state_machine.sql
--- Order status history
+-- Order status enum alignment and status history
 -- ============================================================
--- Migration 003 already contains the complete order_status enum,
--- including `expired`. Keep enum changes out of this migration.
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_enum e
+        JOIN pg_type t ON t.oid = e.enumtypid
+        JOIN pg_namespace n ON n.oid = t.typnamespace
+        WHERE t.typname = 'order_status'
+          AND n.nspname = 'public'
+          AND e.enumlabel = 'expired'
+    ) THEN
+        ALTER TYPE public.order_status ADD VALUE 'expired';
+    END IF;
+END
+$$;
 
 CREATE TABLE IF NOT EXISTS public.order_status_history (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
