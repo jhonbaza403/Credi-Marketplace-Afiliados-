@@ -75,28 +75,50 @@ jobs:
             exit 1
           fi
 
-      - name: Validate package-lock.json
+      - name: Regenerate and validate npm lockfile
         shell: bash
         run: |
           set -euo pipefail
-          test -s package-lock.json
+
+          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+
           node <<'NODE'
           const fs = require("node:fs");
           const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
           const lock = JSON.parse(fs.readFileSync("package-lock.json", "utf8"));
-          if (lock.lockfileVersion !== 3) throw new Error(`Expected lockfileVersion 3, got ${lock.lockfileVersion}`);
-          if (lock.name !== pkg.name) throw new Error("package-lock.json name differs from package.json");
-          if (lock.version !== pkg.version) throw new Error("package-lock.json version differs from package.json");
-          if (!lock.packages || !lock.packages[""]) throw new Error("package-lock.json package tree is missing");
-          NODE
-          npm ci --dry-run --ignore-scripts --no-audit --no-fund
 
-      - name: Install dependencies from lockfile
+          if (lock.lockfileVersion !== 3) {
+            throw new Error(`Expected lockfileVersion 3, got ${lock.lockfileVersion}`);
+          }
+          if (lock.name !== pkg.name) {
+            throw new Error("package-lock.json name differs from package.json");
+          }
+          if (lock.version !== pkg.version) {
+            throw new Error("package-lock.json version differs from package.json");
+          }
+          if (!lock.packages || !lock.packages[""]) {
+            throw new Error("package-lock.json package tree is missing");
+          }
+
+          const root = lock.packages[""];
+          for (const name of [
+            ...Object.keys(root.dependencies ?? {}),
+            ...Object.keys(root.devDependencies ?? {}),
+          ]) {
+            const nodePath = `node_modules/${name}`;
+            if (!lock.packages[nodePath]) {
+              throw new Error(`Missing lock entry: ${nodePath}`);
+            }
+          }
+
+          console.log("package-lock.json is synchronized with package.json");
+          NODE
+
+      - name: Clean install from regenerated lockfile
         run: npm ci --ignore-scripts --no-audit --no-fund
 
       - name: Verify critical dependency tree
-        run: |
-          npm ls esbuild postcss sharp vite vitest --depth=10
+        run: npm ls esbuild postcss sharp vite vitest --depth=10
 
       - name: Run Security Audit
         run: npm audit --audit-level=high
