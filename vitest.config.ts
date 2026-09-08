@@ -7,21 +7,36 @@ const projectRoot = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   plugins: [react()],
+
+  resolve: {
+    alias: {
+      "@": path.resolve(projectRoot, "src"),
+    },
+  },
+
   test: {
     environment: "jsdom",
     globals: true,
     setupFiles: [path.resolve(projectRoot, "tests/unit/setup.ts")],
+
     include: [
       "tests/unit/**/*.test.ts",
       "tests/unit/**/*.test.tsx",
       "tests/integracion/**/*.test.ts",
       "tests/integracion/**/*.test.tsx",
     ],
+
     exclude: [
       "node_modules/**",
       ".next/**",
+      "coverage/**",
       "tests/e2e/**",
     ],
+
+    clearMocks: true,
+    restoreMocks: true,
+    mockReset: true,
+
     coverage: {
       provider: "v8",
       reporter: ["text", "json", "html"],
@@ -30,12 +45,8 @@ export default defineConfig({
         "**/*.d.ts",
         "**/*.config.*",
         ".next/**",
+        "coverage/**",
       ],
-    },
-  },
-  resolve: {
-    alias: {
-      "@": path.resolve(projectRoot, "src"),
     },
   },
 });
