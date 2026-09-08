@@ -1,0 +1,3 @@
+-- Historical migration marker.
+-- Already applied in the remote Supabase project.
+-- Retained locally to keep migration history synchronized.
