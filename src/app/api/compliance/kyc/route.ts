@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { complianceStatus, kycInputSchema } from "@/lib/compliance/validation";
 
@@ -53,24 +54,14 @@ export async function POST(request: Request) {
     );
   }
 
-  await supabase.from("compliance_checks").insert(
-    [
-      "identity",
-      "document",
-      "liveness",
-      "aml",
-      "pep",
-      "sanctions",
-      "risk",
-    ].map((checkType) => ({
-      subject_type: "kyc",
-      subject_id: created.id,
-      check_type: checkType,
-      status: "pending",
-    })),
+  const admin = createAdminClient();
+  const { error: checksError } = await admin.from("compliance_checks").insert(
+    ["identity", "document", "liveness", "aml", "pep", "sanctions", "risk"].map(
+      (checkType) => ({ subject_type: "kyc", subject_id: created.id, check_type: checkType, status: "pending" }),
+    ),
   );
 
-  await supabase.from("compliance_events").insert({
+  const { error: eventError } = await admin.from("compliance_events").insert({
     subject_type: "kyc",
     subject_id: created.id,
     actor_id: auth.user.id,
@@ -78,6 +69,13 @@ export async function POST(request: Request) {
     previous_status: "not_started",
     new_status: "submitted",
   });
+
+  if (checksError || eventError) {
+    return NextResponse.json(
+      { error: "Caso creado, pero no se pudo completar el registro de cumplimiento", details: checksError?.message ?? eventError?.message },
+      { status: 500 },
+    );
+  }
 
   complianceStatus.parse(created.status);
   return NextResponse.json({ case: created }, { status: 201 });
