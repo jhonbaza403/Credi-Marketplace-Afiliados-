@@ -1,0 +1,4 @@
+-- Historical migration marker.
+-- The migration version/name is already applied in the remote Supabase project.
+-- Keep this file in version control so local migration history matches remote history.
+-- No schema change is re-applied here.
