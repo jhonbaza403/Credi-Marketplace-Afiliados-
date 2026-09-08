@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { kybInputSchema } from "@/lib/compliance/validation";
 
@@ -9,18 +10,12 @@ export async function POST(request: Request) {
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
 
-  if (!auth.user) {
-    return NextResponse.json({ error: "No autenticado" }, { status: 401 });
-  }
+  if (!auth.user) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
 
   const body = await request.json().catch(() => null);
   const parsed = kybInputSchema.safeParse(body);
-
   if (!parsed.success) {
-    return NextResponse.json(
-      { error: "Datos KYB inválidos", issues: parsed.error.flatten() },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: "Datos KYB inválidos", issues: parsed.error.flatten() }, { status: 400 });
   }
 
   const { data: existing } = await supabase
@@ -30,9 +25,7 @@ export async function POST(request: Request) {
     .not("status", "in", "(rejected,expired)")
     .maybeSingle();
 
-  if (existing) {
-    return NextResponse.json({ case: existing, reused: true }, { status: 200 });
-  }
+  if (existing) return NextResponse.json({ case: existing, reused: true }, { status: 200 });
 
   const { data: created, error } = await supabase
     .from("kyb_cases")
@@ -52,10 +45,7 @@ export async function POST(request: Request) {
     .single();
 
   if (error || !created) {
-    return NextResponse.json(
-      { error: "No fue posible crear el caso KYB", details: error?.message },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "No fue posible crear el caso KYB", details: error?.message }, { status: 500 });
   }
 
   const { error: uboError } = await supabase.from("kyb_ubo").insert(
@@ -69,21 +59,12 @@ export async function POST(request: Request) {
   );
 
   if (uboError) {
-    return NextResponse.json(
-      { error: "El caso KYB fue creado, pero no se pudieron guardar los UBO", details: uboError.message },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "El caso KYB fue creado, pero no se pudieron guardar los UBO", details: uboError.message }, { status: 500 });
   }
 
-  await supabase.from("compliance_checks").insert(
-    [
-      "business_registry",
-      "ubo",
-      "aml",
-      "pep",
-      "sanctions",
-      "risk",
-    ].map((checkType) => ({
+  const admin = createAdminClient();
+  const { error: checksError } = await admin.from("compliance_checks").insert(
+    ["business_registry", "ubo", "aml", "pep", "sanctions", "risk"].map((checkType) => ({
       subject_type: "kyb",
       subject_id: created.id,
       check_type: checkType,
@@ -91,7 +72,7 @@ export async function POST(request: Request) {
     })),
   );
 
-  await supabase.from("compliance_events").insert({
+  const { error: eventError } = await admin.from("compliance_events").insert({
     subject_type: "kyb",
     subject_id: created.id,
     actor_id: auth.user.id,
@@ -99,6 +80,10 @@ export async function POST(request: Request) {
     previous_status: "not_started",
     new_status: "submitted",
   });
+
+  if (checksError || eventError) {
+    return NextResponse.json({ error: "Caso creado, pero no se pudo completar el registro de cumplimiento", details: checksError?.message ?? eventError?.message }, { status: 500 });
+  }
 
   return NextResponse.json({ case: created }, { status: 201 });
 }
