@@ -1,29 +1,20 @@
+import { getAppUrl } from "@/lib/app-url";
+
 export const SITE_CONFIG = {
   name: "Credi Marketplace",
 
   description:
     "Marketplace empresarial para comercio, servicios, afiliados, B2B y pagos.",
 
-  url:
-    process.env.NEXT_PUBLIC_APP_URL ??
-    "http://localhost:3000",
+  url: getAppUrl(),
 
   locale: "es",
 
-  supportedLocales: [
-    "es",
-    "en",
-    "pt",
-    "fr",
-  ] as const,
+  supportedLocales: ["es", "en", "pt", "fr"] as const,
 
-  defaultCurrency:
-    process.env.NEXT_PUBLIC_DEFAULT_CURRENCY ??
-    "USD",
+  defaultCurrency: process.env.NEXT_PUBLIC_DEFAULT_CURRENCY ?? "USD",
 
-  defaultCountry:
-    process.env.NEXT_PUBLIC_DEFAULT_COUNTRY ??
-    "VE",
+  defaultCountry: process.env.NEXT_PUBLIC_DEFAULT_COUNTRY ?? "VE",
 
   keywords: [
     "Credi Marketplace",
