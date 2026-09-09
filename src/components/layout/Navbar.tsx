@@ -15,6 +15,7 @@ const navigation = [
   { name: 'B2B', href: '/b2b' },
   { name: 'Pedidos', href: '/orders' },
   { name: 'Mi cuenta', href: '/account' },
+  { name: 'Seguridad', href: '/security' },
 ] as const;
 
 export default function Navbar() {
