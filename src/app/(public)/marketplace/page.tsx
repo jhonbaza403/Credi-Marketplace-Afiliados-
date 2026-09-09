@@ -16,9 +16,15 @@ export default async function MarketplacePage() {
 
   const products: Product[] = data.map((row) => {
     const images = Array.isArray(row.images)
-      ? row.images.filter((value): value is string => typeof value === "string" && value.trim().length > 0)
+      ? row.images.filter(
+          (value: unknown): value is string =>
+            typeof value === "string" && value.trim().length > 0,
+        )
       : [];
-    const imageUrl = typeof row.image_url === "string" && row.image_url.trim().length > 0 ? row.image_url.trim() : null;
+    const imageUrl =
+      typeof row.image_url === "string" && row.image_url.trim().length > 0
+        ? row.image_url.trim()
+        : null;
 
     return {
       id: row.id,
