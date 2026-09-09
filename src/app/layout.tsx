@@ -8,8 +8,10 @@ import { AuthProvider } from "@/context/AuthContext";
 import { CartProvider } from "@/context/CartContext";
 import { LanguageProvider } from "@/context/LanguageContext";
 import { RegionProvider } from "@/context/RegionContext";
+import { CANONICAL_APP_URL } from "@/lib/app-url";
 
 export const metadata: Metadata = {
+  metadataBase: new URL(CANONICAL_APP_URL),
   title: {
     default: "Credi Marketplace",
     template: "%s | Credi Marketplace",
@@ -28,11 +30,15 @@ export const metadata: Metadata = {
   ],
   authors: [{ name: "Credi Marketplace" }],
   robots: { index: true, follow: true },
+  alternates: {
+    canonical: "/",
+  },
   openGraph: {
     title: "Credi Marketplace",
     description: "Marketplace empresarial B2B, afiliados y comercio digital.",
     type: "website",
     locale: "es_ES",
+    url: CANONICAL_APP_URL,
   },
   icons: {
     icon: "/logo.png",
