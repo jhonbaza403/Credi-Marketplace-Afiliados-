@@ -12,6 +12,7 @@ const publicRoutes = [
   "/search",
   "/account",
   "/orders",
+  "/social",
 ] as const;
 
 test.describe("Public navigation", () => {
@@ -23,6 +24,15 @@ test.describe("Public navigation", () => {
       await expect(page.locator("body")).toBeVisible();
     });
   }
+
+  test("login exposes the email field with accessible semantics", async ({ page }) => {
+    const response = await page.goto("/login", { waitUntil: "domcontentloaded" });
+    expect(response?.ok()).toBeTruthy();
+    const email = page.getByLabel("Correo electrónico");
+    await expect(email).toHaveAttribute("type", "email");
+    await expect(email).toHaveAttribute("autocomplete", "email");
+    await expect(email).toHaveAttribute("aria-required", "true");
+  });
 
   test("home exposes the real logo and service navigation", async ({ page }) => {
     await page.goto("/", { waitUntil: "domcontentloaded" });
@@ -45,13 +55,14 @@ test.describe("Public navigation", () => {
     }
   });
 
-  test("legacy dashboard aliases resolve to canonical routes", async ({ page }) => {
+  test("legacy and protected aliases resolve safely", async ({ page }) => {
     const aliases = [
       ["/dashboard/orders", "/login"],
       ["/dashboard/profile", "/login"],
       ["/jobs", "/services"],
       ["/seller/b2b", "/b2b"],
-      ["/products/create", "/products"],
+      ["/products/create", "/login"],
+      ["/publish", "/login"],
     ] as const;
 
     for (const [source, target] of aliases) {
