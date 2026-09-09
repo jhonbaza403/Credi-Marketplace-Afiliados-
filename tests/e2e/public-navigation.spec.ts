@@ -44,4 +44,21 @@ test.describe("Public navigation", () => {
       await expect(link).not.toHaveAttribute("href", /^(https?:|mailto:|#)/i);
     }
   });
+
+  test("legacy dashboard aliases resolve to canonical routes", async ({ page }) => {
+    const aliases = [
+      ["/dashboard/orders", "/login"],
+      ["/dashboard/profile", "/login"],
+      ["/jobs", "/services"],
+      ["/seller/b2b", "/b2b"],
+      ["/products/create", "/products"],
+    ] as const;
+
+    for (const [source, target] of aliases) {
+      const response = await page.goto(source, { waitUntil: "domcontentloaded" });
+      expect(response, `No HTTP response for ${source}`).not.toBeNull();
+      expect(response?.ok(), `${source} returned ${response?.status()}`).toBeTruthy();
+      expect(new URL(page.url()).pathname).toBe(target);
+    }
+  });
 });
