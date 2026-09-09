@@ -2,7 +2,9 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import type { Product } from '@/types/product';
+import ProductShare from './ProductShare';
 
 export interface ProductCardProps {
   product: Product;
@@ -32,8 +34,10 @@ export function ProductCard({
   disabled = false,
   showBuyButton = true,
 }: ProductCardProps) {
+  const searchParams = useSearchParams();
+  const affiliateRef = searchParams.get('ref')?.trim() || null;
   const image = Array.isArray(product.images)
-    ? product.images.find((value) => typeof value === 'string' && value.trim().length > 0)
+    ? product.images.find((value: string) => value.trim().length > 0)
     : undefined;
   const isAvailable = Boolean(product.isActive) && product.stock > 0;
   const productHref = `/products/${encodeURIComponent(product.id)}`;
@@ -96,6 +100,13 @@ export function ProductCard({
             )}
           </div>
         </div>
+
+        <ProductShare
+          productId={product.id}
+          title={product.title}
+          description={product.description}
+          affiliateRef={affiliateRef}
+        />
       </div>
     </article>
   );
