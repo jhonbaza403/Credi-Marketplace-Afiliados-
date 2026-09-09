@@ -70,10 +70,13 @@ export default function AffiliateLinksWorkspace() {
   }
 
   function getLink(productId?: string, linkCode?: string) {
-    const params = new URLSearchParams({ ref: affiliateCode })
-    if (productId) params.set("product", productId)
+    const params = new URLSearchParams()
+    if (affiliateCode) params.set("ref", affiliateCode)
+    if (productId) params.set("id", productId)
     if (linkCode) params.set("pl", linkCode)
-    return `${CANONICAL_APP_URL}/products?${params.toString()}`
+    return productId
+      ? `${CANONICAL_APP_URL}/products/detail?${params.toString()}`
+      : `${CANONICAL_APP_URL}/products?${params.toString()}`
   }
 
   return <main className="min-h-screen bg-[#050816] text-white"><div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
