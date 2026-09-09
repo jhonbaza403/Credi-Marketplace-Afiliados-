@@ -1,35 +1,24 @@
-const trimTrailingSlash = (value: string) => value.replace(/\/+$/, "");
+const CANONICAL_APP_URL = "https://credi-marketplace-afiliados.vercel.app";
 
-const normalizeUrl = (value: string | undefined): string | undefined => {
-  if (!value) return undefined;
-
-  const candidate = value.startsWith("http://") || value.startsWith("https://")
-    ? value
-    : `https://${value}`;
-
-  try {
-    return trimTrailingSlash(new URL(candidate).toString());
-  } catch {
-    return undefined;
-  }
-};
+const trimTrailingSlash = (value: string): string => value.replace(/\/+$/, "");
 
 /**
- * Returns the canonical public URL without hard-coding a transient Vercel
- * deployment hostname. NEXT_PUBLIC_APP_URL remains the preferred override.
+ * Canonical public URL for Credi Marketplace.
+ *
+ * Production SEO/canonical links always resolve to the single public domain.
+ * Local development may still use localhost for development-only absolute URLs.
  */
 export function getAppUrl(): string {
-  const configured = normalizeUrl(process.env.NEXT_PUBLIC_APP_URL);
-  if (configured) return configured;
+  if (process.env.NODE_ENV === "production") {
+    return CANONICAL_APP_URL;
+  }
 
-  const production = normalizeUrl(process.env.VERCEL_PROJECT_PRODUCTION_URL);
-  if (production) return production;
-
-  const branch = normalizeUrl(process.env.VERCEL_BRANCH_URL);
-  if (branch) return branch;
-
-  const deployment = normalizeUrl(process.env.VERCEL_URL);
-  if (deployment) return deployment;
+  const configured = process.env.NEXT_PUBLIC_APP_URL?.trim();
+  if (configured) {
+    return trimTrailingSlash(configured);
+  }
 
   return "http://localhost:3000";
 }
+
+export { CANONICAL_APP_URL };
