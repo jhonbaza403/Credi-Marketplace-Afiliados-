@@ -34,7 +34,18 @@ site_url = "http://127.0.0.1:3000"
 additional_redirect_urls = [
   "http://localhost:3000/**",
   "http://127.0.0.1:3000/**",
+  "https://credi-marketplace-afiliados.vercel.app/**",
 ]
+
+# Passkeys/WebAuthn use the public production domain as the relying party.
+# Keep this RP ID stable after users begin registering device passkeys.
+[auth.passkey]
+enabled = true
+
+[auth.webauthn]
+rp_display_name = "Credi Marketplace"
+rp_id = "credi-marketplace-afiliados.vercel.app"
+rp_origins = ["https://credi-marketplace-afiliados.vercel.app"]
 
 [analytics]
 enabled = false
