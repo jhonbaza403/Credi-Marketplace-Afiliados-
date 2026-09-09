@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { improveProductDraft } from "@/lib/ai/product-assistant"
+import { getDatabaseServerClient } from "@/lib/database/server"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -9,6 +10,10 @@ const MAX_BODY = 16000
 
 export async function POST(request: Request) {
   try {
+    const supabase = await getDatabaseServerClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return NextResponse.json({ error: "Debes iniciar sesión para usar la asistencia de publicación." }, { status: 401 })
+
     const type = request.headers.get("content-type") ?? ""
     if (!type.toLowerCase().includes("application/json")) {
       return NextResponse.json({ error: "Content-Type debe ser application/json." }, { status: 415 })
