@@ -2,8 +2,10 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
+
 import { useAuth } from '@/context/AuthContext'
 import { createClient } from '@/lib/supabase/client'
+import { CANONICAL_APP_URL } from '@/lib/app-url'
 
 interface AffiliateOrder {
   total_amount: number | null
@@ -18,8 +20,6 @@ interface AffiliateStats {
   estimatedEarnings: number
 }
 
-const COMMISSION_RATE = 0.1
-
 const EMPTY_STATS: AffiliateStats = {
   totalReferrals: 0,
   completedReferrals: 0,
@@ -29,7 +29,7 @@ const EMPTY_STATS: AffiliateStats = {
 }
 
 function formatCurrency(value: number) {
-  return new Intl.NumberFormat('en-US', {
+  return new Intl.NumberFormat('es-ES', {
     style: 'currency',
     currency: 'USD',
     minimumFractionDigits: 2,
@@ -41,16 +41,11 @@ function isCompletedStatus(status: string | null) {
 }
 
 export default function AffiliateDashboardPage() {
-  const { user, profile, loading: authLoading } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   const [stats, setStats] = useState<AffiliateStats>(EMPTY_STATS)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
-  const [origin, setOrigin] = useState('')
-
-  useEffect(() => {
-    setOrigin(window.location.origin)
-  }, [])
 
   const fetchAffiliateData = useCallback(async () => {
     if (!user) {
@@ -65,12 +60,9 @@ export default function AffiliateDashboardPage() {
     try {
       const supabase = createClient()
 
-      // The canonical relationship is orders.affiliate_id -> affiliates.id
-      // -> affiliates.user_id -> auth.users.id. Do not query a legacy
-      // affiliate_ref column that does not exist in the current schema.
       const { data: affiliate, error: affiliateError } = await supabase
         .from('affiliates')
-        .select('id')
+        .select('id, commission_rate')
         .eq('user_id', user.id)
         .eq('is_active', true)
         .maybeSingle()
@@ -98,21 +90,18 @@ export default function AffiliateDashboardPage() {
         (sum, order) => sum + Number(order.total_amount ?? 0),
         0,
       )
+      const commissionRate = Number(affiliate.commission_rate ?? 0)
 
       setStats({
         totalReferrals: orders.length,
         completedReferrals: completedOrders.length,
         pendingReferrals: pendingOrders.length,
         totalSales,
-        estimatedEarnings: totalSales * COMMISSION_RATE,
+        estimatedEarnings: totalSales * commissionRate,
       })
     } catch (err: unknown) {
       console.error('[AffiliateDashboard] Error cargando datos:', err)
-      setError(
-        err instanceof Error
-          ? err.message
-          : 'No fue posible cargar la información de afiliado.',
-      )
+      setError('No fue posible cargar la información de afiliado. Intenta nuevamente.')
       setStats(EMPTY_STATS)
     } finally {
       setLoading(false)
@@ -123,8 +112,9 @@ export default function AffiliateDashboardPage() {
     if (!authLoading) void fetchAffiliateData()
   }, [authLoading, fetchAffiliateData])
 
-  const affiliateLink =
-    origin && user ? `${origin}/products?ref=${encodeURIComponent(user.id)}` : ''
+  const affiliateLink = user
+    ? `${CANONICAL_APP_URL}/products?ref=${encodeURIComponent(user.id)}`
+    : ''
 
   const handleCopy = async () => {
     if (!affiliateLink) return
@@ -142,10 +132,7 @@ export default function AffiliateDashboardPage() {
   if (authLoading) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-background">
-        <div className="text-center">
-          <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-2 border-border border-t-primary" />
-          <p className="text-sm font-medium text-muted-foreground">Verificando sesión...</p>
-        </div>
+        <p className="text-sm font-medium text-muted-foreground">Verificando sesión...</p>
       </main>
     )
   }
@@ -153,31 +140,18 @@ export default function AffiliateDashboardPage() {
   if (!user) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-background px-4">
-        <div className="w-full max-w-md rounded-3xl border border-border bg-card p-8 text-center shadow-xl">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 text-2xl">🔐</div>
-          <h1 className="mt-5 text-2xl font-black text-foreground">Acceso restringido</h1>
-          <p className="mt-2 text-sm leading-6 text-muted-foreground">Debes iniciar sesión para acceder a tu panel de afiliado.</p>
-          <Link href="/login" className="mt-6 inline-flex w-full items-center justify-center rounded-xl bg-primary px-5 py-3 text-sm font-bold text-primary-foreground transition hover:opacity-90">
+        <section className="w-full max-w-md rounded-3xl border border-border bg-card p-8 text-center shadow-xl">
+          <h1 className="text-2xl font-black text-foreground">Acceso restringido</h1>
+          <p className="mt-2 text-sm leading-6 text-muted-foreground">
+            Debes iniciar sesión para acceder a tu panel de afiliado.
+          </p>
+          <Link
+            href="/login?next=%2Fdashboard%2Faffiliate"
+            className="mt-6 inline-flex w-full items-center justify-center rounded-xl bg-primary px-5 py-3 text-sm font-bold text-primary-foreground hover:opacity-90"
+          >
             Iniciar sesión
           </Link>
-        </div>
-      </main>
-    )
-  }
-
-  const canAccessAffiliate = profile?.role === 'vendor' || profile?.role === 'admin'
-
-  if (!canAccessAffiliate) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-background px-4">
-        <div className="w-full max-w-md rounded-3xl border border-border bg-card p-8 text-center shadow-xl">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-red-500/10 text-2xl">⛔</div>
-          <h1 className="mt-5 text-2xl font-black text-foreground">Acceso no autorizado</h1>
-          <p className="mt-2 text-sm leading-6 text-muted-foreground">Tu cuenta no tiene habilitado el módulo de afiliados.</p>
-          <Link href="/dashboard" className="mt-6 inline-flex items-center justify-center rounded-xl border border-border bg-background px-5 py-3 text-sm font-bold text-foreground transition hover:bg-muted">
-            Volver al panel
-          </Link>
-        </div>
+        </section>
       </main>
     )
   }
@@ -207,11 +181,12 @@ export default function AffiliateDashboardPage() {
 
         {error && (
           <div className="mb-6 flex flex-col gap-3 rounded-2xl border border-red-500/20 bg-red-500/5 p-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-sm font-bold text-red-500">No fue posible cargar los datos</p>
-              <p className="mt-1 text-xs text-muted-foreground">{error}</p>
-            </div>
-            <button type="button" onClick={() => void fetchAffiliateData()} className="rounded-lg border border-border bg-card px-3 py-2 text-xs font-bold transition hover:bg-muted">
+            <p className="text-sm font-medium text-red-500">{error}</p>
+            <button
+              type="button"
+              onClick={() => void fetchAffiliateData()}
+              className="rounded-lg border border-border bg-card px-3 py-2 text-xs font-bold hover:bg-muted"
+            >
               Reintentar
             </button>
           </div>
@@ -219,14 +194,16 @@ export default function AffiliateDashboardPage() {
 
         {loading ? (
           <section className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            {[1, 2, 3, 4].map((item) => <div key={item} className="h-32 animate-pulse rounded-2xl bg-muted" />)}
+            {[1, 2, 3, 4].map((item) => (
+              <div key={item} className="h-32 animate-pulse rounded-2xl bg-muted" />
+            ))}
           </section>
         ) : (
           <section aria-label="Estadísticas de afiliado" className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <Stat label="Referidos" value={String(stats.totalReferrals)} hint="Operaciones atribuidas" />
             <Stat label="Ventas completadas" value={String(stats.completedReferrals)} hint="Referencias convertidas" />
-            <Stat label="Ventas generadas" value={formatCurrency(stats.totalSales)} hint="Solo operaciones completadas" />
-            <Stat label="Comisión estimada" value={formatCurrency(stats.estimatedEarnings)} hint={`Tasa estimada: ${COMMISSION_RATE * 100}%`} />
+            <Stat label="Ventas generadas" value={formatCurrency(stats.totalSales)} hint="Operaciones completadas" />
+            <Stat label="Comisión estimada" value={formatCurrency(stats.estimatedEarnings)} hint="Según tu tasa configurada" />
           </section>
         )}
 
@@ -234,7 +211,7 @@ export default function AffiliateDashboardPage() {
           <div className="mb-6 flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-xl">🔗</div>
           <h2 className="text-xl font-black">Tu enlace de afiliado</h2>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-            Comparte este enlace para dirigir a tus clientes al catálogo y asociar las compras con tu cuenta.
+            El enlace utiliza siempre el dominio público canónico de Credi Marketplace.
           </p>
           <div className="mt-6 flex flex-col gap-3 sm:flex-row">
             <input
@@ -246,8 +223,7 @@ export default function AffiliateDashboardPage() {
             <button
               type="button"
               onClick={() => void handleCopy()}
-              disabled={!affiliateLink}
-              className="rounded-xl bg-primary px-5 py-3 text-sm font-bold text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-xl bg-primary px-5 py-3 text-sm font-bold text-primary-foreground transition hover:opacity-90"
             >
               {copied ? 'Copiado' : 'Copiar enlace'}
             </button>
