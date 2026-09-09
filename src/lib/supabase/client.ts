@@ -9,12 +9,20 @@ export function createClient() {
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim() ||
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
 
+  const options = {
+    auth: {
+      experimental: {
+        passkey: true,
+      },
+    },
+  } as const;
+
   if (url && key) {
-    return createBrowserClient(url, key);
+    return createBrowserClient(url, key, options);
   }
 
   if (typeof window === "undefined") {
-    return createBrowserClient(BUILD_PLACEHOLDER_URL, BUILD_PLACEHOLDER_KEY);
+    return createBrowserClient(BUILD_PLACEHOLDER_URL, BUILD_PLACEHOLDER_KEY, options);
   }
 
   throw new Error(
