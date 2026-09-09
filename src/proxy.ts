@@ -64,8 +64,18 @@ export async function proxy(request: NextRequest) {
   const canonicalRedirect = redirectToCanonicalHost(request);
   if (canonicalRedirect) return canonicalRedirect;
 
-  const response = NextResponse.next({ request });
+  const { pathname } = request.nextUrl;
+  const requiresAuth = matchesPrefix(pathname, PROTECTED_PREFIXES);
+  const guestOnly = matchesPrefix(pathname, GUEST_ONLY_PREFIXES);
 
+  // Public routes do not need a Supabase session lookup. Keeping them out of the
+  // auth branch prevents missing/invalid auth configuration from becoming a
+  // global 500 for the entire site.
+  if (!requiresAuth && !guestOnly) {
+    return NextResponse.next();
+  }
+
+  const response = NextResponse.next({ request });
   const supabase = createServerClient(
     env.NEXT_PUBLIC_SUPABASE_URL,
     env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
@@ -95,19 +105,15 @@ export async function proxy(request: NextRequest) {
     error,
   } = await supabase.auth.getUser();
 
-  const { pathname } = request.nextUrl;
-
   if (error) {
-    return matchesPrefix(pathname, PROTECTED_PREFIXES)
-      ? buildLoginRedirect(request)
-      : response;
+    return requiresAuth ? buildLoginRedirect(request) : response;
   }
 
-  if (matchesPrefix(pathname, PROTECTED_PREFIXES) && !user) {
+  if (requiresAuth && !user) {
     return buildLoginRedirect(request);
   }
 
-  if (matchesPrefix(pathname, GUEST_ONLY_PREFIXES) && user) {
+  if (guestOnly && user) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
