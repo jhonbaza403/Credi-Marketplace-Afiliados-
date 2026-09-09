@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
+import { redirect } from "next/navigation"
 
-export default function SellerB2BRedirect() {
-  redirect("/b2b");
+export default function SellerB2BPage() {
+  redirect("/b2b/publish")
 }
