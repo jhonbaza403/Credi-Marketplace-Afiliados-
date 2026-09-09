@@ -55,6 +55,24 @@ test.describe("Public navigation", () => {
     }
   });
 
+  test("products expose universal sharing controls", async ({ page }) => {
+    await page.goto("/products", { waitUntil: "domcontentloaded" });
+
+    const share = page.getByRole("heading", { name: "Haz viral este producto" }).first();
+    const bodyText = await page.locator("body").innerText();
+
+    if (bodyText.includes("No existen productos disponibles.")) {
+      await expect(share).toHaveCount(0);
+      return;
+    }
+
+    await expect(share).toBeVisible();
+    for (const label of ["Compartir por WhatsApp", "Compartir en Facebook", "Compartir en X", "Compartir en Telegram", "Compartir en Pinterest"]) {
+      await expect(page.getByRole("button", { name: label }).first()).toBeVisible();
+    }
+    await expect(page.getByRole("button", { name: "Copiar enlace viral" }).first()).toBeVisible();
+  });
+
   test("legacy and protected aliases resolve safely", async ({ page }) => {
     const aliases = [
       ["/dashboard/orders", "/login"],
