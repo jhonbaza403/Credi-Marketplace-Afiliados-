@@ -25,46 +25,75 @@ export async function getProducts(limit = 20) {
 
 export async function getProductById(id: string) {
   const supabase = await getDatabaseServerClient();
-  const { data, error } = await supabase.from("products").select("*").eq("id", id).eq("is_active", true).maybeSingle();
+  const { data, error } = await supabase
+    .from("products")
+    .select("*")
+    .eq("id", id)
+    .eq("is_active", true)
+    .maybeSingle();
+
   if (error) throw new Error(error.message);
   return data;
 }
 
 export async function getProductBySlug(slug: string) {
   const supabase = await getDatabaseServerClient();
-  const { data, error } = await supabase.from("products").select("*").eq("slug", slug).eq("is_active", true).maybeSingle();
+  const { data, error } = await supabase
+    .from("products")
+    .select("*")
+    .eq("slug", slug)
+    .eq("is_active", true)
+    .maybeSingle();
+
   if (error) throw new Error(error.message);
   return data;
 }
 
 export async function getUserProfile(userId: string) {
   const supabase = await getDatabaseServerClient();
-  const { data, error } = await supabase.from("profiles").select("*").eq("id", userId).single();
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", userId)
+    .single();
+
   if (error) throw new Error(error.message);
   return data;
 }
 
-export async function getUserOrders(userId: string) {
+export async function getUserOrders(buyerId: string) {
   const supabase = await getDatabaseServerClient();
   const { data, error } = await supabase
     .from("orders")
     .select("*, order_items(*)")
-    .eq("user_id", userId)
+    .eq("buyer_id", buyerId)
     .order("created_at", { ascending: false });
+
   if (error) throw new Error(error.message);
   return data ?? [];
 }
 
 export async function getAffiliateByUser(userId: string) {
   const supabase = await getDatabaseServerClient();
-  const { data, error } = await supabase.from("affiliates").select("*").eq("user_id", userId).single();
+  const { data, error } = await supabase
+    .from("affiliates")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("is_active", true)
+    .maybeSingle();
+
   if (error) throw new Error(error.message);
   return data;
 }
 
 export async function getInventoryByProduct(productId: string) {
   const supabase = await getDatabaseServerClient();
-  const { data, error } = await supabase.from("inventory").select("*").eq("product_id", productId).single();
+  const { data, error } = await supabase
+    .from("inventory")
+    .select("*")
+    .eq("product_id", productId)
+    .maybeSingle();
+
   if (error) throw new Error(error.message);
   return data;
 }
