@@ -11,16 +11,16 @@ export const metadata: Metadata = {
 
 export const revalidate = 60;
 
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
 export default async function MarketplacePage() {
   const data = await getProducts(50);
 
   const products: Product[] = data.map((row) => {
-    const images = Array.isArray(row.images)
-      ? row.images.filter(
-          (value: unknown): value is string =>
-            typeof value === "string" && value.trim().length > 0,
-        )
-      : [];
+    const rawImages: unknown = row.images;
+    const images = Array.isArray(rawImages) ? rawImages.filter(isNonEmptyString) : [];
     const imageUrl =
       typeof row.image_url === "string" && row.image_url.trim().length > 0
         ? row.image_url.trim()
