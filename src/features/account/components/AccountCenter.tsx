@@ -7,7 +7,6 @@ import { createClient } from "@/lib/supabase/client";
 
 export default function AccountCenter() {
   const router = useRouter();
-  const supabase = createClient();
   const [userEmail, setUserEmail] = useState("");
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(true);
@@ -17,25 +16,33 @@ export default function AccountCenter() {
   useEffect(() => {
     let active = true;
     void (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!active) return;
-      if (!user) {
-        setLoading(false);
-        return;
+      try {
+        const supabase = createClient();
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        if (!active) return;
+        if (userError || !user) {
+          setLoading(false);
+          return;
+        }
+        setUserEmail(user.email ?? "");
+        const { data: profile } = await supabase.from("profiles").select("full_name").eq("id", user.id).maybeSingle();
+        if (!active) return;
+        setName(profile?.full_name ?? user.user_metadata?.full_name ?? "");
+      } catch (error: unknown) {
+        console.error("[AccountCenter] account load error", error);
+        if (active) setMessage("No fue posible cargar la cuenta. Revisa la configuración pública de Supabase.");
+      } finally {
+        if (active) setLoading(false);
       }
-      setUserEmail(user.email ?? "");
-      const { data: profile } = await supabase.from("profiles").select("full_name").eq("id", user.id).maybeSingle();
-      if (!active) return;
-      setName(profile?.full_name ?? user.user_metadata?.full_name ?? "");
-      setLoading(false);
     })();
     return () => { active = false; };
-  }, [supabase]);
+  }, []);
 
   async function saveProfile() {
     setSaving(true);
     setMessage(null);
     try {
+      const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         router.replace("/login?next=/account");
@@ -53,9 +60,13 @@ export default function AccountCenter() {
   }
 
   async function signOut() {
-    await supabase.auth.signOut();
-    router.replace("/");
-    router.refresh();
+    try {
+      const supabase = createClient();
+      await supabase.auth.signOut();
+    } finally {
+      router.replace("/");
+      router.refresh();
+    }
   }
 
   if (loading) {
@@ -84,9 +95,10 @@ export default function AccountCenter() {
           <p className="mt-3 text-sm leading-6 text-muted-foreground">Aquí gestionas tus datos personales y accedes a las herramientas que pertenecen exclusivamente a tu cuenta.</p>
         </header>
 
-        <section className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+        <section className="grid gap-5 md:grid-cols-2 lg:grid-cols-4">
           <Link href="/products/create" className="rounded-2xl border border-border bg-card p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg"><span className="text-2xl">🛍️</span><h2 className="mt-4 font-black">Publicar producto</h2><p className="mt-2 text-sm text-muted-foreground">Crea tu propia publicación comercial.</p></Link>
           <Link href="/publish" className="rounded-2xl border border-border bg-card p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg"><span className="text-2xl">✍️</span><h2 className="mt-4 font-black">Publicar contenido</h2><p className="mt-2 text-sm text-muted-foreground">Historias, reels, publicaciones y publicidad.</p></Link>
+          <Link href="/social" className="rounded-2xl border border-border bg-card p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg"><span className="text-2xl">📣</span><h2 className="mt-4 font-black">Comunidad</h2><p className="mt-2 text-sm text-muted-foreground">Consulta el contenido público del ecosistema.</p></Link>
           <Link href="/orders" className="rounded-2xl border border-border bg-card p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg"><span className="text-2xl">📦</span><h2 className="mt-4 font-black">Mis pedidos</h2><p className="mt-2 text-sm text-muted-foreground">Solo ves las operaciones relacionadas con tu cuenta.</p></Link>
         </section>
 
