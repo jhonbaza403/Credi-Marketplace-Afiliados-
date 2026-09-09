@@ -17,7 +17,7 @@ const serverEnvSchema = z.object({
 const publicEnvSchema = z.object({
   NEXT_PUBLIC_SUPABASE_URL: z.string().trim().url("NEXT_PUBLIC_SUPABASE_URL debe ser una URL válida"),
   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: nonEmptyString,
-  NEXT_PUBLIC_APP_URL: z.string().trim().url("NEXT_PUBLIC_APP_URL debe ser una URL válida").default("http://localhost:3000"),
+  NEXT_PUBLIC_APP_URL: z.string().trim().url("NEXT_PUBLIC_APP_URL debe ser una URL válida").default("https://credi-marketplace-afiliados.vercel.app"),
   NEXT_PUBLIC_APP_NAME: nonEmptyString.default("Credi Marketplace"),
   NEXT_PUBLIC_DEFAULT_LOCALE: z.string().trim().min(2).max(10).default("es"),
   NEXT_PUBLIC_DEFAULT_CURRENCY: z.string().trim().length(3).transform((value) => value.toUpperCase()).default("USD"),
