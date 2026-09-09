@@ -3,6 +3,7 @@ import type { CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 import { env } from "@/env";
+import { CANONICAL_APP_URL } from "@/lib/app-url";
 
 const PROTECTED_PREFIXES = [
   "/dashboard",
@@ -27,6 +28,27 @@ function matchesPrefix(
   );
 }
 
+function isDevelopmentHost(hostname: string): boolean {
+  return hostname === "localhost" || hostname === "127.0.0.1";
+}
+
+function redirectToCanonicalHost(request: NextRequest): NextResponse | null {
+  if (process.env.NODE_ENV !== "production") return null;
+
+  const requestHost = request.nextUrl.hostname.toLowerCase();
+  const canonicalHost = new URL(CANONICAL_APP_URL).hostname.toLowerCase();
+
+  if (isDevelopmentHost(requestHost) || requestHost === canonicalHost) {
+    return null;
+  }
+
+  const canonicalUrl = new URL(CANONICAL_APP_URL);
+  canonicalUrl.pathname = request.nextUrl.pathname;
+  canonicalUrl.search = request.nextUrl.search;
+
+  return NextResponse.redirect(canonicalUrl, 308);
+}
+
 function buildLoginRedirect(request: NextRequest): NextResponse {
   const url = new URL("/login", request.url);
   const nextPath = `${request.nextUrl.pathname}${request.nextUrl.search}`;
@@ -39,6 +61,9 @@ function buildLoginRedirect(request: NextRequest): NextResponse {
 }
 
 export async function proxy(request: NextRequest) {
+  const canonicalRedirect = redirectToCanonicalHost(request);
+  if (canonicalRedirect) return canonicalRedirect;
+
   const response = NextResponse.next({ request });
 
   const supabase = createServerClient(
@@ -91,12 +116,6 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/dashboard/:path*",
-    "/checkout/:path*",
-    "/cart/:path*",
-    "/admin/:path*",
-    "/login",
-    "/register",
-    "/forgot-password",
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|txt|xml|json)$).*)",
   ],
 };
