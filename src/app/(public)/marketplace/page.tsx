@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 
 import ProductCard from "@/features/marketplace/components/ProductCard";
 import { getProducts } from "@/lib/database/queries";
@@ -11,16 +12,23 @@ export const metadata: Metadata = {
 
 export const revalidate = 60;
 
-function isNonEmptyString(value: unknown): value is string {
-  return typeof value === "string" && value.trim().length > 0;
+function collectImageUrls(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+
+  const images: string[] = [];
+  for (const candidate of value as unknown[]) {
+    if (typeof candidate === "string" && candidate.trim().length > 0) {
+      images.push(candidate.trim());
+    }
+  }
+  return images;
 }
 
 export default async function MarketplacePage() {
   const data = await getProducts(50);
 
   const products: Product[] = data.map((row) => {
-    const rawImages: unknown = row.images;
-    const images = Array.isArray(rawImages) ? rawImages.filter(isNonEmptyString) : [];
+    const images = collectImageUrls(row.images);
     const imageUrl =
       typeof row.image_url === "string" && row.image_url.trim().length > 0
         ? row.image_url.trim()
@@ -63,12 +71,12 @@ export default async function MarketplacePage() {
           <p className="mt-2 text-muted-foreground">
             Aún no hay productos activos publicados. Los nuevos productos aparecerán aquí automáticamente.
           </p>
-          <a
+          <Link
             href="/products"
             className="mt-6 inline-flex rounded-xl bg-primary px-5 py-3 font-semibold text-white hover:opacity-90"
           >
             Ver productos
-          </a>
+          </Link>
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
