@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import CrediBusinessChat from '@/components/chat/CrediBusinessChat'
+import CrediChatFixed from '@/components/chat/CrediChatFixed'
 import CrediContactDirectory from '@/components/chat/CrediContactDirectory'
 
 export const metadata: Metadata = {
@@ -12,7 +12,7 @@ export default function ChatPage() {
   return (
     <>
       <CrediContactDirectory />
-      <CrediBusinessChat />
+      <CrediChatFixed />
     </>
   )
 }
