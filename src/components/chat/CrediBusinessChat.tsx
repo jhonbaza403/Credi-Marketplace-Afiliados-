@@ -10,15 +10,23 @@ import type { ChatConversation, ChatMessage } from '@/types/chat'
 
 type Profile = { id: string; full_name: string | null; avatar_url: string | null; role: string }
 const QUICK = ['Consultar disponibilidad', 'Solicitar precio mayorista', 'Solicitar catálogo', 'Preguntar MOQ', 'Solicitar condiciones de envío', 'Preguntar tiempo de entrega', 'Solicitar factura', 'Negociar pedido', 'Solicitar cotización']
+const EMOJIS = ['😀','😎','🔥','✅','📦','💼','💰','🚚','⭐','🎉','👏','🤝','👍','❤️','😂','😮','🙏']
 
 function getMeta(message: ChatMessage) { return message.metadata as Record<string, unknown> }
 function fmt(value: string) { return new Intl.DateTimeFormat('es', { hour: '2-digit', minute: '2-digit' }).format(new Date(value)) }
+function fail(error: unknown, fallback: string) {
+  const e = error as { message?: string; code?: string } | null
+  if (e?.code === '42P17') return 'La política de seguridad del chat está desactualizada. Recarga la aplicación.'
+  return e?.message?.trim() || fallback
+}
 
 export default function CrediBusinessChat() {
   const router = useRouter()
   const params = useSearchParams()
   const supabase = useMemo(() => createClient(), [])
   const messageBox = useRef<HTMLDivElement>(null)
+  const recorder = useRef<MediaRecorder | null>(null)
+  const chunks = useRef<Blob[]>([])
   const [userId, setUserId] = useState<string | null>(null)
   const [profiles, setProfiles] = useState<Record<string, Profile>>({})
   const [conversations, setConversations] = useState<ChatConversation[]>([])
@@ -122,14 +130,14 @@ export default function CrediBusinessChat() {
     void refresh().then((id) => {
       if (id && alive) void openBusinessContext(id)
     }).catch((e) => {
-      if (alive) setError(e instanceof Error ? e.message : 'No fue posible cargar Credi Business Chat.')
+      if (alive) setError(fail(e, 'No fue posible cargar Credi Business Chat.'))
     })
     return () => { alive = false }
   }, [openBusinessContext, refresh])
 
   useEffect(() => {
     if (!selectedId) return
-    void loadMessages(selectedId).catch((e) => setError(e instanceof Error ? e.message : 'No fue posible cargar los mensajes.'))
+    void loadMessages(selectedId).catch((e) => setError(fail(e, 'No fue posible cargar los mensajes.')))
     const channel = supabase.channel(`credibusiness-chat:${selectedId}`).on('postgres_changes', { event: '*', schema: 'public', table: 'messages', filter: `conversation_id=eq.${selectedId}` }, (payload) => {
       const next = payload.new as ChatMessage
       if (payload.eventType === 'INSERT') setMessages((current) => current.some((m) => m.id === next.id) ? current : [...current, next])
@@ -145,7 +153,7 @@ export default function CrediBusinessChat() {
       const { error: insertError } = await supabase.from('messages').insert({ conversation_id: selectedId, sender_id: userId, message_type: 'text', body: text.trim(), reply_to_id: reply?.id ?? null, metadata: { business_context: context, forwarded: false } })
       if (insertError) throw insertError
       setDraft(''); setReply(null); setEmojiOpen(false)
-    } catch (e) { setError(e instanceof Error ? e.message : 'No fue posible enviar el mensaje.') } finally { setBusy(false) }
+    } catch (e) { setError(fail(e, 'No fue posible enviar el mensaje.')) } finally { setBusy(false) }
   }
 
   async function sendFile(file: File) {
@@ -158,71 +166,48 @@ export default function CrediBusinessChat() {
       const { error: attachmentError } = await supabase.from('message_attachments').insert({ message_id: message.id, storage_path: media.path, public_url: media.url, file_name: media.name, mime_type: media.contentType, size_bytes: media.size })
       if (attachmentError) throw attachmentError
       setReply(null); setAttachOpen(false)
-    } catch (e) { setError(e instanceof Error ? e.message : 'No fue posible enviar el archivo.') } finally { setUploading(false) }
+    } catch (e) { setError(fail(e, 'No fue posible enviar el archivo.')) } finally { setUploading(false) }
   }
 
   function recordVoice() {
-    if (recording) return
+    if (recording) { recorder.current?.stop(); recorder.current = null; setRecording(false); return }
     void navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
       const mime = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4'
-      const r = new MediaRecorder(stream, { mimeType: mime })
-      r.ondataavailable = () => undefined
-      r.onstop = () => stream.getTracks().forEach((t) => t.stop())
-      r.start(); setRecording(true)
-    }).catch((e) => setError(e instanceof Error ? e.message : 'No fue posible acceder al micrófono.'))
+      const r = new MediaRecorder(stream, { mimeType: mime }); chunks.current = []
+      r.ondataavailable = (e) => { if (e.data.size) chunks.current.push(e.data) }
+      r.onstop = () => { stream.getTracks().forEach((t) => t.stop()); void sendFile(new File([new Blob(chunks.current, { type: mime })], `nota-voz-${Date.now()}.webm`, { type: mime })) }
+      recorder.current = r; r.start(); setRecording(true)
+    }).catch((e) => setError(fail(e, 'No fue posible acceder al micrófono.')))
   }
 
   async function action(message: ChatMessage, type: 'react'|'copy'|'pin'|'delete'|'edit'|'forward') {
     if (!userId) return
-    if (type === 'react') { const { error: e } = await supabase.from('message_reactions').upsert({ message_id: message.id, user_id: userId, reaction: '👍' }, { onConflict: 'message_id,user_id' }); if (e) setError(e.message); return }
+    if (type === 'react') { const { error: e } = await supabase.from('message_reactions').upsert({ message_id: message.id, user_id: userId, reaction: '👍' }, { onConflict: 'message_id,user_id' }); if (e) setError(fail(e, 'No fue posible reaccionar.')); return }
     if (type === 'copy') { if (message.body) await navigator.clipboard.writeText(message.body); return }
-    if (type === 'pin') { const { error: e } = await supabase.from('messages').update({ metadata: { ...getMeta(message), pinned: !Boolean(getMeta(message).pinned) } }).eq('id', message.id); if (e) setError(e.message); return }
-    if (type === 'delete') { if (message.sender_id !== userId) return; const { error: e } = await supabase.from('messages').update({ body: null, deleted_at: new Date().toISOString() }).eq('id', message.id).eq('sender_id', userId); if (e) setError(e.message); return }
-    if (type === 'edit') { if (message.sender_id !== userId || !message.body) return; const next = window.prompt('Editar mensaje', message.body); if (!next?.trim()) return; const { error: e } = await supabase.from('messages').update({ body: next.trim(), edited_at: new Date().toISOString() }).eq('id', message.id).eq('sender_id', userId); if (e) setError(e.message); return }
+    if (type === 'pin') { const { error: e } = await supabase.from('messages').update({ metadata: { ...message.metadata, pinned: !Boolean(message.metadata.pinned) } }).eq('id', message.id); if (e) setError(fail(e, 'No fue posible fijar el mensaje.')); return }
+    if (type === 'delete') { if (message.sender_id !== userId) return; const { error: e } = await supabase.from('messages').update({ body: null, deleted_at: new Date().toISOString() }).eq('id', message.id).eq('sender_id', userId); if (e) setError(fail(e, 'No fue posible eliminar el mensaje.')); return }
+    if (type === 'edit') { if (message.sender_id !== userId || !message.body) return; const next = window.prompt('Editar mensaje', message.body); if (!next?.trim()) return; const { error: e } = await supabase.from('messages').update({ body: next.trim(), edited_at: new Date().toISOString() }).eq('id', message.id).eq('sender_id', userId); if (e) setError(fail(e, 'No fue posible editar el mensaje.')); return }
     const target = window.prompt(`Reenviar a número de conversación:\n${conversations.map((c, i) => `${i + 1}. ${c.display_name}`).join('\n')}`)
     const index = Number(target) - 1; const destination = Number.isInteger(index) ? conversations[index] : null
     if (!destination) return
-    const { error: e } = await supabase.from('messages').insert({ conversation_id: destination.id, sender_id: userId, message_type: message.message_type, body: message.body, metadata: { ...getMeta(message), forwarded: true, forwarded_from: message.conversation_id } })
-    if (e) setError(e.message)
+    const { error: e } = await supabase.from('messages').insert({ conversation_id: destination.id, sender_id: userId, message_type: message.message_type, body: message.body, metadata: { ...message.metadata, forwarded: true, forwarded_from: message.conversation_id } })
+    if (e) setError(fail(e, 'No fue posible reenviar el mensaje.'))
   }
 
-  void search
-  void chatSearch
-  void recordVoice
-  void action
-  void fmt
-  void CrediBusinessCall
-  void FileText
-  void MessageCircle
-  void Mic
-  void Paperclip
-  void Pin
-  void Send
-  void Smile
-  void Square
-  void CheckCheck
-  void X
-  void setProfiles
-  void setChatSearch
-  void setAttachOpen
-  void setContext
-  void setMessages
-  void setProfiles
-  void setUserId
-  void setConversations
-  void setSelectedId
-  void setError
-  void setBusy
-  void setUploading
-  void setRecording
-  void setReply
-  void setEmojiOpen
-  void openBusinessContext
-  void loadMessages
-  void sendText
-  void sendFile
-  void router
-  void params
+  const selected = conversations.find((c) => c.id === selectedId) ?? null
+  const peerId = selected?.member_ids.find((id) => id !== userId) ?? null
+  const peer = peerId ? profiles[peerId] : null
+  const list = conversations.filter((c) => { const q = search.toLowerCase().trim(); return !q || c.display_name.toLowerCase().includes(q) || Boolean(c.title?.toLowerCase().includes(q)) })
+  const shown = messages.filter((m) => !chatSearch.trim() || Boolean(m.body?.toLowerCase().includes(chatSearch.toLowerCase()))).slice(-500)
 
-  return null
+  return <main className="min-h-[calc(100vh-80px)] bg-[#050816] text-white"><div className="mx-auto max-w-[1500px] px-3 py-4 sm:px-6 sm:py-7">
+    <header className="mb-4 rounded-[1.75rem] border border-cyan-300/10 bg-[#08101f] p-5 sm:p-7"><div className="flex items-center justify-between gap-3"><div className="flex items-center gap-3"><span className="flex size-11 items-center justify-center rounded-xl bg-cyan-300/10 text-cyan-200"><MessageCircle size={22}/></span><div><p className="text-[10px] font-black uppercase tracking-[.2em] text-cyan-200">Credi Business Chat</p><h1 className="text-2xl font-black sm:text-3xl">Mensajería comercial instantánea</h1></div></div><span className="rounded-full border border-emerald-400/15 bg-emerald-400/5 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-emerald-200">● Tiempo real</span></div><p className="mt-3 text-sm leading-6 text-slate-300">Comunicación privada y empresarial vinculada al negocio, con multimedia, notas de voz, respuestas, reacciones, documentos, búsqueda y llamadas de voz o vídeo.</p></header>
+    {error && <div className="mb-4 flex items-center justify-between rounded-2xl border border-rose-400/20 bg-rose-400/10 p-4 text-sm text-rose-100"><span>{error}</span><button onClick={()=>setError(null)} aria-label="Cerrar"><X size={17}/></button></div>}
+    <div className="grid min-h-[720px] overflow-hidden rounded-[2rem] border border-white/10 bg-white/[.03] shadow-2xl lg:grid-cols-[330px_1fr]">
+      <aside className="border-b border-white/10 bg-slate-950/70 lg:border-b-0 lg:border-r"><div className="border-b border-white/10 p-4"><div className="relative"><Search className="absolute left-3 top-3.5 size-4 text-slate-500"/><input value={search} onChange={(e)=>setSearch(e.target.value)} placeholder="Buscar conversaciones" className="w-full rounded-xl border border-white/10 bg-white/[.04] py-3 pl-9 pr-3 text-sm outline-none placeholder:text-slate-500"/></div></div><div className="max-h-[630px] overflow-y-auto">{list.length ? list.map((c)=><button key={c.id} type="button" onClick={()=>{setSelectedId(c.id);router.replace(`/chat?conversation=${encodeURIComponent(c.id)}`)}} className={`w-full border-b border-white/5 px-4 py-4 text-left hover:bg-white/[.04] ${selectedId===c.id?'bg-cyan-300/[.08]':''}`}><div className="flex gap-3"><div className="flex size-11 shrink-0 items-center justify-center rounded-full bg-cyan-300/10 font-black text-cyan-100">{c.display_name.slice(0,1).toUpperCase()}</div><div className="min-w-0 flex-1"><p className="truncate text-sm font-black">{c.display_name}</p><p className="mt-1 truncate text-xs text-slate-400">{c.title||'Conversación comercial'}</p></div></div></button>):<div className="p-6 text-sm leading-6 text-slate-400">No hay conversaciones. Abre un producto y pulsa “Contactar al proveedor”.</div>}</div></aside>
+      <section className="flex min-h-[720px] flex-col"><div className="border-b border-white/10 bg-slate-950/55 px-4 py-3 sm:px-5"><div className="flex items-center justify-between gap-3"><div className="flex min-w-0 items-center gap-3"><div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-cyan-300/10 font-black">{selected?.display_name.slice(0,1).toUpperCase()||'C'}</div><div className="min-w-0"><p className="truncate text-sm font-black">{selected?.display_name||'Selecciona una conversación'}</p><p className="truncate text-xs text-slate-400">{peer?.role ? `${peer.role} · Credi Marketplace` : 'Canal comercial'}</p></div></div><CrediBusinessCall conversationId={selectedId} peerUserId={peerId} peerName={selected?.display_name||'Contacto comercial'}/></div>{context && <div className="mt-3 grid gap-2 rounded-2xl border border-cyan-300/10 bg-cyan-300/[.04] p-3 text-xs sm:grid-cols-2 lg:grid-cols-4"><div><span className="font-black text-cyan-200">Producto</span><p className="mt-1 text-slate-300">{String(context.product_title||context.b2b_title||context.product_id||context.b2b_product_id||'—')}</p></div><div><span className="font-black text-cyan-200">Empresa / tienda</span><p className="mt-1 text-slate-300">{String(context.store_name||'—')}</p></div><div><span className="font-black text-cyan-200">Pedido / país</span><p className="mt-1 text-slate-300">{String(context.order_id||context.country||'—')}</p></div><div><span className="font-black text-cyan-200">Afiliado</span><p className="mt-1 text-slate-300">{String(context.affiliate_ref||'—')}</p></div></div>}{selected && <div className="mt-3 flex gap-2 overflow-x-auto pb-1">{QUICK.map((q)=><button key={q} type="button" onClick={()=>void sendText(q)} className="shrink-0 rounded-full border border-white/10 bg-white/[.04] px-3 py-2 text-[11px] font-bold text-slate-200">{q}</button>)}</div>}{selected && <div className="relative mt-3"><Search className="absolute left-3 top-2.5 size-4 text-slate-500"/><input value={chatSearch} onChange={(e)=>setChatSearch(e.target.value)} placeholder="Buscar dentro del chat" className="w-full rounded-xl border border-white/10 bg-white/[.03] py-2 pl-9 pr-3 text-xs outline-none placeholder:text-slate-500"/></div>}</div>
+      <div ref={messageBox} className="flex-1 space-y-3 overflow-y-auto px-3 py-5 sm:px-6">{!selected?<div className="flex min-h-[500px] items-center justify-center text-center"><div><MessageCircle className="mx-auto size-16 text-cyan-200"/><h2 className="mt-5 text-xl font-black">Centro de comunicación comercial</h2><p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-400">Toda la negociación permanece dentro de Credi Marketplace.</p></div></div>:shown.map((m)=><div key={m.id} className={`flex ${m.sender_id===userId?'justify-end':'justify-start'}`}><div className={`group relative max-w-[90%] rounded-2xl px-4 py-3 sm:max-w-[78%] ${m.sender_id===userId?'bg-cyan-300 text-slate-950':'bg-slate-900 text-white'}`}>{Boolean(m.metadata.pinned)&&<div className="mb-2 flex items-center gap-1 text-[10px] font-black"><Pin size={11}/> Fijado</div>}{m.reply_to_id&&<div className="mb-2 rounded-xl bg-black/10 px-3 py-2 text-[11px]">Respuesta · {messages.find((x)=>x.id===m.reply_to_id)?.body||'Contenido multimedia'}</div>}{m.deleted_at?<p className="text-sm italic opacity-60">Mensaje eliminado</p>:<>{(()=>{const meta=getMeta(m);const url=typeof meta.public_url==='string'?meta.public_url:null;return <>{m.message_type==='image'&&url&&<img src={url} alt={String(meta.file_name||'Imagen')} className="mb-2 max-h-80 rounded-xl object-cover"/>}{m.message_type==='video'&&url&&<video src={url} controls playsInline className="mb-2 max-h-96 w-full rounded-xl"/>}{m.message_type==='audio'&&url&&<audio src={url} controls className="mb-2 w-full"/>}{(m.message_type==='document'||m.message_type==='file')&&url&&<a href={url} target="_blank" rel="noreferrer" className="mb-2 flex items-center gap-2 rounded-xl bg-black/10 p-3 text-sm font-bold underline"><FileText size={17}/>{String(meta.file_name||'Abrir archivo')}</a>}</>})()}{m.body&&<p className="whitespace-pre-wrap text-sm leading-6">{m.body}</p>}<div className="mt-2 flex items-center justify-end gap-2 text-[10px] opacity-70">{m.edited_at&&<span>editado</span>}<span>{fmt(m.created_at)}</span>{m.sender_id===userId&&<CheckCheck size={13}/>}</div></>}</div><div className="mt-1 flex gap-1 opacity-0 transition group-hover:opacity-100">{([['react','👍'],['copy','Copiar'],['pin','Fijar'],['edit','Editar'],['delete','Eliminar'],['forward','Reenviar']] as const).map(([type,label])=><button key={type} type="button" onClick={()=>void action(m,type)} className="rounded-lg border border-white/10 bg-slate-950 px-2 py-1 text-[10px] text-slate-300">{label}</button>)}</div></div>)}</div>
+      {reply&&<div className="border-t border-white/10 bg-slate-950/60 px-4 py-3 text-xs text-slate-300">Respondiendo a: <strong>{reply.body||'Contenido multimedia'}</strong><button onClick={()=>setReply(null)} className="ml-3 text-cyan-300">Cerrar</button></div>}
+      <div className="border-t border-white/10 bg-slate-950/75 p-3 sm:p-4"><div className="flex items-end gap-2"><div className="relative"><button type="button" onClick={()=>setEmojiOpen((v)=>!v)} className="flex size-11 items-center justify-center rounded-xl border border-white/10 bg-white/[.04] text-cyan-200"><Smile size={19}/></button>{emojiOpen&&<div className="absolute bottom-14 left-0 z-20 grid w-72 grid-cols-9 gap-1 rounded-2xl border border-white/10 bg-slate-950 p-3 shadow-2xl">{EMOJIS.map((emoji)=><button key={emoji} type="button" onClick={()=>setDraft((d)=>d+emoji)} className="rounded-lg p-2 text-lg hover:bg-white/10">{emoji}</button>)}</div>}</div><div className="relative"><button type="button" onClick={()=>setAttachOpen((v)=>!v)} className="flex size-11 items-center justify-center rounded-xl border border-white/10 bg-white/[.04] text-cyan-200"><Paperclip size={19}/></button>{attachOpen&&<div className="absolute bottom-14 left-0 z-20 w-56 rounded-2xl border border-white/10 bg-slate-950 p-2 shadow-2xl"><label className="flex cursor-pointer items-center gap-2 rounded-xl p-3 text-sm hover:bg-white/10"><FileText size={17}/> Archivo<input type="file" className="hidden" onChange={(e)=>{const f=e.target.files?.[0];if(f)void sendFile(f)}}/></label></div>}</div><button type="button" onClick={recordVoice} className={`flex size-11 items-center justify-center rounded-xl border border-white/10 ${recording?'bg-rose-500/15 text-rose-200':'bg-white/[.04] text-cyan-200'}`} aria-label={recording?'Detener grabación':'Grabar nota de voz'}>{recording?<Square size={17}/>:<Mic size={19}/>}</button><textarea value={draft} onChange={(e)=>setDraft(e.target.value)} onKeyDown={(e)=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();void sendText()}}} placeholder="Escribe un mensaje..." rows={1} className="min-h-11 flex-1 resize-none rounded-xl border border-white/10 bg-white/[.04] px-4 py-3 text-sm outline-none placeholder:text-slate-500"/><button type="button" onClick={()=>void sendText()} disabled={!draft.trim()||busy||!selectedId} className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-cyan-300 text-slate-950 disabled:opacity-40"><Send size={18}/></button></div>{uploading&&<p className="mt-2 text-[11px] text-cyan-200">Subiendo archivo…</p>}</div>
+    </section></div></div></main>
 }
