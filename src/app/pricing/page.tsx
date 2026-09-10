@@ -21,10 +21,15 @@ const audienceLabel: Record<string, string> = {
   enterprise: "Empresas",
 };
 
-function CheckoutButton({ plan, interval }: { plan: (typeof plans)[number]; interval: "monthly" | "yearly" }) {
+type CheckoutButtonProps = {
+  planCode: string;
+  interval: "monthly" | "yearly";
+};
+
+function CheckoutButton({ planCode, interval }: CheckoutButtonProps) {
   return (
     <form action="/api/billing/checkout" method="post">
-      <input type="hidden" name="plan" value={plan.code} />
+      <input type="hidden" name="plan" value={planCode} />
       <input type="hidden" name="interval" value={interval} />
       <button
         type="submit"
@@ -36,9 +41,9 @@ function CheckoutButton({ plan, interval }: { plan: (typeof plans)[number]; inte
   );
 }
 
-const plans = await getPublicCommercialPlans();
-
 export default async function PricingPage() {
+  const plans = await getPublicCommercialPlans();
+
   return (
     <section className="mx-auto w-full max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-3xl text-center">
@@ -114,8 +119,8 @@ export default async function PricingPage() {
                   </a>
                 ) : (
                   <>
-                    <CheckoutButton plan={plan} interval="monthly" />
-                    <CheckoutButton plan={plan} interval="yearly" />
+                    <CheckoutButton planCode={plan.code} interval="monthly" />
+                    <CheckoutButton planCode={plan.code} interval="yearly" />
                   </>
                 )}
               </div>
