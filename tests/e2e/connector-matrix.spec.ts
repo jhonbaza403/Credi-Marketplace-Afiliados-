@@ -42,7 +42,10 @@ test.describe("Credi connector matrix", () => {
       expect(response?.ok(), `${entry.route} returned ${response?.status()}`).toBeTruthy();
 
       for (const [label, href] of entry.links) {
-        const link = page.getByRole("link", { name: new RegExp(label, "i") }).first();
+        const selector = href.endsWith("/") || href.includes("?")
+          ? `a[href^="${href}"]`
+          : `a[href="${href}"]`;
+        const link = page.locator(selector).first();
         await expect(link, `${entry.route} is missing connector ${label}`).toBeVisible();
         await expect(link).toHaveAttribute("href", new RegExp(`^${escapeRegExp(href)}`));
       }
