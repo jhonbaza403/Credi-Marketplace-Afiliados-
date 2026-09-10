@@ -89,16 +89,29 @@ export default async function PricingPage() {
               </ul>
 
               <div className="mt-auto pt-8">
-                <a
-                  href={plan.is_free ? "/register" : "/contacto"}
-                  className={`block rounded-2xl px-4 py-3 text-center text-sm font-bold transition ${
-                    featured
-                      ? "bg-cyan-300 text-slate-950 hover:bg-cyan-200"
-                      : "border border-white/10 bg-white/10 text-white hover:bg-white/15"
-                  }`}
-                >
-                  {plan.is_free ? "Crear cuenta gratis" : "Solicitar plan"}
-                </a>
+                {plan.is_free ? (
+                  <a
+                    href="/register"
+                    className="block rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-center text-sm font-bold text-white transition hover:bg-white/15"
+                  >
+                    Crear cuenta gratis
+                  </a>
+                ) : (
+                  <form action="/api/billing/checkout" method="post">
+                    <input type="hidden" name="plan" value={plan.code} />
+                    <input type="hidden" name="interval" value="monthly" />
+                    <button
+                      type="submit"
+                      className={`block w-full rounded-2xl px-4 py-3 text-center text-sm font-bold transition ${
+                        featured
+                          ? "bg-cyan-300 text-slate-950 hover:bg-cyan-200"
+                          : "border border-white/10 bg-white/10 text-white hover:bg-white/15"
+                      }`}
+                    >
+                      Suscribirme con Stripe
+                    </button>
+                  </form>
+                )}
               </div>
             </article>
           );
@@ -106,10 +119,9 @@ export default async function PricingPage() {
       </div>
 
       <div className="mx-auto mt-12 max-w-4xl rounded-3xl border border-white/10 bg-white/[0.03] p-6 text-center text-sm leading-6 text-white/55">
-        Credi Marketplace mantiene un modelo de entrada gratuita. La monetización puede
-        combinar suscripciones opcionales, servicios premium, herramientas comerciales,
-        promociones y otros ingresos propios del marketplace, sin convertir el acceso
-        básico en un requisito de pago.
+        Credi Marketplace mantiene un modelo de entrada gratuita. Las suscripciones son
+        opcionales y se procesan mediante Checkout de Stripe; el acceso básico no exige
+        una suscripción de pago.
       </div>
     </section>
   );
