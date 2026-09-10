@@ -1,1 +1,1 @@
-export { default } from './CrediBusinessCallTurn'
+export { default } from './CrediCallManager'
