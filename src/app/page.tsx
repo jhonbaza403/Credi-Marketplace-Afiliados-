@@ -1,5 +1,7 @@
 import Link from 'next/link'
 import { ArrowRight, BadgeCheck, Building2, BriefcaseBusiness, Globe2, Handshake, LockKeyhole, Network, ShoppingBag, Sparkles, Store, Users } from 'lucide-react'
+import HeroPortal from '@/components/layout/HeroPortal'
+import '@/styles/hero-portal.css'
 
 type Item = { title: string; description: string; href: string; icon: React.ReactNode }
 
@@ -34,12 +36,19 @@ function Card({ item }: { item: Item }) {
 
 export default function HomePage() {
   return <main className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
-    <section className="bg-neutral-950 px-4 py-20 text-white sm:px-6 sm:py-28">
-      <div className="mx-auto max-w-6xl text-center">
-        <div className="inline-flex items-center gap-2 rounded-full border border-brand-400/20 bg-brand-400/10 px-4 py-2 text-xs font-bold uppercase tracking-[0.16em] text-brand-200"><Sparkles className="size-4" /> Plataforma comercial B2B &amp; B2C</div>
-        <h1 className="mx-auto mt-7 max-w-5xl text-balance text-4xl font-black tracking-tight sm:text-6xl lg:text-7xl">El ecosistema digital para <span className="bg-linear-to-r from-brand-300 via-cyan-300 to-cyan-400 bg-clip-text text-transparent">crecer sin límites</span></h1>
-        <p className="mx-auto mt-6 max-w-3xl text-lg leading-8 text-neutral-300">Compra, vende y desarrolla oportunidades comerciales conectando personas, profesionales, proveedores, vendedores y empresas.</p>
-        <div className="mt-9 flex flex-col justify-center gap-3 sm:flex-row"><Link href="/explorar" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-brand-600 px-7 py-3.5 text-sm font-black hover:bg-brand-500">Explorar mercado <ArrowRight className="size-5" /></Link><Link href="/vender" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 px-7 py-3.5 text-sm font-black hover:bg-white/10">Empieza a vender <ArrowRight className="size-4" /></Link></div>
+    <section className="hero-stage px-4 py-20 text-white sm:px-6 sm:py-28">
+      <HeroPortal />
+      <div className="hero-content mx-auto max-w-6xl text-center">
+        <div className="hero-kicker inline-flex items-center gap-2 rounded-full border border-brand-400/25 bg-brand-400/10 px-4 py-2 text-xs font-bold uppercase tracking-[0.16em] text-cyan-100 shadow-[0_0_28px_rgba(34,211,238,.12)]"><Sparkles className="size-4" /> Plataforma comercial B2B &amp; B2C</div>
+        <h1 className="mx-auto mt-7 max-w-5xl text-balance text-4xl font-black tracking-tight sm:text-6xl lg:text-7xl">
+          <span className="hero-main-text">El ecosistema digital para </span>
+          <span className="hero-highlight">crecer sin límites</span>
+        </h1>
+        <p className="hero-description mx-auto mt-6 max-w-3xl text-lg font-medium leading-8 text-slate-100 drop-shadow-[0_2px_12px_rgba(0,0,0,.8)]">Compra, vende y desarrolla oportunidades comerciales conectando personas, profesionales, proveedores, vendedores y empresas.</p>
+        <div className="hero-actions mt-9 flex flex-col justify-center gap-3 sm:flex-row">
+          <Link href="/explorar" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-brand-600 px-7 py-3.5 text-sm font-black shadow-[0_10px_38px_rgba(37,99,235,.28)] hover:bg-brand-500">Explorar mercado <ArrowRight className="size-5" /></Link>
+          <Link href="/vender" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/8 px-7 py-3.5 text-sm font-black backdrop-blur-sm hover:bg-white/12">Empieza a vender <ArrowRight className="size-4" /></Link>
+        </div>
       </div>
     </section>
 
