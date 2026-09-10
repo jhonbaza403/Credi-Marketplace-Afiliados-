@@ -12,6 +12,7 @@ const navigation = [
   { name: 'Proveedores verificados', href: '/proveedores-verificados' },
   { name: 'Red Comercial', href: '/red-comercial' },
   { name: 'Gestión empresarial', href: '/gestion-empresarial' },
+  { name: 'Reputación', href: '/dashboard/reputation' },
   { name: 'Publicar producto', href: '/products/create' },
   { name: 'Afiliados', href: '/affiliate' },
   { name: 'Social', href: '/social' },
