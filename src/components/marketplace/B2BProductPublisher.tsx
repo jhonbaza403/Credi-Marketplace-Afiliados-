@@ -4,7 +4,6 @@ import { FormEvent, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import MarketplaceMediaUploader from "@/components/media/MarketplaceMediaUploader"
 import type { UploadedMarketplaceMedia } from "@/lib/storage/marketplace-media"
-import { createClient } from "@/lib/supabase/client"
 
 const CATEGORIES = ["Tecnología", "Hogar", "Moda", "Belleza", "Alimentos", "Salud y bienestar", "Automotriz", "Industria", "Oficina", "Otros"]
 
@@ -16,7 +15,6 @@ export default function B2BProductPublisher() {
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
 
-  const imageUrl = images[0]?.url ?? ""
   const videoMedia = useMemo(() => videos.map((item) => ({ url: item.url, kind: item.kind })), [videos])
 
   function update(key: keyof typeof form, value: string) {
@@ -30,39 +28,28 @@ export default function B2BProductPublisher() {
     setMessage(null)
 
     try {
-      const supabase = createClient()
-      const { data: { user }, error: authError } = await supabase.auth.getUser()
-      if (authError || !user) throw new Error("Debes iniciar sesión para publicar una oferta B2B.")
       if (!form.title.trim() || !form.description.trim() || images.length === 0) throw new Error("Completa título, descripción y al menos una imagen.")
-
-      const wholesale = Number(form.wholesalePrice)
-      const regular = Number(form.regularPrice)
-      const minOrder = Number(form.minOrder)
-      const stock = Number(form.stock)
-      if (!Number.isFinite(wholesale) || wholesale <= 0) throw new Error("El precio mayorista debe ser mayor que cero.")
-      if (!Number.isFinite(regular) || regular <= 0 || regular < wholesale) throw new Error("El precio de referencia debe ser válido y no menor al mayorista.")
-      if (!Number.isInteger(minOrder) || minOrder < 1) throw new Error("La cantidad mínima de pedido no es válida.")
-      if (!Number.isInteger(stock) || stock < minOrder) throw new Error("El stock debe ser igual o superior al pedido mínimo.")
-      if (form.country.trim().length !== 2) throw new Error("Usa un código de país ISO de dos letras.")
-
-      const { error } = await supabase.from("b2b_products").insert({
-        supplier_id: user.id,
-        title: form.title.trim(),
-        category: form.category,
-        wholesale_price_usd: wholesale,
-        regular_price_usd: regular,
-        min_order_quantity: minOrder,
-        stock_available: stock,
-        binance_pay_id: form.binancePayId.trim() || null,
-        usdt_wallet_address: form.usdtWallet.trim() || null,
-        image_url: imageUrl,
-        video_media: videoMedia,
-        description: form.description.trim(),
-        country: form.country.trim().toUpperCase(),
-        status: "active",
-        moderation_status: "pending_review",
+      const response = await fetch("/api/b2b/products", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          title: form.title.trim(),
+          category: form.category,
+          description: form.description.trim(),
+          wholesale: Number(form.wholesalePrice),
+          regular: Number(form.regularPrice),
+          moq: Number(form.minOrder),
+          stock: Number(form.stock),
+          country: form.country.trim().toUpperCase(),
+          binancePayId: form.binancePayId.trim(),
+          usdtWalletAddress: form.usdtWallet.trim(),
+          images: images.map((item) => ({ url: item.url, kind: item.kind })),
+          videos: videoMedia,
+        }),
       })
-      if (error) throw error
+      const result = await response.json() as { success?: boolean; product?: { status?: string; moderation_status?: string }; error?: string }
+      if (!response.ok || !result.success) throw new Error(result.error || "No fue posible registrar la oferta B2B.")
 
       setMessage("Oferta enviada a revisión. Cuando sea aprobada aparecerá en el mercado B2B.")
       setForm({ title: "", category: "Tecnología", description: "", wholesalePrice: "", regularPrice: "", minOrder: "1", stock: "1", country: "US", binancePayId: "", usdtWallet: "" })
@@ -83,7 +70,7 @@ export default function B2BProductPublisher() {
         <Field label="Nombre del producto" value={form.title} onChange={(value) => update("title", value)} required />
         <label className="text-sm font-bold">Categoría<select value={form.category} onChange={(event) => update("category", event.target.value)} className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 outline-none focus:border-cyan-300/50">{CATEGORIES.map((category) => <option key={category}>{category}</option>)}</select></label>
       </div>
-      <label className="block text-sm font-bold">Descripción<textarea required rows={6} maxLength={5000} value={form.description} onChange={(event) => update("description", event.target.value)} className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 outline-none focus:border-cyan-300/50" placeholder="Especificaciones, condiciones, empaque, disponibilidad y usos..." /></label>
+      <label className="block text-sm font-bold">Descripción<textarea required rows={6} maxLength={12000} value={form.description} onChange={(event) => update("description", event.target.value)} className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 outline-none focus:border-cyan-300/50" placeholder="Especificaciones, condiciones, empaque, disponibilidad y usos..." /></label>
       <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
         <Field label="Precio mayorista USD" type="number" min="0.01" step="0.01" value={form.wholesalePrice} onChange={(value) => update("wholesalePrice", value)} required />
         <Field label="Precio de referencia USD" type="number" min="0.01" step="0.01" value={form.regularPrice} onChange={(value) => update("regularPrice", value)} required />
