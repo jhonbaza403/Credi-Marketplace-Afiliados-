@@ -6,9 +6,8 @@ export async function getProducts(limit = 20) {
   const supabase = await getDatabaseServerClient();
 
   const { data, error } = await supabase
-    .from("products")
+    .from("published_products")
     .select("*")
-    .eq("is_active", true)
     .order("created_at", { ascending: false })
     .limit(limit);
 
@@ -26,10 +25,9 @@ export async function getProducts(limit = 20) {
 export async function getProductById(id: string) {
   const supabase = await getDatabaseServerClient();
   const { data, error } = await supabase
-    .from("products")
+    .from("published_products")
     .select("*")
     .eq("id", id)
-    .eq("is_active", true)
     .maybeSingle();
 
   if (error) throw new Error(error.message);
@@ -39,10 +37,9 @@ export async function getProductById(id: string) {
 export async function getProductBySlug(slug: string) {
   const supabase = await getDatabaseServerClient();
   const { data, error } = await supabase
-    .from("products")
+    .from("published_products")
     .select("*")
     .eq("slug", slug)
-    .eq("is_active", true)
     .maybeSingle();
 
   if (error) throw new Error(error.message);
