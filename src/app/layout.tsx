@@ -54,7 +54,11 @@ export default function RootLayout({
               <CartProvider>
                 <div className="relative z-10 flex min-h-screen flex-col">
                   <Header />
-                  <main className="flex-1">{children}</main>
+                  <main className="app-content-layer flex-1">
+                    <div className="app-readable-surface min-h-full">
+                      {children}
+                    </div>
+                  </main>
                   <Footer />
                 </div>
               </CartProvider>
