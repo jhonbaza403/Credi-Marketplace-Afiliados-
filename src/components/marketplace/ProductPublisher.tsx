@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import MarketplaceMediaUploader from "@/components/media/MarketplaceMediaUploader"
 import type { UploadedMarketplaceMedia } from "@/lib/storage/marketplace-media"
 import ProductPublishCopilot, { type ProductSuggestion } from "@/components/marketplace/ProductPublishCopilot"
+import { createClient } from "@/lib/supabase/client"
 
 const CATEGORIES = ["Electrónica", "Moda", "Hogar", "Belleza", "Alimentos", "Educación", "Servicios", "Otros"]
 
