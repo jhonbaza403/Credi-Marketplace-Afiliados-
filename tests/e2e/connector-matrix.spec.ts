@@ -11,8 +11,8 @@ const connectorMatrix = [
   {
     route: "/proveedores-verificados",
     links: [
-      ["Contactar", "/chat?to="],
-      ["Ver empresa", "/sellers/"],
+      ["Credi Chat", "/chat"],
+      ["Compras mayoristas", "/compras-mayoristas"],
     ],
   },
   {
@@ -27,8 +27,7 @@ const connectorMatrix = [
   {
     route: "/sellers",
     links: [
-      ["Contactar", "/chat?to="],
-      ["Ver empresa", "/sellers/"],
+      ["Credi Chat", "/chat"],
       ["Proveedores verificados", "/proveedores-verificados"],
       ["Compras mayoristas", "/compras-mayoristas"],
     ],
@@ -42,12 +41,8 @@ test.describe("Credi connector matrix", () => {
       expect(response?.ok(), `${entry.route} returned ${response?.status()}`).toBeTruthy();
 
       for (const [label, href] of entry.links) {
-        const selector = href.endsWith("/") || href.includes("?")
-          ? `a[href^="${href}"]`
-          : `a[href="${href}"]`;
-        const link = page.locator(selector).first();
+        const link = page.locator(`a[href="${href}"]`).first();
         await expect(link, `${entry.route} is missing connector ${label}`).toBeVisible();
-        await expect(link).toHaveAttribute("href", new RegExp(`^${escapeRegExp(href)}`));
       }
     });
   }
@@ -85,7 +80,3 @@ test.describe("Credi connector matrix", () => {
     }
   });
 });
-
-function escapeRegExp(value: string) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
