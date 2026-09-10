@@ -1,8 +1,7 @@
 import type { Metadata, Viewport } from "next";
-
 import "./globals.css";
 import "@/styles/premium-form-surfaces.css";
-
+import "@/styles/readability.css";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import MarketplaceAtmosphere from "@/components/layout/MarketplaceAtmosphere";
@@ -38,15 +37,10 @@ export const viewport: Viewport = {
   themeColor: "#050816",
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{ children: React.ReactNode }>) {
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="es" suppressHydrationWarning>
-      <body
-        className="min-h-screen bg-[var(--background)] text-[var(--foreground)] antialiased"
-        suppressHydrationWarning
-      >
+      <body className="min-h-screen bg-[var(--background)] text-[var(--foreground)] antialiased" suppressHydrationWarning>
         <MarketplaceAtmosphere />
         <LanguageProvider>
           <RegionProvider>
@@ -55,9 +49,7 @@ export default function RootLayout({
                 <div className="relative z-10 flex min-h-screen flex-col">
                   <Header />
                   <main className="app-content-layer flex-1">
-                    <div className="app-readable-surface min-h-full">
-                      {children}
-                    </div>
+                    <div className="app-readable-surface min-h-full">{children}</div>
                   </main>
                   <Footer />
                 </div>
