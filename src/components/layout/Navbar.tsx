@@ -7,6 +7,7 @@ import { useState } from 'react';
 const navigation = [
   { name: 'Inicio', href: '/' },
   { name: 'Marketplace', href: '/marketplace' },
+  { name: 'Credi Chat', href: '/chat' },
   { name: 'Publicar producto', href: '/products/create' },
   { name: 'Vendedores', href: '/sellers' },
   { name: 'Afiliados', href: '/affiliate' },
