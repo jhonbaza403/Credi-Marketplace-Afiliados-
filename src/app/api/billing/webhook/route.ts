@@ -36,6 +36,23 @@ function objectMetadata(object: Record<string, unknown>): Record<string, string>
   );
 }
 
+async function recordEvent(
+  admin: ReturnType<typeof createAdminClient>,
+  event: StripeEvent,
+  subscriptionId: string | null,
+  userId: string | null,
+) {
+  const { error } = await admin.from("subscription_events").insert({
+    subscription_id: subscriptionId,
+    user_id: userId,
+    event_type: event.type,
+    provider: "stripe",
+    provider_event_id: event.id,
+    payload: event.data.object,
+  });
+  if (error && !String(error.message).toLowerCase().includes("duplicate")) throw error;
+}
+
 async function upsertSubscription(event: StripeEvent, subscriptionOverride?: StripeSubscription) {
   const object = event.data.object;
   const subscriptionId = String(object.id ?? subscriptionOverride?.id ?? "");
@@ -61,7 +78,7 @@ async function upsertSubscription(event: StripeEvent, subscriptionOverride?: Str
   const status = normalizeStatus(String(subscription.status));
   const interval = metadata.billing_interval === "yearly" ? "yearly" : "monthly";
 
-  const { data: localSubscription, error: upsertError } = await admin
+  const { data: localSubscription, error } = await admin
     .from("subscriptions")
     .upsert(
       {
@@ -84,30 +101,18 @@ async function upsertSubscription(event: StripeEvent, subscriptionOverride?: Str
     .select("id,user_id,plan_id")
     .maybeSingle();
 
-  if (upsertError) throw upsertError;
+  if (error) throw error;
+  if (!localSubscription) return null;
 
-  if (localSubscription) {
-    const { error: eventError } = await admin.from("subscription_events").insert({
-      subscription_id: localSubscription.id,
-      user_id: userId,
-      event_type: event.type,
-      provider: "stripe",
-      provider_event_id: event.id,
-      payload: event.data.object,
-    });
+  await recordEvent(admin, event, localSubscription.id, userId);
 
-    if (eventError && !String(eventError.message).toLowerCase().includes("duplicate")) {
-      throw eventError;
-    }
-
-    if (event.type === "customer.subscription.deleted") {
-      await admin
-        .from("billing_transactions")
-        .update({ status: "cancelled", metadata: { stripe_event_id: event.id } })
-        .eq("subscription_id", localSubscription.id)
-        .eq("provider", "stripe")
-        .in("status", ["pending", "paid"]);
-    }
+  if (event.type === "customer.subscription.deleted") {
+    await admin
+      .from("billing_transactions")
+      .update({ status: "cancelled", metadata: { stripe_event_id: event.id } })
+      .eq("subscription_id", localSubscription.id)
+      .eq("provider", "stripe")
+      .in("status", ["pending", "failed"]);
   }
 
   return localSubscription;
@@ -118,7 +123,7 @@ async function handleCheckoutCompleted(event: StripeEvent) {
   const sessionId = String(object.id ?? "");
   const metadata = objectMetadata(object);
   const subscriptionId = typeof object.subscription === "string" ? object.subscription : null;
-  const userId = metadata.user_id;
+  const userId = metadata.user_id ?? null;
   if (!sessionId || !userId) return;
 
   const admin = createAdminClient();
@@ -139,14 +144,7 @@ async function handleCheckoutCompleted(event: StripeEvent) {
     .eq("provider", "stripe")
     .eq("provider_checkout_id", sessionId);
 
-  await admin
-    .from("billing_transactions")
-    .update({
-      metadata: checkoutMetadata,
-    })
-    .eq("provider", "stripe")
-    .eq("provider_transaction_id", sessionId)
-    .eq("user_id", userId);
+  await recordEvent(admin, event, null, userId);
 }
 
 async function handleInvoiceEvent(event: StripeEvent) {
@@ -160,42 +158,53 @@ async function handleInvoiceEvent(event: StripeEvent) {
   const localSubscription = await upsertSubscription(event, subscription);
   if (!localSubscription) return;
 
-  const status = event.type === "invoice.paid" ? "paid" : "failed";
   const admin = createAdminClient();
   const metadata = subscription.metadata ?? {};
+  const status = event.type === "invoice.paid" ? "paid" : "failed";
+  const amountMinor = Number(object.amount_paid ?? object.amount_due ?? 0);
+  const currency = String(object.currency ?? "usd").toUpperCase();
+  const invoiceId = typeof object.id === "string" ? object.id : null;
+  if (!invoiceId) return;
+
   const invoiceMetadata = {
     ...metadata,
     stripe_subscription_id: subscriptionId,
     stripe_event_id: event.id,
-    stripe_invoice_id: typeof object.id === "string" ? object.id : null,
+    stripe_invoice_id: invoiceId,
   };
 
-  await admin
-    .from("billing_transactions")
-    .update({
+  const { error } = await admin.from("billing_transactions").upsert(
+    {
+      user_id: localSubscription.user_id,
       subscription_id: localSubscription.id,
+      type: "subscription",
       status,
-      paid_at: status === "paid" ? new Date().toISOString() : null,
+      amount_minor: Number.isSafeInteger(amountMinor) && amountMinor >= 0 ? amountMinor : 0,
+      currency,
+      provider: "stripe",
+      provider_transaction_id: invoiceId,
+      description: `Factura de suscripción Credi Marketplace ${metadata.plan_code ?? ""}`.trim(),
       metadata: invoiceMetadata,
-    })
-    .eq("provider", "stripe")
-    .eq("user_id", localSubscription.user_id)
-    .eq("type", "subscription")
-    .in("status", ["pending", "failed"]);
+      paid_at: status === "paid" ? new Date().toISOString() : null,
+    },
+    { onConflict: "provider,provider_transaction_id" },
+  );
+  if (error) throw error;
 
   if (status === "paid") {
-    await admin
-      .from("platform_revenue")
-      .insert({
-        source_type: "subscription",
-        source_id: localSubscription.id,
-        amount_minor: Number(object.amount_paid ?? 0),
-        currency: String(object.currency ?? "usd").toUpperCase(),
-        status: "recognized",
-        description: `Suscripción Credi Marketplace ${metadata.plan_code ?? ""}`.trim(),
-        metadata: invoiceMetadata,
-        recognized_at: new Date().toISOString(),
-      });
+    const { error: revenueError } = await admin.from("platform_revenue").insert({
+      source_type: "subscription",
+      source_id: localSubscription.id,
+      amount_minor: Number.isSafeInteger(amountMinor) && amountMinor >= 0 ? amountMinor : 0,
+      currency,
+      status: "recognized",
+      description: `Ingreso por suscripción Credi Marketplace ${metadata.plan_code ?? ""}`.trim(),
+      metadata: invoiceMetadata,
+      recognized_at: new Date().toISOString(),
+    });
+    if (revenueError && !String(revenueError.message).toLowerCase().includes("duplicate")) {
+      throw revenueError;
+    }
   }
 }
 
@@ -225,6 +234,10 @@ export async function POST(request: Request) {
 
     switch (event.type) {
       case "checkout.session.completed":
+      case "checkout.session.async_payment_succeeded":
+        await handleCheckoutCompleted(event);
+        break;
+      case "checkout.session.async_payment_failed":
         await handleCheckoutCompleted(event);
         break;
       case "customer.subscription.created":
