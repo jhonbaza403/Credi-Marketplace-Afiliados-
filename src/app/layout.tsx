@@ -20,22 +20,38 @@ export const metadata: Metadata = {
   authors: [{ name: "Credi Marketplace" }],
   robots: { index: true, follow: true },
   alternates: { canonical: "/" },
-  openGraph: { title: "Credi Marketplace", description: "Marketplace empresarial B2B, afiliados y comercio digital.", type: "website", locale: "es_ES", siteName: "Credi Marketplace", url: CANONICAL_APP_URL },
+  openGraph: {
+    title: "Credi Marketplace",
+    description: "Marketplace empresarial B2B, afiliados y comercio digital.",
+    type: "website",
+    locale: "es_ES",
+    siteName: "Credi Marketplace",
+    url: CANONICAL_APP_URL,
+  },
   icons: { icon: "/logo.png", shortcut: "/logo.png", apple: "/logo.png" },
 };
 
-export const viewport: Viewport = { width: "device-width", initialScale: 1, themeColor: "#050816" };
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: "#050816",
+};
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default function RootLayout({
+  children,
+}: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="es" suppressHydrationWarning>
-      <body className="min-h-screen bg-background text-foreground antialiased" suppressHydrationWarning>
+      <body
+        className="min-h-screen bg-[var(--background)] text-[var(--foreground)] antialiased"
+        suppressHydrationWarning
+      >
         <MarketplaceAtmosphere />
         <LanguageProvider>
           <RegionProvider>
             <AuthProvider>
               <CartProvider>
-                <div className="flex min-h-screen flex-col">
+                <div className="relative z-10 flex min-h-screen flex-col">
                   <Header />
                   <main className="flex-1">{children}</main>
                   <Footer />
