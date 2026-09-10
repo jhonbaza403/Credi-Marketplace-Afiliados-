@@ -27,20 +27,25 @@ export default function PublishCenter() {
 
   const currentTab = useMemo(() => tabs.find((tab) => tab.value === type) ?? tabs[0], [type]);
 
-  function resetForm(nextType?: ContentType) {
+  function resetFields(nextType?: ContentType) {
     setTitle("");
     setBody("");
     setMedia([]);
     setDestinationUrl("");
     setBudget("");
     setDisclosure(false);
-    setMessage(null);
     if (nextType) setType(nextType);
+  }
+
+  function resetForm(nextType?: ContentType) {
+    resetFields(nextType);
+    setMessage(null);
   }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (saving) return;
+    setSaving(true);
     setMessage(null);
 
     try {
@@ -69,11 +74,11 @@ export default function PublishCenter() {
         }),
       });
 
-      const data = await response.json() as { error?: string; message?: string; moderationStatus?: string };
+      const data = await response.json() as { error?: string; message?: string };
       if (!response.ok) throw new Error(data.error || "No fue posible registrar el contenido.");
 
+      resetFields();
       setMessage(data.message || "Contenido enviado a revisión.");
-      resetForm();
     } catch (error: unknown) {
       console.error("[PublishCenter] publish error", error);
       setMessage(error instanceof Error ? error.message : "No fue posible publicar el contenido.");
@@ -94,7 +99,7 @@ export default function PublishCenter() {
 
       <div className="mb-6 grid grid-cols-2 gap-2 sm:grid-cols-4" role="tablist" aria-label="Tipo de contenido">
         {tabs.map((tab) => (
-          <button key={tab.value} type="button" role="tab" aria-selected={type === tab.value} onClick={() => resetForm(tab.value)} className={`rounded-2xl border px-4 py-3 text-left transition ${type === tab.value ? "border-cyan-300/30 bg-[var(--primary)] text-white" : "border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] hover:bg-[var(--surface-secondary)]"}`}>
+          <button key={tab.value} type="button" role="tab" aria-selected={type === tab.value} onClick={() => resetForm(tab.value)} disabled={saving} className={`rounded-2xl border px-4 py-3 text-left transition ${type === tab.value ? "border-cyan-300/30 bg-[var(--primary)] text-white" : "border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] hover:bg-[var(--surface-secondary)]"} disabled:cursor-not-allowed disabled:opacity-60`}>
             <span className="block text-sm font-black">{tab.label}</span>
             <span className={`mt-1 block text-[11px] leading-4 ${type === tab.value ? "text-white/80" : "text-[var(--muted)]"}`}>{tab.description}</span>
           </button>
@@ -102,10 +107,7 @@ export default function PublishCenter() {
       </div>
 
       <form onSubmit={submit} className="space-y-5" aria-label={`Crear ${currentTab.label}`}>
-        {type !== "story" && (
-          <label className="block text-sm font-semibold">Título<input required value={title} onChange={(event) => setTitle(event.target.value)} maxLength={180} className="mt-2 w-full rounded-2xl border border-[var(--border-strong)] bg-[var(--surface)] px-4 py-3 outline-none focus:border-[var(--primary)] focus:ring-4 focus:ring-[var(--focus-ring)]" placeholder="Título de tu contenido" /></label>
-        )}
-
+        {type !== "story" && <label className="block text-sm font-semibold">Título<input required value={title} onChange={(event) => setTitle(event.target.value)} maxLength={180} className="mt-2 w-full rounded-2xl border border-[var(--border-strong)] bg-[var(--surface)] px-4 py-3 outline-none focus:border-[var(--primary)] focus:ring-4 focus:ring-[var(--focus-ring)]" placeholder="Título de tu contenido" /></label>}
         <label className="block text-sm font-semibold">{type === "story" ? "Texto de la historia" : "Contenido"}<textarea value={body} onChange={(event) => setBody(event.target.value)} rows={6} maxLength={5000} required={type !== "ad"} className="mt-2 w-full rounded-2xl border border-[var(--border-strong)] bg-[var(--surface)] px-4 py-3 outline-none focus:border-[var(--primary)] focus:ring-4 focus:ring-[var(--focus-ring)]" placeholder="Escribe aquí lo que quieres compartir..." /></label>
 
         <div>
@@ -114,11 +116,8 @@ export default function PublishCenter() {
         </div>
 
         {type !== "ad" && <label className="block text-sm font-semibold">Privacidad<select value={visibility} onChange={(event) => setVisibility(event.target.value as "public" | "private")} className="mt-2 w-full rounded-2xl border border-[var(--border-strong)] bg-[var(--surface)] px-4 py-3 outline-none focus:border-[var(--primary)] focus:ring-4 focus:ring-[var(--focus-ring)]"><option value="public">Público</option><option value="private">Solo yo</option></select></label>}
-
         {type === "ad" && <div className="grid gap-4 md:grid-cols-2"><label className="block text-sm font-semibold">URL de destino (opcional)<input type="url" value={destinationUrl} onChange={(event) => setDestinationUrl(event.target.value)} className="mt-2 w-full rounded-2xl border border-[var(--border-strong)] bg-[var(--surface)] px-4 py-3 outline-none focus:border-[var(--primary)] focus:ring-4 focus:ring-[var(--focus-ring)]" placeholder="https://..." /></label><label className="block text-sm font-semibold">Presupuesto (opcional)<input type="number" min="0" step="0.01" value={budget} onChange={(event) => setBudget(event.target.value)} className="mt-2 w-full rounded-2xl border border-[var(--border-strong)] bg-[var(--surface)] px-4 py-3 outline-none focus:border-[var(--primary)] focus:ring-4 focus:ring-[var(--focus-ring)]" placeholder="0.00" /></label></div>}
-
         <label className="flex items-start gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface-secondary)] p-4 text-sm"><input type="checkbox" checked={disclosure} onChange={(event) => setDisclosure(event.target.checked)} className="mt-1 size-4 shrink-0" required /><span>Afirmo que la información publicada es comprobable y que identificaré correctamente cualquier contenido patrocinado o afiliado cuando corresponda.</span></label>
-
         {message && <p role="status" aria-live="polite" className="rounded-2xl border border-[var(--border)] bg-[var(--surface-secondary)] p-4 text-sm">{message}</p>}
         <button type="submit" disabled={saving} aria-busy={saving} className="w-full rounded-2xl bg-[var(--primary)] px-5 py-3.5 text-sm font-black text-white transition hover:bg-[var(--primary-hover)] disabled:cursor-not-allowed disabled:opacity-50">{saving ? "Registrando..." : type === "ad" ? "Enviar campaña a revisión" : `Enviar ${currentTab.label.toLowerCase()} a revisión`}</button>
       </form>
