@@ -22,8 +22,16 @@ export default async function VerifiedSuppliersPage() {
       <div className="mx-auto max-w-7xl space-y-8">
         <header className="overflow-hidden rounded-[2rem] border border-border bg-card p-7 shadow-sm sm:p-10">
           <p className="text-xs font-black uppercase tracking-[.18em] text-primary">Credi Trust Network</p>
-          <h1 className="mt-2 text-3xl font-black tracking-tight text-foreground sm:text-5xl">Proveedores verificados</h1>
-          <p className="mt-3 max-w-3xl text-sm leading-7 text-muted-foreground">Encuentra empresas activas con verificación comercial y abre una conversación directa para disponibilidad, precios, MOQ, logística y condiciones.</p>
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <h1 className="mt-2 text-3xl font-black tracking-tight text-foreground sm:text-5xl">Proveedores verificados</h1>
+              <p className="mt-3 max-w-3xl text-sm leading-7 text-muted-foreground">Encuentra empresas activas con verificación comercial y abre una conversación directa para disponibilidad, precios, MOQ, logística y condiciones.</p>
+            </div>
+            <nav aria-label="Acciones de proveedores" className="flex flex-wrap gap-2">
+              <Link href="/chat" className="rounded-xl bg-primary px-4 py-2.5 text-sm font-black text-primary-foreground hover:opacity-90">Abrir Credi Chat</Link>
+              <Link href="/compras-mayoristas" className="rounded-xl border border-border px-4 py-2.5 text-sm font-bold text-foreground hover:bg-muted">Compras mayoristas</Link>
+            </nav>
+          </div>
         </header>
         {error ? <div className="rounded-2xl border border-destructive/20 bg-destructive/5 p-5 text-sm text-muted-foreground">No fue posible cargar el directorio ahora.</div> : stores?.length ? (
           <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
