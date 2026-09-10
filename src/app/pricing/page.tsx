@@ -21,9 +21,24 @@ const audienceLabel: Record<string, string> = {
   enterprise: "Empresas",
 };
 
-export default async function PricingPage() {
-  const plans = await getPublicCommercialPlans();
+function CheckoutButton({ plan, interval }: { plan: (typeof plans)[number]; interval: "monthly" | "yearly" }) {
+  return (
+    <form action="/api/billing/checkout" method="post">
+      <input type="hidden" name="plan" value={plan.code} />
+      <input type="hidden" name="interval" value={interval} />
+      <button
+        type="submit"
+        className="block w-full rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-center text-sm font-bold text-white transition hover:bg-white/15"
+      >
+        Suscribirme {interval === "yearly" ? "anual" : "mensual"}
+      </button>
+    </form>
+  );
+}
 
+const plans = await getPublicCommercialPlans();
+
+export default async function PricingPage() {
   return (
     <section className="mx-auto w-full max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-3xl text-center">
@@ -43,7 +58,8 @@ export default async function PricingPage() {
       <div className="mt-12 grid gap-6 lg:grid-cols-4">
         {plans.map((plan) => {
           const featured = plan.code === "business";
-          const price = formatPlanPrice(plan, "monthly");
+          const monthly = formatPlanPrice(plan, "monthly");
+          const yearly = formatPlanPrice(plan, "yearly");
 
           return (
             <article
@@ -67,13 +83,13 @@ export default async function PricingPage() {
               <p className="mt-3 min-h-16 text-sm leading-6 text-white/65">{plan.description}</p>
 
               <div className="mt-7 flex items-end gap-2">
-                <span className="text-4xl font-bold text-white">{price}</span>
+                <span className="text-4xl font-bold text-white">{monthly}</span>
                 {!plan.is_free && <span className="mb-1 text-sm text-white/50">/mes</span>}
               </div>
 
               {!plan.is_free && (
                 <p className="mt-1 text-xs text-white/45">
-                  {formatPlanPrice(plan, "yearly")} al año · precio configurable
+                  {yearly} al año · ahorro frente al pago mensual
                 </p>
               )}
 
@@ -88,7 +104,7 @@ export default async function PricingPage() {
                 ))}
               </ul>
 
-              <div className="mt-auto pt-8">
+              <div className="mt-auto space-y-3 pt-8">
                 {plan.is_free ? (
                   <a
                     href="/register"
@@ -97,20 +113,10 @@ export default async function PricingPage() {
                     Crear cuenta gratis
                   </a>
                 ) : (
-                  <form action="/api/billing/checkout" method="post">
-                    <input type="hidden" name="plan" value={plan.code} />
-                    <input type="hidden" name="interval" value="monthly" />
-                    <button
-                      type="submit"
-                      className={`block w-full rounded-2xl px-4 py-3 text-center text-sm font-bold transition ${
-                        featured
-                          ? "bg-cyan-300 text-slate-950 hover:bg-cyan-200"
-                          : "border border-white/10 bg-white/10 text-white hover:bg-white/15"
-                      }`}
-                    >
-                      Suscribirme con Stripe
-                    </button>
-                  </form>
+                  <>
+                    <CheckoutButton plan={plan} interval="monthly" />
+                    <CheckoutButton plan={plan} interval="yearly" />
+                  </>
                 )}
               </div>
             </article>
