@@ -8,10 +8,17 @@ import { createClient } from "@/lib/supabase/client";
 const MIN_PASSWORD_LENGTH = 8;
 type PublicRole = "customer" | "vendor";
 
+function normalizePhone(value: string) {
+  const compact = value.trim().replace(/[\s().-]/g, "");
+  if (!/^\+[1-9]\d{6,14}$/.test(compact)) return null;
+  return compact;
+}
+
 export default function RegisterPage() {
   const router = useRouter();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [role, setRole] = useState<PublicRole>("customer");
@@ -23,9 +30,14 @@ export default function RegisterPage() {
     setError(null);
     const name = fullName.trim();
     const normalizedEmail = email.trim().toLowerCase();
+    const normalizedPhone = normalizePhone(phone);
 
     if (name.length < 2 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
       setError("Introduce un nombre y un correo electrónico válidos.");
+      return;
+    }
+    if (!normalizedPhone) {
+      setError("Introduce el número con código de país, por ejemplo +58 412 1234567.");
       return;
     }
     if (password.length < MIN_PASSWORD_LENGTH || password !== confirmPassword) {
@@ -38,7 +50,7 @@ export default function RegisterPage() {
       const { data, error: signUpError } = await supabase.auth.signUp({
         email: normalizedEmail,
         password,
-        options: { data: { full_name: name, requested_role: role } }
+        options: { data: { full_name: name, requested_role: role, phone_e164: normalizedPhone } }
       });
 
       if (signUpError) {
@@ -49,6 +61,13 @@ export default function RegisterPage() {
       if (data.user && !data.session) {
         router.push(`/verify?email=${encodeURIComponent(normalizedEmail)}`);
         return;
+      }
+
+      if (data.user) {
+        const { error: phoneError } = await supabase.rpc("set_my_credi_phone", { p_phone: normalizedPhone });
+        if (phoneError) {
+          setError("La cuenta se creó, pero no fue posible guardar el número para Credi Chat. Puedes configurarlo desde tu perfil.");
+        }
       }
 
       router.replace("/dashboard");
@@ -65,6 +84,8 @@ export default function RegisterPage() {
         <form onSubmit={submit} className="mt-7 space-y-5">
           <label className="block text-sm font-semibold">Nombre completo<input required value={fullName} onChange={(e) => setFullName(e.target.value)} className="mt-2 w-full rounded-xl border p-3" autoComplete="name" /></label>
           <label className="block text-sm font-semibold">Correo<input required type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="mt-2 w-full rounded-xl border p-3" autoComplete="email" /></label>
+          <label className="block text-sm font-semibold">Número telefónico internacional<input required type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} className="mt-2 w-full rounded-xl border p-3" placeholder="+58 412 1234567" autoComplete="tel" inputMode="tel" /></label>
+          <p className="-mt-3 text-xs text-neutral-500">Usa el código de país. Ejemplo: +58 Venezuela, +34 España, +1 EE. UU./Canadá.</p>
           <label className="block text-sm font-semibold">Tipo de cuenta<select value={role} onChange={(e) => setRole(e.target.value as PublicRole)} className="mt-2 w-full rounded-xl border p-3"><option value="customer">Cliente</option><option value="vendor">Vendedor</option></select></label>
           <label className="block text-sm font-semibold">Contraseña<input required minLength={MIN_PASSWORD_LENGTH} type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="mt-2 w-full rounded-xl border p-3" autoComplete="new-password" /></label>
           <label className="block text-sm font-semibold">Confirmar contraseña<input required minLength={MIN_PASSWORD_LENGTH} type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="mt-2 w-full rounded-xl border p-3" autoComplete="new-password" /></label>
