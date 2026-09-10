@@ -5,6 +5,7 @@ import "@/styles/readability.css";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import MarketplaceAtmosphere from "@/components/layout/MarketplaceAtmosphere";
+import CrediCallManager from "@/components/chat/CrediCallManager";
 import { AuthProvider } from "@/context/AuthContext";
 import { CartProvider } from "@/context/CartContext";
 import { LanguageProvider } from "@/context/LanguageContext";
@@ -53,6 +54,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
                   </main>
                   <Footer />
                 </div>
+                <CrediCallManager />
               </CartProvider>
             </AuthProvider>
           </RegionProvider>
