@@ -30,7 +30,7 @@ using (status = 'published' or reviewer_id = auth.uid() or reviewee_id = auth.ui
 
 revoke insert, update, delete on public.transaction_ratings from anon, authenticated;
 
-aCreate or replace function public.get_transaction_rating_targets(p_order_id uuid)
+create or replace function public.get_transaction_rating_targets(p_order_id uuid)
 returns table (
   store_id uuid,
   product_id uuid,
@@ -68,25 +68,24 @@ begin
       and o.status = 'delivered'
       and o.buyer_id = v_user
   ),
-  seller_targets as (
-    select
+  buyer_targets as (
+    select distinct on (r.store_id)
       r.store_id, r.product_id, r.store_name,
       r.vendor_id as counterpart_id,
       'seller'::text as counterpart_role,
-      coalesce(p.full_name, s.store_name) as counterpart_name,
+      coalesce(p.full_name, r.store_name) as counterpart_name,
       true as can_rate,
       exists (
         select 1 from public.transaction_ratings tr
         where tr.order_id = r.order_id and tr.store_id = r.store_id and tr.reviewer_id = v_user
       ) as already_rated
     from order_rows r
-    join public.profiles p on p.id = r.vendor_id
-    join public.stores s on s.id = r.store_id
+    left join public.profiles p on p.id = r.vendor_id
     where r.vendor_id <> v_user
-    group by r.order_id, r.store_id, r.product_id, r.store_name, r.vendor_id, p.full_name, s.store_name
+    order by r.store_id, r.product_id
   ),
-  seller_targets_for_seller as (
-    select
+  seller_targets as (
+    select distinct on (oi.store_id)
       oi.store_id, oi.product_id, s.store_name,
       o.buyer_id as counterpart_id,
       'buyer'::text as counterpart_role,
@@ -104,14 +103,15 @@ begin
       and o.status = 'delivered'
       and s.vendor_id = v_user
       and o.buyer_id <> v_user
+    order by oi.store_id, oi.product_id
   )
-  select * from seller_targets
+  select * from buyer_targets
   union all
-  select * from seller_targets_for_seller;
+  select * from seller_targets;
 end;
 $$;
 
-aCreate or replace function public.submit_transaction_rating(
+create or replace function public.submit_transaction_rating(
   p_order_id uuid,
   p_store_id uuid,
   p_score smallint,
@@ -129,31 +129,32 @@ declare
   v_reviewee uuid;
   v_role text;
   v_product uuid;
-  v_exists boolean;
 begin
   if v_user is null then raise exception 'UNAUTHORIZED'; end if;
   if p_score < 1 or p_score > 5 then raise exception 'INVALID_SCORE'; end if;
   if p_comment is not null and char_length(trim(p_comment)) > 1200 then raise exception 'COMMENT_TOO_LONG'; end if;
 
-  select exists (
+  if exists (
     select 1 from public.transaction_ratings tr
     where tr.order_id = p_order_id and tr.store_id = p_store_id and tr.reviewer_id = v_user
-  ) into v_exists;
-  if v_exists then raise exception 'ALREADY_RATED'; end if;
+  ) then
+    raise exception 'ALREADY_RATED';
+  end if;
 
-  select s.vendor_id, oi.product_id into v_reviewee, v_product
+  select s.vendor_id, oi.product_id
+  into v_reviewee, v_product
   from public.orders o
   join public.order_items oi on oi.order_id = o.id
   join public.stores s on s.id = oi.store_id
-  where o.id = p_order_id and s.id = p_store_id and o.status = 'delivered'
+  where o.id = p_order_id
+    and s.id = p_store_id
+    and o.status = 'delivered'
     and (o.buyer_id = v_user or s.vendor_id = v_user)
   limit 1;
 
   if v_reviewee is null then raise exception 'RATING_NOT_ELIGIBLE'; end if;
 
-  if exists (
-    select 1 from public.orders o where o.id = p_order_id and o.buyer_id = v_user
-  ) then
+  if exists (select 1 from public.orders where id = p_order_id and buyer_id = v_user) then
     v_role := 'buyer';
     select s.vendor_id into v_reviewee from public.stores s where s.id = p_store_id;
   else
@@ -163,8 +164,13 @@ begin
 
   if v_reviewee is null or v_reviewee = v_user then raise exception 'INVALID_REVIEWEE'; end if;
 
-  insert into public.transaction_ratings(order_id, store_id, product_id, reviewer_id, reviewee_id, reviewer_role, score, dimensions, comment)
-  values (p_order_id, p_store_id, v_product, v_user, v_reviewee, v_role, p_score, coalesce(p_dimensions,'{}'::jsonb), nullif(trim(p_comment),''))
+  insert into public.transaction_ratings (
+    order_id, store_id, product_id, reviewer_id, reviewee_id, reviewer_role, score, dimensions, comment
+  )
+  values (
+    p_order_id, p_store_id, v_product, v_user, v_reviewee, v_role, p_score,
+    coalesce(p_dimensions,'{}'::jsonb), nullif(trim(p_comment),'')
+  )
   returning * into v_rating;
 
   return v_rating;
@@ -194,5 +200,6 @@ select
     else 'at_risk'
   end as reputation_level
 from public.profiles p
-left join public.transaction_ratings tr on tr.reviewee_id = p.id and tr.status = 'published'
+left join public.transaction_ratings tr
+  on tr.reviewee_id = p.id and tr.status = 'published'
 group by p.id;
