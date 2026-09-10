@@ -106,9 +106,15 @@ if (packageJson.dependencies?.next !== "16.3.4") {
   );
 }
 
-if (packageJson.dependencies?.react !== "19.2.7") {
+if (packageJson.dependencies?.react !== "19.2.8") {
   errors.push(
-    `React esperado: 19.2.7; detectado: ${packageJson.dependencies?.react ?? "ausente"}`,
+    `React esperado: 19.2.8; detectado: ${packageJson.dependencies?.react ?? "ausente"}`,
+  );
+}
+
+if (packageJson.dependencies?.["react-dom"] !== "19.2.8") {
+  errors.push(
+    `React DOM esperado: 19.2.8; detectado: ${packageJson.dependencies?.["react-dom"] ?? "ausente"}`,
   );
 }
 
