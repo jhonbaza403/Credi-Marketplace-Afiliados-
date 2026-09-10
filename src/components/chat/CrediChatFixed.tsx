@@ -140,9 +140,7 @@ export default function CrediChatFixed() {
       const otherId = members.find((member) => member.user_id !== currentUserId)?.user_id
       const mine = members.find((member) => member.user_id === currentUserId)
       const other = otherId ? profileMap[otherId] : undefined
-      const unread = mine?.last_read_at
-        ? 0
-        : 0
+      const unread = mine?.last_read_at ? 0 : 0
       return { ...row, member_ids: members.map((member) => member.user_id), display_name: row.title || other?.full_name || 'Usuario Credi', unread } as ChatConversation
     })
     setConversations(mapped)
@@ -390,7 +388,7 @@ export default function CrediChatFixed() {
 
           <section className="flex min-h-[720px] flex-col">
             <div className="border-b border-white/10 bg-slate-950/50 px-4 py-3 sm:px-5">
-              <div className="flex items-center justify-between gap-3"><div className="flex min-w-0 items-center gap-3"><div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-cyan-300/10 text-cyan-100">{selected?.display_name.slice(0, 1).toUpperCase() || 'C'}</div><div className="min-w-0"><p className="truncate text-sm font-black">{selected?.display_name || 'Selecciona una conversación'}</p><p className="truncate text-xs text-slate-400">{peer?.role ? `${peer.role} · Credi Marketplace` : 'Canal comercial'}</p></div></div><CrediBusinessCall conversationId={selectedId} currentUserId={userId} peerUserId={peerId} peerName={selected?.display_name || 'Contacto comercial'} /></div>
+              <div className="flex items-center justify-between gap-3"><div className="flex min-w-0 items-center gap-3"><div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-cyan-300/10 text-cyan-100">{selected?.display_name.slice(0, 1).toUpperCase() || 'C'}</div><div className="min-w-0"><p className="truncate text-sm font-black">{selected?.display_name || 'Selecciona una conversación'}</p><p className="truncate text-xs text-slate-400">{peer?.role ? `${peer.role} · Credi Marketplace` : 'Canal comercial'}</p></div></div><CrediBusinessCall conversationId={selectedId} peerUserId={peerId} peerName={selected?.display_name || 'Contacto comercial'} /></div>
               {hasBusinessContext && <div className="mt-3 grid gap-2 rounded-2xl border border-cyan-300/10 bg-cyan-300/[.04] p-3 text-xs sm:grid-cols-2 lg:grid-cols-4"><div><span className="font-black text-cyan-200">Producto</span><p className="mt-1 text-slate-300">{context?.productTitle || context?.b2bTitle || context?.product || context?.b2bProduct || '—'}</p></div><div><span className="font-black text-cyan-200">Empresa / tienda</span><p className="mt-1 text-slate-300">{context?.store || '—'}</p></div><div><span className="font-black text-cyan-200">Pedido / destino</span><p className="mt-1 text-slate-300">{context?.order || context?.country || '—'}</p></div><div><span className="font-black text-cyan-200">Afiliado</span><p className="mt-1 text-slate-300">{context?.affiliateRef || '—'}</p></div></div>}
               {selected && <div className="mt-3 flex items-center gap-2 overflow-x-auto pb-1">{QUICK_ACTIONS.map((action) => <button key={action} type="button" onClick={() => void sendText(action)} className="shrink-0 rounded-full border border-white/10 bg-white/[.04] px-3 py-2 text-[11px] font-bold text-slate-200 hover:bg-white/[.08]">{action}</button>)}</div>}
               {selected && <div className="mt-3 relative"><Search className="absolute left-3 top-2.5 size-4 text-slate-500" /><input value={chatSearch} onChange={(event) => setChatSearch(event.target.value)} placeholder="Buscar dentro del chat" className="w-full rounded-xl border border-white/10 bg-white/[.03] py-2 pl-9 pr-3 text-xs outline-none placeholder:text-slate-500" /></div>}
