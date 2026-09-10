@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import CrediChat from '@/components/chat/CrediChat'
+import CrediChatFixed from '@/components/chat/CrediChatFixed'
 
 export const metadata: Metadata = {
   title: 'Credi Chat | Credi Marketplace',
@@ -8,5 +8,5 @@ export const metadata: Metadata = {
 }
 
 export default function ChatPage() {
-  return <CrediChat />
+  return <CrediChatFixed />
 }
