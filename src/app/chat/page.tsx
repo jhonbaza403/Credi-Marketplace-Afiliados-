@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import CrediChatFixed from '@/components/chat/CrediChatFixed'
 import CrediContactDirectory from '@/components/chat/CrediContactDirectory'
+import CrediChatInteractionLayer from '@/components/chat/CrediChatInteractionLayer'
 
 export const metadata: Metadata = {
   title: 'Credi Business Chat | Credi Marketplace',
@@ -13,6 +14,7 @@ export default function ChatPage() {
     <>
       <CrediContactDirectory />
       <CrediChatFixed />
+      <CrediChatInteractionLayer />
     </>
   )
 }
