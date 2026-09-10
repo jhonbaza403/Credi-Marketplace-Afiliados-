@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 
 export interface ProductDraftInput {
   title: string;
@@ -38,47 +38,84 @@ const FALLBACK: ProductDraftSuggestion = {
   ],
 };
 
-function cleanJson(text: string): string {
-  return text.replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/\s*```$/i, "").trim();
+const SYSTEM_INSTRUCTION = [
+  "Eres el asistente editorial de Credi Marketplace.",
+  "Tu único objetivo es ayudar a preparar una ficha de producto antes de que el vendedor la publique.",
+  "No publicas productos, no ejecutas pagos y no tomas decisiones en nombre del vendedor.",
+  "Trabaja exclusivamente con los datos proporcionados.",
+  "No inventes certificaciones, materiales, especificaciones, garantías, precios, disponibilidad, resultados médicos ni afirmaciones legales o fiscales.",
+  "Mejora claridad, estructura, SEO y conversión sin cambiar hechos.",
+  "Cuando falte información importante, dilo en checklist en lugar de inventarla.",
+].join(" ");
+
+const RESPONSE_SCHEMA = {
+  type: "object",
+  properties: {
+    title: { type: "string" },
+    description: { type: "string" },
+    category: { type: "string" },
+    tags: { type: "array", items: { type: "string" } },
+    sellingPoints: { type: "array", items: { type: "string" } },
+    checklist: { type: "array", items: { type: "string" } },
+    complianceNotes: { type: "array", items: { type: "string" } },
+  },
+  required: ["title", "description", "category", "tags", "sellingPoints", "checklist", "complianceNotes"],
+};
+
+function cleanText(value: unknown, fallback: string, maxLength: number): string {
+  return typeof value === "string" ? value.trim().slice(0, maxLength) : fallback;
+}
+
+function cleanList(value: unknown, maxItems: number, maxLength: number): string[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((item): item is string => typeof item === "string")
+    .map((item) => item.trim().slice(0, maxLength))
+    .filter(Boolean)
+    .slice(0, maxItems);
 }
 
 export async function improveProductDraft(input: ProductDraftInput): Promise<ProductDraftSuggestion> {
   const apiKey = process.env.GEMINI_API_KEY?.trim();
-  if (!apiKey) return { ...FALLBACK, title: input.title.trim(), description: input.description.trim(), category: input.category.trim() };
+  if (!apiKey) {
+    return {
+      ...FALLBACK,
+      title: input.title.trim(),
+      description: input.description.trim(),
+      category: input.category.trim(),
+    };
+  }
 
-  const modelName = process.env.GEMINI_PRODUCT_MODEL?.trim() || "gemini-2.5-flash";
-  const client = new GoogleGenerativeAI(apiKey);
-  const model = client.getGenerativeModel({
-    model: modelName,
-    systemInstruction:
-      "Eres un asistente editorial de un marketplace. Solo ayudas a preparar fichas de productos para publicación. No inventes certificaciones, características, precios, garantías, resultados médicos, legales o fiscales. Mejora claridad, estructura, SEO y conversión con información proporcionada por el usuario. Devuelve únicamente JSON válido.",
-  });
+  const modelName = process.env.GEMINI_PRODUCT_MODEL?.trim() || "gemini-3.8-flash";
+  const client = new GoogleGenAI({ apiKey });
 
   const prompt = JSON.stringify({
-    task: "Mejorar una ficha de producto antes de publicarla",
+    task: "Mejorar una ficha de producto antes de su publicación",
     input,
-    outputSchema: {
-      title: "string",
-      description: "string",
-      category: "string",
-      tags: ["string"],
-      sellingPoints: ["string"],
-      checklist: ["string"],
-      complianceNotes: ["string"],
+  });
+
+  const result = await client.models.generateContent({
+    model: modelName,
+    contents: prompt,
+    config: {
+      systemInstruction: SYSTEM_INSTRUCTION,
+      responseMimeType: "application/json",
+      responseSchema: RESPONSE_SCHEMA,
     },
   });
 
-  const result = await model.generateContent(prompt);
-  const text = cleanJson(result.response.text());
+  const text = typeof result.text === "string" ? result.text.trim() : "";
+  if (!text) return FALLBACK;
+
   const parsed = JSON.parse(text) as Partial<ProductDraftSuggestion>;
 
   return {
-    title: typeof parsed.title === "string" ? parsed.title : input.title.trim(),
-    description: typeof parsed.description === "string" ? parsed.description : input.description.trim(),
-    category: typeof parsed.category === "string" ? parsed.category : input.category.trim(),
-    tags: Array.isArray(parsed.tags) ? parsed.tags.filter((value): value is string => typeof value === "string").slice(0, 12) : [],
-    sellingPoints: Array.isArray(parsed.sellingPoints) ? parsed.sellingPoints.filter((value): value is string => typeof value === "string").slice(0, 8) : [],
-    checklist: Array.isArray(parsed.checklist) ? parsed.checklist.filter((value): value is string => typeof value === "string").slice(0, 10) : FALLBACK.checklist,
-    complianceNotes: Array.isArray(parsed.complianceNotes) ? parsed.complianceNotes.filter((value): value is string => typeof value === "string").slice(0, 8) : FALLBACK.complianceNotes,
+    title: cleanText(parsed.title, input.title.trim(), 150),
+    description: cleanText(parsed.description, input.description.trim(), 4000),
+    category: cleanText(parsed.category, input.category.trim(), 100),
+    tags: cleanList(parsed.tags, 12, 60),
+    sellingPoints: cleanList(parsed.sellingPoints, 8, 180),
+    checklist: cleanList(parsed.checklist, 10, 240).length ? cleanList(parsed.checklist, 10, 240) : FALLBACK.checklist,
+    complianceNotes: cleanList(parsed.complianceNotes, 8, 280).length ? cleanList(parsed.complianceNotes, 8, 280) : FALLBACK.complianceNotes,
   };
 }
