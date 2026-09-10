@@ -34,7 +34,7 @@ export const AFFILIATE_NAVIGATION = [
 
 export const SELLER_NAVIGATION = [
   { label: "Panel de vendedor", href: "/dashboard/seller", requiresAuth: true, roles: ["seller"] },
-  { label: "Publicar producto", href: "/publish", requiresAuth: true, roles: ["seller"] },
+  { label: "Publicar producto", href: "/products/create", requiresAuth: true, roles: ["seller"] },
   { label: "Publicar B2B", href: "/b2b/publish", requiresAuth: true, roles: ["seller"] },
 ] as const satisfies readonly NavigationItem[];
 
