@@ -26,12 +26,21 @@ function normalizeStatus(status: string): string {
   }
 }
 
+function objectMetadata(object: Record<string, unknown>): Record<string, string> {
+  const value = object.metadata;
+  if (!value || typeof value !== "object") return {};
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>)
+      .filter((entry): entry is [string, string] => typeof entry[1] === "string"),
+  );
+}
+
 async function handleSubscription(event: StripeEvent) {
   const object = event.data.object;
   const subscriptionId = String(object.id ?? "");
   if (!subscriptionId) return;
 
-  const metadata = (object.metadata ?? {}) as Record<string, string>;
+  const metadata = objectMetadata(object);
   const userId = metadata.user_id;
   const planId = metadata.plan_id;
   const providerCustomerId = typeof object.customer === "string" ? object.customer : null;
@@ -88,39 +97,123 @@ async function handleSubscription(event: StripeEvent) {
     throw eventError;
   }
 
-  if (event.type === "customer.subscription.deleted") {
+  if (localSubscription?.id) {
+    if (event.type === "customer.subscription.deleted") {
+      await admin
+        .from("billing_transactions")
+        .update({ status: "cancelled", metadata: { stripe_event_id: event.id } })
+        .eq("subscription_id", localSubscription.id)
+        .eq("provider", "stripe");
+    }
+
     await admin
       .from("billing_transactions")
-      .update({ status: "cancelled", metadata: { stripe_event_id: event.id } })
-      .eq("subscription_id", localSubscription?.id ?? "00000000-0000-0000-0000-000000000000")
-      .eq("provider", "stripe");
+      .update({ subscription_id: localSubscription.id })
+      .eq("provider", "stripe")
+      .eq("provider_transaction_id", String(metadata.checkout_session_id ?? ""));
   }
+
+  return localSubscription?.id ?? null;
 }
 
 async function handleCheckoutCompleted(event: StripeEvent) {
   const object = event.data.object;
   const sessionId = String(object.id ?? "");
-  const metadata = (object.metadata ?? {}) as Record<string, string>;
+  const metadata = objectMetadata(object);
   const subscriptionId = typeof object.subscription === "string" ? object.subscription : null;
   const userId = metadata.user_id;
   if (!sessionId || !userId) return;
 
   const admin = createAdminClient();
+  const baseMetadata = {
+    ...metadata,
+    stripe_subscription_id: subscriptionId,
+    stripe_customer_id: typeof object.customer === "string" ? object.customer : null,
+    stripe_event_id: event.id,
+  };
+
+  await admin
+    .from("checkout_intents")
+    .update({
+      status: "completed",
+      updated_at: new Date().toISOString(),
+      metadata: baseMetadata,
+    })
+    .eq("provider", "stripe")
+    .eq("provider_checkout_id", sessionId);
+
   await admin
     .from("billing_transactions")
     .update({
-      status: "paid",
-      provider_transaction_id: sessionId,
-      paid_at: new Date().toISOString(),
-      metadata: {
-        ...metadata,
-        stripe_subscription_id: subscriptionId,
-        stripe_customer_id: typeof object.customer === "string" ? object.customer : null,
-        stripe_event_id: event.id,
-      },
+      subscription_id: null,
+      metadata: baseMetadata,
     })
     .eq("provider", "stripe")
     .eq("provider_transaction_id", sessionId);
+}
+
+async function handleInvoiceEvent(event: StripeEvent) {
+  const object = event.data.object;
+  const subscriptionId = typeof object.subscription === "string" ? object.subscription : null;
+  if (!subscriptionId) return;
+
+  const subscription = await stripeRequest<StripeSubscription>(
+    `/subscriptions/${encodeURIComponent(subscriptionId)}`,
+  );
+  const metadata = subscription.metadata ?? {};
+  const admin = createAdminClient();
+  const status = event.type === "invoice.paid" ? "paid" : "failed";
+
+  await admin
+    .from("billing_transactions")
+    .update({
+      status,
+      paid_at: status === "paid" ? new Date().toISOString() : null,
+      metadata: {
+        ...metadata,
+        stripe_subscription_id: subscriptionId,
+        stripe_event_id: event.id,
+        stripe_invoice_id: typeof object.id === "string" ? object.id : null,
+      },
+    })
+    .eq("provider", "stripe")
+    .eq("subscription_id", "00000000-0000-0000-0000-000000000000");
+
+  const syntheticEvent: StripeEvent = {
+    ...event,
+    data: { object: subscription as unknown as Record<string, unknown> },
+  };
+  await handleSubscription(syntheticEvent);
+
+  const metadataUserId = metadata.user_id;
+  if (metadataUserId) {
+    const { data: localSubscription } = await admin
+      .from("subscriptions")
+      .select("id")
+      .eq("provider", "stripe")
+      .eq("provider_subscription_id", subscriptionId)
+      .maybeSingle();
+
+    if (localSubscription?.id) {
+      await admin
+        .from("billing_transactions")
+        .update({
+          subscription_id: localSubscription.id,
+          status,
+          paid_at: status === "paid" ? new Date().toISOString() : null,
+          metadata: {
+            ...metadata,
+            stripe_subscription_id: subscriptionId,
+            stripe_event_id: event.id,
+            stripe_invoice_id: typeof object.id === "string" ? object.id : null,
+          },
+        })
+        .eq("provider", "stripe")
+        .eq("user_id", metadataUserId)
+        .eq("type", "subscription")
+        .in("status", ["pending", "failed"]);
+    }
+  }
 }
 
 export async function POST(request: Request) {
@@ -150,23 +243,16 @@ export async function POST(request: Request) {
     switch (event.type) {
       case "checkout.session.completed":
         await handleCheckoutCompleted(event);
-        if (event.data.object.subscription) await handleSubscription(event);
         break;
+      case "customer.subscription.created":
       case "customer.subscription.updated":
       case "customer.subscription.deleted":
         await handleSubscription(event);
         break;
       case "invoice.paid":
-      case "invoice.payment_failed": {
-        const object = event.data.object;
-        const subscriptionId = typeof object.subscription === "string" ? object.subscription : null;
-        if (subscriptionId) {
-          const subscription = await stripeRequest<StripeSubscription>(`/subscriptions/${encodeURIComponent(subscriptionId)}`);
-          const syntheticEvent: StripeEvent = { ...event, data: { object: subscription as unknown as Record<string, unknown> } };
-          await handleSubscription(syntheticEvent);
-        }
+      case "invoice.payment_failed":
+        await handleInvoiceEvent(event);
         break;
-      }
       default:
         break;
     }
