@@ -118,7 +118,7 @@ async function upsertSubscription(event: StripeEvent, subscriptionOverride?: Str
   return localSubscription;
 }
 
-async function handleCheckoutCompleted(event: StripeEvent) {
+async function handleCheckoutEvent(event: StripeEvent, status: "completed" | "failed") {
   const object = event.data.object;
   const sessionId = String(object.id ?? "");
   const metadata = objectMetadata(object);
@@ -137,7 +137,7 @@ async function handleCheckoutCompleted(event: StripeEvent) {
   await admin
     .from("checkout_intents")
     .update({
-      status: "completed",
+      status,
       updated_at: new Date().toISOString(),
       metadata: checkoutMetadata,
     })
@@ -235,10 +235,10 @@ export async function POST(request: Request) {
     switch (event.type) {
       case "checkout.session.completed":
       case "checkout.session.async_payment_succeeded":
-        await handleCheckoutCompleted(event);
+        await handleCheckoutEvent(event, "completed");
         break;
       case "checkout.session.async_payment_failed":
-        await handleCheckoutCompleted(event);
+        await handleCheckoutEvent(event, "failed");
         break;
       case "customer.subscription.created":
       case "customer.subscription.updated":
