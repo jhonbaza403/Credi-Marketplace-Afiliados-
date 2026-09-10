@@ -75,7 +75,6 @@ export async function POST(request: Request) {
     }
 
     const admin = createAdminClient();
-
     await admin.from("checkout_intents").insert({
       user_id: auth.user.id,
       plan_id: plan.id,
@@ -88,23 +87,6 @@ export async function POST(request: Request) {
       status: "pending",
       metadata: {
         plan_code: plan.code,
-        stripe_price_id: priceId,
-      },
-    });
-
-    await admin.from("billing_transactions").insert({
-      user_id: auth.user.id,
-      type: "subscription",
-      status: "pending",
-      amount_minor: amount,
-      currency: plan.currency,
-      provider: "stripe",
-      provider_transaction_id: session.id,
-      description: `Suscripción ${plan.name} (${interval})`,
-      metadata: {
-        plan_code: plan.code,
-        billing_interval: interval,
-        plan_id: plan.id,
         stripe_price_id: priceId,
       },
     });
