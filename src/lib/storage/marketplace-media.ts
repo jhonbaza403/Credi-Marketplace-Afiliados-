@@ -45,7 +45,7 @@ export async function uploadMarketplaceMedia(file: File, kind?: MarketplaceMedia
   if (authError || !user) throw new Error('Debes iniciar sesión para cargar archivos.')
 
   const { data: signed, error: signedError } = await supabase.functions.invoke('media-upload', {
-    body: { fileName: file.name, contentType: file.type },
+    body: { fileName: file.name, contentType: file.type, context: 'marketplace', fileSize: file.size },
   })
 
   if (signedError || !signed?.path || !signed?.token || !signed?.bucket) {
