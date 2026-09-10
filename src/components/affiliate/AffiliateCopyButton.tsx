@@ -1,16 +1,14 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { CANONICAL_APP_URL } from '@/lib/app-url';
 
 interface AffiliateCopyButtonProps {
   affiliatePath?: string;
   url?: string;
 }
 
-export default function AffiliateCopyButton({
-  affiliatePath,
-  url,
-}: AffiliateCopyButtonProps) {
+export default function AffiliateCopyButton({ affiliatePath, url }: AffiliateCopyButtonProps) {
   const source = (url ?? affiliatePath ?? '').trim();
   const [fullUrl, setFullUrl] = useState('');
   const [copied, setCopied] = useState(false);
@@ -28,13 +26,12 @@ export default function AffiliateCopyButton({
       return;
     }
 
-    setFullUrl(`${window.location.origin}${source.startsWith('/') ? source : `/${source}`}`);
+    const path = source.startsWith('/') ? source : `/${source}`;
+    setFullUrl(`${CANONICAL_APP_URL}${path}`);
   }, [source]);
 
-  useEffect(() => {
-    return () => {
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    };
+  useEffect(() => () => {
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
   }, []);
 
   const handleCopy = useCallback(async () => {
