@@ -2,7 +2,6 @@
 
 import { FormEvent, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
-import { createClient } from "@/lib/supabase/client"
 import MarketplaceMediaUploader from "@/components/media/MarketplaceMediaUploader"
 import type { UploadedMarketplaceMedia } from "@/lib/storage/marketplace-media"
 import ProductPublishCopilot, { type ProductSuggestion } from "@/components/marketplace/ProductPublishCopilot"
@@ -61,7 +60,7 @@ export default function ProductPublisher() {
       }
 
       const urls = media.filter((item) => item.kind === "image").map((item) => item.url)
-      const { error: productError } = await supabase.from("products").insert({
+      const { data: createdProduct, error: productError } = await supabase.from("products").insert({
         store_id: store.id,
         title: cleanTitle,
         slug: `${slugify(cleanTitle)}-${crypto.randomUUID().slice(0, 8)}`,
@@ -71,14 +70,29 @@ export default function ProductPublisher() {
         image_url: urls[0] ?? null,
         images: urls,
         is_active: true,
-      })
-      if (productError) throw productError
+      }).select("id").single()
+      if (productError || !createdProduct) throw productError || new Error("No fue posible crear el producto.")
 
-      setMessage("Producto publicado correctamente.")
+      const { error: controlError } = await supabase.from("product_publication_controls").insert({
+        product_id: createdProduct.id,
+        owner_id: user.id,
+        catalog_visible: false,
+        marketplace_visible: false,
+        b2b_visible: false,
+        feed_visible: false,
+        story_visible: false,
+        sale_enabled: false,
+      })
+      if (controlError) throw controlError
+
+      await supabase.from("inventory").upsert({ product_id: createdProduct.id, available_quantity: numericStock }, { onConflict: "product_id" })
+
+      setMessage("Producto creado en tu inventario privado. Ahora decide si entra al catálogo, B2B, Marketplace, feed, historias o venta.")
       setTitle(""); setDescription(""); setPrice(""); setStock("1"); setAudience(""); setMedia([])
+      router.push("/gestion-empresarial")
       router.refresh()
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "No fue posible publicar el producto.")
+      setMessage(error instanceof Error ? error.message : "No fue posible crear el producto.")
     } finally { setPublishing(false) }
   }
 
@@ -87,8 +101,8 @@ export default function ProductPublisher() {
       <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8 lg:py-14">
         <header className="mb-8 overflow-hidden rounded-[2rem] border border-cyan-300/10 bg-[radial-gradient(circle_at_15%_15%,rgba(34,211,238,.16),transparent_34%),radial-gradient(circle_at_85%_10%,rgba(168,85,247,.16),transparent_32%),linear-gradient(135deg,#0b1024,#060914)] p-7 shadow-[inset_0_1px_0_rgba(255,255,255,.08),0_30px_100px_rgba(0,0,0,.3)] sm:p-10">
           <span className="inline-flex rounded-full border border-cyan-300/20 bg-cyan-300/10 px-3 py-1 text-[10px] font-black uppercase tracking-[.2em] text-cyan-200">Credi Publisher Studio</span>
-          <h1 className="mt-4 text-3xl font-black tracking-tight sm:text-5xl">Publica tu producto en minutos.</h1>
-          <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-300 sm:text-base">Carga imágenes, completa los datos comerciales y usa la IA exclusivamente para convertir tu información en una ficha de producto clara y atractiva. Tú mantienes el control de la publicación.</p>
+          <h1 className="mt-4 text-3xl font-black tracking-tight sm:text-5xl">Registra tu producto en tu empresa.</h1>
+          <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-300 sm:text-base">Carga la información y multimedia. El producto nace privado en tu inventario: tú decides después qué publicar y dónde mostrarlo.</p>
         </header>
 
         <form onSubmit={publish} className="grid gap-6 lg:grid-cols-[1.05fr_.95fr]">
@@ -109,12 +123,12 @@ export default function ProductPublisher() {
 
             {message && <p role="status" className="mt-6 rounded-2xl border border-cyan-300/15 bg-cyan-300/5 p-4 text-sm text-cyan-100">{message}</p>}
 
-            <button type="submit" disabled={publishing} className="mt-7 w-full rounded-2xl bg-cyan-300 px-6 py-4 text-sm font-black text-slate-950 shadow-[0_14px_35px_rgba(34,211,238,.16)] hover:bg-cyan-200 disabled:opacity-50">{publishing ? "Publicando…" : "Publicar producto"}</button>
+            <button type="submit" disabled={publishing} className="mt-7 w-full rounded-2xl bg-cyan-300 px-6 py-4 text-sm font-black text-slate-950 shadow-[0_14px_35px_rgba(34,211,238,.16)] hover:bg-cyan-200 disabled:opacity-50">{publishing ? "Guardando…" : "Guardar en inventario privado"}</button>
           </section>
 
           <div className="space-y-6">
             <ProductPublishCopilot draft={draft} onApply={applySuggestion} />
-            <section className="rounded-[2rem] border border-white/10 bg-white/[.03] p-6 sm:p-7"><p className="text-xs font-black uppercase tracking-[.18em] text-slate-400">Qué revisa el asistente</p><div className="mt-4 grid gap-3 sm:grid-cols-2">{["Título y claridad", "Descripción comercial", "SEO y etiquetas", "Beneficios verificables", "Checklist de publicación", "Notas de cumplimiento"].map((item) => <div key={item} className="rounded-2xl border border-white/10 bg-white/[.035] p-4 text-sm font-semibold text-slate-200">✓ {item}</div>)}</div></section>
+            <section className="rounded-[2rem] border border-white/10 bg-white/[.03] p-6 sm:p-7"><p className="text-xs font-black uppercase tracking-[.18em] text-slate-400">Después de guardar</p><div className="mt-4 grid gap-3 sm:grid-cols-2">{["Catálogo", "Marketplace", "B2B", "Feed", "Historias", "Venta"].map((item) => <div key={item} className="rounded-2xl border border-white/10 bg-white/[.035] p-4 text-sm font-semibold text-slate-200">◻ {item}</div>)}</div><p className="mt-4 text-xs leading-5 text-slate-400">Cada canal se controla por separado desde Gestión empresarial.</p></section>
           </div>
         </form>
       </div>
