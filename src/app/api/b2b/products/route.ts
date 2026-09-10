@@ -50,6 +50,8 @@ export async function POST(request: Request) {
     const category = typeof body.category === "string" ? body.category.trim() : ""
     const description = typeof body.description === "string" ? body.description.trim() : ""
     const countryRaw = typeof body.country === "string" ? body.country.trim().toUpperCase() : ""
+    const binancePayId = typeof body.binancePayId === "string" ? body.binancePayId.trim().slice(0, 160) : ""
+    const usdtWalletAddress = typeof body.usdtWalletAddress === "string" ? body.usdtWalletAddress.trim().slice(0, 220) : ""
     const wholesale = Number(body.wholesale)
     const regular = Number(body.regular)
     const moq = Number(body.moq)
@@ -77,6 +79,8 @@ export async function POST(request: Request) {
         regular_price_usd: regular,
         min_order_quantity: moq,
         stock_available: stock,
+        binance_pay_id: binancePayId || null,
+        usdt_wallet_address: usdtWalletAddress || null,
         image_url: typeof images[0] === "object" && images[0] !== null && typeof (images[0] as Record<string, unknown>).url === "string"
           ? (images[0] as Record<string, unknown>).url
           : null,
