@@ -172,6 +172,43 @@ La infraestructura social no implica que todas las plataformas permitan publicac
 
 Nunca almacenar tokens OAuth en texto plano.
 
+## Monetización freemium y planes comerciales
+
+Credi Marketplace utiliza un modelo de entrada gratuita: el acceso esencial al marketplace y a la presencia social no depende de una suscripción. La monetización se construye alrededor de capacidades opcionales para usuarios y negocios que necesiten mayor escala.
+
+El catálogo comercial está definido por la migración:
+
+```text
+supabase/migrations/020_commercial_plans.sql
+```
+
+Y la lógica pública de planes por:
+
+```text
+src/lib/billing/plans.ts
+src/app/pricing/page.tsx
+src/app/api/billing/subscription/route.ts
+```
+
+Planes iniciales:
+
+| Plan | Modelo | Precio base | Objetivo |
+| --- | --- | ---: | --- |
+| **Free** | Gratis | $0 | Comunidad, marketplace y afiliación básica |
+| **Creator** | Suscripción opcional | $9/mes | Creadores, afiliados y vendedores independientes |
+| **Business** | Suscripción opcional | $29/mes | Tiendas y negocios |
+| **Enterprise** | Suscripción opcional | $99/mes | Empresas, equipos, API y automatización |
+
+El precio y los límites viven en Supabase y pueden modificarse sin cambiar el código de la interfaz. Las suscripciones incluyen estado, período de facturación, proveedor, identificadores externos y bitácora de eventos para soportar integración futura con el proveedor de pagos elegido.
+
+La plataforma no debe activar un plan de pago únicamente por una acción del navegador. La activación de suscripciones pagadas debe quedar condicionada a una confirmación server-side verificable del proveedor de pagos y a controles de idempotencia.
+
+La página pública de planes está disponible en:
+
+```text
+/pricing
+```
+
 ## Agent Skills y MCP de Supabase
 
 Instalar las skills oficiales cuando se trabaje con agentes de código:
