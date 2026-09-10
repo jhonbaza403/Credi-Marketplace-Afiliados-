@@ -4,20 +4,28 @@ import { getDatabaseServerClient } from "@/lib/database/server"
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
-const PUBLIC_FIELDS = "id,title,category,wholesale_price_usd,regular_price_usd,min_order_quantity,stock_available,image_url,video_media,description,country,status,moderation_status,created_at"
+const PUBLIC_FIELDS = "id,title,category,wholesale_price_usd,regular_price_usd,min_order_quantity,stock_available,image_url,video_media,description,country,status,moderation_status,created_at,supplier_id"
 
 function json(data: unknown, status = 200) {
   return NextResponse.json(data, { status, headers: { "Cache-Control": "no-store" } })
 }
 
+async function getAccess() {
+  const supabase = await getDatabaseServerClient()
+  const { data: auth } = await supabase.auth.getUser()
+  if (!auth.user) return { supabase, user: null, access: null }
+  const { data: access, error } = await supabase.rpc("get_b2b_access_context", { p_user_id: auth.user.id })
+  if (error) throw error
+  return { supabase, user: auth.user, access: access as { allowed?: boolean; can_sell?: boolean; risk_blocked?: boolean } }
+}
+
 export async function GET() {
   try {
-    const supabase = await getDatabaseServerClient()
+    const { supabase, user } = await getAccess()
+    if (!user) return json({ error: "UNAUTHORIZED" }, 401)
     const { data, error } = await supabase
-      .from("b2b_products")
+      .from("verified_b2b_products")
       .select(PUBLIC_FIELDS)
-      .eq("status", "published")
-      .eq("moderation_status", "approved")
       .order("created_at", { ascending: false })
       .limit(100)
 
@@ -35,15 +43,12 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const supabase = await getDatabaseServerClient()
-    const { data: { user } } = await supabase.auth.getUser()
-
+    const { supabase, user, access } = await getAccess()
     if (!user) return json({ error: "Debes iniciar sesión para publicar una oferta B2B." }, 401)
+    if (!access?.can_sell || access.risk_blocked) return json({ error: "VERIFICATION_REQUIRED", message: "Debes tener identidad KYC y empresa KYB aprobadas, tienda verificada y no tener alertas de riesgo activas antes de publicar B2B." }, 403)
 
     const contentType = request.headers.get("content-type") ?? ""
-    if (!contentType.toLowerCase().includes("application/json")) {
-      return json({ error: "Content-Type debe ser application/json." }, 415)
-    }
+    if (!contentType.toLowerCase().includes("application/json")) return json({ error: "Content-Type debe ser application/json." }, 415)
 
     const body = await request.json() as Record<string, unknown>
     const title = typeof body.title === "string" ? body.title.trim() : ""
@@ -71,25 +76,7 @@ export async function POST(request: Request) {
 
     const { data, error } = await supabase
       .from("b2b_products")
-      .insert({
-        supplier_id: user.id,
-        title,
-        category,
-        wholesale_price_usd: wholesale,
-        regular_price_usd: regular,
-        min_order_quantity: moq,
-        stock_available: stock,
-        binance_pay_id: binancePayId || null,
-        usdt_wallet_address: usdtWalletAddress || null,
-        image_url: typeof images[0] === "object" && images[0] !== null && typeof (images[0] as Record<string, unknown>).url === "string"
-          ? (images[0] as Record<string, unknown>).url
-          : null,
-        video_media: videos,
-        description,
-        country: countryRaw || null,
-        status: "draft",
-        moderation_status: "pending",
-      })
+      .insert({ supplier_id: user.id, title, category, wholesale_price_usd: wholesale, regular_price_usd: regular, min_order_quantity: moq, stock_available: stock, binance_pay_id: binancePayId || null, usdt_wallet_address: usdtWalletAddress || null, image_url: typeof images[0] === "object" && images[0] !== null && typeof (images[0] as Record<string, unknown>).url === "string" ? (images[0] as Record<string, unknown>).url : null, video_media: videos, description, country: countryRaw || null, status: "draft", moderation_status: "pending" })
       .select("id,status,moderation_status,created_at")
       .single()
 
