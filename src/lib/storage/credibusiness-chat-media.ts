@@ -34,9 +34,14 @@ export async function uploadCrediBusinessChatMedia(file: File) {
   if (authError || !user) throw new Error('Debes iniciar sesión para enviar archivos.')
 
   const { data: signed, error: signedError } = await supabase.functions.invoke('media-upload', {
-    body: { fileName: file.name, contentType: file.type, context: 'credibusiness-chat', userId: user.id },
+    body: { fileName: file.name, contentType: file.type, context: 'credibusiness-chat', fileSize: file.size },
   })
-  if (signedError || !signed?.path || !signed?.token || !signed?.bucket) throw new Error('No fue posible preparar la carga del archivo.')
+  if (signedError || !signed?.path || !signed?.token || !signed?.bucket) {
+    const message = signed?.error === 'PLAN_STORAGE_LIMIT_REACHED'
+      ? 'El archivo supera la capacidad disponible de tu plan. Amplía tu plan para continuar.'
+      : 'No fue posible preparar la carga del archivo.'
+    throw new Error(message)
+  }
 
   const bucket = String(signed.bucket)
   const path = String(signed.path)
@@ -47,8 +52,8 @@ export async function uploadCrediBusinessChatMedia(file: File) {
   })
   if (uploadError) throw new Error('No fue posible completar la carga del archivo.')
 
-  const { data } = supabase.storage.from(bucket).getPublicUrl(path)
-  return { kind, name: file.name, path, url: data.publicUrl, size: file.size, contentType: file.type }
+  const accessUrl = `/api/chat/media?path=${encodeURIComponent(path)}`
+  return { kind, name: file.name, path, url: accessUrl, bucket, size: file.size, contentType: file.type }
 }
 
 export function chatMessageType(kind: ChatUploadKind) {
