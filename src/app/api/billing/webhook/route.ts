@@ -30,32 +30,34 @@ function objectMetadata(object: Record<string, unknown>): Record<string, string>
   const value = object.metadata;
   if (!value || typeof value !== "object") return {};
   return Object.fromEntries(
-    Object.entries(value as Record<string, unknown>)
-      .filter((entry): entry is [string, string] => typeof entry[1] === "string"),
+    Object.entries(value as Record<string, unknown>).filter(
+      (entry): entry is [string, string] => typeof entry[1] === "string",
+    ),
   );
 }
 
-async function handleSubscription(event: StripeEvent) {
+async function upsertSubscription(event: StripeEvent, subscriptionOverride?: StripeSubscription) {
   const object = event.data.object;
-  const subscriptionId = String(object.id ?? "");
-  if (!subscriptionId) return;
+  const subscriptionId = String(object.id ?? subscriptionOverride?.id ?? "");
+  if (!subscriptionId) return null;
 
-  const metadata = objectMetadata(object);
+  let subscription = subscriptionOverride ?? (object as unknown as StripeSubscription);
+  if (!subscription.items) {
+    subscription = await stripeRequest<StripeSubscription>(
+      `/subscriptions/${encodeURIComponent(subscriptionId)}`,
+    );
+  }
+
+  const metadata = subscription.metadata ?? objectMetadata(object);
   const userId = metadata.user_id;
   const planId = metadata.plan_id;
-  const providerCustomerId = typeof object.customer === "string" ? object.customer : null;
-  const admin = createAdminClient();
-
-  let subscription = object as unknown as StripeSubscription;
-  if (!subscription.items) {
-    subscription = await stripeRequest<StripeSubscription>(`/subscriptions/${encodeURIComponent(subscriptionId)}`);
-  }
-
+  const providerCustomerId = typeof subscription.customer === "string" ? subscription.customer : null;
   if (!userId || !planId) {
     console.warn("billing.webhook.subscription_missing_metadata", event.id, subscriptionId);
-    return;
+    return null;
   }
 
+  const admin = createAdminClient();
   const status = normalizeStatus(String(subscription.status));
   const interval = metadata.billing_interval === "yearly" ? "yearly" : "monthly";
 
@@ -79,41 +81,36 @@ async function handleSubscription(event: StripeEvent) {
       },
       { onConflict: "provider,provider_subscription_id" },
     )
-    .select("id")
+    .select("id,user_id,plan_id")
     .maybeSingle();
 
   if (upsertError) throw upsertError;
 
-  const { error: eventError } = await admin.from("subscription_events").insert({
-    subscription_id: localSubscription?.id ?? null,
-    user_id: userId,
-    event_type: event.type,
-    provider: "stripe",
-    provider_event_id: event.id,
-    payload: event.data.object,
-  });
+  if (localSubscription) {
+    const { error: eventError } = await admin.from("subscription_events").insert({
+      subscription_id: localSubscription.id,
+      user_id: userId,
+      event_type: event.type,
+      provider: "stripe",
+      provider_event_id: event.id,
+      payload: event.data.object,
+    });
 
-  if (eventError && !String(eventError.message).toLowerCase().includes("duplicate")) {
-    throw eventError;
-  }
+    if (eventError && !String(eventError.message).toLowerCase().includes("duplicate")) {
+      throw eventError;
+    }
 
-  if (localSubscription?.id) {
     if (event.type === "customer.subscription.deleted") {
       await admin
         .from("billing_transactions")
         .update({ status: "cancelled", metadata: { stripe_event_id: event.id } })
         .eq("subscription_id", localSubscription.id)
-        .eq("provider", "stripe");
+        .eq("provider", "stripe")
+        .in("status", ["pending", "paid"]);
     }
-
-    await admin
-      .from("billing_transactions")
-      .update({ subscription_id: localSubscription.id })
-      .eq("provider", "stripe")
-      .eq("provider_transaction_id", String(metadata.checkout_session_id ?? ""));
   }
 
-  return localSubscription?.id ?? null;
+  return localSubscription;
 }
 
 async function handleCheckoutCompleted(event: StripeEvent) {
@@ -125,7 +122,7 @@ async function handleCheckoutCompleted(event: StripeEvent) {
   if (!sessionId || !userId) return;
 
   const admin = createAdminClient();
-  const baseMetadata = {
+  const checkoutMetadata = {
     ...metadata,
     stripe_subscription_id: subscriptionId,
     stripe_customer_id: typeof object.customer === "string" ? object.customer : null,
@@ -137,7 +134,7 @@ async function handleCheckoutCompleted(event: StripeEvent) {
     .update({
       status: "completed",
       updated_at: new Date().toISOString(),
-      metadata: baseMetadata,
+      metadata: checkoutMetadata,
     })
     .eq("provider", "stripe")
     .eq("provider_checkout_id", sessionId);
@@ -145,11 +142,11 @@ async function handleCheckoutCompleted(event: StripeEvent) {
   await admin
     .from("billing_transactions")
     .update({
-      subscription_id: null,
-      metadata: baseMetadata,
+      metadata: checkoutMetadata,
     })
     .eq("provider", "stripe")
-    .eq("provider_transaction_id", sessionId);
+    .eq("provider_transaction_id", sessionId)
+    .eq("user_id", userId);
 }
 
 async function handleInvoiceEvent(event: StripeEvent) {
@@ -160,59 +157,45 @@ async function handleInvoiceEvent(event: StripeEvent) {
   const subscription = await stripeRequest<StripeSubscription>(
     `/subscriptions/${encodeURIComponent(subscriptionId)}`,
   );
-  const metadata = subscription.metadata ?? {};
-  const admin = createAdminClient();
+  const localSubscription = await upsertSubscription(event, subscription);
+  if (!localSubscription) return;
+
   const status = event.type === "invoice.paid" ? "paid" : "failed";
+  const admin = createAdminClient();
+  const metadata = subscription.metadata ?? {};
+  const invoiceMetadata = {
+    ...metadata,
+    stripe_subscription_id: subscriptionId,
+    stripe_event_id: event.id,
+    stripe_invoice_id: typeof object.id === "string" ? object.id : null,
+  };
 
   await admin
     .from("billing_transactions")
     .update({
+      subscription_id: localSubscription.id,
       status,
       paid_at: status === "paid" ? new Date().toISOString() : null,
-      metadata: {
-        ...metadata,
-        stripe_subscription_id: subscriptionId,
-        stripe_event_id: event.id,
-        stripe_invoice_id: typeof object.id === "string" ? object.id : null,
-      },
+      metadata: invoiceMetadata,
     })
     .eq("provider", "stripe")
-    .eq("subscription_id", "00000000-0000-0000-0000-000000000000");
+    .eq("user_id", localSubscription.user_id)
+    .eq("type", "subscription")
+    .in("status", ["pending", "failed"]);
 
-  const syntheticEvent: StripeEvent = {
-    ...event,
-    data: { object: subscription as unknown as Record<string, unknown> },
-  };
-  await handleSubscription(syntheticEvent);
-
-  const metadataUserId = metadata.user_id;
-  if (metadataUserId) {
-    const { data: localSubscription } = await admin
-      .from("subscriptions")
-      .select("id")
-      .eq("provider", "stripe")
-      .eq("provider_subscription_id", subscriptionId)
-      .maybeSingle();
-
-    if (localSubscription?.id) {
-      await admin
-        .from("billing_transactions")
-        .update({
-          subscription_id: localSubscription.id,
-          status,
-          paid_at: status === "paid" ? new Date().toISOString() : null,
-          metadata: {
-            ...metadata,
-            stripe_subscription_id: subscriptionId,
-            stripe_event_id: event.id,
-            stripe_invoice_id: typeof object.id === "string" ? object.id : null,
-          },
-        })
-        .eq("provider", "stripe")
-        .eq("user_id", metadataUserId)
-        .eq("type", "subscription")
-        .in("status", ["pending", "failed"]);
-    }
+  if (status === "paid") {
+    await admin
+      .from("platform_revenue")
+      .insert({
+        source_type: "subscription",
+        source_id: localSubscription.id,
+        amount_minor: Number(object.amount_paid ?? 0),
+        currency: String(object.currency ?? "usd").toUpperCase(),
+        status: "recognized",
+        description: `Suscripción Credi Marketplace ${metadata.plan_code ?? ""}`.trim(),
+        metadata: invoiceMetadata,
+        recognized_at: new Date().toISOString(),
+      });
   }
 }
 
@@ -247,7 +230,7 @@ export async function POST(request: Request) {
       case "customer.subscription.created":
       case "customer.subscription.updated":
       case "customer.subscription.deleted":
-        await handleSubscription(event);
+        await upsertSubscription(event);
         break;
       case "invoice.paid":
       case "invoice.payment_failed":
