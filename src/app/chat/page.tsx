@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import CrediChatFixed from '@/components/chat/CrediChatFixed'
+import CrediBusinessChat from '@/components/chat/CrediBusinessChat'
 import CrediContactDirectory from '@/components/chat/CrediContactDirectory'
 import CrediChatInteractionLayer from '@/components/chat/CrediChatInteractionLayer'
 
@@ -13,7 +13,7 @@ export default function ChatPage() {
   return (
     <>
       <CrediContactDirectory />
-      <CrediChatFixed />
+      <CrediBusinessChat />
       <CrediChatInteractionLayer />
     </>
   )
