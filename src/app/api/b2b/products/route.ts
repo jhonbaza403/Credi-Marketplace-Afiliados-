@@ -21,8 +21,10 @@ async function getAccess() {
 
 export async function GET() {
   try {
-    const { supabase, user } = await getAccess()
+    const { supabase, user, access } = await getAccess()
     if (!user) return json({ error: "UNAUTHORIZED" }, 401)
+    if (!access?.allowed || access.risk_blocked) return json({ error: "VERIFICATION_REQUIRED", message: "Completa la verificación de identidad y los controles de riesgo para acceder al catálogo B2B." }, 403)
+
     const { data, error } = await supabase
       .from("verified_b2b_products")
       .select(PUBLIC_FIELDS)
