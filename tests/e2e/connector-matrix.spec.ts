@@ -3,34 +3,19 @@ import { expect, test } from "@playwright/test";
 const connectorMatrix = [
   {
     route: "/compras-mayoristas",
-    links: [
-      ["Proveedores verificados", "/proveedores-verificados"],
-      ["Credi Business Chat", "/chat"],
-    ],
+    links: ["/proveedores-verificados", "/chat"],
   },
   {
     route: "/proveedores-verificados",
-    links: [
-      ["Credi Chat", "/chat"],
-      ["Compras mayoristas", "/compras-mayoristas"],
-    ],
+    links: ["/chat", "/compras-mayoristas"],
   },
   {
     route: "/red-comercial",
-    links: [
-      ["Credi Chat", "/chat"],
-      ["Compras mayoristas", "/compras-mayoristas"],
-      ["Proveedores verificados", "/proveedores-verificados"],
-      ["Gestión empresarial", "/gestion-empresarial"],
-    ],
+    links: ["/chat", "/compras-mayoristas", "/proveedores-verificados", "/gestion-empresarial"],
   },
   {
     route: "/sellers",
-    links: [
-      ["Credi Chat", "/chat"],
-      ["Proveedores verificados", "/proveedores-verificados"],
-      ["Compras mayoristas", "/compras-mayoristas"],
-    ],
+    links: ["/chat", "/proveedores-verificados", "/compras-mayoristas"],
   },
 ] as const;
 
@@ -40,12 +25,23 @@ test.describe("Credi connector matrix", () => {
       const response = await page.goto(entry.route, { waitUntil: "domcontentloaded" });
       expect(response?.ok(), `${entry.route} returned ${response?.status()}`).toBeTruthy();
 
-      for (const [label, href] of entry.links) {
-        const link = page.locator(`a[href="${href}"]`).first();
-        await expect(link, `${entry.route} is missing connector ${label}`).toBeVisible();
+      for (const href of entry.links) {
+        await expect(page.locator(`a[href="${href}"]`).first()).toBeVisible();
       }
     });
   }
+
+  test("provider cards generate direct chat and company destinations when data exists", async ({ page }) => {
+    await page.goto("/proveedores-verificados", { waitUntil: "domcontentloaded" });
+    const cardContacts = page.locator('a[href^="/chat?to="]');
+    const companyLinks = page.locator('a[href^="/sellers/"]');
+    const cards = await page.locator("article").count();
+
+    if (cards > 0) {
+      expect(await cardContacts.count()).toBeGreaterThan(0);
+      expect(await companyLinks.count()).toBeGreaterThan(0);
+    }
+  });
 
   test("pricing exposes all active commercial plans and checkout forms", async ({ page }) => {
     const response = await page.goto("/pricing", { waitUntil: "domcontentloaded" });
@@ -66,6 +62,11 @@ test.describe("Credi connector matrix", () => {
       expect(response?.ok(), `${source} returned ${response?.status()}`).toBeTruthy();
       expect(new URL(page.url()).pathname).toBe("/login");
     }
+  });
+
+  test("private chat media endpoint rejects unauthenticated access", async ({ request }) => {
+    const response = await request.get("/api/chat/media?path=unknown");
+    expect(response.status()).toBe(401);
   });
 
   test("legacy seller and jobs connectors remain safe", async ({ page }) => {
