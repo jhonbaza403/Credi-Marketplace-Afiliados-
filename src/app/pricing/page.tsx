@@ -90,7 +90,7 @@ export default async function PricingPage() {
 
               <div className="mt-auto pt-8">
                 <a
-                  href={plan.is_free ? "/registro" : "/contacto"}
+                  href={plan.is_free ? "/register" : "/contacto"}
                   className={`block rounded-2xl px-4 py-3 text-center text-sm font-bold transition ${
                     featured
                       ? "bg-cyan-300 text-slate-950 hover:bg-cyan-200"
