@@ -1,8 +1,8 @@
 // ==========================================================
 // Credi Marketplace — Canonical Application Routes
 // ==========================================================
-// This module contains internal routes only. External provider
-// destinations live in dedicated configuration modules.
+// Internal routes only. External provider destinations live
+// in dedicated integration/config modules.
 
 export const ROUTES = {
   home: "/",
@@ -13,7 +13,8 @@ export const ROUTES = {
   profile: "/dashboard/profile",
   marketplace: "/marketplace",
   products: "/products",
-  productDetail: "/products/detail",
+  productDetailBase: "/products",
+  productCreate: "/products/create",
   services: "/services",
   sellers: "/sellers",
   search: "/search",
@@ -32,5 +33,9 @@ export const ROUTES = {
   adminCompliance: "/admin/compliance",
   compliance: "/dashboard/compliance",
 } as const;
+
+export function productDetailPath(productId: string): string {
+  return `${ROUTES.productDetailBase}/${encodeURIComponent(productId)}`;
+}
 
 export type AppRoute = (typeof ROUTES)[keyof typeof ROUTES];
