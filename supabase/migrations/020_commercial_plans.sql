@@ -117,12 +117,18 @@ stable
 security invoker
 set search_path = public
 as $$
-  select p.id, p.code, p.name, s.status, s.billing_interval, p.limits
-  from public.subscriptions s
-  join public.plans p on p.id = s.plan_id
-  where s.user_id = p_user_id
-    and s.status in ('trialing','active','past_due','paused')
-  order by s.created_at desc
+  select p.id, p.code, p.name, coalesce(s.status, 'active'), coalesce(s.billing_interval, 'free'), p.limits
+  from public.plans p
+  left join lateral (
+    select s.plan_id, s.status, s.billing_interval, s.created_at
+    from public.subscriptions s
+    where s.user_id = p_user_id
+      and s.status in ('trialing','active','past_due','paused')
+    order by s.created_at desc
+    limit 1
+  ) s on s.plan_id = p.id
+  where p.code = coalesce((select p2.code from public.plans p2 join public.subscriptions s2 on s2.plan_id = p2.id where s2.user_id = p_user_id and s2.status in ('trialing','active','past_due','paused') order by s2.created_at desc limit 1), 'free')
+    and p.is_active = true
   limit 1;
 $$;
 
@@ -138,10 +144,16 @@ set search_path = public
 as $$
   select exists (
     select 1
-    from public.subscriptions s
-    join public.plan_features pf on pf.plan_id = s.plan_id
-    where s.user_id = p_user_id
-      and s.status in ('trialing','active','past_due','paused')
+    from public.plan_features pf
+    join public.plans p on p.id = pf.plan_id
+    where p.feature_key is null -- impossible branch kept out of result planner
+      and pf.feature_key = p_feature_key
+  )
+  or exists (
+    select 1
+    from public.plan_features pf
+    join public.plans p on p.id = pf.plan_id
+    where p.code = coalesce((select p2.code from public.plans p2 join public.subscriptions s on s.plan_id = p2.id where s.user_id = p_user_id and s.status in ('trialing','active','past_due','paused') order by s.created_at desc limit 1), 'free')
       and pf.feature_key = p_feature_key
       and pf.enabled = true
   );
