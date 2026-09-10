@@ -108,6 +108,8 @@ export async function improveProductDraft(input: ProductDraftInput): Promise<Pro
   if (!text) return FALLBACK;
 
   const parsed = JSON.parse(text) as Partial<ProductDraftSuggestion>;
+  const checklist = cleanList(parsed.checklist, 10, 240);
+  const complianceNotes = cleanList(parsed.complianceNotes, 8, 280);
 
   return {
     title: cleanText(parsed.title, input.title.trim(), 150),
@@ -115,7 +117,7 @@ export async function improveProductDraft(input: ProductDraftInput): Promise<Pro
     category: cleanText(parsed.category, input.category.trim(), 100),
     tags: cleanList(parsed.tags, 12, 60),
     sellingPoints: cleanList(parsed.sellingPoints, 8, 180),
-    checklist: cleanList(parsed.checklist, 10, 240).length ? cleanList(parsed.checklist, 10, 240) : FALLBACK.checklist,
-    complianceNotes: cleanList(parsed.complianceNotes, 8, 280).length ? cleanList(parsed.complianceNotes, 8, 280) : FALLBACK.complianceNotes,
+    checklist: checklist.length ? checklist : FALLBACK.checklist,
+    complianceNotes: complianceNotes.length ? complianceNotes : FALLBACK.complianceNotes,
   };
 }
