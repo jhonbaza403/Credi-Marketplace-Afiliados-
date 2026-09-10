@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { stripeRequest, type StripeCheckoutSession } from "@/lib/billing/stripe";
 
@@ -25,7 +26,9 @@ export async function POST(request: Request) {
 
     const { data: plan, error: planError } = await supabase
       .from("plans")
-      .select("id,code,name,description,monthly_price_minor,yearly_price_minor,currency,is_free,is_active,is_public")
+      .select(
+        "id,code,name,description,monthly_price_minor,yearly_price_minor,currency,is_free,is_active,is_public,stripe_product_id,stripe_monthly_price_id,stripe_yearly_price_id",
+      )
       .eq("code", planCode)
       .eq("is_active", true)
       .eq("is_public", true)
@@ -36,8 +39,10 @@ export async function POST(request: Request) {
     }
 
     const amount = interval === "yearly" ? plan.yearly_price_minor : plan.monthly_price_minor;
-    if (!Number.isInteger(amount) || amount <= 0) {
-      return NextResponse.json({ error: "PLAN_PRICE_INVALID" }, { status: 409 });
+    const priceId = interval === "yearly" ? plan.stripe_yearly_price_id : plan.stripe_monthly_price_id;
+
+    if (!Number.isInteger(amount) || amount <= 0 || !priceId) {
+      return NextResponse.json({ error: "PLAN_PRICE_NOT_CONFIGURED" }, { status: 409 });
     }
 
     const customerEmail = auth.user.email ?? undefined;
@@ -46,12 +51,8 @@ export async function POST(request: Request) {
     params.set("success_url", `${appUrl()}/pricing?checkout=success&session_id={CHECKOUT_SESSION_ID}`);
     params.set("cancel_url", `${appUrl()}/pricing?checkout=cancelled`);
     params.set("submit_type", "subscribe");
+    params.set("line_items[0][price]", priceId);
     params.set("line_items[0][quantity]", "1");
-    params.set("line_items[0][price_data][currency]", String(plan.currency).toLowerCase());
-    params.set("line_items[0][price_data][unit_amount]", String(amount));
-    params.set("line_items[0][price_data][product_data][name]", `Credi Marketplace ${plan.name}`);
-    params.set("line_items[0][price_data][product_data][description]", String(plan.description).slice(0, 500));
-    params.set("line_items[0][price_data][recurring][interval]", interval === "yearly" ? "year" : "month");
     params.set("customer_creation", "always");
     if (customerEmail) params.set("customer_email", customerEmail);
     params.set("client_reference_id", auth.user.id);
@@ -73,7 +74,25 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "CHECKOUT_URL_MISSING" }, { status: 502 });
     }
 
-    await supabase.from("billing_transactions").insert({
+    const admin = createAdminClient();
+
+    await admin.from("checkout_intents").insert({
+      user_id: auth.user.id,
+      plan_id: plan.id,
+      type: "subscription",
+      billing_interval: interval,
+      amount_minor: amount,
+      currency: plan.currency,
+      provider: "stripe",
+      provider_checkout_id: session.id,
+      status: "pending",
+      metadata: {
+        plan_code: plan.code,
+        stripe_price_id: priceId,
+      },
+    });
+
+    await admin.from("billing_transactions").insert({
       user_id: auth.user.id,
       type: "subscription",
       status: "pending",
@@ -82,7 +101,12 @@ export async function POST(request: Request) {
       provider: "stripe",
       provider_transaction_id: session.id,
       description: `Suscripción ${plan.name} (${interval})`,
-      metadata: { plan_code: plan.code, billing_interval: interval, plan_id: plan.id },
+      metadata: {
+        plan_code: plan.code,
+        billing_interval: interval,
+        plan_id: plan.id,
+        stripe_price_id: priceId,
+      },
     });
 
     return NextResponse.redirect(session.url, 303);
