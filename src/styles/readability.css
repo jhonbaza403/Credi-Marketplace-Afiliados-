@@ -1,0 +1,66 @@
+/* Global readability contract: premium imagery stays visible without affecting UI legibility. */
+
+.app-readable-surface {
+  position: relative;
+  z-index: 0;
+  isolation: isolate;
+  background: color-mix(in srgb, var(--background) 96%, transparent);
+}
+
+.app-readable-surface input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]),
+.app-readable-surface textarea,
+.app-readable-surface select {
+  position: relative;
+  z-index: 1;
+  background-color: var(--surface) !important;
+  background-image: none !important;
+  color: var(--foreground) !important;
+  border-color: var(--border-strong) !important;
+  opacity: 1 !important;
+}
+
+.app-readable-surface input::placeholder,
+.app-readable-surface textarea::placeholder {
+  color: var(--muted) !important;
+  opacity: 1 !important;
+}
+
+.app-readable-surface input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]):focus,
+.app-readable-surface textarea:focus,
+.app-readable-surface select:focus {
+  outline: 2px solid var(--primary) !important;
+  outline-offset: 1px;
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 4px var(--focus-ring) !important;
+}
+
+.app-readable-surface select option {
+  background: var(--surface);
+  color: var(--foreground);
+}
+
+.app-readable-surface p,
+.app-readable-surface li,
+.app-readable-surface label,
+.app-readable-surface legend,
+.app-readable-surface dt,
+.app-readable-surface dd {
+  position: relative;
+  z-index: 1;
+}
+
+.premium-surface {
+  position: relative;
+  z-index: 1;
+  background: var(--surface) !important;
+  color: var(--foreground) !important;
+  border-color: var(--border) !important;
+}
+
+.premium-surface-soft {
+  position: relative;
+  z-index: 1;
+  background: var(--surface-secondary) !important;
+  color: var(--foreground) !important;
+  border-color: var(--border) !important;
+}
