@@ -82,7 +82,8 @@ export default function CrediCallManager({ conversationId = null, peerUserId = n
 
   const send = useCallback(async (callId: string, recipient: string, type: Signal['signal_type'], payload: Record<string, unknown>) => {
     if (!user) return
-    await supabase.from('chat_call_signals').insert({ call_id: callId, sender_id: user.id, recipient_id: recipient, signal_type: type, payload })
+    const { error: signalError } = await supabase.from('chat_call_signals').insert({ call_id: callId, sender_id: user.id, recipient_id: recipient, signal_type: type, payload })
+    if (signalError) throw signalError
   }, [supabase, user])
 
   const finish = useCallback(async (callId: string | null, status: CallStatus) => {
@@ -147,10 +148,13 @@ export default function CrediCallManager({ conversationId = null, peerUserId = n
       const { data: offer, error: offerError } = await supabase.from('chat_call_signals').select('sender_id,payload').eq('call_id', incoming.id).eq('recipient_id', user.id).eq('signal_type', 'offer').order('id', { ascending: false }).limit(1).maybeSingle()
       if (offerError || !offer) throw offerError ?? new Error('La oferta ya no está disponible.')
       await pc.current?.setRemoteDescription(offer.payload.description as RTCSessionDescriptionInit)
-      for (const candidate of pendingIce.current) await pc.current.addIceCandidate(candidate)
+      const connection = pc.current
+      if (!connection) throw new Error('No se pudo preparar la conexión de llamada.')
+      for (const candidate of pendingIce.current) await connection.addIceCandidate(candidate)
       pendingIce.current = []
-      const answer = await pc.current?.createAnswer(); if (!answer) throw new Error('No fue posible responder la llamada.')
-      await pc.current?.setLocalDescription(answer); await send(incoming.id, offer.sender_id, 'answer', { description: answer })
+      const answer = await connection.createAnswer()
+      await connection.setLocalDescription(answer)
+      await send(incoming.id, offer.sender_id, 'answer', { description: answer })
       await supabase.from('chat_calls').update({ status: 'connecting' }).eq('id', incoming.id)
     } catch (e) { setError(e instanceof Error ? e.message : 'No fue posible aceptar la llamada.'); await finish(incoming.id, 'failed') }
   }, [finish, incoming, incomingPeer, send, setup, supabase, user])
@@ -170,10 +174,11 @@ export default function CrediCallManager({ conversationId = null, peerUserId = n
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_call_signals', filter: `recipient_id=eq.${user.id}` }, async (payload) => {
         const next = payload.new as Signal
         if (!activeId.current || next.call_id !== activeId.current || !pc.current) return
+        const connection = pc.current
         try {
-          if (next.signal_type === 'answer') { await pc.current.setRemoteDescription(next.payload.description as RTCSessionDescriptionInit); return }
-          if (next.signal_type === 'ice') { const c = next.payload.candidate as RTCIceCandidateInit; if (pc.current.remoteDescription) await pc.current.addIceCandidate(c); else pendingIce.current.push(c); return }
-          if (next.signal_type === 'renegotiate') { await pc.current.setRemoteDescription(next.payload.description as RTCSessionDescriptionInit); const answer = await pc.current.createAnswer(); await pc.current.setLocalDescription(answer); await send(next.call_id, next.sender_id, 'answer', { description: answer }); return }
+          if (next.signal_type === 'answer') { await connection.setRemoteDescription(next.payload.description as RTCSessionDescriptionInit); return }
+          if (next.signal_type === 'ice') { const c = next.payload.candidate as RTCIceCandidateInit; if (connection.remoteDescription) await connection.addIceCandidate(c); else pendingIce.current.push(c); return }
+          if (next.signal_type === 'renegotiate') { await connection.setRemoteDescription(next.payload.description as RTCSessionDescriptionInit); const answer = await connection.createAnswer(); await connection.setLocalDescription(answer); await send(next.call_id, next.sender_id, 'answer', { description: answer }); return }
           if (next.signal_type === 'hangup') { setError('La otra persona finalizó la llamada.'); clear() }
         } catch (e) { console.error('[CrediCall] signal', e) }
       }).subscribe()
