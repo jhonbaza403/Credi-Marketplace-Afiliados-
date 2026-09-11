@@ -1,9 +1,8 @@
 import "server-only";
 
-import { GoogleGenAI, ThinkingLevel } from "@google/genai";
+import { GoogleGenAI } from "@google/genai";
 
 const DEFAULT_MODEL = "gemini-3.8-flash";
-const DEFAULT_THINKING_LEVEL = ThinkingLevel.LOW;
 
 function getApiKey(): string {
   const apiKey = process.env.GEMINI_API_KEY;
@@ -21,7 +20,7 @@ export function isGeminiConfigured(): boolean {
 
 export async function generateGeminiText(
   prompt: string,
-  options: { maxOutputTokens?: number; thinkingLevel?: ThinkingLevel } = {},
+  options: { maxOutputTokens?: number } = {},
 ): Promise<string> {
   const normalizedPrompt = prompt.trim();
   if (!normalizedPrompt) throw new Error("El prompt de Gemini no puede estar vacío");
@@ -32,9 +31,6 @@ export async function generateGeminiText(
     contents: normalizedPrompt,
     config: {
       maxOutputTokens: options.maxOutputTokens ?? 1200,
-      thinkingConfig: {
-        thinkingLevel: options.thinkingLevel ?? DEFAULT_THINKING_LEVEL,
-      },
     },
   });
 
