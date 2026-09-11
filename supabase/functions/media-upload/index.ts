@@ -9,7 +9,7 @@ const PRIVATE_BUCKET = 'credichat-private'
 const ALLOWED = [
   'image/jpeg', 'image/png', 'image/webp', 'image/gif',
   'video/mp4', 'video/webm', 'video/quicktime',
-  'audio/mpeg', 'audio/mp4', 'audio/ogg', 'audio/webm', 'audio/wav', 'audio/x-wav',
+  'audio/aac', 'audio/flac', 'audio/m4a', 'audio/mp4', 'audio/mpeg', 'audio/ogg', 'audio/opus', 'audio/webm', 'audio/wav', 'audio/x-m4a', 'audio/x-wav',
   'application/pdf',
 ]
 const PRIVATE_CHAT_ALLOWED = new Set(ALLOWED)
