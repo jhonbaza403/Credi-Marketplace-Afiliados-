@@ -22,7 +22,8 @@ export function getAgentAuthorizationLevel(action: CrediAgentAction): AgentAutho
 }
 
 export function canAgentExecute(action: CrediAgentAction, approved: boolean): boolean {
-  return getAgentAuthorizationLevel(action) === 'read' || (getAgentAuthorizationLevel(action) === 'propose' ? approved : approved)
+  const level = getAgentAuthorizationLevel(action)
+  return level === 'read' || approved
 }
 
 export function isCrediAgentAction(value: unknown): value is CrediAgentAction {
