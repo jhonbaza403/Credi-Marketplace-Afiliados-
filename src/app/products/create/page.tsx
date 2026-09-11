@@ -4,10 +4,12 @@ import ProductPublisher from "@/components/marketplace/ProductPublisher"
 import { getDatabaseServerClient } from "@/lib/database/server"
 
 export const metadata: Metadata = {
-  title: "Publicar producto | Credi Marketplace",
-  description: "Publica tu producto con carga de imágenes y asistencia editorial de IA.",
+  title: "Registrar bienes y servicios | Credi Marketplace",
+  description: "Registra bienes y servicios con galería de imágenes, vídeo, asistencia editorial de IA y publicación multicanal.",
   robots: { index: false, follow: false },
 }
+
+export const dynamic = "force-dynamic"
 
 export default async function ProductCreatePage() {
   const supabase = await getDatabaseServerClient()
