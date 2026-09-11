@@ -23,8 +23,8 @@
 .app-readable-surface h4,
 .app-readable-surface h5,
 .app-readable-surface h6 {
-  color: var(--foreground);
-  text-shadow: none;
+  color: var(--foreground) !important;
+  text-shadow: none !important;
 }
 
 .app-readable-surface input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]),
@@ -70,6 +70,19 @@
   z-index: 1;
 }
 
+.marketplace-card {
+  position: relative;
+  z-index: 1;
+  background: var(--surface) !important;
+  color: var(--foreground) !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: var(--shadow-marketplace) !important;
+}
+
+.marketplace-card:hover {
+  box-shadow: var(--shadow-marketplace-lg) !important;
+}
+
 .premium-surface {
   position: relative;
   z-index: 1;
@@ -86,7 +99,7 @@
   border-color: var(--border) !important;
 }
 
-/* Business Chat: preserve rich controls while making every work surface opaque. */
+/* Business Chat: keep the work area opaque while preserving accent actions. */
 main[class*="bg-[#050816]"] {
   background: var(--background) !important;
   color: var(--foreground) !important;
@@ -114,13 +127,12 @@ main[class*="bg-[#050816]"] textarea::placeholder {
 }
 
 main[class*="bg-[#050816]"] h1,
-main[class*="bg-[#050816]"] h2,
-main[class*="bg-[#050816]"] h3,
-main[class*="bg-[#050816]"] p,
+main[class*="bg-[#050816"]] h2,
+main[class*="bg-[#050816"]] h3,
+main[class*="bg-[#050816"]] p,
 main[class*="bg-[#050816"]] span,
 main[class*="bg-[#050816"]] label {
-  color: var(--foreground);
-  text-shadow: none;
+  text-shadow: none !important;
 }
 
 @media (prefers-reduced-motion: reduce) {
