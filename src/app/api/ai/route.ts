@@ -25,10 +25,7 @@ export async function POST(request: Request) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json(
-      { error: "No autenticado" },
-      { status: 401 },
-    );
+    return NextResponse.json({ error: "No autenticado" }, { status: 401 });
   }
 
   if (!isGeminiConfigured()) {
@@ -39,14 +36,10 @@ export async function POST(request: Request) {
   }
 
   let body: unknown;
-
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json(
-      { error: "JSON inválido" },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: "JSON inválido" }, { status: 400 });
   }
 
   const prompt =
@@ -63,41 +56,40 @@ export async function POST(request: Request) {
 
   if (prompt.length > AI_LIMITS.maxInputCharacters) {
     return NextResponse.json(
-      {
-        error: `El prompt supera el máximo de ${AI_LIMITS.maxInputCharacters} caracteres`,
-      },
+      { error: `El prompt supera el máximo de ${AI_LIMITS.maxInputCharacters} caracteres` },
       { status: 413 },
     );
   }
 
+  const requestId = crypto.randomUUID();
+  const timeoutMs = Math.min(Math.max(AI_LIMITS.timeout, 8_000), 18_000);
+
   try {
     const result = await Promise.race([
-      generateGeminiText(prompt),
+      generateGeminiText(prompt, { maxOutputTokens: AI_LIMITS.maxTokens, thinkingLevel: "low" }),
       new Promise<never>((_, reject) => {
-        setTimeout(() => {
-          reject(new Error("Tiempo de espera agotado"));
-        }, AI_LIMITS.timeout);
+        setTimeout(() => reject(new Error("Tiempo de espera agotado")), timeoutMs);
       }),
     ]);
 
-    return NextResponse.json({
-      text: result,
-    });
-  } catch (error) {
-    console.error("AI request failed", {
-      userId: user.id,
-      error: error instanceof Error ? error.message : "Unknown error",
-    });
-
-    const message =
-      error instanceof Error &&
-      error.message === "Tiempo de espera agotado"
-        ? "La solicitud de IA tardó demasiado"
-        : "No fue posible procesar la solicitud de IA";
-
     return NextResponse.json(
-      { error: message },
-      { status: 502 },
+      { text: result },
+      { status: 200, headers: { "Cache-Control": "no-store", "X-Credi-AI-Request": requestId } },
+    );
+  } catch (error) {
+    const raw = error instanceof Error ? error.message : "Unknown error";
+    console.error("AI request failed", { requestId, userId: user.id, error: raw });
+
+    const isTimeout = raw === "Tiempo de espera agotado";
+    return NextResponse.json(
+      {
+        error: isTimeout
+          ? "Credi AI está tardando más de lo esperado. Prueba una solicitud más concreta."
+          : "No fue posible procesar la solicitud de IA",
+        code: isTimeout ? "AI_TIMEOUT" : "AI_PROVIDER_ERROR",
+        request_id: requestId,
+      },
+      { status: isTimeout ? 504 : 502, headers: { "Cache-Control": "no-store" } },
     );
   }
 }
