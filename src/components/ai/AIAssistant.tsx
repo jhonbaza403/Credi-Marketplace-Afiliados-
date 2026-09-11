@@ -18,6 +18,8 @@ const SUGGESTIONS = [
   'Prepara una estrategia para entrar en otro mercado',
 ]
 
+type AiResponse = { text?: unknown; error?: unknown }
+
 export default function AIAssistant() {
   const [messages, setMessages] = useState<Message[]>([
     { id: 'welcome', role: 'assistant', content: 'Hola. Soy Credi AI, tu copiloto comercial. Puedo ayudarte a explorar mercados, preparar ofertas, analizar oportunidades y estructurar acciones B2B y B2C.', timestamp: 'Ahora' },
@@ -27,20 +29,47 @@ export default function AIAssistant() {
   async function sendMessage(text: string) {
     const prompt = text.trim()
     if (!prompt || loading) return
-    setMessages((current) => [...current, { id: crypto.randomUUID(), role: 'user', content: prompt, timestamp: 'Ahora' }])
+
+    setMessages((current) => [
+      ...current,
+      { id: crypto.randomUUID(), role: 'user', content: prompt, timestamp: 'Ahora' },
+    ])
     setLoading(true)
+
     try {
       const response = await fetch('/api/ai', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ prompt: `Eres Credi AI, copiloto comercial de Credi Marketplace. Responde en español con claridad y acciones concretas. Contexto: marketplace B2C, mercado B2B, afiliados, proveedores, Credi Business Chat y expansión internacional. Solicitud: ${prompt}` }),
+        body: JSON.stringify({
+          prompt: `Eres Credi AI, copiloto comercial de Credi Marketplace. Responde en español con claridad y acciones concretas. Contexto: marketplace B2C, mercado B2B, afiliados, proveedores, Credi Business Chat y expansión internacional. Solicitud: ${prompt}`,
+        }),
       })
-      const result = await response.json() as { text?: string; error?: string }
-      if (!response.ok || !result.text) throw new Error(result.error || 'No fue posible obtener una respuesta de IA.')
-      setMessages((current) => [...current, { id: crypto.randomUUID(), role: 'assistant', content: result.text, timestamp: 'Ahora' }])
+
+      const result = (await response.json()) as AiResponse
+      const generatedText = typeof result.text === 'string' ? result.text.trim() : ''
+      const apiError = typeof result.error === 'string' ? result.error : 'No fue posible obtener una respuesta de IA.'
+
+      if (!response.ok || !generatedText) {
+        throw new Error(apiError)
+      }
+
+      const assistantMessage: Message = {
+        id: crypto.randomUUID(),
+        role: 'assistant',
+        content: generatedText,
+        timestamp: 'Ahora',
+      }
+
+      setMessages((current) => [...current, assistantMessage])
     } catch (error: unknown) {
-      setMessages((current) => [...current, { id: crypto.randomUUID(), role: 'assistant', content: error instanceof Error ? error.message : 'No fue posible procesar la solicitud.', timestamp: 'Ahora' }])
+      const assistantMessage: Message = {
+        id: crypto.randomUUID(),
+        role: 'assistant',
+        content: error instanceof Error ? error.message : 'No fue posible procesar la solicitud.',
+        timestamp: 'Ahora',
+      }
+      setMessages((current) => [...current, assistantMessage])
     } finally {
       setLoading(false)
     }
