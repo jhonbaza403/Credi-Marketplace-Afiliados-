@@ -26,6 +26,7 @@ export default function CrediBusinessChat() {
   const supabase = useMemo(() => createClient(), [])
   const messageBox = useRef<HTMLDivElement>(null)
   const recorder = useRef<MediaRecorder | null>(null)
+  const recordingStream = useRef<MediaStream | null>(null)
   const chunks = useRef<Blob[]>([])
   const [userId, setUserId] = useState<string | null>(null)
   const [profiles, setProfiles] = useState<Record<string, Profile>>({})
@@ -110,7 +111,11 @@ export default function CrediBusinessChat() {
     const { data, error: rpcError } = await supabase.rpc('create_credichat_direct_conversation', { p_target_user_id: targetUser, p_product_id: productId, p_order_id: orderId, p_store_id: storeId, p_b2b_product_id: b2bProductId, p_title: title, p_metadata: metadata })
     if (rpcError) throw rpcError
     const id = String(data)
-    setContext(metadata); setSelectedId(id); router.replace(`/chat?conversation=${encodeURIComponent(id)}`); await refresh()
+    if (!id || id === 'null') throw new Error('No fue posible crear la conversación comercial.')
+    setContext(metadata)
+    setSelectedId(id)
+    router.replace(`/chat?conversation=${encodeURIComponent(id)}`)
+    await refresh()
   }, [params, refresh, router, selectedId, supabase])
 
   const loadMessages = useCallback(async (conversationId: string) => {
@@ -147,38 +152,115 @@ export default function CrediBusinessChat() {
   }, [loadMessages, selectedId, supabase])
 
   async function sendText(text = draft) {
-    if (!selectedId || !userId || !text.trim() || busy) return
-    setBusy(true); setError(null)
+    const body = text.trim()
+    if (!selectedId || !userId || !body || busy) return
+    setBusy(true)
+    setError(null)
     try {
-      const { error: insertError } = await supabase.from('messages').insert({ conversation_id: selectedId, sender_id: userId, message_type: 'text', body: text.trim(), reply_to_id: reply?.id ?? null, metadata: { business_context: context, forwarded: false } })
+      const { data: inserted, error: insertError } = await supabase.from('messages').insert({ conversation_id: selectedId, sender_id: userId, message_type: 'text', body, reply_to_id: reply?.id ?? null, metadata: { business_context: context, forwarded: false } }).select('id,conversation_id,sender_id,message_type,body,reply_to_id,edited_at,deleted_at,metadata,created_at').single()
       if (insertError) throw insertError
-      setDraft(''); setReply(null); setEmojiOpen(false)
-    } catch (e) { setError(fail(e, 'No fue posible enviar el mensaje.')) } finally { setBusy(false) }
+      if (inserted) setMessages((current) => current.some((m) => m.id === inserted.id) ? current : [...current, inserted as ChatMessage])
+      setDraft('')
+      setReply(null)
+      setEmojiOpen(false)
+      requestAnimationFrame(() => messageBox.current?.scrollTo({ top: messageBox.current.scrollHeight, behavior: 'smooth' }))
+    } catch (e) {
+      setError(fail(e, 'No fue posible enviar el mensaje.'))
+    } finally {
+      setBusy(false)
+    }
   }
 
   async function sendFile(file: File) {
     if (!selectedId || !userId || uploading) return
-    setUploading(true); setError(null)
+    setUploading(true)
+    setError(null)
     try {
       const media = await uploadCrediBusinessChatMedia(file)
-      const { data: message, error: messageError } = await supabase.from('messages').insert({ conversation_id: selectedId, sender_id: userId, message_type: media.kind, reply_to_id: reply?.id ?? null, metadata: { file_name: media.name, public_url: media.url, storage_path: media.path, mime_type: media.contentType, size_bytes: media.size, business_context: context } }).select('id').single()
+      const { data: message, error: messageError } = await supabase.from('messages').insert({ conversation_id: selectedId, sender_id: userId, message_type: media.kind, reply_to_id: reply?.id ?? null, metadata: { file_name: media.name, public_url: media.url, storage_path: media.path, mime_type: media.contentType, size_bytes: media.size, business_context: context } }).select('id,conversation_id,sender_id,message_type,body,reply_to_id,edited_at,deleted_at,metadata,created_at').single()
       if (messageError || !message) throw messageError ?? new Error('No fue posible crear el mensaje multimedia.')
       const { error: attachmentError } = await supabase.from('message_attachments').insert({ message_id: message.id, storage_path: media.path, public_url: media.url, file_name: media.name, mime_type: media.contentType, size_bytes: media.size })
       if (attachmentError) throw attachmentError
-      setReply(null); setAttachOpen(false)
-    } catch (e) { setError(fail(e, 'No fue posible enviar el archivo.')) } finally { setUploading(false) }
+      setMessages((current) => current.some((m) => m.id === message.id) ? current : [...current, message as ChatMessage])
+      setReply(null)
+      setAttachOpen(false)
+      requestAnimationFrame(() => messageBox.current?.scrollTo({ top: messageBox.current.scrollHeight, behavior: 'smooth' }))
+    } catch (e) {
+      setError(fail(e, 'No fue posible enviar el archivo.'))
+    } finally {
+      setUploading(false)
+    }
   }
 
-  function recordVoice() {
-    if (recording) { recorder.current?.stop(); recorder.current = null; setRecording(false); return }
-    void navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
-      const mime = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4'
-      const r = new MediaRecorder(stream, { mimeType: mime }); chunks.current = []
-      r.ondataavailable = (e) => { if (e.data.size) chunks.current.push(e.data) }
-      r.onstop = () => { stream.getTracks().forEach((t) => t.stop()); void sendFile(new File([new Blob(chunks.current, { type: mime })], `nota-voz-${Date.now()}.webm`, { type: mime })) }
-      recorder.current = r; r.start(); setRecording(true)
-    }).catch((e) => setError(fail(e, 'No fue posible acceder al micrófono.')))
+  function chooseRecordingMime() {
+    if (typeof MediaRecorder === 'undefined') return null
+    const candidates = [
+      { mime: 'audio/webm;codecs=opus', extension: 'webm' },
+      { mime: 'audio/webm', extension: 'webm' },
+      { mime: 'audio/mp4', extension: 'm4a' },
+      { mime: 'audio/ogg;codecs=opus', extension: 'ogg' },
+      { mime: 'audio/ogg', extension: 'ogg' },
+    ]
+    return candidates.find(({ mime }) => MediaRecorder.isTypeSupported(mime)) ?? null
   }
+
+  async function recordVoice() {
+    if (!selectedId || !userId || uploading) return
+    if (recording) {
+      recorder.current?.stop()
+      return
+    }
+    if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
+      setError('La grabación de voz requiere HTTPS y permiso para usar el micrófono.')
+      return
+    }
+    const recordingFormat = chooseRecordingMime()
+    if (!recordingFormat) {
+      setError('Este navegador no dispone de un formato de grabación de voz compatible.')
+      return
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } })
+      const r = new MediaRecorder(stream, { mimeType: recordingFormat.mime })
+      recordingStream.current = stream
+      chunks.current = []
+      r.ondataavailable = (event) => { if (event.data.size > 0) chunks.current.push(event.data) }
+      r.onerror = () => {
+        stream.getTracks().forEach((track) => track.stop())
+        recordingStream.current = null
+        recorder.current = null
+        setRecording(false)
+        setError('La grabación de voz se interrumpió inesperadamente.')
+      }
+      r.onstop = () => {
+        stream.getTracks().forEach((track) => track.stop())
+        recordingStream.current = null
+        recorder.current = null
+        setRecording(false)
+        const blob = new Blob(chunks.current, { type: recordingFormat.mime })
+        chunks.current = []
+        if (blob.size === 0) {
+          setError('No se obtuvo audio de la grabación.')
+          return
+        }
+        void sendFile(new File([blob], `nota-voz-${Date.now()}.${recordingFormat.extension}`, { type: recordingFormat.mime.split(';')[0] }))
+      }
+      recorder.current = r
+      r.start(250)
+      setRecording(true)
+    } catch (e) {
+      recordingStream.current?.getTracks().forEach((track) => track.stop())
+      recordingStream.current = null
+      recorder.current = null
+      setRecording(false)
+      setError(fail(e, 'No fue posible acceder al micrófono. Revisa el permiso del navegador.'))
+    }
+  }
+
+  useEffect(() => () => {
+    recorder.current?.stop()
+    recordingStream.current?.getTracks().forEach((track) => track.stop())
+  }, [])
 
   async function action(message: ChatMessage, type: 'react'|'copy'|'pin'|'delete'|'edit'|'forward') {
     if (!userId) return
@@ -188,7 +270,8 @@ export default function CrediBusinessChat() {
     if (type === 'delete') { if (message.sender_id !== userId) return; const { error: e } = await supabase.from('messages').update({ body: null, deleted_at: new Date().toISOString() }).eq('id', message.id).eq('sender_id', userId); if (e) setError(fail(e, 'No fue posible eliminar el mensaje.')); return }
     if (type === 'edit') { if (message.sender_id !== userId || !message.body) return; const next = window.prompt('Editar mensaje', message.body); if (!next?.trim()) return; const { error: e } = await supabase.from('messages').update({ body: next.trim(), edited_at: new Date().toISOString() }).eq('id', message.id).eq('sender_id', userId); if (e) setError(fail(e, 'No fue posible editar el mensaje.')); return }
     const target = window.prompt(`Reenviar a número de conversación:\n${conversations.map((c, i) => `${i + 1}. ${c.display_name}`).join('\n')}`)
-    const index = Number(target) - 1; const destination = Number.isInteger(index) ? conversations[index] : null
+    const index = Number(target) - 1
+    const destination = Number.isInteger(index) ? conversations[index] : null
     if (!destination) return
     const { error: e } = await supabase.from('messages').insert({ conversation_id: destination.id, sender_id: userId, message_type: message.message_type, body: message.body, metadata: { ...message.metadata, forwarded: true, forwarded_from: message.conversation_id } })
     if (e) setError(fail(e, 'No fue posible reenviar el mensaje.'))
@@ -208,6 +291,6 @@ export default function CrediBusinessChat() {
       <section className="chat-panel flex min-h-[720px] flex-col"><div className="border-b border-white/10 bg-slate-950/55 px-4 py-3 sm:px-5"><div className="flex items-center justify-between gap-3"><div className="flex min-w-0 items-center gap-3"><div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-cyan-300/10 font-black">{selected?.display_name.slice(0,1).toUpperCase()||'C'}</div><div className="min-w-0"><p className="truncate text-sm font-black">{selected?.display_name||'Selecciona una conversación'}</p><p className="truncate text-xs text-slate-400">{peer?.role ? `${peer.role} · Credi Marketplace` : 'Canal comercial'}</p></div></div><CrediBusinessCall conversationId={selectedId} peerUserId={peerId} peerName={selected?.display_name||'Contacto comercial'}/></div>{context && <div className="mt-3 grid gap-2 rounded-2xl border border-cyan-300/10 bg-cyan-300/[.04] p-3 text-xs sm:grid-cols-2 lg:grid-cols-4"><div><span className="font-black text-cyan-200">Producto</span><p className="mt-1 text-slate-300">{String(context.product_title||context.b2b_title||context.product_id||context.b2b_product_id||'—')}</p></div><div><span className="font-black text-cyan-200">Empresa / tienda</span><p className="mt-1 text-slate-300">{String(context.store_name||'—')}</p></div><div><span className="font-black text-cyan-200">Pedido / país</span><p className="mt-1 text-slate-300">{String(context.order_id||context.country||'—')}</p></div><div><span className="font-black text-cyan-200">Afiliado</span><p className="mt-1 text-slate-300">{String(context.affiliate_ref||'—')}</p></div></div>}{selected && <div className="mt-3 flex gap-2 overflow-x-auto pb-1">{QUICK.map((q)=><button key={q} type="button" onClick={()=>void sendText(q)} className="shrink-0 rounded-full border border-white/10 bg-white/[.04] px-3 py-2 text-[11px] font-bold text-slate-200">{q}</button>)}</div>}{selected && <div className="relative mt-3"><Search className="absolute left-3 top-2.5 size-4 text-slate-500"/><input value={chatSearch} onChange={(e)=>setChatSearch(e.target.value)} placeholder="Buscar dentro del chat" className="w-full rounded-xl border border-white/10 bg-white/[.03] py-2 pl-9 pr-3 text-xs outline-none placeholder:text-slate-500"/></div>}</div>
       <div ref={messageBox} className="flex-1 space-y-3 overflow-y-auto px-3 py-5 sm:px-6">{!selected?<div className="flex min-h-[500px] items-center justify-center text-center"><div><MessageCircle className="mx-auto size-16 text-cyan-200"/><h2 className="mt-5 text-xl font-black">Centro de comunicación comercial</h2><p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-400">Toda la negociación permanece dentro de Credi Marketplace.</p></div></div>:shown.map((m)=><div key={m.id} className={`flex ${m.sender_id===userId?'justify-end':'justify-start'}`}><div className={`group relative max-w-[90%] rounded-2xl px-4 py-3 sm:max-w-[78%] ${m.sender_id===userId?'bg-cyan-300 text-slate-950':'bg-slate-900 text-white'}`}>{Boolean(m.metadata.pinned)&&<div className="mb-2 flex items-center gap-1 text-[10px] font-black"><Pin size={11}/> Fijado</div>}{m.reply_to_id&&<div className="mb-2 rounded-xl bg-black/10 px-3 py-2 text-[11px]">Respuesta · {messages.find((x)=>x.id===m.reply_to_id)?.body||'Contenido multimedia'}</div>}{m.deleted_at?<p className="text-sm italic opacity-60">Mensaje eliminado</p>:<>{(()=>{const meta=getMeta(m);const url=typeof meta.public_url==='string'?meta.public_url:null;return <>{m.message_type==='image'&&url&&<img src={url} alt={String(meta.file_name||'Imagen')} className="mb-2 max-h-80 rounded-xl object-cover"/>}{m.message_type==='video'&&url&&<video src={url} controls playsInline className="mb-2 max-h-96 w-full rounded-xl"/>}{m.message_type==='audio'&&url&&<audio src={url} controls className="mb-2 w-full"/>}{(m.message_type==='document'||m.message_type==='file')&&url&&<a href={url} target="_blank" rel="noreferrer" className="mb-2 flex items-center gap-2 rounded-xl bg-black/10 p-3 text-sm font-bold underline"><FileText size={17}/>{String(meta.file_name||'Abrir archivo')}</a>}</>})()}{m.body&&<p className="whitespace-pre-wrap text-sm leading-6">{m.body}</p>}<div className="mt-2 flex items-center justify-end gap-2 text-[10px] opacity-70">{m.edited_at&&<span>editado</span>}<span>{fmt(m.created_at)}</span>{m.sender_id===userId&&<CheckCheck size={13}/>}</div></>}</div><div className="mt-1 flex gap-1 opacity-0 transition group-hover:opacity-100">{([['react','👍'],['copy','Copiar'],['pin','Fijar'],['edit','Editar'],['delete','Eliminar'],['forward','Reenviar']] as const).map(([type,label])=><button key={type} type="button" onClick={()=>void action(m,type)} className="rounded-lg border border-white/10 bg-slate-950 px-2 py-1 text-[10px] text-slate-300">{label}</button>)}</div></div>)}</div>
       {reply&&<div className="border-t border-white/10 bg-slate-950/60 px-4 py-3 text-xs text-slate-300">Respondiendo a: <strong>{reply.body||'Contenido multimedia'}</strong><button onClick={()=>setReply(null)} className="ml-3 text-cyan-300">Cerrar</button></div>}
-      <div className="border-t border-white/10 bg-slate-950/75 p-3 sm:p-4"><div className="flex items-end gap-2"><div className="relative"><button type="button" onClick={()=>setEmojiOpen((v)=>!v)} className="flex size-11 items-center justify-center rounded-xl border border-white/10 bg-white/[.04] text-cyan-200"><Smile size={19}/></button>{emojiOpen&&<div className="absolute bottom-14 left-0 z-20 grid w-72 grid-cols-9 gap-1 rounded-2xl border border-white/10 bg-slate-950 p-3 shadow-2xl">{EMOJIS.map((emoji)=><button key={emoji} type="button" onClick={()=>setDraft((d)=>d+emoji)} className="rounded-lg p-2 text-lg hover:bg-white/10">{emoji}</button>)}</div>}</div><div className="relative"><button type="button" onClick={()=>setAttachOpen((v)=>!v)} className="flex size-11 items-center justify-center rounded-xl border border-white/10 bg-white/[.04] text-cyan-200"><Paperclip size={19}/></button>{attachOpen&&<div className="absolute bottom-14 left-0 z-20 w-56 rounded-2xl border border-white/10 bg-slate-950 p-2 shadow-2xl"><label className="flex cursor-pointer items-center gap-2 rounded-xl p-3 text-sm hover:bg-white/10"><FileText size={17}/> Archivo<input type="file" className="hidden" onChange={(e)=>{const f=e.target.files?.[0];if(f)void sendFile(f)}}/></label></div>}</div><button type="button" onClick={recordVoice} className={`flex size-11 items-center justify-center rounded-xl border border-white/10 ${recording?'bg-rose-500/15 text-rose-200':'bg-white/[.04] text-cyan-200'}`} aria-label={recording?'Detener grabación':'Grabar nota de voz'}>{recording?<Square size={17}/>:<Mic size={19}/>}</button><textarea value={draft} onChange={(e)=>setDraft(e.target.value)} onKeyDown={(e)=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();void sendText()}}} placeholder="Escribe un mensaje..." rows={1} className="min-h-11 flex-1 resize-none rounded-xl border border-white/10 bg-white/[.04] px-4 py-3 text-sm outline-none placeholder:text-slate-500"/><button type="button" onClick={()=>void sendText()} disabled={!draft.trim()||busy||!selectedId} className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-cyan-300 text-slate-950 disabled:opacity-40"><Send size={18}/></button></div>{uploading&&<p className="mt-2 text-[11px] text-cyan-200">Subiendo archivo…</p>}</div>
+      <div className="border-t border-white/10 bg-slate-950/75 p-3 sm:p-4"><div className="flex items-end gap-2"><div className="relative"><button type="button" onClick={()=>setEmojiOpen((v)=>!v)} className="flex size-11 items-center justify-center rounded-xl border border-white/10 bg-white/[.04] text-cyan-200"><Smile size={19}/></button>{emojiOpen&&<div className="absolute bottom-14 left-0 z-20 grid w-72 grid-cols-9 gap-1 rounded-2xl border border-white/10 bg-slate-950 p-3 shadow-2xl">{EMOJIS.map((emoji)=><button key={emoji} type="button" onClick={()=>setDraft((d)=>d+emoji)} className="rounded-lg p-2 text-lg hover:bg-white/10">{emoji}</button>)}</div>}</div><div className="relative"><button type="button" onClick={()=>setAttachOpen((v)=>!v)} className="flex size-11 items-center justify-center rounded-xl border border-white/10 bg-white/[.04] text-cyan-200" aria-label="Adjuntar archivo"><Paperclip size={19}/></button>{attachOpen&&<div className="absolute bottom-14 left-0 z-20 w-60 rounded-2xl border border-white/10 bg-slate-950 p-2 shadow-2xl"><label className="flex cursor-pointer items-center gap-2 rounded-xl p-3 text-sm hover:bg-white/10"><FileText size={17}/> Archivo<input type="file" accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt" className="hidden" onChange={(e)=>{const f=e.target.files?.[0];e.currentTarget.value='';if(f)void sendFile(f)}}/></label></div>}</div><button type="button" onClick={()=>void recordVoice()} disabled={!selectedId||uploading} className={`flex size-11 items-center justify-center rounded-xl border border-white/10 ${recording?'bg-rose-500/15 text-rose-200':'bg-white/[.04] text-cyan-200'} disabled:cursor-not-allowed disabled:opacity-40`} aria-label={recording?'Detener grabación':'Grabar nota de voz'}>{recording?<Square size={17}/>:<Mic size={19}/>}</button><textarea value={draft} onChange={(e)=>setDraft(e.target.value)} onKeyDown={(e)=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();void sendText()}}} disabled={!selectedId||busy} placeholder="Escribe un mensaje…" rows={1} className="min-h-11 flex-1 resize-none rounded-xl border border-white/10 bg-white/[.04] px-4 py-3 text-sm outline-none placeholder:text-slate-500 disabled:cursor-not-allowed disabled:opacity-60"/><button type="button" onClick={()=>void sendText()} disabled={!draft.trim()||busy||!selectedId} className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-cyan-300 text-slate-950 disabled:cursor-not-allowed disabled:opacity-40" aria-label="Enviar mensaje"><Send size={18}/></button></div>{uploading&&<p className="mt-2 text-[11px] text-cyan-200">Procesando archivo o nota de voz…</p>}{recording&&<p className="mt-2 flex items-center gap-2 text-[11px] font-semibold text-rose-500"><span className="size-2 animate-pulse rounded-full bg-rose-500"/> Grabando nota de voz</p>}</div>
     </section></div></div></main>
 }
