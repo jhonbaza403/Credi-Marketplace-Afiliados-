@@ -1,4 +1,112 @@
 import Link from 'next/link'
-import { Boxes, Megaphone, PackageSearch, Sparkles, Store, WandSparkles } from 'lucide-react'
-export const dynamic='force-dynamic'
-export default function CommerceStudioPage(){return <main className="min-h-screen bg-background text-foreground"><div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8"><section className="rounded-[2rem] border border-border bg-card p-7 shadow-sm sm:p-10"><div className="flex items-center gap-4"><div className="flex size-14 items-center justify-center rounded-2xl bg-primary/10 text-primary"><Sparkles className="size-7"/></div><div><p className="text-[10px] font-black uppercase tracking-[.2em] text-primary">Commerce Studio</p><h1 className="text-3xl font-black sm:text-5xl">Una oferta. Múltiples mercados.</h1><p className="mt-3 max-w-3xl text-sm leading-7 text-muted-foreground">Centro unificado para preparar catálogo B2C, B2B, contenidos, inventario y operaciones comerciales. Las salidas conectan con los módulos reales de Credi en lugar de duplicar información.</p></div></div></section><section className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4"><Link href="/products/create" className="rounded-3xl border border-border bg-card p-6 shadow-sm hover:border-primary/30"><Store className="size-6 text-primary"/><h2 className="mt-4 text-xl font-black">Oferta B2C</h2><p className="mt-2 text-sm leading-6 text-muted-foreground">Producto, precio, multimedia, stock y publicación.</p><span className="mt-5 block text-sm font-black text-primary">Crear →</span></Link><Link href="/b2b/publish" className="rounded-3xl border border-border bg-card p-6 shadow-sm hover:border-primary/30"><PackageSearch className="size-6 text-primary"/><h2 className="mt-4 text-xl font-black">Oferta B2B</h2><p className="mt-2 text-sm leading-6 text-muted-foreground">Mayorista, MOQ, stock y condiciones para empresas.</p><span className="mt-5 block text-sm font-black text-primary">Publicar →</span></Link><Link href="/social" className="rounded-3xl border border-border bg-card p-6 shadow-sm hover:border-primary/30"><Megaphone className="size-6 text-primary"/><h2 className="mt-4 text-xl font-black">Contenido</h2><p className="mt-2 text-sm leading-6 text-muted-foreground">Feed, historias, reels y campañas conectadas al catálogo.</p><span className="mt-5 block text-sm font-black text-primary">Gestionar →</span></Link><Link href="/product-graph" className="rounded-3xl border border-border bg-card p-6 shadow-sm hover:border-primary/30"><Boxes className="size-6 text-primary"/><h2 className="mt-4 text-xl font-black">Product Graph</h2><p className="mt-2 text-sm leading-6 text-muted-foreground">Consulta el activo comercial completo y sus relaciones.</p><span className="mt-5 block text-sm font-black text-primary">Explorar →</span></Link></section><section className="mt-6 rounded-3xl border border-border bg-card p-6"><div className="flex items-center gap-3"><WandSparkles className="size-5 text-primary"/><h2 className="text-xl font-black">Principio operativo</h2></div><p className="mt-3 max-w-4xl text-sm leading-7 text-muted-foreground">Credi conserva una fuente de verdad comercial: la misma oferta alimenta marketplace, B2B, inventario, conversaciones, analytics y agentes. Las traducciones, argumentos comerciales y variantes de mercado deben generarse como derivados del activo central, no como catálogos paralelos.</p></section></div></main>
+import {
+  Boxes,
+  Megaphone,
+  PackageSearch,
+  Sparkles,
+  Store,
+  WandSparkles,
+} from 'lucide-react'
+
+export const dynamic = 'force-dynamic'
+
+export default function CommerceStudioPage() {
+  return (
+    <main className="min-h-screen bg-background text-foreground">
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <section className="rounded-[2rem] border border-border bg-card p-7 shadow-sm sm:p-10">
+          <div className="flex items-center gap-4">
+            <div className="flex size-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+              <Sparkles className="size-7" />
+            </div>
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[.2em] text-primary">
+                Commerce Studio
+              </p>
+              <h1 className="text-3xl font-black sm:text-5xl">
+                Una oferta. Múltiples mercados.
+              </h1>
+              <p className="mt-3 max-w-3xl text-sm leading-7 text-muted-foreground">
+                Centro unificado para preparar catálogo B2C, B2B, contenidos,
+                inventario y operaciones comerciales. Las salidas conectan con
+                los módulos reales de Credi en lugar de duplicar información.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <Link
+            href="/products/create"
+            className="rounded-3xl border border-border bg-card p-6 shadow-sm hover:border-primary/30"
+          >
+            <Store className="size-6 text-primary" />
+            <h2 className="mt-4 text-xl font-black">Oferta B2C</h2>
+            <p className="mt-2 text-sm leading-6 text-muted-foreground">
+              Producto, precio, multimedia, stock y publicación.
+            </p>
+            <span className="mt-5 block text-sm font-black text-primary">
+              Crear →
+            </span>
+          </Link>
+
+          <Link
+            href="/b2b/publish"
+            className="rounded-3xl border border-border bg-card p-6 shadow-sm hover:border-primary/30"
+          >
+            <PackageSearch className="size-6 text-primary" />
+            <h2 className="mt-4 text-xl font-black">Oferta B2B</h2>
+            <p className="mt-2 text-sm leading-6 text-muted-foreground">
+              Mayorista, MOQ, stock y condiciones para empresas.
+            </p>
+            <span className="mt-5 block text-sm font-black text-primary">
+              Publicar →
+            </span>
+          </Link>
+
+          <Link
+            href="/social"
+            className="rounded-3xl border border-border bg-card p-6 shadow-sm hover:border-primary/30"
+          >
+            <Megaphone className="size-6 text-primary" />
+            <h2 className="mt-4 text-xl font-black">Contenido</h2>
+            <p className="mt-2 text-sm leading-6 text-muted-foreground">
+              Feed, historias, reels y campañas conectadas al catálogo.
+            </p>
+            <span className="mt-5 block text-sm font-black text-primary">
+              Gestionar →
+            </span>
+          </Link>
+
+          <Link
+            href="/product-graph"
+            className="rounded-3xl border border-border bg-card p-6 shadow-sm hover:border-primary/30"
+          >
+            <Boxes className="size-6 text-primary" />
+            <h2 className="mt-4 text-xl font-black">Product Graph</h2>
+            <p className="mt-2 text-sm leading-6 text-muted-foreground">
+              Consulta el activo comercial completo y sus relaciones.
+            </p>
+            <span className="mt-5 block text-sm font-black text-primary">
+              Explorar →
+            </span>
+          </Link>
+        </section>
+
+        <section className="mt-6 rounded-3xl border border-border bg-card p-6">
+          <div className="flex items-center gap-3">
+            <WandSparkles className="size-5 text-primary" />
+            <h2 className="text-xl font-black">Principio operativo</h2>
+          </div>
+          <p className="mt-3 max-w-4xl text-sm leading-7 text-muted-foreground">
+            Credi conserva una fuente de verdad comercial: la misma oferta
+            alimenta marketplace, B2B, inventario, conversaciones, analytics y
+            agentes. Las traducciones, argumentos comerciales y variantes de
+            mercado deben generarse como derivados del activo central, no como
+            catálogos paralelos.
+          </p>
+        </section>
+      </div>
+    </main>
+  )
+}
