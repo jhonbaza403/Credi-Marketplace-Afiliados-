@@ -121,7 +121,6 @@
   border-color: var(--border) !important;
 }
 
-/* Business Chat: keep the work area opaque while preserving accent actions. */
 .credi-business-chat {
   position: relative;
   z-index: 5;
@@ -153,11 +152,23 @@
 
 .credi-business-chat h1,
 .credi-business-chat h2,
-.credi-business-chat h3,
-.credi-business-chat p,
-.credi-business-chat span,
-.credi-business-chat label {
-  text-shadow: none !important;
+.credi-business-chat h3 {
+  position: relative;
+  z-index: 20;
+  color: var(--foreground) !important;
+  text-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.64),
+    0 3px 0 rgba(15, 23, 42, 0.2),
+    0 8px 16px rgba(15, 23, 42, 0.2) !important;
+}
+
+.dark .credi-business-chat h1,
+.dark .credi-business-chat h2,
+.dark .credi-business-chat h3 {
+  text-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.2),
+    0 3px 0 rgba(2, 6, 23, 0.58),
+    0 8px 18px rgba(0, 0, 0, 0.55) !important;
 }
 
 @media (prefers-reduced-motion: reduce) {
