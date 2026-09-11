@@ -26,9 +26,9 @@ const business: Item[] = [
 ]
 
 const connectedMarkets: Item[] = [
-  { title: 'Mercados conectados', description: 'Encuentra ofertas, proveedores y relaciones comerciales desde distintos mercados y regiones.', href: '/explorar', icon: <Globe2 /> },
+  { title: 'Mercados conectados', description: 'Encuentra ofertas y relaciones comerciales desde distintos mercados y regiones.', href: '/mercados-conectados', icon: <Globe2 /> },
   { title: 'Comunicación comercial', description: 'Conecta con vendedores y proveedores mediante Credi Business Chat para consultar, negociar y cerrar oportunidades.', href: '/chat', icon: <MessageCircle /> },
-  { title: 'Visión global', description: 'Desarrolla oportunidades B2C y B2B sin limitar tu estrategia comercial a un solo mercado.', href: '/comercio', icon: <Network /> },
+  { title: 'Visión global', description: 'Desarrolla oportunidades B2C y B2B sin limitar tu estrategia comercial a un solo mercado.', href: '/mercados-conectados', icon: <Network /> },
 ]
 
 function Card({ item }: { item: Item }) {
@@ -46,15 +46,9 @@ export default function HomePage() {
       <HeroPortal />
       <div className="hero-content mx-auto max-w-6xl text-center">
         <div className="hero-kicker inline-flex items-center gap-2 rounded-full border border-brand-400/25 bg-brand-400/10 px-4 py-2 text-xs font-bold uppercase tracking-[0.16em] text-cyan-100 shadow-[0_0_28px_rgba(34,211,238,.12)]"><Sparkles className="size-4" /> Plataforma comercial B2B &amp; B2C</div>
-        <h1 className="mx-auto mt-7 max-w-5xl text-balance text-4xl font-black tracking-tight sm:text-6xl lg:text-7xl">
-          <span className="hero-main-text">El ecosistema digital para </span>
-          <span className="hero-highlight">crecer sin límites</span>
-        </h1>
+        <h1 className="mx-auto mt-7 max-w-5xl text-balance text-4xl font-black tracking-tight sm:text-6xl lg:text-7xl"><span className="hero-main-text">El ecosistema digital para </span><span className="hero-highlight">crecer sin límites</span></h1>
         <p className="hero-description mx-auto mt-6 max-w-3xl text-lg font-medium leading-8 text-slate-100 drop-shadow-[0_2px_12px_rgba(0,0,0,.8)]">Compra, vende y desarrolla oportunidades comerciales conectando personas, profesionales, proveedores, vendedores y empresas.</p>
-        <div className="hero-actions mt-9 flex flex-col justify-center gap-3 sm:flex-row">
-          <Link href="/explorar" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-brand-600 px-7 py-3.5 text-sm font-black shadow-[0_10px_38px_rgba(37,99,235,.28)] hover:bg-brand-500">Explorar mercado <ArrowRight className="size-5" /></Link>
-          <Link href="/vender" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/8 px-7 py-3.5 text-sm font-black backdrop-blur-sm hover:bg-white/12">Empieza a vender <ArrowRight className="size-4" /></Link>
-        </div>
+        <div className="hero-actions mt-9 flex flex-col justify-center gap-3 sm:flex-row"><Link href="/explorar" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-brand-600 px-7 py-3.5 text-sm font-black shadow-[0_10px_38px_rgba(37,99,235,.28)] hover:bg-brand-500">Explorar mercado <ArrowRight className="size-5" /></Link><Link href="/vender" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/8 px-7 py-3.5 text-sm font-black backdrop-blur-sm hover:bg-white/12">Empieza a vender <ArrowRight className="size-4" /></Link></div>
       </div>
     </section>
 
