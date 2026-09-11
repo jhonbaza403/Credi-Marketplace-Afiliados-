@@ -26,6 +26,13 @@
   z-index: 10;
 }
 
+.app-readable-surface > main:not(.credi-business-chat) {
+  position: relative;
+  z-index: 12;
+  background: var(--background) !important;
+  color: var(--foreground) !important;
+}
+
 .app-readable-surface h1,
 .app-readable-surface h2,
 .app-readable-surface h3,
@@ -110,6 +117,23 @@
 .app-readable-surface select option {
   background: var(--surface);
   color: var(--foreground);
+}
+
+.app-readable-surface main:not(.credi-business-chat) > div > header,
+.app-readable-surface main:not(.credi-business-chat) section,
+.app-readable-surface main:not(.credi-business-chat) article,
+.app-readable-surface main:not(.credi-business-chat) aside,
+.app-readable-surface main:not(.credi-business-chat) form {
+  color: var(--foreground) !important;
+}
+
+.app-readable-surface main:not(.credi-business-chat) header[class*="bg-slate-950"],
+.app-readable-surface main:not(.credi-business-chat) section[class*="bg-slate-950"],
+.app-readable-surface main:not(.credi-business-chat) article[class*="bg-slate-950"],
+.app-readable-surface main:not(.credi-business-chat) form[class*="bg-slate-950"] {
+  background: var(--surface) !important;
+  border-color: var(--border) !important;
+  color: var(--foreground) !important;
 }
 
 .marketplace-card,
