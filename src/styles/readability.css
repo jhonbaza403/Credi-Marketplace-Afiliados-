@@ -100,38 +100,39 @@
 }
 
 /* Business Chat: keep the work area opaque while preserving accent actions. */
-main[class*="bg-[#050816]"] {
+.credi-business-chat {
   background: var(--background) !important;
   color: var(--foreground) !important;
 }
 
-main[class*="bg-[#050816]"] header,
-main[class*="bg-[#050816]"] aside,
-main[class*="bg-[#050816]"] section {
+.credi-business-chat > header,
+.credi-business-chat > aside,
+.credi-business-chat > section,
+.credi-business-chat .chat-panel {
   background-color: var(--surface) !important;
   color: var(--foreground) !important;
   border-color: var(--border) !important;
 }
 
-main[class*="bg-[#050816]"] input:not([type=file]),
-main[class*="bg-[#050816]"] textarea {
+.credi-business-chat input:not([type=file]),
+.credi-business-chat textarea {
   background-color: var(--surface-secondary) !important;
   color: var(--foreground) !important;
   border-color: var(--border-strong) !important;
 }
 
-main[class*="bg-[#050816]"] input::placeholder,
-main[class*="bg-[#050816]"] textarea::placeholder {
+.credi-business-chat input::placeholder,
+.credi-business-chat textarea::placeholder {
   color: var(--muted) !important;
   opacity: 1 !important;
 }
 
-main[class*="bg-[#050816]"] h1,
-main[class*="bg-[#050816"]] h2,
-main[class*="bg-[#050816"]] h3,
-main[class*="bg-[#050816"]] p,
-main[class*="bg-[#050816"]] span,
-main[class*="bg-[#050816"]] label {
+.credi-business-chat h1,
+.credi-business-chat h2,
+.credi-business-chat h3,
+.credi-business-chat p,
+.credi-business-chat span,
+.credi-business-chat label {
   text-shadow: none !important;
 }
 
