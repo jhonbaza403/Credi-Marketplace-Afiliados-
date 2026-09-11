@@ -6,9 +6,11 @@ import { useState } from 'react';
 
 const navigation = [
   { name: 'Inicio', href: '/' },
+  { name: 'Business OS', href: '/business-os' },
   { name: 'Marketplace', href: '/marketplace' },
   { name: 'Credi Chat', href: '/chat' },
   { name: 'Compras mayoristas', href: '/compras-mayoristas' },
+  { name: 'Abastecimiento B2B', href: '/abastecimiento' },
   { name: 'Proveedores verificados', href: '/proveedores-verificados' },
   { name: 'Red Comercial', href: '/red-comercial' },
   { name: 'Gestión empresarial', href: '/gestion-empresarial' },
