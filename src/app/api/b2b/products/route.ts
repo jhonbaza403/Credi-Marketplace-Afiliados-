@@ -6,7 +6,19 @@ export const dynamic = "force-dynamic"
 
 const PUBLIC_FIELDS = "id,title,category,wholesale_price_usd,regular_price_usd,min_order_quantity,stock_available,image_url,video_media,description,country,status,moderation_status,created_at,supplier_id"
 
-type Access = { allowed?: boolean; can_sell?: boolean; risk_blocked?: boolean; email_confirmed?: boolean; next_action?: string }
+type Access = {
+  allowed: boolean
+  can_sell: boolean
+  active: boolean
+  email_confirmed: boolean
+  kyc_status: string
+  kyb_status: string
+  store_verified: boolean
+  risk_blocked: boolean
+  role: string
+  plan_code: string
+  next_action: string
+}
 
 function json(data: unknown, status = 200) {
   return NextResponse.json(data, { status, headers: { "Cache-Control": "no-store" } })
@@ -43,8 +55,8 @@ export async function GET() {
     return json({
       products: data ?? [],
       capabilities: {
-        can_buy: Boolean(access?.allowed),
-        can_sell: Boolean(access?.can_sell),
+        can_buy: Boolean(access.allowed),
+        can_sell: Boolean(access.can_sell),
       },
     })
   } catch (error) {
