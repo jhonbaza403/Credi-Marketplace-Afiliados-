@@ -1,7 +1,8 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { Bot, Boxes, Building2, ChartNoAxesCombined, MessageSquareText, PackageSearch, ReceiptText, ShieldCheck, Sparkles, Store, Workflow } from 'lucide-react'
+import type { ReactNode } from 'react'
+import { Bot, Boxes, Building2, ChartNoAxesCombined, MessageSquareText, PackageSearch, ReceiptText, ShieldCheck, Sparkles, Workflow } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 
 export const metadata: Metadata = {
@@ -16,7 +17,7 @@ function Metric({ label, value, hint }: { label: string; value: string; hint: st
   return <article className="rounded-3xl border border-border bg-card p-5 shadow-sm"><p className="text-[11px] font-black uppercase tracking-[.17em] text-muted-foreground">{label}</p><p className="mt-2 text-3xl font-black tracking-tight">{value}</p><p className="mt-1 text-xs text-muted-foreground">{hint}</p></article>
 }
 
-function Module({ href, icon, eyebrow, title, text, action }: { href: string; icon: React.ReactNode; eyebrow: string; title: string; text: string; action: string }) {
+function Module({ href, icon, eyebrow, title, text, action }: { href: string; icon: ReactNode; eyebrow: string; title: string; text: string; action: string }) {
   return <Link href={href} className="group rounded-3xl border border-border bg-card p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md"><div className="flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">{icon}</div><p className="mt-5 text-[10px] font-black uppercase tracking-[.18em] text-primary">{eyebrow}</p><h2 className="mt-1 text-xl font-black">{title}</h2><p className="mt-2 text-sm leading-6 text-muted-foreground">{text}</p><span className="mt-5 inline-flex text-sm font-black text-primary group-hover:underline">{action} →</span></Link>
 }
 
@@ -26,9 +27,9 @@ export default async function BusinessOsPage() {
   if (error || !auth.user) redirect('/login?next=%2Fbusiness-os')
 
   const user = auth.user
-  const [{ data: store }, { data: products }, { count: rfqCount }, { count: automationCount }, { count: auditCount }] = await Promise.all([
-    supabase.from('stores').select('id,store_name,is_verified,is_active').eq('vendor_id', user.id).maybeSingle(),
-    supabase.from('products').select('id,title,price,stock,is_active').eq('store_id', (await supabase.from('stores').select('id').eq('vendor_id', user.id).maybeSingle()).data?.id ?? '').order('created_at', { ascending: false }).limit(200),
+  const { data: store } = await supabase.from('stores').select('id,store_name,is_verified,is_active').eq('vendor_id', user.id).maybeSingle()
+  const [{ data: products }, { count: rfqCount }, { count: automationCount }, { count: auditCount }] = await Promise.all([
+    supabase.from('products').select('id,title,price,stock,is_active').eq('store_id', store?.id ?? '').order('created_at', { ascending: false }).limit(200),
     supabase.from('business_rfqs').select('id', { count: 'exact', head: true }).eq('buyer_id', user.id),
     supabase.from('business_automation_rules').select('id', { count: 'exact', head: true }).eq('owner_id', user.id).eq('enabled', true),
     supabase.from('agent_action_audit').select('id', { count: 'exact', head: true }).eq('owner_id', user.id),
