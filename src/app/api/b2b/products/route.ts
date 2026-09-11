@@ -6,6 +6,8 @@ export const dynamic = "force-dynamic"
 
 const PUBLIC_FIELDS = "id,title,category,wholesale_price_usd,regular_price_usd,min_order_quantity,stock_available,image_url,video_media,description,country,status,moderation_status,created_at,supplier_id"
 
+type Access = { allowed?: boolean; can_sell?: boolean; risk_blocked?: boolean; email_confirmed?: boolean; next_action?: string }
+
 function json(data: unknown, status = 200) {
   return NextResponse.json(data, { status, headers: { "Cache-Control": "no-store" } })
 }
@@ -13,17 +15,19 @@ function json(data: unknown, status = 200) {
 async function getAccess() {
   const supabase = await getDatabaseServerClient()
   const { data: auth } = await supabase.auth.getUser()
-  if (!auth.user) return { supabase, user: null, access: null }
+  if (!auth.user) return { supabase, user: null, access: null as Access | null }
   const { data: access, error } = await supabase.rpc("get_b2b_access_context", { p_user_id: auth.user.id })
   if (error) throw error
-  return { supabase, user: auth.user, access: access as { allowed?: boolean; can_sell?: boolean; risk_blocked?: boolean } }
+  return { supabase, user: auth.user, access: access as Access }
 }
 
 export async function GET() {
   try {
     const { supabase, user, access } = await getAccess()
-    if (!user) return json({ error: "UNAUTHORIZED" }, 401)
-    if (!access?.allowed || access.risk_blocked) return json({ error: "VERIFICATION_REQUIRED", message: "Completa la verificación de identidad y los controles de riesgo para acceder al catálogo B2B." }, 403)
+    if (!user) return json({ error: "UNAUTHORIZED", message: "Inicia sesión para comprar en el mercado B2B." }, 401)
+    if (access?.risk_blocked) return json({ error: "RISK_REVIEW", message: "El acceso B2B está temporalmente pausado mientras se revisan señales de seguridad de la cuenta." }, 403)
+    if (access?.email_confirmed === false) return json({ error: "EMAIL_CONFIRMATION_REQUIRED", message: "Confirma tu correo electrónico para acceder al mercado B2B." }, 403)
+    if (!access?.active) return json({ error: "ACCOUNT_INACTIVE", message: "Tu cuenta no está habilitada para operaciones B2B." }, 403)
 
     const { data, error } = await supabase
       .from("verified_b2b_products")
@@ -33,21 +37,32 @@ export async function GET() {
 
     if (error) {
       console.error("[b2b/products][GET]", error)
-      return json({ error: "No fue posible cargar el catálogo B2B." }, 500)
+      return json({ error: "CATALOG_UNAVAILABLE", message: "No fue posible cargar el catálogo B2B en este momento." }, 500)
     }
 
-    return json({ products: data ?? [] })
+    return json({
+      products: data ?? [],
+      capabilities: {
+        can_buy: Boolean(access?.allowed),
+        can_sell: Boolean(access?.can_sell),
+      },
+    })
   } catch (error) {
     console.error("[b2b/products][GET]", error)
-    return json({ error: "No fue posible cargar el catálogo B2B." }, 500)
+    return json({ error: "CATALOG_UNAVAILABLE", message: "No fue posible cargar el catálogo B2B en este momento." }, 500)
   }
 }
 
 export async function POST(request: Request) {
   try {
     const { supabase, user, access } = await getAccess()
-    if (!user) return json({ error: "Debes iniciar sesión para publicar una oferta B2B." }, 401)
-    if (!access?.can_sell || access.risk_blocked) return json({ error: "VERIFICATION_REQUIRED", message: "Debes tener identidad KYC y empresa KYB aprobadas, tienda verificada y no tener alertas de riesgo activas antes de publicar B2B." }, 403)
+    if (!user) return json({ error: "UNAUTHORIZED", message: "Debes iniciar sesión para publicar una oferta B2B." }, 401)
+    if (!access?.can_sell || access.risk_blocked) {
+      return json({
+        error: "VERIFICATION_REQUIRED",
+        message: "Para vender B2B necesitas identidad KYC aprobada, empresa KYB aprobada, tienda verificada y ausencia de bloqueos de riesgo.",
+      }, 403)
+    }
 
     const contentType = request.headers.get("content-type") ?? ""
     if (!contentType.toLowerCase().includes("application/json")) return json({ error: "Content-Type debe ser application/json." }, 415)
