@@ -23,15 +23,48 @@
 .app-readable-surface h4,
 .app-readable-surface h5,
 .app-readable-surface h6 {
+  position: relative;
+  z-index: 20;
+  isolation: isolate;
   color: var(--foreground) !important;
-  text-shadow: none !important;
+  text-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.72),
+    0 2px 0 rgba(255, 255, 255, 0.24),
+    0 5px 12px rgba(15, 23, 42, 0.18),
+    0 12px 24px rgba(15, 23, 42, 0.12) !important;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: geometricPrecision;
+}
+
+.dark .app-readable-surface h1,
+.dark .app-readable-surface h2,
+.dark .app-readable-surface h3,
+.dark .app-readable-surface h4,
+.dark .app-readable-surface h5,
+.dark .app-readable-surface h6 {
+  text-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.2),
+    0 3px 0 rgba(2, 6, 23, 0.55),
+    0 8px 18px rgba(0, 0, 0, 0.55),
+    0 16px 32px rgba(0, 0, 0, 0.36) !important;
+}
+
+.app-readable-surface p,
+.app-readable-surface li,
+.app-readable-surface label,
+.app-readable-surface legend,
+.app-readable-surface dt,
+.app-readable-surface dd,
+.app-readable-surface span {
+  position: relative;
+  z-index: 2;
 }
 
 .app-readable-surface input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]),
 .app-readable-surface textarea,
 .app-readable-surface select {
   position: relative;
-  z-index: 1;
+  z-index: 5;
   background-color: var(--surface) !important;
   background-image: none !important;
   color: var(--foreground) !important;
@@ -59,20 +92,9 @@
   color: var(--foreground);
 }
 
-.app-readable-surface p,
-.app-readable-surface li,
-.app-readable-surface label,
-.app-readable-surface legend,
-.app-readable-surface dt,
-.app-readable-surface dd,
-.app-readable-surface span {
-  position: relative;
-  z-index: 1;
-}
-
 .marketplace-card {
   position: relative;
-  z-index: 1;
+  z-index: 5;
   background: var(--surface) !important;
   color: var(--foreground) !important;
   border: 1px solid var(--border) !important;
@@ -85,7 +107,7 @@
 
 .premium-surface {
   position: relative;
-  z-index: 1;
+  z-index: 5;
   background: var(--surface) !important;
   color: var(--foreground) !important;
   border-color: var(--border) !important;
@@ -93,7 +115,7 @@
 
 .premium-surface-soft {
   position: relative;
-  z-index: 1;
+  z-index: 5;
   background: var(--surface-secondary) !important;
   color: var(--foreground) !important;
   border-color: var(--border) !important;
@@ -101,6 +123,8 @@
 
 /* Business Chat: keep the work area opaque while preserving accent actions. */
 .credi-business-chat {
+  position: relative;
+  z-index: 5;
   background: var(--background) !important;
   color: var(--foreground) !important;
 }
