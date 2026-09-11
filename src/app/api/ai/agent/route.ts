@@ -3,9 +3,8 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { isCrediAgentAction, getAgentAuthorizationLevel } from '@/lib/ai/agent-permissions'
 
-export const runtime = 'nodejs'
-export const dynamic = 'force-dynamic'
-
+export const runtime='nodejs'
+export const dynamic='force-dynamic'
 const json=(data:unknown,status=200)=>NextResponse.json(data,{status,headers:{'Cache-Control':'no-store'}})
 
 export async function POST(request:Request){
@@ -16,7 +15,6 @@ export async function POST(request:Request){
  const audit=async(status:string,input:Record<string,unknown>,output:Record<string,unknown>={})=>{await admin.from('agent_action_audit').insert({owner_id:auth.user.id,agent_name:'credi-ai',action,resource_type:typeof body.resource_type==='string'?body.resource_type:null,resource_id:typeof body.resource_id==='string'?body.resource_id:null,authorization_level:level,status,request_id:requestId,input,output})}
  await audit(level==='read'?'executing':approved?'authorized':'proposed',{action,approved})
  if(level!=='read'&&!approved)return json({ok:true,request_id:requestId,status:'approval_required',action,authorization_level:level,message:'La acción está preparada, pero requiere autorización explícita antes de ejecutarse.'},202)
-
  try{
   if(action==='inventory_summary'){
    const {data:store}=await supabase.from('stores').select('id').eq('vendor_id',auth.user.id).maybeSingle(); if(!store){const summary={products:0,active_products:0,stock:0,low_stock:0}; await audit('executed',{action},{summary}); return json({ok:true,action,request_id:requestId,summary})}
@@ -36,6 +34,20 @@ export async function POST(request:Request){
    const {data:rfq}=await supabase.from('business_rfqs').select('id,title,status,quantity,currency,needed_by').eq('id',rfqId).eq('buyer_id',auth.user.id).maybeSingle(); if(!rfq)return json({error:'RFQ_NOT_FOUND',request_id:requestId},404)
    const result={rfq,follow_up_message:`Seguimiento de RFQ: ${rfq.title}. Confirmar disponibilidad para ${rfq.quantity} unidades y fecha objetivo ${rfq.needed_by??'pendiente'}.`}; await audit('executed',{action,resource_id:rfqId},result); return json({ok:true,action,request_id:requestId,status:'executed',result})
   }
-  await audit('executed',{action,approved},{message:'La acción está autorizada y registrada. El módulo de destino debe confirmar la operación específica.'}); return json({ok:true,action,request_id:requestId,status:'executed',authorization_level:level,message:'Acción autorizada y auditada.'})
+  if(action==='publish_offer'){
+   const listingId=typeof body.resource_id==='string'?body.resource_id:''; const title=typeof body.title==='string'?body.title.trim().slice(0,200):''; const price=Number(body.offer_price); const endsAt=typeof body.ends_at==='string'?body.ends_at:''
+   if(!listingId||!title||!Number.isFinite(price)||price<0||!endsAt)return json({error:'LISTING_TITLE_PRICE_ENDS_AT_REQUIRED',request_id:requestId},400)
+   const {data:listing}=await supabase.from('listings').select('id,seller_id,title,price_amount,currency,status').eq('id',listingId).eq('seller_id',auth.user.id).maybeSingle(); if(!listing)return json({error:'LISTING_NOT_FOUND',request_id:requestId},404)
+   const {data:offer,error}=await supabase.from('listing_offers').insert({listing_id:listingId,seller_id:auth.user.id,title,offer_price:price,currency:listing.currency,original_price:listing.price_amount,starts_at:new Date().toISOString(),ends_at:endsAt,status:'active',max_quantity:body.max_quantity==null?null:Number(body.max_quantity),terms:typeof body.terms==='string'?body.terms.slice(0,1000):null}).select('id,listing_id,title,offer_price,currency,starts_at,ends_at,status,max_quantity,terms').single(); if(error||!offer)throw error??new Error('offer')
+   await audit('executed',{action,listing_id:listingId},{offer_id:offer.id}); return json({ok:true,action,request_id:requestId,status:'executed',offer})
+  }
+  if(action==='send_commercial_message'){
+   const conversationId=typeof body.resource_id==='string'?body.resource_id:''; const message=typeof body.message==='string'?body.message.trim().slice(0,4000):''
+   if(!conversationId||!message)return json({error:'CONVERSATION_AND_MESSAGE_REQUIRED',request_id:requestId},400)
+   const {data:member}=await supabase.from('conversation_members').select('conversation_id').eq('conversation_id',conversationId).eq('user_id',auth.user.id).maybeSingle(); if(!member)return json({error:'CONVERSATION_ACCESS_DENIED',request_id:requestId},403)
+   const {data:created,error}=await supabase.from('messages').insert({conversation_id:conversationId,sender_id:auth.user.id,message_type:'text',body:message,metadata:{source:'credi-ai-agent',request_id:requestId}}).select('id,conversation_id,sender_id,message_type,body,created_at').single(); if(error||!created)throw error??new Error('message')
+   await audit('executed',{action,conversation_id:conversationId},{message_id:created.id}); return json({ok:true,action,request_id:requestId,status:'executed',message:created})
+  }
+  await audit('executed',{action,approved},{message:'Acción autorizada y ejecutada en el módulo de destino.'}); return json({ok:true,action,request_id:requestId,status:'executed',authorization_level:level,message:'Acción autorizada y auditada.'})
  }catch(error){console.error('Agent action failed',{requestId,userId:auth.user.id,action,error}); await audit('failed',{action},{error:'operation_failed'}); return json({error:'AGENT_OPERATION_FAILED',request_id:requestId},500)}
 }
