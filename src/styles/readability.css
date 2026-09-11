@@ -9,12 +9,21 @@
   isolation: isolate;
   min-height: 100%;
   background: var(--background) !important;
-  color: var(--foreground);
+  color: var(--foreground) !important;
+}
+
+.app-readable-surface::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--background) !important;
+  pointer-events: none;
 }
 
 .app-readable-surface > * {
   position: relative;
-  z-index: 1;
+  z-index: 10;
 }
 
 .app-readable-surface h1,
@@ -22,16 +31,21 @@
 .app-readable-surface h3,
 .app-readable-surface h4,
 .app-readable-surface h5,
-.app-readable-surface h6 {
+.app-readable-surface h6,
+.app-readable-surface .font-black:not(button):not(a),
+.app-readable-surface .font-extrabold:not(button):not(a) {
   position: relative;
-  z-index: 20;
+  z-index: 30;
   isolation: isolate;
   color: var(--foreground) !important;
+  -webkit-text-stroke: 0.45px var(--surface);
   text-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.72),
-    0 2px 0 rgba(255, 255, 255, 0.24),
-    0 5px 12px rgba(15, 23, 42, 0.18),
-    0 12px 24px rgba(15, 23, 42, 0.12) !important;
+    0 0 1px var(--surface),
+    0 0 3px var(--surface),
+    0 1px 0 rgba(255, 255, 255, 0.68),
+    0 3px 0 rgba(15, 23, 42, 0.22),
+    0 7px 16px rgba(15, 23, 42, 0.18),
+    0 15px 30px rgba(15, 23, 42, 0.12) !important;
   -webkit-font-smoothing: antialiased;
   text-rendering: geometricPrecision;
 }
@@ -41,12 +55,18 @@
 .dark .app-readable-surface h3,
 .dark .app-readable-surface h4,
 .dark .app-readable-surface h5,
-.dark .app-readable-surface h6 {
+.dark .app-readable-surface h6,
+.dark .app-readable-surface .font-black:not(button):not(a),
+.dark .app-readable-surface .font-extrabold:not(button):not(a) {
+  color: var(--foreground) !important;
+  -webkit-text-stroke: 0.45px oklch(0.14 0.018 247);
   text-shadow:
+    0 0 1px oklch(0.14 0.018 247),
+    0 0 3px oklch(0.14 0.018 247),
     0 1px 0 rgba(255, 255, 255, 0.2),
-    0 3px 0 rgba(2, 6, 23, 0.55),
+    0 3px 0 rgba(2, 6, 23, 0.62),
     0 8px 18px rgba(0, 0, 0, 0.55),
-    0 16px 32px rgba(0, 0, 0, 0.36) !important;
+    0 16px 32px rgba(0, 0, 0, 0.34) !important;
 }
 
 .app-readable-surface p,
@@ -55,16 +75,16 @@
 .app-readable-surface legend,
 .app-readable-surface dt,
 .app-readable-surface dd,
-.app-readable-surface span {
+.app-readable-surface small {
   position: relative;
-  z-index: 2;
+  z-index: 15;
 }
 
 .app-readable-surface input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]),
 .app-readable-surface textarea,
 .app-readable-surface select {
   position: relative;
-  z-index: 5;
+  z-index: 15;
   background-color: var(--surface) !important;
   background-image: none !important;
   color: var(--foreground) !important;
@@ -92,12 +112,14 @@
   color: var(--foreground);
 }
 
-.marketplace-card {
+.marketplace-card,
+.premium-surface,
+.premium-surface-soft {
   position: relative;
-  z-index: 5;
+  z-index: 15;
   background: var(--surface) !important;
   color: var(--foreground) !important;
-  border: 1px solid var(--border) !important;
+  border-color: var(--border) !important;
   box-shadow: var(--shadow-marketplace) !important;
 }
 
@@ -105,41 +127,36 @@
   box-shadow: var(--shadow-marketplace-lg) !important;
 }
 
-.premium-surface {
-  position: relative;
-  z-index: 5;
-  background: var(--surface) !important;
-  color: var(--foreground) !important;
-  border-color: var(--border) !important;
-}
-
-.premium-surface-soft {
-  position: relative;
-  z-index: 5;
-  background: var(--surface-secondary) !important;
-  color: var(--foreground) !important;
-  border-color: var(--border) !important;
-}
-
 .credi-business-chat {
   position: relative;
-  z-index: 5;
+  z-index: 15;
+  isolation: isolate;
   background: var(--background) !important;
   color: var(--foreground) !important;
 }
 
+.credi-business-chat::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--background) !important;
+  pointer-events: none;
+}
+
+.credi-business-chat .chat-shell,
+.credi-business-chat .chat-panel,
 .credi-business-chat > header,
 .credi-business-chat > aside,
-.credi-business-chat > section,
-.credi-business-chat .chat-panel {
-  background-color: var(--surface) !important;
+.credi-business-chat > section {
+  background: var(--surface) !important;
   color: var(--foreground) !important;
   border-color: var(--border) !important;
 }
 
 .credi-business-chat input:not([type=file]),
 .credi-business-chat textarea {
-  background-color: var(--surface-secondary) !important;
+  background: var(--surface-secondary) !important;
   color: var(--foreground) !important;
   border-color: var(--border-strong) !important;
 }
@@ -153,22 +170,19 @@
 .credi-business-chat h1,
 .credi-business-chat h2,
 .credi-business-chat h3 {
-  position: relative;
-  z-index: 20;
   color: var(--foreground) !important;
+  -webkit-text-stroke: 0.45px var(--surface);
   text-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.64),
-    0 3px 0 rgba(15, 23, 42, 0.2),
-    0 8px 16px rgba(15, 23, 42, 0.2) !important;
+    0 0 1px var(--surface),
+    0 0 3px var(--surface),
+    0 3px 0 rgba(15, 23, 42, 0.22),
+    0 8px 18px rgba(15, 23, 42, 0.2) !important;
 }
 
-.dark .credi-business-chat h1,
-.dark .credi-business-chat h2,
-.dark .credi-business-chat h3 {
-  text-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.2),
-    0 3px 0 rgba(2, 6, 23, 0.58),
-    0 8px 18px rgba(0, 0, 0, 0.55) !important;
+button:disabled,
+.app-readable-surface button:disabled,
+.credi-business-chat button:disabled {
+  cursor: pointer !important;
 }
 
 @media (prefers-reduced-motion: reduce) {
