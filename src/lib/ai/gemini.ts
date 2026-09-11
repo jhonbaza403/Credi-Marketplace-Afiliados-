@@ -1,10 +1,9 @@
 import "server-only";
 
-import { GoogleGenAI } from "@google/genai";
-import type { ThinkingLevel } from "@google/genai";
+import { GoogleGenAI, ThinkingLevel } from "@google/genai";
 
 const DEFAULT_MODEL = "gemini-3.8-flash";
-const DEFAULT_THINKING_LEVEL: ThinkingLevel = "low" as ThinkingLevel;
+const DEFAULT_THINKING_LEVEL = ThinkingLevel.LOW;
 
 function getApiKey(): string {
   const apiKey = process.env.GEMINI_API_KEY;
