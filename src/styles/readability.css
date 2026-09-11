@@ -4,7 +4,16 @@
   position: relative;
   z-index: 0;
   isolation: isolate;
-  background: color-mix(in srgb, var(--background) 96%, transparent);
+  min-height: 100%;
+  background: var(--background);
+  color: var(--foreground);
+}
+
+/* The decorative atmosphere is intentionally kept behind this surface.
+ * Content must never depend on transparency for legibility. */
+.app-readable-surface > * {
+  position: relative;
+  z-index: 1;
 }
 
 .app-readable-surface input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]),
