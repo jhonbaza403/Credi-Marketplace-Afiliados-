@@ -1,0 +1,4 @@
+import { LayoutGrid } from 'lucide-react'
+import { ModuleShell } from '@/components/advanced/ModuleShell'
+export const dynamic='force-dynamic'
+export default function Page(){return <ModuleShell eyebrow="App ecosystem" title="Marketplace de aplicaciones" description="Ecosistema de extensiones para automatización, ventas, logística, analítica e integración. Los manifiestos de app quedan separados del núcleo comercial y pueden publicarse bajo revisión." icon={<LayoutGrid className="size-7"/>} endpoint="/api/apps/marketplace"><div className="grid gap-4 md:grid-cols-4">{['Business','Automation','Analytics','Integrations'].map((x)=><div key={x} className="rounded-2xl border border-border bg-muted/20 p-4"><p className="font-black">{x}</p><p className="mt-1 text-xs text-muted-foreground">Categoría preparada para extensiones.</p></div>)}</div></ModuleShell>}
