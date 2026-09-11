@@ -6,7 +6,6 @@ import {
   isGeminiConfigured,
 } from "@/lib/ai/gemini";
 import { createClient } from "@/lib/supabase/server";
-import { ThinkingLevel } from "@google/genai";
 
 interface AiRequestBody {
   prompt?: unknown;
@@ -67,10 +66,7 @@ export async function POST(request: Request) {
 
   try {
     const result = await Promise.race([
-      generateGeminiText(prompt, {
-        maxOutputTokens: AI_LIMITS.maxTokens,
-        thinkingLevel: ThinkingLevel.LOW,
-      }),
+      generateGeminiText(prompt, { maxOutputTokens: AI_LIMITS.maxTokens }),
       new Promise<never>((_, reject) => {
         setTimeout(() => reject(new Error("Tiempo de espera agotado")), timeoutMs);
       }),
