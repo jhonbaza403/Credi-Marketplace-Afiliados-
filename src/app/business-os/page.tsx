@@ -1,0 +1,54 @@
+import type { Metadata } from 'next'
+import Link from 'next/link'
+import { redirect } from 'next/navigation'
+import { Bot, Boxes, Building2, ChartNoAxesCombined, MessageSquareText, PackageSearch, ReceiptText, ShieldCheck, Sparkles, Store, Workflow } from 'lucide-react'
+import { createClient } from '@/lib/supabase/server'
+
+export const metadata: Metadata = {
+  title: 'Credi Business OS | Credi Marketplace',
+  description: 'Centro operativo inteligente para ventas, compras, inventario, B2B, IA, reputación y automatización.',
+  robots: { index: false, follow: false },
+}
+
+export const dynamic = 'force-dynamic'
+
+function Metric({ label, value, hint }: { label: string; value: string; hint: string }) {
+  return <article className="rounded-3xl border border-border bg-card p-5 shadow-sm"><p className="text-[11px] font-black uppercase tracking-[.17em] text-muted-foreground">{label}</p><p className="mt-2 text-3xl font-black tracking-tight">{value}</p><p className="mt-1 text-xs text-muted-foreground">{hint}</p></article>
+}
+
+function Module({ href, icon, eyebrow, title, text, action }: { href: string; icon: React.ReactNode; eyebrow: string; title: string; text: string; action: string }) {
+  return <Link href={href} className="group rounded-3xl border border-border bg-card p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md"><div className="flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">{icon}</div><p className="mt-5 text-[10px] font-black uppercase tracking-[.18em] text-primary">{eyebrow}</p><h2 className="mt-1 text-xl font-black">{title}</h2><p className="mt-2 text-sm leading-6 text-muted-foreground">{text}</p><span className="mt-5 inline-flex text-sm font-black text-primary group-hover:underline">{action} →</span></Link>
+}
+
+export default async function BusinessOsPage() {
+  const supabase = await createClient()
+  const { data: auth, error } = await supabase.auth.getUser()
+  if (error || !auth.user) redirect('/login?next=%2Fbusiness-os')
+
+  const user = auth.user
+  const [{ data: store }, { data: products }, { count: rfqCount }, { count: automationCount }, { count: auditCount }] = await Promise.all([
+    supabase.from('stores').select('id,store_name,is_verified,is_active').eq('vendor_id', user.id).maybeSingle(),
+    supabase.from('products').select('id,title,price,stock,is_active').eq('store_id', (await supabase.from('stores').select('id').eq('vendor_id', user.id).maybeSingle()).data?.id ?? '').order('created_at', { ascending: false }).limit(200),
+    supabase.from('business_rfqs').select('id', { count: 'exact', head: true }).eq('buyer_id', user.id),
+    supabase.from('business_automation_rules').select('id', { count: 'exact', head: true }).eq('owner_id', user.id).eq('enabled', true),
+    supabase.from('agent_action_audit').select('id', { count: 'exact', head: true }).eq('owner_id', user.id),
+  ])
+
+  const items = products ?? []
+  const active = items.filter((item) => item.is_active).length
+  const stock = items.reduce((sum, item) => sum + Math.max(0, Number(item.stock)), 0)
+  const lowStock = items.filter((item) => Number(item.stock) > 0 && Number(item.stock) <= 5).length
+  const company = store?.store_name || user.email?.split('@')[0] || 'Mi empresa'
+
+  return <main className="min-h-screen bg-background text-foreground"><div className="mx-auto w-full max-w-[1560px] px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
+    <section className="relative overflow-hidden rounded-[2rem] border border-border bg-card p-6 shadow-sm sm:p-8 lg:p-10"><div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-transparent" /><div className="relative flex flex-col gap-7 xl:flex-row xl:items-end xl:justify-between"><div className="max-w-4xl"><div className="flex flex-wrap items-center gap-2"><span className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-[.2em] text-primary"><Sparkles className="size-3.5" /> Credi Business OS</span><span className={`rounded-full px-3 py-1.5 text-[10px] font-black uppercase tracking-[.16em] ${store?.is_verified ? 'bg-emerald-500/10 text-emerald-700' : 'bg-amber-500/10 text-amber-700'}`}>{store?.is_verified ? 'Empresa verificada' : 'Completa verificación'}</span></div><h1 className="mt-5 text-3xl font-black tracking-tight sm:text-5xl lg:text-6xl">{company}</h1><p className="mt-4 max-w-3xl text-sm leading-7 text-muted-foreground sm:text-base">Una sola consola para vender, comprar, abastecerte, controlar inventario, conversar con clientes y proveedores, automatizar operaciones y trabajar con agentes de IA.</p></div><div className="flex flex-wrap gap-2"><Link href="/products/create" className="rounded-2xl bg-primary px-5 py-3 text-sm font-black text-primary-foreground">Crear oferta</Link><Link href="/abastecimiento" className="rounded-2xl border border-border bg-background px-5 py-3 text-sm font-black">Nueva solicitud B2B</Link><Link href="/chat" className="rounded-2xl border border-border bg-background px-5 py-3 text-sm font-black">Credi Chat</Link></div></div></section>
+
+    <section className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-5"><Metric label="Ofertas" value={items.length.toLocaleString('es-ES')} hint="Activos comerciales"/><Metric label="Activos" value={active.toLocaleString('es-ES')} hint="Listos para operar"/><Metric label="Stock" value={stock.toLocaleString('es-ES')} hint="Unidades disponibles"/><Metric label="RFQ B2B" value={Number(rfqCount ?? 0).toLocaleString('es-ES')} hint="Solicitudes propias"/><Metric label="Automaciones" value={Number(automationCount ?? 0).toLocaleString('es-ES')} hint="Reglas activas"/></section>
+
+    {lowStock > 0 ? <section className="mt-6 rounded-3xl border border-amber-300/40 bg-amber-50 p-5 text-amber-950 sm:p-6"><div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-[10px] font-black uppercase tracking-[.18em] text-amber-700">Inventario inteligente</p><h2 className="mt-1 text-xl font-black">{lowStock} referencias necesitan atención</h2><p className="mt-1 text-sm text-amber-900/80">Revisa existencias, reservas y reposición antes de perder una venta.</p></div><Link href="/inventario" className="rounded-xl bg-amber-950 px-4 py-3 text-sm font-black text-amber-50">Abrir inventario</Link></div></section> : null}
+
+    <section className="mt-8 grid gap-5 md:grid-cols-2 xl:grid-cols-4"><Module href="/abastecimiento" icon={<PackageSearch className="size-6"/>} eyebrow="Procurement" title="Abastecimiento B2B" text="Crea solicitudes de compra, estructura necesidades y prepara procesos de cotización con proveedores." action="Gestionar abastecimiento"/><Module href="/inventario" icon={<Boxes className="size-6"/>} eyebrow="Inventory OS" title="Inventario" text="Controla disponibilidad, reservas, productos críticos y el valor operativo de tus existencias." action="Abrir inventario"/><Module href="/chat" icon={<MessageSquareText className="size-6"/>} eyebrow="Business Messaging" title="Credi Chat" text="Convierte conversaciones en relaciones comerciales con producto, contexto y operaciones vinculadas." action="Abrir conversaciones"/><Module href="/pricing" icon={<ReceiptText className="size-6"/>} eyebrow="Commerce Core" title="Planes y pagos" text="Administra tu capacidad empresarial y conecta las operaciones de suscripción y checkout." action="Administrar cuenta"/><Module href="/proveedores-verificados" icon={<ShieldCheck className="size-6"/>} eyebrow="Trust" title="Proveedores verificados" text="Descubre empresas y ofertas con señales de confianza para reducir fricción comercial." action="Explorar proveedores"/><Module href="/red-comercial" icon={<Building2 className="size-6"/>} eyebrow="Network" title="Red Comercial" text="Amplía compradores, proveedores y oportunidades empresariales desde un mismo ecosistema." action="Explorar red"/><Module href="/chat" icon={<Bot className="size-6"/>} eyebrow="AI Agents" title="Credi AI" text="Usa IA para análisis, ofertas, decisiones comerciales y preparación de acciones con trazabilidad." action="Abrir Credi AI"/><Module href="/gestion-empresarial" icon={<ChartNoAxesCombined className="size-6"/>} eyebrow="Control Center" title="Gestión empresarial" text="El espacio operativo tradicional de Credi para gestionar catálogo, publicaciones y negocio." action="Abrir gestión"/></section>
+
+    <section className="mt-8 grid gap-5 lg:grid-cols-[1.15fr_.85fr]"><div className="rounded-3xl border border-border bg-card p-6 shadow-sm sm:p-7"><div className="flex items-center gap-3"><span className="flex size-11 items-center justify-center rounded-xl bg-violet-500/10 text-violet-700"><Workflow className="size-5"/></span><div><p className="text-[10px] font-black uppercase tracking-[.18em] text-violet-700">Automations + Agents</p><h2 className="text-xl font-black">De tablero a operación autónoma</h2></div></div><p className="mt-4 max-w-3xl text-sm leading-7 text-muted-foreground">La siguiente capa de Credi está diseñada para que la IA observe datos del negocio, proponga acciones, solicite autorización cuando sea necesario, ejecute tareas permitidas y deje una huella auditable.</p><div className="mt-5 grid gap-3 sm:grid-cols-3"><div className="rounded-2xl border border-border bg-muted/30 p-4"><p className="text-sm font-black">Observa</p><p className="mt-1 text-xs leading-5 text-muted-foreground">Ventas, inventario, pedidos, proveedores y conversaciones.</p></div><div className="rounded-2xl border border-border bg-muted/30 p-4"><p className="text-sm font-black">Propone</p><p className="mt-1 text-xs leading-5 text-muted-foreground">RFQ, reposición, seguimiento, precio y campañas.</p></div><div className="rounded-2xl border border-border bg-muted/30 p-4"><p className="text-sm font-black">Ejecuta</p><p className="mt-1 text-xs leading-5 text-muted-foreground">Solo acciones autorizadas, registradas y verificables.</p></div></div></div><div className="rounded-3xl border border-border bg-card p-6 shadow-sm sm:p-7"><p className="text-[10px] font-black uppercase tracking-[.18em] text-primary">Gobernanza</p><h2 className="mt-1 text-xl font-black">Trazabilidad del negocio</h2><p className="mt-2 text-sm leading-6 text-muted-foreground">Credi registra las acciones de agentes para que puedas saber qué se propuso, qué fue autorizado y qué se ejecutó.</p><div className="mt-5 rounded-2xl bg-muted/40 p-4"><p className="text-xs font-bold text-muted-foreground">Acciones de agente registradas</p><p className="mt-1 text-2xl font-black">{Number(auditCount ?? 0).toLocaleString('es-ES')}</p></div><Link href="/security" className="mt-4 inline-flex w-full justify-center rounded-xl border border-border px-4 py-3 text-sm font-black hover:bg-muted">Revisar seguridad</Link></div></section>
+  </div></main>
+}
