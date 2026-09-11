@@ -20,7 +20,7 @@ const SUGGESTIONS = [
   'Diseña una estrategia para entrar en un nuevo mercado',
 ]
 
-const AI_TIMEOUT_MS = 20_000
+const AI_TIMEOUT_MS = 18_000
 
 export default function AIAssistant() {
   const [messages, setMessages] = useState<Message[]>([
@@ -45,7 +45,7 @@ export default function AIAssistant() {
         credentials: 'include',
         signal: controller.signal,
         body: JSON.stringify({
-          prompt: `Eres Credi AI, copiloto comercial de Credi Marketplace. Responde en español claro, directo y accionable. Ayuda con B2B, B2C, proveedores, ventas, negociación, catálogo, inventario, expansión y estrategia. No inventes datos. Solicitud: ${prompt}`,
+          prompt: `Eres Credi AI, copiloto comercial de Credi Marketplace. Responde en español claro, directo y accionable. Prioriza operaciones B2B y B2C, proveedores, ventas, negociación, catálogo, inventario, expansión, abastecimiento y estrategia. No inventes datos. Cuando falte un dato, dilo y pide solo lo mínimo necesario. Solicitud: ${prompt}`,
         }),
       })
 
@@ -59,7 +59,7 @@ export default function AIAssistant() {
       setMessages((current) => [...current, { id: crypto.randomUUID(), role: 'assistant', content: generatedText, timestamp: 'Ahora' }])
     } catch (error: unknown) {
       const message = error instanceof DOMException && error.name === 'AbortError'
-        ? 'Credi AI está tardando más de lo esperado. Reduce la consulta a una sola tarea concreta.'
+        ? 'Credi AI superó el tiempo de respuesta. La solicitud se cerró para no bloquear tu operación.'
         : error instanceof Error ? error.message : 'No fue posible procesar la solicitud.'
       setMessages((current) => [...current, { id: crypto.randomUUID(), role: 'assistant', content: message, timestamp: 'Ahora' }])
     } finally {
