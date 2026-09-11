@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import CrediBusinessChat from '@/components/chat/CrediBusinessChat'
+import CrediBusinessChatInteractionGuard from '@/components/chat/CrediBusinessChatInteractionGuard'
 import CrediContactDirectory from '@/components/chat/CrediContactDirectory'
 import CrediLiveChatPanel from '@/components/chat/CrediLiveChatPanel'
 import AIAssistant from '@/components/ai/AIAssistant'
@@ -13,6 +14,7 @@ export const metadata: Metadata = {
 export default function ChatPage() {
   return (
     <div className="bg-[var(--background)] text-[var(--foreground)]">
+      <CrediBusinessChatInteractionGuard />
       <div className="mx-auto max-w-[1600px] space-y-6 px-3 py-4 sm:px-6 sm:py-8">
         <section className="rounded-[2rem] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-marketplace-lg sm:p-8">
           <p className="text-xs font-black uppercase tracking-[.18em] text-brand-600 dark:text-brand-400">Credi Commerce Network</p>
