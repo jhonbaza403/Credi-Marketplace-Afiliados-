@@ -7,6 +7,7 @@ import { useState } from 'react';
 const navigation = [
   { name: 'Inicio', href: '/' },
   { name: 'Business OS', href: '/business-os' },
+  { name: 'Commerce Studio', href: '/commerce-studio' },
   { name: 'Comercio avanzado', href: '/ecosistema-avanzado' },
   { name: 'Intelligence', href: '/intelligence' },
   { name: 'Product Graph', href: '/product-graph' },
