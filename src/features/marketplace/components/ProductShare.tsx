@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Check, Copy, Instagram, Mail, Send, Share2 } from 'lucide-react';
+import { Check, Copy, Mail, Send, Share2 } from 'lucide-react';
 
 import { CANONICAL_APP_URL } from '@/lib/app-url';
 
@@ -122,7 +122,7 @@ export default function ProductShare({
         <button type="button" onClick={() => openShare('x')} aria-label="Compartir en X" className="rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5 text-xs font-bold text-[var(--foreground)] hover:bg-[var(--surface-secondary)]">X</button>
         <button type="button" onClick={() => openShare('telegram')} aria-label="Compartir en Telegram" className="rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5 text-xs font-bold text-[var(--foreground)] hover:bg-[var(--surface-secondary)]">Telegram</button>
         <button type="button" onClick={() => openShare('pinterest')} aria-label="Compartir en Pinterest" className="rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5 text-xs font-bold text-[var(--foreground)] hover:bg-[var(--surface-secondary)]">Pinterest</button>
-        <button type="button" onClick={() => openShare('instagram')} aria-label="Preparar enlace para Instagram" className="inline-flex items-center justify-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5 text-xs font-bold text-[var(--foreground)] hover:bg-[var(--surface-secondary)]"><Instagram aria-hidden="true" className="size-4" />Instagram</button>
+        <button type="button" onClick={() => openShare('instagram')} aria-label="Preparar enlace para Instagram" className="inline-flex items-center justify-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5 text-xs font-bold text-[var(--foreground)] hover:bg-[var(--surface-secondary)]"><Share2 aria-hidden="true" className="size-4" />Instagram</button>
         <button type="button" onClick={() => openShare('tiktok')} aria-label="Preparar enlace para TikTok" className="rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5 text-xs font-bold text-[var(--foreground)] hover:bg-[var(--surface-secondary)]">TikTok</button>
         <button type="button" onClick={() => openShare('email')} aria-label="Compartir por correo electrónico" className="inline-flex items-center justify-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5 text-xs font-bold text-[var(--foreground)] hover:bg-[var(--surface-secondary)]"><Mail aria-hidden="true" className="size-4" />Correo</button>
       </div>
