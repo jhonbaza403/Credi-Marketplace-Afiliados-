@@ -8,7 +8,7 @@ import { useState } from 'react'
 const groups = [
   { label: 'Comercio', icon: Store, items: [['Marketplace','/marketplace'],['Compras mayoristas','/compras-mayoristas'],['Abastecimiento B2B','/abastecimiento'],['Proveedores verificados','/proveedores-verificados'],['Servicios','/services'],['Pedidos','/orders']] },
   { label: 'Empresa', icon: LayoutDashboard, items: [['Business OS','/business-os'],['Commerce Studio','/commerce-studio'],['Gestión empresarial','/gestion-empresarial'],['Inventario','/inventario'],['Negociaciones','/negociaciones'],['Analytics','/analytics']] },
-  { label: 'Red', icon: Users, items: [['Afiliados','/affiliate'],['Red Comercial','/red-comercial'],['Social','/social'],['Credi Chat','/chat'],['Reputación','/dashboard/reputation']] },
+  { label: 'Red', icon: Users, items: [['CREDI-AFFILIATE-AI','/affiliate'],['Panel de afiliados','/dashboard/affiliate'],['Enlaces por producto','/dashboard/affiliate/links'],['Red Comercial','/red-comercial'],['Social','/social'],['Credi Chat','/chat'],['Reputación','/dashboard/reputation']] },
   { label: 'Finanzas', icon: WalletCards, items: [['Pagos','/pagos'],['Stripe Checkout','/pagos#stripe-checkout'],['Wallet','/wallet'],['Disputas','/disputas']] },
   { label: 'Plataforma', icon: PackageSearch, items: [['Comercio avanzado','/ecosistema-avanzado'],['Intelligence','/intelligence'],['Product Graph','/product-graph'],['Developer','/developer'],['Apps','/apps'],['Seguridad','/security']] },
 ] as const
