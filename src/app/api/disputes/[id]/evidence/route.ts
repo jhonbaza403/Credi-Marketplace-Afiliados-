@@ -82,6 +82,8 @@ export async function POST(
     return json({ error: 'DISPUTE_CLOSED' }, 409)
   }
 
+  // Keep Supabase's response fields explicit: the previous implementation
+  // accidentally referenced a non-existent response property named `e`.
   const { data, error } = await supabase
     .from('commerce_dispute_evidence')
     .insert({
