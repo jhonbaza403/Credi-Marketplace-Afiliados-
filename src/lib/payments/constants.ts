@@ -1,12 +1,12 @@
 import type { PaymentProvider } from './types'
 
-export const PAYMENT_PROVIDERS: readonly PaymentProvider[] =
-  [
-    'paypal',
-    'binance_pay',
-    'usdt',
-    'bank_transfer',
-  ] as const
+export const PAYMENT_PROVIDERS: readonly PaymentProvider[] = [
+  'stripe',
+  'paypal',
+  'binance_pay',
+  'usdt',
+  'bank_transfer',
+] as const
 
 export const PAYMENT_EXPIRATION_MINUTES = 30
 
