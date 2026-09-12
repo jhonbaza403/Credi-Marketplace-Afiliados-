@@ -43,7 +43,7 @@ export async function POST(request: Request) {
 
     if (method === 'crypto') {
       if (!['USD', 'USDC'].includes(order.currency)) return json({ error: 'CRYPTO_CURRENCY_NOT_SUPPORTED' }, 422)
-      const { data: payment, error: insertError } = await supabase.from('payment_orchestrations').insert({ user_id: user.id, order_id: order.id, amount: order.amount, currency: order.currency, method_type: 'crypto', provider: 'coinbase_business', status: 'created', client_reference: order.id, idempotency_key: key, metadata: paymentMetadata('crypto', order.id), expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString() }).select('id').single()
+      const { data: payment, error: insertError } = await supabase.from('payment_orchestrations').insert({ user_id: user.id, order_id: order.id, amount: order.amount, currency: 'USDC', method_type: 'crypto', provider: 'coinbase_business', status: 'created', client_reference: order.id, idempotency_key: key, metadata: { ...paymentMetadata('crypto', order.id), order_currency: order.currency, settlement_currency: 'USDC' }, expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString() }).select('id').single()
       if (insertError || !payment) return json({ error: 'PAYMENT_INTENT_CREATE_FAILED' }, 500)
       const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin).replace(/\/$/, '')
       const checkout = await createCoinbaseCheckout({
@@ -58,11 +58,12 @@ export async function POST(request: Request) {
       const metadata = {
         ...paymentMetadata('crypto', order.id),
         provider: 'coinbase_business',
+        order_currency: order.currency,
+        settlement_currency: 'USDC',
         checkout_url: checkout.url,
         network: checkout.network,
         address: checkout.address,
         token_address: checkout.tokenAddress || null,
-        settlement_currency: checkout.settlement?.currency || 'USDC',
       }
       const { data: updated, error: updateError } = await supabase.from('payment_orchestrations').update({ status: checkout.status === 'COMPLETED' ? 'succeeded' : 'pending', provider_reference: checkout.id, metadata, expires_at: checkout.expiresAt || new Date(Date.now() + 30 * 60 * 1000).toISOString() }).eq('id', payment.id).select('id,order_id,amount,currency,method_type,provider,status,provider_reference,client_reference,metadata,expires_at,created_at').single()
       if (updateError || !updated) return json({ error: 'PAYMENT_RECORD_UPDATE_FAILED' }, 500)
