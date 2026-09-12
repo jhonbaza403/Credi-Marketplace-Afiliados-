@@ -4,6 +4,26 @@
 
 Credi Marketplace es un marketplace abierto para productos, bienes, servicios, ofertas, tiendas, B2B, afiliación empresarial y distribución de contenido social.
 
+## Nomenclatura oficial de Credi Intelligence
+
+La arquitectura de primera parte usa nombres propios de Credi. No presentar tecnologías o proveedores externos como identidad funcional del producto.
+
+- **CREDI INTELLIGENCE** — capa transversal de orquestación de inteligencia, señales, decisiones y auditoría.
+- **CREDI-CREDIT AI** — inteligencia crediticia y evaluación de riesgo.
+- **CREDI-SUPPLY AI** — abastecimiento e incorporación de fuentes comerciales autorizadas.
+- **CREDI-CATALOG AI** — generación y optimización de catálogos.
+- **CREDI-FLEX AI** — inteligencia logística y asignación de entregas.
+- **CREDI-LOCKER** — casilleros inteligentes y puntos de entrega.
+- **CREDI-ESCROW** — custodia y liberación controlada de fondos.
+- **CREDI-LIVE** — comercio en vivo.
+- **CREDI-AFFILIATE AI** — afiliación, atribución y comisiones.
+- **CREDI-REPUTATION** — reputación comercial y confianza transaccional.
+- **CREDI-AUTOMATION** — automatización y agentes gobernados.
+
+`Dropshipping` es una modalidad comercial soportada por `CREDI-SUPPLY AI`; no es el nombre de un producto principal ni del módulo.
+
+Las integraciones externas deben encapsularse como adaptadores. Credi conserva la fuente de verdad de su dominio y no debe depender de una marca concreta de proveedor para su identidad arquitectónica.
+
 ## Stack canónico
 
 - Next.js 16.3.x App Router
@@ -33,6 +53,7 @@ No migrar a Next.js Pages Router, Tailwind 3, Redux, microservicios, Kubernetes,
 9. No reemplazar `@supabase/ssr` por `@supabase/server` de forma global solo porque aparezca en una guía. Evaluar primero el runtime y el caso de uso.
 10. No añadir Npgsql, `appsettings.json` ni un backend .NET al proyecto Next.js. Esas instrucciones son opcionales para una aplicación .NET independiente y no forman parte del stack canónico.
 11. Drizzle ORM es opcional. No duplicar el acceso a PostgreSQL sin una decisión explícita. Supabase client/RPC/migrations siguen siendo la fuente canónica.
+12. La capa `credi_intelligence_*` es transversal: no duplicar entidades de dominio existentes para implementar inteligencia.
 
 ## Base de datos
 
@@ -41,6 +62,7 @@ No migrar a Next.js Pages Router, Tailwind 3, Redux, microservicios, Kubernetes,
 - Revisar el orden completo de migraciones antes de modificar enums, constraints, triggers o funciones.
 - RLS debe permanecer habilitado en tablas expuestas y las políticas deben seguir mínimo privilegio.
 - No introducir tablas de demostración como `instruments` en producción solo por seguir el quickstart de Supabase. Puede utilizarse como smoke test aislado si se decide explícitamente.
+- `credi_intelligence_events` y `credi_intelligence_decisions` son registros internos. No exponerlos directamente al cliente sin una política y caso de uso explícitos.
 
 ## Marketplace
 
