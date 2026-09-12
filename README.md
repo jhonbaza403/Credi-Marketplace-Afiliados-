@@ -2,6 +2,56 @@
 
 Plataforma de marketplace orientada a producción para comercio electrónico, vendedores, afiliados empresariales, ofertas, servicios, operaciones B2B, pagos y distribución de publicaciones en redes sociales.
 
+## Identidad y arquitectura canónicas de Credi
+
+Credi Marketplace mantiene una arquitectura tecnológica propia. Las capacidades de inteligencia se presentan bajo nomenclatura Credi y no deben utilizar marcas de terceros como identidad funcional del producto.
+
+### Capa transversal
+
+**CREDI INTELLIGENCE** es el cerebro transversal de la plataforma. Orquesta señales, decisiones, modelos, automatizaciones y auditoría sin sustituir los módulos de dominio que ya existen.
+
+### Módulos oficiales
+
+| Módulo | Función |
+| --- | --- |
+| **CREDI INTELLIGENCE** | Orquestación transversal de inteligencia y decisiones |
+| **CREDI-CREDIT AI** | Inteligencia crediticia y evaluación de riesgo |
+| **CREDI-SUPPLY AI** | Abastecimiento e incorporación inteligente de fuentes comerciales autorizadas |
+| **CREDI-CATALOG AI** | Generación, normalización y optimización de catálogos |
+| **CREDI-FLEX AI** | Inteligencia logística y asignación de entregas |
+| **CREDI-LOCKER** | Red de casilleros inteligentes y puntos de entrega |
+| **CREDI-ESCROW** | Custodia y liberación controlada de fondos |
+| **CREDI-LIVE** | Comercio en vivo |
+| **CREDI-AFFILIATE AI** | Afiliación, atribución y comisiones inteligentes |
+| **CREDI-REPUTATION** | Reputación comercial y señales de confianza |
+| **CREDI-AUTOMATION** | Automatización y agentes gobernados |
+
+```text
+                         CREDI MARKETPLACE
+                                  │
+                         CREDI INTELLIGENCE
+                                  │
+          ┌─────────────┬────────┼────────┬─────────────┐
+          │             │        │        │             │
+       CREDIT        SUPPLY   CATALOG    FLEX          LIVE
+          │             │        │        │             │
+          └─────────────┴────────┼────────┴─────────────┘
+                                  │
+                    REPUTATION / ESCROW / PAYMENTS
+                                  │
+                    AFFILIATE / AUTOMATION / LOCKER
+```
+
+### Regla de abastecimiento
+
+**CREDI-SUPPLY AI no depende de una marca concreta.** Debe admitir múltiples fuentes comerciales autorizadas, cada una mediante su propio adaptador, contrato, política de datos, condiciones de atribución y controles de cumplimiento.
+
+`Dropshipping` es una **modalidad comercial soportada por CREDI-SUPPLY AI**, no el nombre principal del producto ni de la arquitectura.
+
+### Regla de fuente de verdad
+
+El producto, catálogo, relación comercial, oferta, afiliación, reputación y estado transaccional pertenecen a Credi. Las integraciones externas son fuentes o canales autorizados; no sustituyen la identidad ni el modelo de dominio de Credi.
+
 ## Stack canónico
 
 - **Next.js 16.3.x App Router**
@@ -11,6 +61,7 @@ Plataforma de marketplace orientada a producción para comercio electrónico, ve
 - **Node.js 24.x LTS / npm 11.x**
 - **Supabase**: PostgreSQL, Auth, RLS, Storage y funciones
 - **Vercel**
+- **Stripe** para pagos cuando corresponda, sujeto a configuración de entorno y webhooks verificados
 - **Vitest + Playwright**
 
 Node.js 24 es el runtime objetivo del proyecto. Next.js 16 usa Turbopack de forma predeterminada para desarrollo y build, por lo que no se mantiene un script duplicado para activar Turbopack manualmente.
@@ -32,6 +83,8 @@ Next.js App Router
    │
    ▼
 Features / Services
+   │
+   ├── Credi Intelligence modules
    │
    ▼
 Supabase clients
@@ -65,6 +118,28 @@ Supabase / infraestructura
 ```
 
 Los componentes no acceden directamente a PostgreSQL ni a credenciales privilegiadas.
+
+## CREDI Intelligence en Supabase
+
+La base de datos contiene una capa transversal para registrar módulos, eventos de inteligencia y decisiones gobernadas:
+
+```text
+public.credi_intelligence_modules
+public.credi_intelligence_events
+public.credi_intelligence_decisions
+```
+
+La migración inicial es:
+
+```text
+supabase/migrations/credi_intelligence_core.sql
+```
+
+`credi_intelligence_modules` actúa como registro canónico de capacidades. `credi_intelligence_events` permite auditar señales y resultados. `credi_intelligence_decisions` conserva decisiones versionadas con puntuación, confianza, racional y estado.
+
+Las tablas tienen RLS habilitado y no deben recibir acceso público por defecto. Las operaciones privilegiadas deben ejecutarse server-side mediante los clientes y servicios canónicos.
+
+La capa transversal no reemplaza las tablas de dominio ya existentes, como `products`, `listings`, `inventory`, `inventory_forecasts`, `affiliate_attributions`, `reputation_profiles`, `orders`, `stores`, `business_workspaces` y demás componentes del marketplace. La función de CREDI Intelligence es coordinarlas y aportar inteligencia gobernada sobre ellas.
 
 ## Supabase en Next.js
 
@@ -218,91 +293,3 @@ npx skills add supabase/agent-skills
 ```
 
 La skill `supabase/server` puede instalarse como conocimiento adicional cuando sea necesaria, pero no implica migrar el cliente SSR de Next.js desde `@supabase/ssr`.
-
-Para auditorías se recomienda conectar el MCP de Supabase en modo read-only y limitarlo al proyecto correspondiente:
-
-```bash
-codex mcp add supabase --url "https://mcp.supabase.com/mcp?project_ref=PROJECT_REF&read_only=true&features=docs%2Caccount%2Cdatabase%2Cdebugging%2Cdevelopment%2Cfunctions%2Cbranching"
-codex mcp login supabase
-```
-
-No incluir tokens de autenticación ni credenciales del MCP en el repositorio.
-
-## Instalación
-
-```bash
-npm ci
-```
-
-## Desarrollo
-
-```bash
-npm run dev
-```
-
-## Verificación completa
-
-```bash
-npm ci
-npm run verify:structure
-npm run lint
-npm run typecheck
-npm run test
-npm run test:e2e
-npm run security:audit
-npm run build
-```
-
-No utilizar `npm audit fix --force` de forma ciega. Primero se debe identificar el árbol vulnerable y actualizar dependencias de forma controlada.
-
-## Vercel
-
-El proyecto está preparado para Vercel con Node.js 24.x y npm 11.x. Next.js 16 usa Turbopack de forma predeterminada.
-
-Las variables públicas mínimas para Supabase son:
-
-```text
-NEXT_PUBLIC_SUPABASE_URL
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
-```
-
-Deben estar configuradas en los entornos de Vercel que correspondan. Las credenciales secretas nunca se colocan en el código cliente.
-
-## Estructura principal
-
-```text
-src/
-├── app/
-├── components/
-├── config/
-├── context/
-├── features/
-├── hooks/
-├── i18n/
-├── lib/
-├── schemas/
-├── services/
-├── types/
-├── env.ts
-└── proxy.ts
-
-supabase/
-├── migrations/
-├── tests/
-└── functions/
-
-tests/
-├── unit/
-├── e2e/
-└── integracion/
-
-AGENTS.md
-```
-
-## Reglas para agentes de código
-
-Consultar `AGENTS.md` antes de modificar el proyecto. Allí están las reglas canónicas para Supabase, seguridad, marketplace, publicación social, MCP, Agent Skills y verificación.
-
-## Estado de verificación
-
-El estado real de CI y Vercel debe determinarse mediante ejecuciones reales. La existencia de archivos, una inspección estática o una configuración local no demuestra que el build de producción haya pasado.
