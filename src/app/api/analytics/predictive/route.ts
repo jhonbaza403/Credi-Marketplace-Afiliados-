@@ -3,14 +3,12 @@ import { createClient } from '@/lib/supabase/server'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
-
 function round(value: number) { return Math.round(value * 100) / 100 }
 
 export async function GET() {
   const supabase = await createClient()
   const { data: auth } = await supabase.auth.getUser()
   if (!auth.user) return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 })
-
   const since = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString()
   const { data: orders, error } = await supabase.from('orders').select('id,total_amount,status,created_at').eq('buyer_id', auth.user.id).gte('created_at', since).order('created_at',{ascending:true}).limit(5000)
   if (error) return NextResponse.json({ error: 'ANALYTICS_UNAVAILABLE' }, { status: 500 })
@@ -35,11 +33,13 @@ export async function GET() {
   }
   const last7 = points.slice(-7)
   const avg7 = last7.length ? last7.reduce((a,b)=>a+b,0)/last7.length : 0
-  const forecast7 = Math.max(0, avg7 * 7 + slope * 7)
+  const forecast7 = n >= 2 ? Math.max(0, avg7 * 7 + slope * 7) : 0
   const total = points.reduce((a,b)=>a+b,0)
   const completed = (orders ?? []).filter((o)=>['paid','completed','fulfilled','delivered'].includes(String(o.status).toLowerCase())).length
+  const dataState = n === 0 ? 'no_history' : n < 2 ? 'insufficient_history' : 'available'
   return NextResponse.json({
     period_days: 90,
+    data_state: dataState,
     sample_points: n,
     observed_volume: round(total),
     observed_orders: orders?.length ?? 0,
@@ -48,7 +48,7 @@ export async function GET() {
     forecast_next_7_days_volume: round(forecast7),
     trend_daily: round(slope),
     confidence: n >= 21 ? 'moderate' : 'low',
-    methodology: 'Tendencia lineal descriptiva sobre volumen histórico; no constituye una predicción financiera garantizada.',
+    methodology: 'Tendencia lineal descriptiva sobre volumen histórico; no constituye una predicción financiera garantizada. Sin historial suficiente, no se fabrica una predicción.',
     daily: Array.from(daily.entries()).map(([date, value]) => ({ date, orders: value.orders, volume: round(value.volume) })),
   }, { headers: { 'Cache-Control': 'no-store' } })
 }
