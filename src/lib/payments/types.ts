@@ -1,4 +1,5 @@
 export type PaymentProvider =
+  | 'stripe'
   | 'paypal'
   | 'binance_pay'
   | 'usdt'
@@ -24,6 +25,7 @@ export interface PaymentResult {
   paymentId?: string
   status: PaymentStatus
   provider: PaymentProvider
+  checkoutUrl?: string
 }
 
 export interface PaymentWebhookEvent {
