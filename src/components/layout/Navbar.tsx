@@ -2,15 +2,28 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { ChevronDown, LayoutDashboard, Menu, MessageCircle, PackageSearch, Store, Users, WalletCards, X } from 'lucide-react'
+import { ChevronDown, LayoutDashboard, Menu, MessageCircle, PackageSearch, Store, Users, WalletCards, X, Bot, ShieldCheck, BrainCircuit, Zap, CreditCard, LockKeyhole, Truck, BookOpen, Radio } from 'lucide-react'
 import { useState } from 'react'
 
 const groups = [
+  { label: 'CREDI', icon: CreditCard, items: [
+    ['CREDI-CREDIT-AI','/pagos'],
+    ['CREDI-REPUTATION','/dashboard/reputation'],
+    ['CREDI-INTELLIGENCE','/intelligence'],
+    ['CREDI-AUTOMATION','/automation'],
+    ['CREDI-FLEX-AI','/credi-flex'],
+    ['CREDI-ESCROW','/escrow'],
+    ['CREDI-LOCKER','/locker'],
+    ['CREDI-SUPPLY-AI','/abastecimiento'],
+    ['CREDI-CATALOG-AI','/catalog'],
+    ['CREDI-LIVE','/live'],
+    ['CREDI-AFFILIATE-AI','/affiliate'],
+  ] },
   { label: 'Comercio', icon: Store, items: [['Marketplace','/marketplace'],['Compras mayoristas','/compras-mayoristas'],['Abastecimiento B2B','/abastecimiento'],['Proveedores verificados','/proveedores-verificados'],['Servicios','/services'],['Pedidos','/orders']] },
   { label: 'Empresa', icon: LayoutDashboard, items: [['Business OS','/business-os'],['Commerce Studio','/commerce-studio'],['Gestión empresarial','/gestion-empresarial'],['Inventario','/inventario'],['Negociaciones','/negociaciones'],['Analytics','/analytics']] },
-  { label: 'Red', icon: Users, items: [['CREDI-AFFILIATE-AI','/affiliate'],['Panel de afiliados','/dashboard/affiliate'],['Enlaces por producto','/dashboard/affiliate/links'],['Red Comercial','/red-comercial'],['Social','/social'],['Credi Chat','/chat'],['Reputación','/dashboard/reputation']] },
+  { label: 'Red', icon: Users, items: [['Panel de afiliados','/dashboard/affiliate'],['Enlaces por producto','/dashboard/affiliate/links'],['Red Comercial','/red-comercial'],['Social','/social'],['Credi Chat','/chat']] },
   { label: 'Finanzas', icon: WalletCards, items: [['Pagos','/pagos'],['Stripe Checkout','/pagos#stripe-checkout'],['Wallet','/wallet'],['Disputas','/disputas']] },
-  { label: 'Plataforma', icon: PackageSearch, items: [['Comercio avanzado','/ecosistema-avanzado'],['Intelligence','/intelligence'],['Product Graph','/product-graph'],['Developer','/developer'],['Apps','/apps'],['Seguridad','/security']] },
+  { label: 'Plataforma', icon: PackageSearch, items: [['Comercio avanzado','/ecosistema-avanzado'],['Product Graph','/product-graph'],['Developer','/developer'],['Apps','/apps'],['Seguridad','/security']] },
 ] as const
 
 const quick = [['Explorar','/explorar'],['Publicar producto','/products/create'],['Mi cuenta','/account']] as const
@@ -27,7 +40,7 @@ export default function Navbar() {
       </Link>
       <div className="hidden items-center gap-1 lg:flex">
         <Link href="/" className="rounded-lg px-3 py-2 text-sm font-bold text-white/90 hover:bg-white/10">Inicio</Link>
-        {groups.map((group) => { const Icon = group.icon; const isOpen = activeGroup === group.label; return <div key={group.label} className="relative"><button type="button" onClick={() => setActiveGroup(isOpen ? null : group.label)} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-bold text-white/90 hover:bg-white/10" aria-expanded={isOpen}><Icon className="size-4" />{group.label}<ChevronDown className={`size-3.5 ${isOpen ? 'rotate-180' : ''}`} /></button>{isOpen && <div className="absolute left-0 top-full mt-2 w-64 rounded-2xl border border-white/10 bg-[#0a1020]/98 p-2 shadow-2xl">{group.items.map(([name, href]) => <Link key={href} href={href} onClick={close} className="block rounded-xl px-3 py-2.5 text-sm font-semibold text-white/80 hover:bg-white/10 hover:text-white">{name}</Link>)}</div>}</div> })}
+        {groups.map((group) => { const Icon = group.icon; const isOpen = activeGroup === group.label; return <div key={group.label} className="relative"><button type="button" onClick={() => setActiveGroup(isOpen ? null : group.label)} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-bold text-white/90 hover:bg-white/10" aria-expanded={isOpen}><Icon className="size-4" />{group.label}<ChevronDown className={`size-3.5 ${isOpen ? 'rotate-180' : ''}`} /></button>{isOpen && <div className="absolute left-0 top-full mt-2 w-72 rounded-2xl border border-white/10 bg-[#0a1020]/98 p-2 shadow-2xl">{group.items.map(([name, href]) => <Link key={href} href={href} onClick={close} className="block rounded-xl px-3 py-2.5 text-sm font-semibold text-white/80 hover:bg-white/10 hover:text-white">{name}</Link>)}</div>}</div> })}
         <Link href="/chat" className="ml-2 inline-flex items-center gap-2 rounded-xl bg-white/10 px-3.5 py-2 text-sm font-black text-white"><MessageCircle className="size-4" />Chat</Link>
       </div>
       <div className="hidden items-center gap-1 xl:flex">{quick.map(([name, href]) => <Link key={href} href={href} className="rounded-lg px-2.5 py-2 text-xs font-bold text-white/70 hover:bg-white/10 hover:text-white">{name}</Link>)}</div>
