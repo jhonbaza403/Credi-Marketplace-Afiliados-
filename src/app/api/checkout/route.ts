@@ -210,7 +210,7 @@ export async function POST(request: Request) {
         unitAmountMinor: moneyToMinorUnits(Number(item.unit_price)),
       })),
       successUrl: `${siteUrl}/checkout/success?order_id=${encodeURIComponent(orderId)}&session_id={CHECKOUT_SESSION_ID}`,
-      cancelUrl: `${siteUrl}/checkout?order_id=${encodeURIComponent(orderId)}`,
+      cancelUrl: `${siteUrl}/checkout/payment?order_id=${encodeURIComponent(orderId)}&payment_cancelled=1`,
       idempotencyKey,
     })
 
