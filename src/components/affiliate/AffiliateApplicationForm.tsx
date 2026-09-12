@@ -27,7 +27,10 @@ export default function AffiliateApplicationForm() {
     try {
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error("Debes iniciar sesión para solicitar ser afiliado.")
+      if (!user) {
+        window.location.assign(`/login?redirectTo=${encodeURIComponent("/affiliate")}`)
+        return
+      }
       const { data: existing } = await supabase.from("affiliate_applications").select("id,status").eq("user_id", user.id).in("status", ["pending", "approved"]).maybeSingle()
       if (existing) throw new Error(existing.status === "approved" ? "Ya tienes una solicitud aprobada." : "Ya tienes una solicitud pendiente de revisión.")
       const { error } = await supabase.from("affiliate_applications").insert({
