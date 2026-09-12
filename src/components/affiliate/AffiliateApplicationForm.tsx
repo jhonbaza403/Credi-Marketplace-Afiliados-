@@ -28,7 +28,7 @@ export default function AffiliateApplicationForm() {
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
-        window.location.assign(`/login?redirectTo=${encodeURIComponent("/affiliate")}`)
+        window.location.assign(`/login?next=${encodeURIComponent("/affiliate")}`)
         return
       }
       const { data: existing } = await supabase.from("affiliate_applications").select("id,status").eq("user_id", user.id).in("status", ["pending", "approved"]).maybeSingle()
