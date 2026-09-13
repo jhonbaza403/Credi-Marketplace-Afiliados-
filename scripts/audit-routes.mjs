@@ -7,7 +7,12 @@ const SRC = path.join(ROOT, 'src')
 const APP = path.join(SRC, 'app')
 
 const TEXT_EXTENSIONS = new Set(['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs'])
-const ROUTE_REFERENCE = /(?:href\s*=\s*[{(]?\s*['\"](\/[^'\"?#]*)|(?:router\.(?:push|replace)|redirect|permanentRedirect|window\.location\.(?:assign|replace))\s*\(\s*['\"](\/[^'\"?#]*)|fetch\s*\(\s*['\"](\/api\/[^'\"?#]*)/g
+const ROUTE_PATTERNS = [
+  /href\s*=\s*[{(]?\s*['"](\/[^'"?#]*)/g,
+  /(?:router\.(?:push|replace)|redirect|permanentRedirect)\s*\(\s*['"](\/[^'"?#]*)/g,
+  /window\.location\.(?:assign|replace)\s*\(\s*['"](\/[^'"?#]*)/g,
+  /fetch\s*\(\s*['"](\/api\/[^'"?#]*)/g,
+]
 
 function walk(dir, files = []) {
   if (!fs.existsSync(dir)) return files
@@ -33,7 +38,6 @@ function normalizeRoute(value) {
       return segment
     })
     .join('/')
-    .replace(/\*\??$/, (suffix) => suffix)
     .replace(/^/, '/')
 }
 
@@ -83,13 +87,15 @@ for (const file of apiRouteFiles) {
 const refs = new Map()
 for (const file of sourceFiles) {
   const text = fs.readFileSync(file, 'utf8')
-  for (const match of text.matchAll(ROUTE_REFERENCE)) {
-    const value = match[1] || match[2] || match[3]
-    if (!value) continue
-    const normalized = normalizeRoute(value)
-    const map = refs.get(normalized) ?? []
-    map.push(path.relative(ROOT, file))
-    refs.set(normalized, map)
+  for (const pattern of ROUTE_PATTERNS) {
+    for (const match of text.matchAll(pattern)) {
+      const value = match[1]
+      if (!value) continue
+      const normalized = normalizeRoute(value)
+      const map = refs.get(normalized) ?? []
+      map.push(path.relative(ROOT, file))
+      refs.set(normalized, map)
+    }
   }
 }
 
@@ -117,11 +123,7 @@ for (const [route, files] of refs) {
   if (!matchesDynamic(route, available)) missing.push({ route, files })
 }
 
-const duplicateRoutes = [...routes].filter((route) => {
-  const count = pageFiles.filter((file) => routeFromPageFile(file) === route).length
-  return count > 1
-})
-
+const duplicateRoutes = [...routes].filter((route) => pageFiles.filter((file) => routeFromPageFile(file) === route).length > 1)
 const duplicateApis = [...apis].filter((api) => (apiFilesByRoute.get(api) ?? []).length > 1)
 const apiInventory = [...apis].sort().map((api) => ({
   route: api,
@@ -137,9 +139,7 @@ console.log(`Missing references: ${missing.length}`)
 console.log(`Duplicate canonical pages: ${duplicateRoutes.length}`)
 console.log(`Duplicate canonical APIs: ${duplicateApis.length}`)
 console.log('\nAPI inventory:')
-for (const item of apiInventory) {
-  console.log(`- ${item.route} [${item.methods.join(', ') || 'NO_EXPORTED_METHOD'}] <- ${item.files.join(', ')}`)
-}
+for (const item of apiInventory) console.log(`- ${item.route} [${item.methods.join(', ') || 'NO_EXPORTED_METHOD'}] <- ${item.files.join(', ')}`)
 
 if (missing.length) {
   console.error('\nMissing references:')
