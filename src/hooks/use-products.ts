@@ -2,6 +2,8 @@
 
 import { useCallback, useState } from "react";
 
+import { buildSearchOrFilter } from "@/lib/search/postgrest-filter";
+import { createClient } from "@/lib/supabase/client";
 import type { ProductSummary } from "@/types/product";
 
 interface UseProductsOptions {
@@ -21,7 +23,6 @@ export function useProducts(
   const [products, setProducts] = useState<ProductSummary[]>(
     options.initialProducts ?? [],
   );
-
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -30,32 +31,28 @@ export function useProducts(
     setError(null);
 
     try {
-      const response = await fetch("/api/products", {
-        method: "GET",
-        headers: {
-          Accept: "application/json",
-        },
-        cache: "no-store",
-      });
+      const supabase = createClient();
+      const search = buildSearchOrFilter(
+        ["title", "description"],
+        "",
+      );
 
-      if (!response.ok) {
-        throw new Error("No fue posible cargar los productos");
-      }
+      let query = supabase
+        .from("published_products")
+        .select(
+          "id,title,slug,description,price,stock,image_url,images,is_active,updated_at",
+        )
+        .eq("is_active", true)
+        .gt("stock", 0)
+        .order("updated_at", { ascending: false })
+        .limit(100);
 
-      const data: unknown = await response.json();
+      if (search) query = query.or(search);
 
-      if (
-        typeof data === "object" &&
-        data !== null &&
-        "products" in data &&
-        Array.isArray((data as { products?: unknown }).products)
-      ) {
-        setProducts(
-          (data as { products: ProductSummary[] }).products,
-        );
-      } else {
-        setProducts([]);
-      }
+      const { data, error: queryError } = await query;
+      if (queryError) throw queryError;
+
+      setProducts((data ?? []) as ProductSummary[]);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Error desconocido",
