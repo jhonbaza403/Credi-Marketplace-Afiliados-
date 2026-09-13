@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto'
 import { z } from 'zod'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { verifyPkceS256 } from '@/lib/oauth/pkce'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -19,7 +20,6 @@ const bodySchema = z.object({
 })
 
 const hashHex = (value: string) => createHash('sha256').update(value).digest('hex')
-const pkceChallenge = (value: string) => createHash('sha256').update(value).digest('base64url')
 
 function safeEqual(a: string, b: string) {
   const left = Buffer.from(a, 'utf8')
@@ -40,12 +40,13 @@ export async function POST(request: Request) {
   if (parsed.grant_type === 'refresh_token') {
     const refresh = parsed.refresh_token
     if (!refresh) return json({ error: 'INVALID_REFRESH_REQUEST' }, 400)
+    const refreshHash = hashHex(refresh)
 
     const { data: row, error: lookupError } = await admin
       .from('developer_oauth_authorizations')
       .select('id,scopes,refresh_token_expires_at,revoked_at')
       .eq('app_id', parsed.client_id)
-      .eq('refresh_token_hash', hashHex(refresh))
+      .eq('refresh_token_hash', refreshHash)
       .maybeSingle()
 
     if (lookupError || !row || row.revoked_at) return json({ error: 'INVALID_REFRESH_TOKEN' }, 400)
@@ -69,28 +70,22 @@ export async function POST(request: Request) {
         updated_at: now.toISOString(),
       })
       .eq('id', row.id)
-      .eq('refresh_token_hash', hashHex(refresh))
+      .eq('refresh_token_hash', refreshHash)
 
     if (error) return json({ error: 'TOKEN_ROTATION_FAILED' }, 500)
-
-    return json({
-      access_token: access,
-      token_type: 'Bearer',
-      expires_in: 3600,
-      scope: row.scopes.join(' '),
-      refresh_token: newRefresh,
-    })
+    return json({ access_token: access, token_type: 'Bearer', expires_in: 3600, scope: row.scopes.join(' '), refresh_token: newRefresh })
   }
 
   if (!parsed.code || !parsed.redirect_uri || !parsed.code_verifier) {
     return json({ error: 'INVALID_GRANT_REQUEST' }, 400)
   }
 
+  const codeHash = hashHex(parsed.code)
   const { data: row, error: lookupError } = await admin
     .from('developer_oauth_authorizations')
     .select('id,scopes,authorization_code_expires_at,redirect_uri,code_challenge,code_challenge_method,used_at')
     .eq('app_id', parsed.client_id)
-    .eq('authorization_code_hash', hashHex(parsed.code))
+    .eq('authorization_code_hash', codeHash)
     .maybeSingle()
 
   if (lookupError || !row || row.used_at) return json({ error: 'INVALID_AUTHORIZATION_CODE' }, 400)
@@ -100,7 +95,7 @@ export async function POST(request: Request) {
   if (row.redirect_uri !== parsed.redirect_uri || row.code_challenge_method !== 'S256' || !row.code_challenge) {
     return json({ error: 'PKCE_MISMATCH' }, 400)
   }
-  if (!safeEqual(pkceChallenge(parsed.code_verifier), row.code_challenge)) {
+  if (!verifyPkceS256(parsed.code_verifier, row.code_challenge) || !safeEqual(parsed.code_verifier, parsed.code_verifier)) {
     return json({ error: 'PKCE_VERIFIER_INVALID' }, 400)
   }
 
@@ -123,15 +118,8 @@ export async function POST(request: Request) {
     })
     .eq('id', row.id)
     .is('used_at', null)
-    .eq('authorization_code_hash', hashHex(parsed.code))
+    .eq('authorization_code_hash', codeHash)
 
   if (error) return json({ error: 'TOKEN_ISSUE_FAILED' }, 500)
-
-  return json({
-    access_token: access,
-    token_type: 'Bearer',
-    expires_in: 3600,
-    scope: row.scopes.join(' '),
-    refresh_token: refresh,
-  })
+  return json({ access_token: access, token_type: 'Bearer', expires_in: 3600, scope: row.scopes.join(' '), refresh_token: refresh })
 }
