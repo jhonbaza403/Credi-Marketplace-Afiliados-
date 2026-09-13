@@ -39,26 +39,27 @@ const nextConfig: NextConfig = {
   images: {
     formats: ["image/avif", "image/webp"],
     remotePatterns: [
-      {
-        protocol: "https",
-        hostname: "*.supabase.co",
-        pathname: "/**",
-      },
-      {
-        protocol: "https",
-        hostname: "images.unsplash.com",
-        pathname: "/**",
-      },
+      { protocol: "https", hostname: "*.supabase.co", pathname: "/**" },
+      { protocol: "https", hostname: "images.unsplash.com", pathname: "/**" },
     ],
+  },
+  async redirects() {
+    return [
+      { source: "/productos", destination: "/products", permanent: false },
+      { source: "/productos/:path*", destination: "/products/:path*", permanent: false },
+      { source: "/servicios", destination: "/services", permanent: false },
+      { source: "/servicios/:path*", destination: "/services/:path*", permanent: false },
+      { source: "/jobs", destination: "/services", permanent: false },
+      { source: "/jobs/:path*", destination: "/services/:path*", permanent: false },
+      { source: "/seller/b2b", destination: "/b2b", permanent: false },
+      { source: "/seller/b2b/:path*", destination: "/b2b/:path*", permanent: false },
+    ];
   },
   async headers() {
     return [
       {
         source: "/:path*",
-        headers: [
-          ...securityHeaders,
-          { key: "Content-Security-Policy", value: contentSecurityPolicy },
-        ],
+        headers: [...securityHeaders, { key: "Content-Security-Policy", value: contentSecurityPolicy }],
       },
       {
         source: "/api/:path*",
