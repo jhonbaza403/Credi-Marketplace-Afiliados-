@@ -10,11 +10,11 @@ function mediaLabel(media: unknown): string | null {
 }
 
 export const metadata = {
-  title: "Social | Credi Marketplace",
-  description: "Historias, reels, publicaciones y publicidad de Credi Marketplace.",
+  title: "Feed | Credi Marketplace",
+  description: "Feed principal con historias, reels, publicaciones y publicidad de Credi Marketplace.",
 };
 
-export default async function SocialPage() {
+export default async function FeedPage() {
   const supabase = await getDatabaseServerClient();
   const now = new Date().toISOString();
 
@@ -28,22 +28,26 @@ export default async function SocialPage() {
   return (
     <main className="min-h-screen bg-background px-4 py-10 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl space-y-10">
-        <header className="rounded-3xl border border-border bg-card p-7 shadow-sm sm:p-10">
+        <header className="overflow-hidden rounded-[2rem] border border-border bg-card p-7 shadow-sm sm:p-10">
           <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">Comunidad Credi</p>
-              <h1 className="mt-2 text-3xl font-black tracking-tight text-foreground sm:text-4xl">Historias, reels y publicaciones</h1>
-              <p className="mt-3 max-w-3xl text-sm leading-6 text-muted-foreground">Contenido público separado por cuenta. Las historias expiran en 24 horas y los anuncios activos se muestran en su propia sección.</p>
+              <p className="text-xs font-black uppercase tracking-[0.2em] text-primary">Red Credi · Feed</p>
+              <h1 className="mt-2 text-3xl font-black tracking-tight text-foreground sm:text-4xl">El contenido que está pasando ahora</h1>
+              <p className="mt-3 max-w-3xl text-sm leading-6 text-muted-foreground">El Feed es el espacio de descubrimiento: combina publicaciones, historias, reels y campañas públicas. El Muro, en cambio, pertenece a cada perfil.</p>
+              <div className="mt-5 flex flex-wrap gap-2 text-xs font-bold">
+                <Link href="/feed" className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1.5 text-primary">Feed</Link>
+                <Link href="/muro" className="rounded-full border border-border bg-background px-3 py-1.5 text-muted-foreground hover:text-foreground">Mi Muro</Link>
+                <Link href="/publish" className="rounded-full border border-border bg-background px-3 py-1.5 text-muted-foreground hover:text-foreground">Publicar</Link>
+              </div>
             </div>
-            <Link href="/publish" className="inline-flex items-center justify-center rounded-xl bg-primary px-5 py-3 text-sm font-bold text-primary-foreground hover:opacity-90">Publicar contenido</Link>
           </div>
         </header>
 
         <section aria-labelledby="stories-title">
-          <div className="mb-4 flex items-center justify-between"><h2 id="stories-title" className="text-xl font-black text-foreground">Historias</h2><span className="text-xs text-muted-foreground">24 horas</span></div>
+          <div className="mb-4 flex items-center justify-between"><h2 id="stories-title" className="text-xl font-black text-foreground">Historias</h2><span className="text-xs font-semibold text-muted-foreground">24 horas</span></div>
           {storiesResult.error ? <p className="rounded-2xl border border-border bg-card p-5 text-sm text-muted-foreground">Las historias no están disponibles ahora.</p> : storiesResult.data?.length ? (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {storiesResult.data.map((story) => <article key={story.id} className="rounded-2xl border border-border bg-card p-5 shadow-sm"><p className="text-sm leading-6 text-foreground">{story.body}</p><p className="mt-4 text-xs text-muted-foreground">Expira: {new Date(story.expires_at).toLocaleString()}</p></article>)}
+              {storiesResult.data.map((story) => <article key={story.id} className="rounded-2xl border border-border bg-card p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg"><p className="text-sm leading-6 text-foreground">{story.body}</p><p className="mt-4 text-xs text-muted-foreground">Expira: {new Date(story.expires_at).toLocaleString()}</p></article>)}
             </div>
           ) : <p className="rounded-2xl border border-border bg-card p-5 text-sm text-muted-foreground">Aún no hay historias públicas.</p>}
         </section>
@@ -52,7 +56,7 @@ export default async function SocialPage() {
           <h2 id="reels-title" className="mb-4 text-xl font-black text-foreground">Reels</h2>
           {reelsResult.error ? <p className="rounded-2xl border border-border bg-card p-5 text-sm text-muted-foreground">Los reels no están disponibles ahora.</p> : reelsResult.data?.length ? (
             <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-              {reelsResult.data.map((reel) => { const media = mediaLabel(reel.media); return <article key={reel.id} className="overflow-hidden rounded-3xl border border-border bg-card shadow-sm"><div className="aspect-video bg-muted">{media ? <video className="h-full w-full object-cover" controls preload="metadata" src={media} /> : <div className="flex h-full items-center justify-center text-sm text-muted-foreground">Reel sin multimedia</div>}</div><div className="p-5"><h3 className="font-black text-foreground">{reel.title || "Reel de la comunidad"}</h3><p className="mt-2 text-sm leading-6 text-muted-foreground">{reel.body}</p></div></article>; })}
+              {reelsResult.data.map((reel) => { const media = mediaLabel(reel.media); return <article key={reel.id} className="overflow-hidden rounded-3xl border border-border bg-card shadow-sm transition hover:-translate-y-1 hover:shadow-xl"><div className="aspect-video bg-muted">{media ? <video className="h-full w-full object-cover" controls preload="metadata" src={media} /> : <div className="flex h-full items-center justify-center text-sm text-muted-foreground">Reel sin multimedia</div>}</div><div className="p-5"><h3 className="font-black text-foreground">{reel.title || "Reel de la comunidad"}</h3><p className="mt-2 text-sm leading-6 text-muted-foreground">{reel.body}</p></div></article>; })}
             </div>
           ) : <p className="rounded-2xl border border-border bg-card p-5 text-sm text-muted-foreground">Aún no hay reels públicos.</p>}
         </section>
