@@ -1,11 +1,15 @@
-import { redirect } from 'next/navigation'
+import AccountCenter from '@/features/account/components/AccountCenter'
 
 export const metadata = {
-  title: 'Muro | Credi Marketplace',
-  description: 'Muro personal de Credi Marketplace: tu perfil, publicaciones y actividad.',
+  title: 'Muro · Mi perfil | Credi Marketplace',
+  description: 'Tu muro personal: perfil, publicaciones y actividad dentro de Credi Marketplace.',
   robots: { index: false, follow: false },
 }
 
 export default function MuroPage() {
-  redirect('/account')
+  return (
+    <main aria-label="Muro personal de Credi Marketplace">
+      <AccountCenter />
+    </main>
+  )
 }
