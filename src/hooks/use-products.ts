@@ -2,7 +2,6 @@
 
 import { useCallback, useState } from "react";
 
-import { buildSearchOrFilter } from "@/lib/search/postgrest-filter";
 import { createClient } from "@/lib/supabase/client";
 import type { ProductSummary } from "@/types/product";
 
@@ -16,6 +15,18 @@ interface UseProductsResult {
   error: string | null;
   refresh: () => Promise<void>;
 }
+
+type ProductRow = {
+  id: string;
+  store_id: string;
+  category_id: string | null;
+  title: string;
+  slug: string;
+  price: number;
+  stock: number;
+  images: string[] | null;
+  is_active: boolean;
+};
 
 export function useProducts(
   options: UseProductsOptions = {},
@@ -32,27 +43,32 @@ export function useProducts(
 
     try {
       const supabase = createClient();
-      const search = buildSearchOrFilter(
-        ["title", "description"],
-        "",
-      );
-
-      let query = supabase
+      const { data, error: queryError } = await supabase
         .from("published_products")
         .select(
-          "id,title,slug,description,price,stock,image_url,images,is_active,updated_at",
+          "id,store_id,category_id,title,slug,price,stock,images,is_active",
         )
         .eq("is_active", true)
         .gt("stock", 0)
         .order("updated_at", { ascending: false })
         .limit(100);
 
-      if (search) query = query.or(search);
-
-      const { data, error: queryError } = await query;
       if (queryError) throw queryError;
 
-      setProducts((data ?? []) as ProductSummary[]);
+      const rows = (data ?? []) as ProductRow[];
+      setProducts(
+        rows.map((row): ProductSummary => ({
+          id: row.id,
+          storeId: row.store_id,
+          categoryId: row.category_id,
+          title: row.title,
+          slug: row.slug,
+          price: row.price,
+          stock: row.stock,
+          images: row.images ?? [],
+          isActive: row.is_active,
+        })),
+      );
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Error desconocido",
