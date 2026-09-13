@@ -36,12 +36,17 @@ export async function POST(request: Request) {
   if (!payment.order_id) return json({ error: 'ORDER_REQUIRED_FOR_SETTLEMENT' }, 422)
   const { data: order } = await db.from('orders').select('id,buyer_id,status,payment_status').eq('id', payment.order_id).maybeSingle()
   if (!order) return json({ error: 'ORDER_NOT_FOUND' }, 404)
-  if (order.status === 'paid' || order.payment_status === 'paid') return json({ ok: true, payment_id: payment.id, status: 'succeeded', order_id: order.id })
+  if (order.status === 'paid' || order.payment_status === 'paid') {
+    await db.rpc('finalize_order_settlement_allocations', { p_order_id: order.id })
+    return json({ ok: true, payment_id: payment.id, status: 'succeeded', order_id: order.id })
+  }
   if (order.status !== 'pending' || order.payment_status !== 'pending') return json({ error: 'ORDER_NOT_PAYABLE' }, 409)
 
   const { error: orderError } = await db.from('orders').update({ status: 'paid', payment_status: 'paid', paid_at: now, updated_at: now }).eq('id', order.id).eq('status', 'pending').eq('payment_status', 'pending')
   if (orderError) return json({ error: 'ORDER_SETTLEMENT_FAILED' }, 500)
   await db.from('order_status_history').insert({ order_id: order.id, from_status: 'pending', to_status: 'paid', changed_by: user.id, reason: `${payment.method_type}_payment_confirmed`, metadata: { payment_id: payment.id, reference } })
   await db.from('commerce_events').insert({ user_id: order.buyer_id, event_type: 'order_paid', amount: Number(payment.amount), currency: String(payment.currency || 'USD').trim(), metadata: { provider: payment.method_type, payment_id: payment.id, reference } })
+  const { error: allocationError } = await db.rpc('finalize_order_settlement_allocations', { p_order_id: order.id })
+  if (allocationError) return json({ error: 'SETTLEMENT_ALLOCATION_FAILED' }, 500)
   return json({ ok: true, payment_id: payment.id, order_id: order.id, status: 'succeeded' })
 }
