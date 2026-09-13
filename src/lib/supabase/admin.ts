@@ -8,8 +8,8 @@ import {
 let adminClient: SupabaseClient | undefined;
 
 function requiredAdminKey(): string {
-  const value = process.env.SUPABASE_SECRET_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!value) throw new Error("Missing SUPABASE_SECRET_KEY or SUPABASE_SERVICE_ROLE_KEY for administrative Supabase access");
+  const value = process.env.SUPABASE_SECRET_KEY?.trim();
+  if (!value) throw new Error("Missing SUPABASE_SECRET_KEY for administrative Supabase access");
   return value;
 }
 
