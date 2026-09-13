@@ -26,18 +26,14 @@ function verifyCoinbaseWebhook(body: string, signatureHeader: string, secret: st
 }
 
 type CoinbaseEvent = {
-  id?: string
-  eventType?: string
-  type?: string
-  status?: string
-  amount?: string
-  currency?: string
-  network?: string
-  transactionHash?: string
-  updatedAt?: string
-  expiresAt?: string
-  metadata?: Record<string, string>
+  id?: string; eventType?: string; type?: string; status?: string; amount?: string; currency?: string; network?: string
+  transactionHash?: string; updatedAt?: string; expiresAt?: string; metadata?: Record<string, string>
   settlement?: { totalAmount?: string; netAmount?: string; feeAmount?: string; currency?: string }
+}
+
+async function finalizeSettlement(db: ReturnType<typeof createServiceClient>, orderId: string) {
+  const { error } = await db.rpc('finalize_order_settlement_allocations', { p_order_id: orderId })
+  if (error) throw error
 }
 
 export async function POST(request: Request) {
@@ -65,9 +61,7 @@ export async function POST(request: Request) {
   const expectedAmount = Number(payment.amount)
   const receivedAmount = Number(event.amount)
   const normalizedCurrency = String(event.currency || '').toUpperCase()
-  if (!Number.isFinite(receivedAmount) || Math.round(receivedAmount * 100) !== Math.round(expectedAmount * 100) || normalizedCurrency !== 'USDC') {
-    return json({ error: 'PAYMENT_AMOUNT_OR_CURRENCY_MISMATCH' }, 409)
-  }
+  if (!Number.isFinite(receivedAmount) || Math.round(receivedAmount * 100) !== Math.round(expectedAmount * 100) || normalizedCurrency !== 'USDC') return json({ error: 'PAYMENT_AMOUNT_OR_CURRENCY_MISMATCH' }, 409)
 
   if (eventType === 'checkout.payment.success') {
     if (payment.status !== 'succeeded') {
@@ -86,12 +80,13 @@ export async function POST(request: Request) {
       }
 
       await db.from('payment_orchestrations').update({ status: 'succeeded', updated_at: now, metadata: { ...(payment.metadata || {}), checkout_status: 'COMPLETED', transaction_hash: event.transactionHash || null, settlement: event.settlement || null, last_webhook_event: eventType, last_webhook_at: now } }).eq('id', payment.id).in('status', ['created', 'pending', 'requires_action'])
+      try { await finalizeSettlement(db, payment.order_id) } catch (error) { console.error('[coinbase webhook] settlement allocation failed', error) }
     }
     return json({ ok: true, status: 'succeeded', payment_id: payment.id, order_id: payment.order_id, checkout_id: checkoutId })
   }
 
   if (['checkout.payment.failed', 'checkout.payment.expired'].includes(eventType)) {
-    if (['succeeded'].includes(payment.status)) return json({ ok: true, ignored: true, reason: 'ALREADY_SUCCEEDED', payment_id: payment.id })
+    if (payment.status === 'succeeded') return json({ ok: true, ignored: true, reason: 'ALREADY_SUCCEEDED', payment_id: payment.id })
     const now = new Date().toISOString()
     await db.from('payment_orchestrations').update({ status: eventType.endsWith('.expired') ? 'expired' : 'failed', updated_at: now, metadata: { ...(payment.metadata || {}), checkout_status: event.status || eventType, last_webhook_event: eventType, last_webhook_at: now } }).eq('id', payment.id).in('status', ['created', 'pending', 'requires_action'])
     return json({ ok: true, status: eventType.endsWith('.expired') ? 'expired' : 'failed', payment_id: payment.id, checkout_id: checkoutId })
