@@ -20,43 +20,40 @@ export interface TaxSnapshot {
   currency: string
   snapshot_at: string
   reason: string
+  rule_id?: string | null
+  rate_id?: string | null
+  rule_version?: string | null
 }
 
-export async function initializeOrderTax(
-  supabase: SupabaseClient,
-  orderId: string,
-): Promise<string> {
+export const TAX_ENGINE_VERSION = '1.0.0'
+
+export function roundMoney(value: number) {
+  return Math.round((Number.isFinite(value) ? value : 0) * 100) / 100
+}
+
+export function calculateTax(base: number, ratePercent: number) {
+  if (!Number.isFinite(base) || base < 0) throw new Error('INVALID_TAXABLE_BASE')
+  if (!Number.isFinite(ratePercent) || ratePercent < 0 || ratePercent > 100) throw new Error('INVALID_TAX_RATE')
+  return roundMoney(base * (ratePercent / 100))
+}
+
+export async function initializeOrderTax(supabase: SupabaseClient, orderId: string): Promise<string> {
   if (!orderId) throw new Error('ORDER_ID_REQUIRED')
-
-  const { data, error } = await supabase.rpc(
-    'initialize_order_tax_transaction',
-    { p_order_id: orderId },
-  )
-
+  const { data, error } = await supabase.rpc('initialize_order_tax_transaction', { p_order_id: orderId })
   if (error) {
     console.error('[taxation] initialization error:', error)
     throw new Error('ORDER_TAX_INITIALIZATION_FAILED')
   }
-
   if (typeof data !== 'string') throw new Error('INVALID_TAX_TRANSACTION_RESPONSE')
   return data
 }
 
-export async function prepareSettlement(
-  serviceSupabase: SupabaseClient,
-  orderId: string,
-): Promise<number> {
+export async function prepareSettlement(serviceSupabase: SupabaseClient, orderId: string): Promise<number> {
   if (!orderId) throw new Error('ORDER_ID_REQUIRED')
-
-  const { data, error } = await serviceSupabase.rpc(
-    'finalize_order_settlement_allocations',
-    { p_order_id: orderId },
-  )
-
+  const { data, error } = await serviceSupabase.rpc('finalize_order_settlement_allocations', { p_order_id: orderId })
   if (error) {
     console.error('[taxation] settlement preparation error:', error)
     throw new Error('SETTLEMENT_ALLOCATION_FAILED')
   }
-
   return Number(data) || 0
 }
