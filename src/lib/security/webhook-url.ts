@@ -12,7 +12,7 @@ const PRIVATE_IPV4_RANGES = [
   [/^0\./, 'UNSPECIFIED'],
 ] as const
 
-function blockedIp(address: string): string | null {
+export function isBlockedWebhookIp(address: string): string | null {
   if (isIP(address) === 4) {
     for (const [pattern, reason] of PRIVATE_IPV4_RANGES) {
       if (pattern.test(address)) return reason
@@ -25,7 +25,7 @@ function blockedIp(address: string): string | null {
   if (normalized === '::' || normalized === '0:0:0:0:0:0:0:0') return 'UNSPECIFIED'
   if (normalized.startsWith('fe80:')) return 'LINK_LOCAL'
   if (normalized.startsWith('fc') || normalized.startsWith('fd')) return 'PRIVATE_NETWORK'
-  if (normalized.startsWith('::ffff:')) return blockedIp(normalized.slice(7))
+  if (normalized.startsWith('::ffff:')) return isBlockedWebhookIp(normalized.slice(7))
   return null
 }
 
@@ -41,14 +41,14 @@ export async function isSafeWebhookUrl(rawUrl: string): Promise<{ allowed: true 
   if (url.username || url.password) return { allowed: false, reason: 'WEBHOOK_CREDENTIALS_NOT_ALLOWED' }
   if (!url.hostname || url.hostname.length > 253) return { allowed: false, reason: 'INVALID_WEBHOOK_HOST' }
 
-  const literalReason = blockedIp(url.hostname)
+  const literalReason = isBlockedWebhookIp(url.hostname)
   if (literalReason) return { allowed: false, reason: `WEBHOOK_HOST_BLOCKED:${literalReason}` }
 
   try {
     const records = await lookup(url.hostname, { all: true, verbatim: true })
     if (!records.length) return { allowed: false, reason: 'WEBHOOK_DNS_NOT_RESOLVED' }
     for (const record of records) {
-      const reason = blockedIp(record.address)
+      const reason = isBlockedWebhookIp(record.address)
       if (reason) return { allowed: false, reason: `WEBHOOK_ADDRESS_BLOCKED:${reason}` }
     }
   } catch {
