@@ -31,7 +31,7 @@ export async function createOrder(
 
   const item = input.items[0]
   const supabase = await createClient()
-  const idempotencyKey = `order_${input.userId}_${item.productId}_${item.quantity}_${input.affiliateRef ?? 'none'}`
+  const idempotencyKey = crypto.randomUUID()
 
   const { data, error } = await supabase.rpc(
     'create_pending_order_batch',
