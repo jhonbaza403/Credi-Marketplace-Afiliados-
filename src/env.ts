@@ -46,16 +46,11 @@ function readServerEnv(): ServerEnv {
   return serverEnvCache;
 }
 
-function resolvePublishableKey(): string | undefined {
-  return process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim()
-    || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
-}
-
 function readPublicEnv(): PublicEnv {
   if (publicEnvCache) return publicEnvCache;
   publicEnvCache = publicEnvSchema.parse({
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
-    NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: resolvePublishableKey(),
+    NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
     NEXT_PUBLIC_APP_NAME: process.env.NEXT_PUBLIC_APP_NAME,
     NEXT_PUBLIC_DEFAULT_LOCALE: process.env.NEXT_PUBLIC_DEFAULT_LOCALE,
