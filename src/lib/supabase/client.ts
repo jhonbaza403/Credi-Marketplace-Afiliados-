@@ -14,6 +14,7 @@ export function createClient() {
 
   const options = {
     auth: {
+      flowType: "pkce" as const,
       experimental: {
         passkey: true,
       },
