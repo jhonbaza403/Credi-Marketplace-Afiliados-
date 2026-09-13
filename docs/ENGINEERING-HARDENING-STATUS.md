@@ -2,40 +2,38 @@
 
 Fecha de referencia: 2026-09-13
 
-## Baseline
+Credi permanece como un modular monolith sobre Next.js/TypeScript/Vercel + Supabase/PostgreSQL, RLS/RPC y Zod. Prisma, Kubernetes y microservicios prematuros quedan fuera del baseline.
 
-Credi remains a modular monolith on Next.js/TypeScript/Vercel with Supabase/PostgreSQL, RLS/RPC, Zod, Stripe and Coinbase Business. Prisma and premature microservices are intentionally excluded.
+## Implementado
 
-## Implemented
+- `main` = production baseline; `develop` = integration baseline.
+- Workflow `feature/* → develop → Preview/CI → main` documentado.
+- Acceso privilegiado de Supabase consolidado en `admin.ts`; `service.ts` es shim deprecado.
+- RLS comprobado en 125/125 tablas públicas actuales.
+- Índices críticos de orders, payments, taxation y settlement.
+- Rate limiting distribuido mediante RPC atómico en PostgreSQL.
+- OAuth token endpoint con Zod y PKCE S256 centralizado.
+- Registro de webhooks restringido a HTTPS con validación DNS/IP anti-SSRF.
+- Sanitización centralizada de filtros PostgREST.
+- Tax & Fiscal Engine versionado con snapshots y settlement allocations.
+- Stripe/Coinbase con estados financieros gobernados por webhook.
+- Tests de regresión para PKCE, SSRF y filtros.
+- Redirects de aliases legacy conocidos hacia rutas canónicas.
+- Documentación de arquitectura y hardening.
 
-- Production baseline on `main` and development baseline on `develop`.
-- Production/development workflow documented.
-- Privileged Supabase access consolidated around `admin.ts`; `service.ts` is a compatibility shim.
-- RLS verified on 125/125 public tables in the current database audit.
-- Financial/tax/settlement indexes added.
-- Atomic distributed rate limiter added to Supabase and exposed as a server utility.
-- OAuth token endpoint hardened with Zod and RFC 7636 S256 PKCE helper.
-- Developer webhook registration restricted to HTTPS and DNS/IP SSRF checks.
-- PostgREST free-text search sanitization helper added.
-- Tax & Fiscal Engine with immutable-style transaction snapshots and settlement allocations.
-- Stripe/Coinbase payment settlement remains webhook-driven.
-- Security regression tests added for PKCE, SSRF and search filtering.
-- Legacy route aliases redirect to canonical routes without deleting existing implementations.
-- Architecture and hardening status documented.
+## No ejecutable desde esta conexión
 
-## External controls not executable from this code connection
+- Activar branch protection y required checks en GitHub.
+- Configurar approvals/protection definitivos de Production y Preview en Vercel.
+- Ejecutar un restore real de backup y certificar RPO/RTO en Supabase.
+- Certificar pagos reales de Coinbase/Stripe en cuentas productivas.
 
-- GitHub branch protection/required approvals on `main`.
-- Vercel Production/Preview approval settings and deployment protection.
-- Supabase backup restore drill, RPO/RTO validation.
-- Live provider onboarding and real payment/webhook certification.
+## Siguiente lote de ingeniería
 
-## Remaining engineering consolidation
-
-- Apply a shared API guard contract to every Route Handler: authentication, authorization, schema validation, rate limit, idempotency where needed, request context and structured errors.
-- Migrate remaining `service.ts` consumers directly to `admin.ts`, then remove the shim.
-- Continue replacing `any` with `unknown` + Zod schemas.
-- Split the largest God Routes/God Components.
-- Audit all foreign keys, constraints, triggers, policies and indexes and produce `schema-v1` only after a tested restore path exists.
-- Expand integration/E2E coverage for Commerce, Orders, Payments, Affiliate, B2B, Disputes, Webhooks and RLS.
-- Add organization/workspace/members only when multi-tenant enterprise requirements become concrete.
+- Aplicar un API guard común a todos los Route Handlers.
+- Migrar consumidores restantes desde el shim `service.ts` y retirarlo.
+- Sustituir progresivamente `any` por `unknown` + Zod.
+- Dividir las rutas/componentes gigantes.
+- Auditoría completa de FK, constraints, triggers, policies e índices.
+- Baseline `schema-v1` solamente después de un restore probado.
+- Ampliar integration/E2E: Commerce, Orders, Payments, Affiliate, B2B, Disputes, Webhooks y RLS.
