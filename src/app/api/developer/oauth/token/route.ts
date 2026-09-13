@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createHash, randomBytes, timingSafeEqual } from 'node:crypto'
+import { createHash, randomBytes } from 'node:crypto'
 import { z } from 'zod'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { verifyPkceS256 } from '@/lib/oauth/pkce'
@@ -20,12 +20,6 @@ const bodySchema = z.object({
 })
 
 const hashHex = (value: string) => createHash('sha256').update(value).digest('hex')
-
-function safeEqual(a: string, b: string) {
-  const left = Buffer.from(a, 'utf8')
-  const right = Buffer.from(b, 'utf8')
-  return left.length === right.length && timingSafeEqual(left, right)
-}
 
 export async function POST(request: Request) {
   let parsed: z.infer<typeof bodySchema>
@@ -95,7 +89,7 @@ export async function POST(request: Request) {
   if (row.redirect_uri !== parsed.redirect_uri || row.code_challenge_method !== 'S256' || !row.code_challenge) {
     return json({ error: 'PKCE_MISMATCH' }, 400)
   }
-  if (!verifyPkceS256(parsed.code_verifier, row.code_challenge) || !safeEqual(parsed.code_verifier, parsed.code_verifier)) {
+  if (!verifyPkceS256(parsed.code_verifier, row.code_challenge)) {
     return json({ error: 'PKCE_VERIFIER_INVALID' }, 400)
   }
 
