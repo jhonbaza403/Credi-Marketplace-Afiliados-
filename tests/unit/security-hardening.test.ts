@@ -12,13 +12,13 @@ describe('security hardening', () => {
     expect(verifyPkceS256(`${verifier}x`, challenge)).toBe(false)
   })
 
-  it('removes PostgREST structural separators from free-text search', () => {
+  it('normalizes free-text search into a safe PostgREST filter', () => {
     const query = sanitizeSearchQuery('  phone,(or),description  ')
     expect(query).toBe('phone or description')
     expect(buildSearchOrFilter(['title', 'description'], 'phone,(or)')).toBe('title.ilike.%phone or or%,description.ilike.%phone or or%')
   })
 
-  it('blocks metadata and private webhook destinations', () => {
+  it('blocks private and metadata-service webhook destinations', () => {
     expect(isBlockedWebhookIp('127.0.0.1')).toBe('LOOPBACK')
     expect(isBlockedWebhookIp('169.254.169.254')).toBe('LINK_LOCAL')
     expect(isBlockedWebhookIp('10.0.0.1')).toBe('PRIVATE_NETWORK')
