@@ -8,11 +8,12 @@ Credi permanece como un modular monolith sobre Next.js/TypeScript/Vercel + Supab
 
 - `main` = production baseline; `develop` = integration baseline.
 - Workflow `feature/* → develop → Preview/CI → main` documentado.
-- Acceso privilegiado de Supabase centralizado en `admin.ts`; `service.ts` queda únicamente como shim temporal para compatibilidad de despliegue.
+- Acceso privilegiado de Supabase centralizado en `admin.ts`; `service.ts` queda únicamente como shim temporal de compatibilidad.
 - RLS comprobado en 125/125 tablas públicas actuales.
-- Auditoría de FK: 0 advertencias de foreign keys sin índice.
-- Auditoría de índices: eliminados los 2 pares de índices duplicados detectados.
-- Auditoría de políticas: eliminadas las políticas permisivas redundantes detectadas en media/social y separadas las operaciones de escritura.
+- Auditoría de FK sin índices: corregida; el asesor ya no reporta `unindexed_foreign_keys`.
+- Índices duplicados detectados: eliminados.
+- Políticas RLS permisivas redundantes detectadas: consolidadas y separadas por operación de escritura.
+- `credichat_is_member` restringido para que un usuario autenticado no pueda consultar la membresía de otro usuario.
 - Rate limiting distribuido mediante RPC atómico en PostgreSQL.
 - OAuth token endpoint con Zod y PKCE S256 centralizado.
 - Webhooks restringidos a HTTPS con validación DNS/IP anti-SSRF.
@@ -21,26 +22,24 @@ Credi permanece como un modular monolith sobre Next.js/TypeScript/Vercel + Supab
 - Stripe/Coinbase con estados financieros gobernados por webhook.
 - Tests de regresión para PKCE, SSRF y filtros.
 - Redirects de aliases legacy conocidos hacia rutas canónicas.
-- Tipado de Stripe subscription interval corregido para usar la estructura real de `price.recurring.interval`.
+- Tipado de Stripe subscription interval corregido para usar `price.recurring.interval`.
 - Mapeo explícito de filas Supabase a `ProductSummary` sin casts inseguros.
-- Migraciones de hardening de FK/RLS sincronizadas entre la base activa y `supabase/migrations`.
+- Migraciones de hardening sincronizadas entre la base activa y `supabase/migrations`.
 - Documentación de arquitectura y hardening actualizada.
 
-## Advertencias no bloqueantes o que requieren validación externa
+## Pendientes que requieren una acción administrativa o una prueba real externa
 
-- Supabase mantiene 19 avisos del linter sobre funciones `SECURITY DEFINER` ejecutables por `authenticated`. Estas funciones contienen controles de autorización específicos y no se revoca `EXECUTE` indiscriminadamente porque varias forman parte del contrato RPC del producto.
-- Supabase mantiene avisos INFO de índices no utilizados. No se eliminan automáticamente porque el proyecto aún no tiene suficiente carga histórica para distinguir índices realmente innecesarios de índices preventivos.
-- La protección de contraseñas comprometidas de Supabase Auth requiere configuración administrativa de Auth que no está expuesta por esta conexión.
+- Activar y verificar branch protection y required checks de `main`/`develop` en GitHub; la conexión actual no dispone de permiso administrativo para modificar esa configuración.
+- Configurar y verificar protecciones definitivas de Production/Preview en Vercel; la API conectada puede recibir el webhook de despliegue pero no expone la administración del proyecto actual.
+- Ejecutar restore real de backup y certificar RPO/RTO en Supabase.
+- Ejecutar transacciones de prueba con cuentas productivas de Stripe/Coinbase.
+- Activar leaked-password protection de Supabase Auth desde la configuración administrativa de Auth.
 
-## Validaciones administrativas externas
+## Advertencias informativas
 
-Estas comprobaciones no se pueden certificar desde el conector actual y no se deben presentar como terminadas:
+- Supabase puede reportar funciones `SECURITY DEFINER` ejecutables por `authenticated`. No se revoca `EXECUTE` indiscriminadamente porque varias son RPC públicas previstas por el producto y contienen controles de autorización propios.
+- Supabase reporta índices sin uso histórico. No se eliminan automáticamente mientras la plataforma no tenga suficiente carga real para distinguir índices preventivos de índices innecesarios.
 
-- branch protection y required checks administrativos de GitHub;
-- protección/approvals definitivos de Production y Preview en Vercel;
-- restore real de backup y certificación RPO/RTO;
-- transacción real de prueba en cuentas productivas de Stripe/Coinbase.
+## Criterio de cierre de producción
 
-## Criterio de cierre
-
-No se considera producción certificada hasta que el último commit del branch de hardening obtenga un build Vercel satisfactorio, el pipeline requerido quede verde y se hayan resuelto las validaciones administrativas externas anteriores.
+El código y la base de datos quedan en estado de hardening aplicado en el branch de auditoría. La certificación de producción exige además que el último build de Vercel termine correctamente y que las validaciones administrativas/operativas externas anteriores se ejecuten y queden registradas.
