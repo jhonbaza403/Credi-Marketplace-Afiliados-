@@ -2,46 +2,40 @@
 
 Fecha de referencia: 2026-09-13
 
-## Arquitectura objetivo
+## Baseline
 
-Credi permanece como un modular monolith sobre Next.js/TypeScript/Vercel con Supabase/PostgreSQL, RLS/RPC, Zod, Stripe y Coinbase Business. Prisma, Kubernetes y una descomposición prematura en microservicios no forman parte del baseline.
+Credi remains a modular monolith on Next.js/TypeScript/Vercel with Supabase/PostgreSQL, RLS/RPC, Zod, Stripe and Coinbase Business. Prisma and premature microservices are intentionally excluded.
 
-## Implementado
+## Implemented
 
-- `main` como baseline de producción.
-- `develop` creado como línea de integración.
-- Constitución técnica y workflow de desarrollo documentados.
-- Cliente privilegiado de Supabase unificado en `admin.ts`; `service.ts` es un shim deprecado.
-- RLS habilitado en 125/125 tablas públicas auditadas en la comprobación actual.
-- Índices críticos de orders/payments/tax/settlement.
-- Rate limiting distribuido mediante RPC atómico de Supabase.
-- OAuth token endpoint con Zod y PKCE S256 centralizado conforme a RFC 7636.
-- Registro de webhooks limitado a HTTPS con validación DNS/IP contra loopback, redes privadas, link-local y metadata.
-- Sanitización centralizada de filtros PostgREST.
-- Tax & Fiscal Engine con snapshot versionado.
-- Settlement allocations separadas por beneficiario/concepto.
-- Stripe/Coinbase webhook-driven payment state.
-- Tests unitarios de seguridad, PKCE, filtros y SSRF.
-- Redirects de compatibilidad hacia rutas canónicas para aliases legacy conocidos.
+- Production baseline on `main` and development baseline on `develop`.
+- Production/development workflow documented.
+- Privileged Supabase access consolidated around `admin.ts`; `service.ts` is a compatibility shim.
+- RLS verified on 125/125 public tables in the current database audit.
+- Financial/tax/settlement indexes added.
+- Atomic distributed rate limiter added to Supabase and exposed as a server utility.
+- OAuth token endpoint hardened with Zod and RFC 7636 S256 PKCE helper.
+- Developer webhook registration restricted to HTTPS and DNS/IP SSRF checks.
+- PostgREST free-text search sanitization helper added.
+- Tax & Fiscal Engine with immutable-style transaction snapshots and settlement allocations.
+- Stripe/Coinbase payment settlement remains webhook-driven.
+- Security regression tests added for PKCE, SSRF and search filtering.
+- Legacy route aliases redirect to canonical routes without deleting existing implementations.
+- Architecture and hardening status documented.
 
-## Pendientes que requieren acceso/acción externa
+## External controls not executable from this code connection
 
-1. GitHub: proteger `main` con PR obligatorio, checks requeridos, branch protection y prohibición de push directo.
-2. Vercel: confirmar Production/Preview environments, approvals y política de rollback desde la consola del proyecto.
-3. Supabase: ejecutar y documentar una restauración real de backup en un entorno aislado y establecer RPO/RTO.
-4. Coinbase/Stripe: validar webhooks con eventos reales de una cuenta de producción antes de activar entregas finales.
+- GitHub branch protection/required approvals on `main`.
+- Vercel Production/Preview approval settings and deployment protection.
+- Supabase backup restore drill, RPO/RTO validation.
+- Live provider onboarding and real payment/webhook certification.
 
-## Consolidación posterior
+## Remaining engineering consolidation
 
-- Inventario y adaptación archivo por archivo de todos los Route Handlers.
-- Sustitución progresiva de `any` por `unknown`/schemas.
-- División de los God Routes/God Components.
-- Migración de consumidores restantes desde el shim `service.ts`.
-- Auditoría detallada de foreign keys, constraints, triggers, policies e índices.
-- Consolidación de migraciones mediante un baseline `schema-v1` sin borrar el historial existente.
-- Ampliación de integration/E2E tests para Commerce, Orders, Payments, Affiliate, B2B, Disputes, Webhooks y RLS.
-- Multi-tenancy `organization/workspace/members/roles` cuando el producto empresarial lo requiera.
-
-## Regla operativa
-
-La interfaz nunca determina un estado financiero. Los eventos verificables del backend/proveedor son los que producen cambios financieros. La IA recomienda; el dominio, compliance, riesgo y políticas autorizan acciones.
+- Apply a shared API guard contract to every Route Handler: authentication, authorization, schema validation, rate limit, idempotency where needed, request context and structured errors.
+- Migrate remaining `service.ts` consumers directly to `admin.ts`, then remove the shim.
+- Continue replacing `any` with `unknown` + Zod schemas.
+- Split the largest God Routes/God Components.
+- Audit all foreign keys, constraints, triggers, policies and indexes and produce `schema-v1` only after a tested restore path exists.
+- Expand integration/E2E coverage for Commerce, Orders, Payments, Affiliate, B2B, Disputes, Webhooks and RLS.
+- Add organization/workspace/members only when multi-tenant enterprise requirements become concrete.
