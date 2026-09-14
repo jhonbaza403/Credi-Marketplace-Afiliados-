@@ -12,7 +12,7 @@ export function sanitizeSearchQuery(input: string): string {
     .slice(0, MAX_QUERY_LENGTH)
     .replace(/[\\%_.,(){}[\]:!|&*<>]/g, " ")
     .replace(/\s+/g, " ")
-    .trim();
+    .trim(); // Remove whitespace introduced by stripped metacharacters.
 }
 
 export function buildSearchOrFilter(
