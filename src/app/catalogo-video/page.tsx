@@ -47,7 +47,7 @@ export default function CatalogVideoPublisher() {
       } else {
         const name = catalogName.trim()
         if (name.length < 2) throw new Error('Indica el nombre del nuevo catálogo.')
-        const { data, error: insertError } = await supabase.from('business_catalogs').insert({ owner_id: userId, name, description: description.trim() || null, audience: 'b2b', visibility: 'private', status: 'draft', video_media: [{ kind: video.kind, name: video.name, path: video.path, url: video.url, size: video.size, contentType: video.contentType }] }).select('id,name,description,status,visibility,video_media').single()
+        const { data, error: insertError } = await supabase.from('business_catalogs').insert({ owner_id: userId, name, description: description.trim() || null, audience: 'b2c', visibility: 'private', status: 'draft', video_media: [{ kind: video.kind, name: video.name, path: video.path, url: video.url, size: video.size, contentType: video.contentType }] }).select('id,name,description,status,visibility,video_media').single()
         if (insertError || !data) throw insertError ?? new Error('No fue posible crear el catálogo.')
         setCatalogs((current) => [data as Catalog, ...current]); setCatalogId(data.id as string); setCatalogName(''); setDescription('')
       }
