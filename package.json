@@ -23,9 +23,17 @@
     "audit:routes": "node scripts/audit-routes.mjs",
     "check": "npm run verify:structure && npm run audit:routes && npm run lint && npm run typecheck && npm run test",
     "check:all": "npm run check && npm run test:e2e && npm run build",
-    "security:audit": "npm audit --audit-level=critical"
+    "security:audit": "npm audit --audit-level=critical",
+    "cap:init": "cap init",
+    "cap:sync": "cap sync android",
+    "cap:open:android": "cap open android",
+    "android:add": "cap add android",
+    "android:build:debug": "npm run cap:sync && cd android && ./gradlew assembleDebug",
+    "android:build:release": "npm run cap:sync && cd android && ./gradlew bundleRelease"
   },
   "dependencies": {
+    "@capacitor/android": "8.5.2",
+    "@capacitor/core": "8.5.2",
     "@google/genai": "2.21.0",
     "@hookform/resolvers": "^3.9.0",
     "@supabase/ssr": "^0.12.6",
@@ -41,6 +49,7 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@capacitor/cli": "8.5.2",
     "@next/eslint-plugin-next": "16.3.4",
     "@playwright/test": "^1.48.0",
     "@tailwindcss/postcss": "^4.3.3",
