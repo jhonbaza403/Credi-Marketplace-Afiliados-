@@ -11,7 +11,8 @@ export function sanitizeSearchQuery(input: string): string {
     .trim()
     .slice(0, MAX_QUERY_LENGTH)
     .replace(/[\\%_.,(){}[\]:!|&*<>]/g, " ")
-    .replace(/\s+/g, " ");
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 export function buildSearchOrFilter(
