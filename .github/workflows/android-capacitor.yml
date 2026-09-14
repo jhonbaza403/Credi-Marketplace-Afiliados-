@@ -3,7 +3,7 @@ name: Credi Marketplace Android
 on:
   workflow_dispatch:
   push:
-    branches: [main, develop]
+    branches: [main, develop, audit-hardening-2026-09-13]
     paths:
       - 'capacitor.config.ts'
       - 'mobile/**'
@@ -39,6 +39,9 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
+
+      - name: Regenerate lockfile for Capacitor dependencies
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
 
       - name: Install dependencies
         run: npm ci --ignore-scripts --no-audit --no-fund
