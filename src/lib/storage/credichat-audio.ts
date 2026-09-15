@@ -5,9 +5,7 @@ export const CREDICHAT_AUDIO_MAX_SIZE = 15 * 1024 * 1024
 
 const AUDIO_TYPES = new Set([
   'audio/webm',
-  'audio/webm;codecs=opus',
   'audio/ogg',
-  'audio/ogg;codecs=opus',
   'audio/mp4',
   'audio/m4a',
   'audio/x-m4a',
@@ -18,7 +16,8 @@ const AUDIO_TYPES = new Set([
 ])
 
 export function audioMimeTypeSupported(contentType: string) {
-  return AUDIO_TYPES.has(contentType.toLowerCase()) || contentType.toLowerCase().startsWith('audio/webm')
+  const normalized = contentType.toLowerCase().split(';', 1)[0]
+  return AUDIO_TYPES.has(normalized)
 }
 
 export function validateCrediChatAudio(file: File) {
@@ -35,10 +34,15 @@ export async function uploadCrediChatAudio(file: File) {
   const { data: { user }, error: authError } = await supabase.auth.getUser()
   if (authError || !user) throw new Error('Debes iniciar sesión para enviar audio.')
 
+  const requestedType = file.type || 'audio/webm'
+  const contentType = requestedType.toLowerCase().startsWith('audio/webm') ? 'audio/webm' : requestedType.split(';', 1)[0]
+  const extension = contentType === 'audio/webm' ? 'webm' : contentType.split('/')[1]?.replace('x-', '') || 'bin'
+  const fileName = file.name || `voice-${Date.now()}.${extension}`
+
   const { data: signed, error: signedError } = await supabase.functions.invoke('media-upload', {
     body: {
-      fileName: file.name || `voice-${Date.now()}.webm`,
-      contentType: file.type || 'audio/webm',
+      fileName,
+      contentType,
       context: 'credibusiness-chat',
       fileSize: file.size,
     },
@@ -51,18 +55,12 @@ export async function uploadCrediChatAudio(file: File) {
   const { error: uploadError } = await supabase.storage
     .from(CREDICHAT_AUDIO_BUCKET)
     .uploadToSignedUrl(String(signed.path), String(signed.token), file, {
-      contentType: file.type || 'audio/webm',
+      contentType,
       cacheControl: '31536000',
       upsert: false,
     })
 
   if (uploadError) throw new Error('No fue posible completar la carga del audio.')
 
-  return {
-    bucket: CREDICHAT_AUDIO_BUCKET,
-    path: String(signed.path),
-    name: file.name || `voice-${Date.now()}.webm`,
-    contentType: file.type || 'audio/webm',
-    size: file.size,
-  }
+  return { bucket: CREDICHAT_AUDIO_BUCKET, path: String(signed.path), name: fileName, contentType, size: file.size }
 }
