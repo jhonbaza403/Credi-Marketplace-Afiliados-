@@ -6,7 +6,6 @@ import { CANONICAL_APP_URL } from "@/lib/app-url"
 
 type Product = { id: string; title: string; price: number; image_url: string | null }
 type LinkRow = { id: string; product_id: string; code: string; commission_rate_override: number | null; clicks: number; conversions: number; is_active: boolean }
-
 type AffiliateProduct = { product_id: string; affiliate_url: string; is_active: boolean }
 
 function normalizeAffiliateUrl(value: string) {
@@ -103,13 +102,11 @@ export default function AffiliateLinksWorkspace() {
   }
 
   function getLink(productId?: string, linkCode?: string) {
+    if (linkCode) return `${CANONICAL_APP_URL}/go/${encodeURIComponent(linkCode)}`
     const params = new URLSearchParams()
     if (affiliateCode) params.set("ref", affiliateCode)
     if (productId) params.set("id", productId)
-    if (linkCode) params.set("pl", linkCode)
-    return productId
-      ? `${CANONICAL_APP_URL}/products/detail?${params.toString()}`
-      : `${CANONICAL_APP_URL}/products?${params.toString()}`
+    return productId ? `${CANONICAL_APP_URL}/products/detail?${params.toString()}` : `${CANONICAL_APP_URL}/products?${params.toString()}`
   }
 
   return <main className="min-h-screen bg-[#050816] text-white"><div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
