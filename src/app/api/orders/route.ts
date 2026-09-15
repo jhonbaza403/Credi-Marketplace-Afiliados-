@@ -7,7 +7,6 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 const MAX_ITEMS = 50
 const MAX_QUANTITY_PER_ITEM = 100
-const AFFILIATE_COOKIE = 'credi_affiliate_ref'
 const checkoutSchema = z.object({
   items: z.array(z.object({ product_id: z.string().uuid(), quantity: z.number().int().min(1).max(MAX_QUANTITY_PER_ITEM) })).min(1).max(MAX_ITEMS),
   affiliate_ref: z.string().trim().max(128).optional().nullable(),
