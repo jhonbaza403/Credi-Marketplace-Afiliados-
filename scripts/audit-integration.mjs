@@ -40,7 +40,6 @@ function resolveImport(fromFile, specifier, files) {
 }
 
 const files = walk(SRC)
-const fileSet = new Set(files)
 const imports = new Map(files.map((file) => [file, new Set()]))
 const reverse = new Map(files.map((file) => [file, new Set()]))
 const unresolved = []
