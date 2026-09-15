@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 
 const BUCKET = 'credichat-private'
 const SIGNED_URL_TTL = 60 * 60
+const USER_PATH = /^[0-9a-f-]{36}\/[^/]+$/i
 
 export async function GET(_request: Request, context: { params: Promise<{ messageId: string }> }) {
   const { messageId } = await context.params
@@ -32,9 +33,7 @@ export async function GET(_request: Request, context: { params: Promise<{ messag
   const metadata = message.metadata && typeof message.metadata === 'object' ? message.metadata as Record<string, unknown> : {}
   const path = typeof metadata.storage_path === 'string' ? metadata.storage_path : null
   const bucket = typeof metadata.bucket === 'string' ? metadata.bucket : BUCKET
-  if (!path || bucket !== BUCKET || !path.startsWith(`${message.id}/`) && !path.startsWith(`${user.id}/`)) {
-    return NextResponse.json({ error: 'AUDIO_PATH_INVALID' }, { status: 422 })
-  }
+  if (!path || bucket !== BUCKET || !USER_PATH.test(path)) return NextResponse.json({ error: 'AUDIO_PATH_INVALID' }, { status: 422 })
 
   const { data, error: signError } = await supabase.storage.from(BUCKET).createSignedUrl(path, SIGNED_URL_TTL)
   if (signError || !data?.signedUrl) return NextResponse.json({ error: 'AUDIO_URL_FAILED' }, { status: 500 })
