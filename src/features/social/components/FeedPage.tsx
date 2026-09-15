@@ -14,7 +14,6 @@ function mediaItem(media: unknown): MediaItem | null {
 export default async function FeedPage() {
   const supabase = await getDatabaseServerClient()
   const now = new Date().toISOString()
-  const [{ data: auth }] = await Promise.all([supabase.auth.getUser()])
   const [postsResult, storiesResult, reelsResult, adsResult] = await Promise.all([
     supabase.from('feed_posts').select('id,owner_id,title,body,media,published_at,created_at').eq('status', 'published').eq('visibility', 'public').eq('moderation_status', 'approved').order('created_at', { ascending: false }).limit(20),
     supabase.from('stories').select('id,owner_id,body,media,expires_at,created_at').eq('visibility', 'public').gt('expires_at', now).order('created_at', { ascending: false }).limit(20),
