@@ -15,7 +15,7 @@ describe('security hardening', () => {
   it('removes PostgREST grammar and LIKE metacharacters from free-text search', () => {
     const query = sanitizeSearchQuery('  phone,(or),description.%_\\  ')
     expect(query).toBe('phone or description')
-    expect(buildSearchOrFilter(['title', 'description'], 'phone,(or)')).toBe('title.ilike.%phone or or%,description.ilike.%phone or or%')
+    expect(buildSearchOrFilter(['title', 'description'], 'phone,(or)')).toBe('title.ilike.%phone or%,description.ilike.%phone or%')
     expect(buildSearchOrFilter(['title;drop', 'description'], 'x')).toBe('description.ilike.%x%')
   })
 
