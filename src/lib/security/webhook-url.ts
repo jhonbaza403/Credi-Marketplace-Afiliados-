@@ -1,19 +1,41 @@
 import { isIP } from 'node:net'
 import { lookup } from 'node:dns/promises'
 
-const PRIVATE_IPV4_RANGES = [
-  [/^10\./, 'PRIVATE_NETWORK'],
-  [/^127\./, 'LOOPBACK'],
-  [/^169\.254\./, 'LINK_LOCAL'],
-  [/^192\.168\./, 'PRIVATE_NETWORK'],
-  [/^172\.(1[6-9]|2\d|3[0-1])\./, 'PRIVATE_NETWORK'],
-  [/^0\./, 'UNSPECIFIED'],
-] as const
+function ipv4ToInt(address: string): number | null {
+  const parts = address.split('.').map(Number)
+  if (parts.length !== 4 || parts.some((part) => !Number.isInteger(part) || part < 0 || part > 255)) return null
+  return (((parts[0] * 256 + parts[1]) * 256 + parts[2]) * 256 + parts[3]) >>> 0
+}
+
+function inIpv4Cidr(address: string, network: string, prefix: number): boolean {
+  const ip = ipv4ToInt(address)
+  const base = ipv4ToInt(network)
+  if (ip === null || base === null || prefix < 0 || prefix > 32) return false
+  const mask = prefix === 0 ? 0 : (0xffffffff << (32 - prefix)) >>> 0
+  return (ip & mask) === (base & mask)
+}
+
+const PRIVATE_IPV4_RANGES: ReadonlyArray<readonly [string, number, string]> = [
+  ['0.0.0.0', 8, 'UNSPECIFIED'],
+  ['10.0.0.0', 8, 'PRIVATE_NETWORK'],
+  ['100.64.0.0', 10, 'SHARED_ADDRESS_SPACE'],
+  ['127.0.0.0', 8, 'LOOPBACK'],
+  ['169.254.0.0', 16, 'LINK_LOCAL'],
+  ['172.16.0.0', 12, 'PRIVATE_NETWORK'],
+  ['192.0.0.0', 24, 'SPECIAL_USE'],
+  ['192.0.2.0', 24, 'DOCUMENTATION'],
+  ['192.168.0.0', 16, 'PRIVATE_NETWORK'],
+  ['198.18.0.0', 15, 'BENCHMARK_NETWORK'],
+  ['198.51.100.0', 24, 'DOCUMENTATION'],
+  ['203.0.113.0', 24, 'DOCUMENTATION'],
+  ['224.0.0.0', 4, 'MULTICAST'],
+  ['240.0.0.0', 4, 'RESERVED'],
+]
 
 export function isBlockedWebhookIp(address: string): string | null {
   if (isIP(address) === 4) {
-    for (const [pattern, reason] of PRIVATE_IPV4_RANGES) {
-      if (pattern.test(address)) return reason
+    for (const [network, prefix, reason] of PRIVATE_IPV4_RANGES) {
+      if (inIpv4Cidr(address, network, prefix)) return reason
     }
     return null
   }
@@ -23,6 +45,7 @@ export function isBlockedWebhookIp(address: string): string | null {
   if (normalized === '::' || normalized === '0:0:0:0:0:0:0:0') return 'UNSPECIFIED'
   if (normalized.startsWith('fe80:')) return 'LINK_LOCAL'
   if (normalized.startsWith('fc') || normalized.startsWith('fd')) return 'PRIVATE_NETWORK'
+  if (normalized.startsWith('ff')) return 'MULTICAST'
   if (normalized.startsWith('::ffff:')) return isBlockedWebhookIp(normalized.slice(7))
   return null
 }

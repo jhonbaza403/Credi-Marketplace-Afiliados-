@@ -12,17 +12,21 @@ describe('security hardening', () => {
     expect(verifyPkceS256(`${verifier}x`, challenge)).toBe(false)
   })
 
-  it('normalizes free-text search into a safe PostgREST filter', () => {
-    const query = sanitizeSearchQuery('  phone,(or),description  ')
+  it('removes PostgREST grammar and LIKE metacharacters from free-text search', () => {
+    const query = sanitizeSearchQuery('  phone,(or),description.%_\\  ')
     expect(query).toBe('phone or description')
-    expect(buildSearchOrFilter(['title', 'description'], 'phone,(or)')).toBe('title.ilike.%phone or or%,description.ilike.%phone or or%')
+    expect(buildSearchOrFilter(['title', 'description'], 'phone,(or)')).toBe('title.ilike.%phone or%,description.ilike.%phone or%')
+    expect(buildSearchOrFilter(['title;drop', 'description'], 'x')).toBe('description.ilike.%x%')
   })
 
-  it('blocks private and metadata-service webhook destinations', () => {
+  it('blocks private, link-local, benchmark, and metadata-service webhook destinations', () => {
     expect(isBlockedWebhookIp('127.0.0.1')).toBe('LOOPBACK')
     expect(isBlockedWebhookIp('169.254.169.254')).toBe('LINK_LOCAL')
     expect(isBlockedWebhookIp('10.0.0.1')).toBe('PRIVATE_NETWORK')
     expect(isBlockedWebhookIp('192.168.1.1')).toBe('PRIVATE_NETWORK')
+    expect(isBlockedWebhookIp('100.64.1.1')).toBe('SHARED_ADDRESS_SPACE')
+    expect(isBlockedWebhookIp('198.18.1.1')).toBe('BENCHMARK_NETWORK')
+    expect(isBlockedWebhookIp('224.0.0.1')).toBe('MULTICAST')
     expect(isBlockedWebhookIp('8.8.8.8')).toBe(null)
   })
 })

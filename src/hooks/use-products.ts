@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from "react";
 
+import { createClient } from "@/lib/supabase/client";
 import type { ProductSummary } from "@/types/product";
 
 interface UseProductsOptions {
@@ -15,13 +16,24 @@ interface UseProductsResult {
   refresh: () => Promise<void>;
 }
 
+type ProductRow = {
+  id: string;
+  store_id: string;
+  category_id: string | null;
+  title: string;
+  slug: string;
+  price: number;
+  stock: number;
+  images: string[] | null;
+  is_active: boolean;
+};
+
 export function useProducts(
   options: UseProductsOptions = {},
 ): UseProductsResult {
   const [products, setProducts] = useState<ProductSummary[]>(
     options.initialProducts ?? [],
   );
-
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -30,32 +42,33 @@ export function useProducts(
     setError(null);
 
     try {
-      const response = await fetch("/api/products", {
-        method: "GET",
-        headers: {
-          Accept: "application/json",
-        },
-        cache: "no-store",
-      });
+      const supabase = createClient();
+      const { data, error: queryError } = await supabase
+        .from("published_products")
+        .select(
+          "id,store_id,category_id,title,slug,price,stock,images,is_active",
+        )
+        .eq("is_active", true)
+        .gt("stock", 0)
+        .order("updated_at", { ascending: false })
+        .limit(100);
 
-      if (!response.ok) {
-        throw new Error("No fue posible cargar los productos");
-      }
+      if (queryError) throw queryError;
 
-      const data: unknown = await response.json();
-
-      if (
-        typeof data === "object" &&
-        data !== null &&
-        "products" in data &&
-        Array.isArray((data as { products?: unknown }).products)
-      ) {
-        setProducts(
-          (data as { products: ProductSummary[] }).products,
-        );
-      } else {
-        setProducts([]);
-      }
+      const rows = (data ?? []) as ProductRow[];
+      setProducts(
+        rows.map((row): ProductSummary => ({
+          id: row.id,
+          storeId: row.store_id,
+          categoryId: row.category_id,
+          title: row.title,
+          slug: row.slug,
+          price: row.price,
+          stock: row.stock,
+          images: row.images ?? [],
+          isActive: row.is_active,
+        })),
+      );
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Error desconocido",
