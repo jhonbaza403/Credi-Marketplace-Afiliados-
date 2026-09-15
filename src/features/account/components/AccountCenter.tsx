@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
+import type { ReactNode } from 'react'
 import { FileText, LogOut, Package, PenLine, Settings, UserRound } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
@@ -102,6 +103,6 @@ export default function AccountCenter() {
   )
 }
 
-function Stat({ icon, label, value }: { icon: React.ReactNode; label: string; value: React.ReactNode }) {
+function Stat({ icon, label, value }: { icon: ReactNode; label: string; value: ReactNode }) {
   return <div className="rounded-2xl border border-border bg-background p-4"><div className="flex items-center gap-2 text-primary">{icon}<span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">{label}</span></div><p className="mt-2 text-xl font-black text-foreground">{value}</p></div>
 }
