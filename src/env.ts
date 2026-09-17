@@ -5,7 +5,6 @@ const nonEmptyString = z.string().trim().min(1, "El valor no puede estar vacío"
 
 const serverEnvSchema = z.object({
   SUPABASE_SECRET_KEY: nonEmptyString.optional(),
-  SUPABASE_SERVICE_ROLE_KEY: nonEmptyString.optional(),
   DATABASE_URL: nonEmptyString.optional(),
   GEMINI_API_KEY: nonEmptyString.optional(),
   STRIPE_SECRET_KEY: nonEmptyString.optional(),
@@ -35,7 +34,6 @@ function readServerEnv(): ServerEnv {
   if (serverEnvCache) return serverEnvCache;
   serverEnvCache = serverEnvSchema.parse({
     SUPABASE_SECRET_KEY: process.env.SUPABASE_SECRET_KEY,
-    SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
     DATABASE_URL: process.env.DATABASE_URL,
     GEMINI_API_KEY: process.env.GEMINI_API_KEY,
     STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
@@ -46,16 +44,11 @@ function readServerEnv(): ServerEnv {
   return serverEnvCache;
 }
 
-function resolvePublishableKey(): string | undefined {
-  return process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim()
-    || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
-}
-
 function readPublicEnv(): PublicEnv {
   if (publicEnvCache) return publicEnvCache;
   publicEnvCache = publicEnvSchema.parse({
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
-    NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: resolvePublishableKey(),
+    NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
     NEXT_PUBLIC_APP_NAME: process.env.NEXT_PUBLIC_APP_NAME,
     NEXT_PUBLIC_DEFAULT_LOCALE: process.env.NEXT_PUBLIC_DEFAULT_LOCALE,
@@ -68,7 +61,6 @@ function readPublicEnv(): PublicEnv {
 
 export const env = {
   get SUPABASE_SECRET_KEY() { return readServerEnv().SUPABASE_SECRET_KEY; },
-  get SUPABASE_SERVICE_ROLE_KEY() { return readServerEnv().SUPABASE_SERVICE_ROLE_KEY; },
   get DATABASE_URL() { return readServerEnv().DATABASE_URL; },
   get GEMINI_API_KEY() { return readServerEnv().GEMINI_API_KEY; },
   get STRIPE_SECRET_KEY() { return readServerEnv().STRIPE_SECRET_KEY; },

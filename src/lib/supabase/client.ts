@@ -3,14 +3,18 @@ import { createBrowserClient } from "@supabase/ssr";
 const BUILD_PLACEHOLDER_URL = "https://placeholder.supabase.co";
 const BUILD_PLACEHOLDER_KEY = "build-placeholder-key";
 
+function getPublicEnv(name: "NEXT_PUBLIC_SUPABASE_URL" | "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY"): string | undefined {
+  const value = process.env[name]?.trim();
+  return value || undefined;
+}
+
 export function createClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key =
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim() ||
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
+  const url = getPublicEnv("NEXT_PUBLIC_SUPABASE_URL");
+  const key = getPublicEnv("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY");
 
   const options = {
     auth: {
+      flowType: "pkce" as const,
       experimental: {
         passkey: true,
       },
@@ -26,6 +30,6 @@ export function createClient() {
   }
 
   throw new Error(
-    "Falta la configuración pública de Supabase. Configure NEXT_PUBLIC_SUPABASE_URL y NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY (o NEXT_PUBLIC_SUPABASE_ANON_KEY).",
+    "Falta la configuración pública de Supabase. Configure NEXT_PUBLIC_SUPABASE_URL y NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY.",
   );
 }

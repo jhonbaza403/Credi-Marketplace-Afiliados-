@@ -6,6 +6,7 @@ import {
   isGeminiConfigured,
 } from "@/lib/ai/gemini";
 import { createClient } from "@/lib/supabase/server";
+import { rateLimit } from "@/lib/security/rate-limit";
 
 interface AiRequestBody {
   prompt?: unknown;
@@ -26,6 +27,14 @@ export async function POST(request: Request) {
 
   if (!user) {
     return NextResponse.json({ error: "No autenticado" }, { status: 401 });
+  }
+
+  const limit = await rateLimit(`ai:${user.id}`, { limit: 30, windowMs: 60_000 });
+  if (!limit.success) {
+    return NextResponse.json(
+      { error: "Has alcanzado el límite temporal de solicitudes de IA. Intenta nuevamente más tarde.", code: "AI_RATE_LIMITED" },
+      { status: 429, headers: { "Cache-Control": "no-store", "Retry-After": String(Math.max(1, Math.ceil((limit.resetAt - Date.now()) / 1000))) } },
+    );
   }
 
   if (!isGeminiConfigured()) {

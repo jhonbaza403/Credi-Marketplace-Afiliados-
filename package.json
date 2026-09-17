@@ -21,11 +21,24 @@
     "test:e2e:report": "playwright show-report",
     "verify:structure": "node scripts-verify.mjs",
     "audit:routes": "node scripts/audit-routes.mjs",
-    "check": "npm run verify:structure && npm run audit:routes && npm run lint && npm run typecheck && npm run test",
+    "audit:integration": "node scripts/audit-integration.mjs",
+    "check": "npm run verify:structure && npm run audit:routes && npm run audit:integration && npm run lint && npm run typecheck && npm run test",
     "check:all": "npm run check && npm run test:e2e && npm run build",
-    "security:audit": "npm audit --audit-level=critical"
+    "security:audit": "npm audit --audit-level=critical",
+    "cap:init": "cap init",
+    "cap:sync": "cap sync",
+    "cap:open:android": "cap open android",
+    "cap:open:ios": "cap open ios",
+    "android:add": "cap add android",
+    "ios:add": "cap add ios",
+    "android:build:debug": "npm run cap:sync && cd android && ./gradlew assembleDebug",
+    "android:build:release": "npm run cap:sync && cd android && ./gradlew bundleRelease",
+    "ios:build:simulator": "npm run cap:sync && cd ios && xcodebuild -workspace App/App.xcworkspace -scheme App -sdk iphonesimulator -configuration Debug -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build"
   },
   "dependencies": {
+    "@capacitor/android": "8.5.2",
+    "@capacitor/core": "8.5.2",
+    "@capacitor/ios": "8.5.2",
     "@google/genai": "2.21.0",
     "@hookform/resolvers": "^3.9.0",
     "@supabase/ssr": "^0.12.6",
@@ -41,6 +54,7 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@capacitor/cli": "8.5.2",
     "@next/eslint-plugin-next": "16.3.4",
     "@playwright/test": "^1.48.0",
     "@tailwindcss/postcss": "^4.3.3",

@@ -7,7 +7,12 @@ const SRC = path.join(ROOT, 'src')
 const APP = path.join(SRC, 'app')
 
 const TEXT_EXTENSIONS = new Set(['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs'])
-const ROUTE_REFERENCE = /(?:href\s*=\s*[{(]?\s*['\"](\/[^'\"?#]*)|(?:router\.(?:push|replace)|redirect|permanentRedirect|window\.location\.(?:assign|replace))\s*\(\s*['\"](\/[^'\"?#]*)|fetch\s*\(\s*['\"](\/api\/[^'\"?#]*)/g
+const ROUTE_PATTERNS = [
+  /href\s*=\s*[{(]?\s*['"](\/[^'"?#]*)/g,
+  /(?:router\.(?:push|replace)|redirect|permanentRedirect)\s*\(\s*['"](\/[^'"?#]*)/g,
+  /window\.location\.(?:assign|replace)\s*\(\s*['"](\/[^'"?#]*)/g,
+  /fetch\s*\(\s*['"](\/api\/[^'"?#]*)/g,
+]
 
 function walk(dir, files = []) {
   if (!fs.existsSync(dir)) return files
@@ -33,14 +38,13 @@ function normalizeRoute(value) {
       return segment
     })
     .join('/')
-    .replace(/\*\??$/, (suffix) => suffix)
     .replace(/^/, '/')
 }
 
 function routeFromPageFile(file) {
   const rel = path.relative(APP, file).replace(/\\/g, '/')
   const parts = rel.split('/')
-  if (parts.at(-1) !== 'page.tsx' && parts.at(-1) !== 'page.ts' && parts.at(-1) !== 'page.jsx' && parts.at(-1) !== 'page.js') return null
+  if (!['page.tsx', 'page.ts', 'page.jsx', 'page.js'].includes(parts.at(-1))) return null
   parts.pop()
   return normalizeRoute(parts.join('/'))
 }
@@ -49,33 +53,49 @@ function apiFromRouteFile(file) {
   const rel = path.relative(APP, file).replace(/\\/g, '/')
   if (!rel.startsWith('api/')) return null
   const parts = rel.split('/')
-  if (parts.at(-1) !== 'route.ts' && parts.at(-1) !== 'route.js') return null
+  if (!['route.ts', 'route.js'].includes(parts.at(-1))) return null
   parts.pop()
   return normalizeRoute(parts.join('/'))
 }
 
-const pageFiles = walk(APP)
+function methodNames(file) {
+  const text = fs.readFileSync(file, 'utf8')
+  return [...new Set([...text.matchAll(/^export\s+async\s+function\s+(GET|POST|PUT|PATCH|DELETE|OPTIONS|HEAD)/gm)].map((m) => m[1]))].sort()
+}
+
 const sourceFiles = walk(SRC)
+const pageFiles = sourceFiles.filter((file) => routeFromPageFile(file))
+const apiRouteFiles = sourceFiles.filter((file) => apiFromRouteFile(file))
 const routes = new Set()
 const apis = new Set()
+const apiFilesByRoute = new Map()
 
 for (const file of pageFiles) {
   const route = routeFromPageFile(file)
   if (route) routes.add(route)
+}
+
+for (const file of apiRouteFiles) {
   const api = apiFromRouteFile(file)
-  if (api) apis.add(api)
+  if (!api) continue
+  apis.add(api)
+  const files = apiFilesByRoute.get(api) ?? []
+  files.push(file)
+  apiFilesByRoute.set(api, files)
 }
 
 const refs = new Map()
 for (const file of sourceFiles) {
   const text = fs.readFileSync(file, 'utf8')
-  for (const match of text.matchAll(ROUTE_REFERENCE)) {
-    const value = match[1] || match[2] || match[3]
-    if (!value) continue
-    const normalized = normalizeRoute(value)
-    const map = refs.get(normalized) ?? []
-    map.push(path.relative(ROOT, file))
-    refs.set(normalized, map)
+  for (const pattern of ROUTE_PATTERNS) {
+    for (const match of text.matchAll(pattern)) {
+      const value = match[1]
+      if (!value) continue
+      const normalized = normalizeRoute(value)
+      const map = refs.get(normalized) ?? []
+      map.push(path.relative(ROOT, file))
+      refs.set(normalized, map)
+    }
   }
 }
 
@@ -98,34 +118,41 @@ function matchesDynamic(target, available) {
 const missing = []
 for (const [route, files] of refs) {
   const isApi = route === '/api' || route.startsWith('/api/')
-  if ((isApi ? apis : routes).size === 0) continue
-  if (!matchesDynamic(route, isApi ? apis : routes)) {
-    missing.push({ route, files })
-  }
+  const available = isApi ? apis : routes
+  if (available.size === 0) continue
+  if (!matchesDynamic(route, available)) missing.push({ route, files })
 }
 
-const duplicateRoutes = [...routes].filter((route) => {
-  const count = pageFiles.filter((file) => routeFromPageFile(file) === route).length
-  return count > 1
-})
+const duplicateRoutes = [...routes].filter((route) => pageFiles.filter((file) => routeFromPageFile(file) === route).length > 1)
+const duplicateApis = [...apis].filter((api) => (apiFilesByRoute.get(api) ?? []).length > 1)
+const apiInventory = [...apis].sort().map((api) => ({
+  route: api,
+  files: (apiFilesByRoute.get(api) ?? []).map((file) => path.relative(ROOT, file)).sort(),
+  methods: [...new Set((apiFilesByRoute.get(api) ?? []).flatMap(methodNames))].sort(),
+}))
 
 console.log('=== Credi Marketplace Route/API Audit ===')
 console.log(`Pages discovered: ${routes.size}`)
 console.log(`API routes discovered: ${apis.size}`)
 console.log(`Static route references: ${refs.size}`)
 console.log(`Missing references: ${missing.length}`)
-console.log(`Duplicate canonical routes: ${duplicateRoutes.length}`)
+console.log(`Duplicate canonical pages: ${duplicateRoutes.length}`)
+console.log(`Duplicate canonical APIs: ${duplicateApis.length}`)
+console.log('\nAPI inventory:')
+for (const item of apiInventory) console.log(`- ${item.route} [${item.methods.join(', ') || 'NO_EXPORTED_METHOD'}] <- ${item.files.join(', ')}`)
 
 if (missing.length) {
   console.error('\nMissing references:')
-  for (const item of missing) {
-    console.error(`- ${item.route} <- ${item.files.join(', ')}`)
-  }
+  for (const item of missing) console.error(`- ${item.route} <- ${item.files.join(', ')}`)
 }
 if (duplicateRoutes.length) {
-  console.error('\nDuplicate canonical routes:')
+  console.error('\nDuplicate canonical pages:')
   for (const route of duplicateRoutes) console.error(`- ${route}`)
 }
+if (duplicateApis.length) {
+  console.error('\nDuplicate canonical APIs:')
+  for (const api of duplicateApis) console.error(`- ${api}`)
+}
 
-if (missing.length || duplicateRoutes.length) process.exit(1)
+if (missing.length || duplicateRoutes.length || duplicateApis.length) process.exit(1)
 console.log('\nRoute/API audit: PASSED')

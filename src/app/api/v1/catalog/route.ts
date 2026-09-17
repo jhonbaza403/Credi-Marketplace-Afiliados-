@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createHash } from 'node:crypto'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { buildSearchOrFilter } from '@/lib/search/postgrest-filter'
 
 export const runtime='nodejs'
 export const dynamic='force-dynamic'
@@ -21,9 +22,12 @@ export async function GET(request:Request){
  if(quotaError)return NextResponse.json({error:'RATE_LIMIT_SERVICE_UNAVAILABLE'},{status:503})
  if(quotaAllowed===false)return NextResponse.json({error:'RATE_LIMITED',retry_after_seconds:60},{status:429,headers:{'Retry-After':'60','Cache-Control':'no-store'}})
  await admin.from('developer_api_keys').update({last_used_at:now.toISOString()}).eq('id',keyRow.id)
- const url=new URL(request.url); const q=url.searchParams.get('q')?.trim().toLowerCase()||''; const limit=Math.min(Math.max(Number(url.searchParams.get('limit')||50),1),100)
+ const url=new URL(request.url)
+ const rawLimit=Number(url.searchParams.get('limit')||50)
+ const limit=Number.isSafeInteger(rawLimit)?Math.min(Math.max(rawLimit,1),100):50
+ const filter=buildSearchOrFilter(['title','description'],url.searchParams.get('q')||'')
  let query=admin.from('published_products').select('id,title,slug,description,price,stock,image_url,images,is_active,updated_at').eq('is_active',true).gt('stock',0).limit(limit)
- if(q)query=query.or(`title.ilike.%${q}%,description.ilike.%${q}%`)
+ if(filter)query=query.or(filter)
  const {data,error}=await query
  if(error)return NextResponse.json({error:'CATALOG_UNAVAILABLE'},{status:500})
  return NextResponse.json({version:'v1',app_id:app.id,products:data??[]},{headers:{'Cache-Control':'private, max-age=30'}})

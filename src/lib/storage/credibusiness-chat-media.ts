@@ -19,8 +19,18 @@ const AUDIO_TYPES = new Set([
 ])
 const MAX_IMAGE = 20 * 1024 * 1024
 const MAX_VIDEO = 500 * 1024 * 1024
-const MAX_AUDIO = 50 * 1024 * 1024
+export const CREDICHAT_AUDIO_MAX_SIZE = 15 * 1024 * 1024
 const MAX_FILE = 100 * 1024 * 1024
+
+export function audioMimeTypeSupported(contentType: string) {
+  const normalized = contentType.toLowerCase().split(';', 1)[0].trim()
+  return AUDIO_TYPES.has(normalized)
+}
+
+export function validateCrediChatAudio(file: File) {
+  if (!audioMimeTypeSupported(file.type)) throw new Error(`Formato de audio no compatible: ${file.type || 'desconocido'}.`)
+  if (file.size > CREDICHAT_AUDIO_MAX_SIZE) throw new Error('El mensaje de voz supera el máximo permitido de 15 MB.')
+}
 
 function kindFor(file: File): ChatUploadKind {
   if (file.type.startsWith('image/')) return 'image'
@@ -33,8 +43,8 @@ function kindFor(file: File): ChatUploadKind {
 function validate(file: File, kind: ChatUploadKind) {
   if (kind === 'image' && !IMAGE_TYPES.has(file.type)) throw new Error('Formato de imagen no compatible.')
   if (kind === 'video' && !VIDEO_TYPES.has(file.type)) throw new Error('Formato de vídeo no compatible.')
-  if (kind === 'audio' && !AUDIO_TYPES.has(file.type)) throw new Error(`Formato de audio no compatible: ${file.type || 'desconocido'}.`)
-  const max = kind === 'image' ? MAX_IMAGE : kind === 'video' ? MAX_VIDEO : kind === 'audio' ? MAX_AUDIO : MAX_FILE
+  if (kind === 'audio') validateCrediChatAudio(file)
+  const max = kind === 'image' ? MAX_IMAGE : kind === 'video' ? MAX_VIDEO : kind === 'audio' ? CREDICHAT_AUDIO_MAX_SIZE : MAX_FILE
   if (file.size > max) throw new Error(`El archivo supera el máximo permitido de ${Math.round(max / 1024 / 1024)} MB.`)
 }
 
