@@ -2,14 +2,18 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
-export default function AccountCenter() {
+interface AccountCenterProps {
+  userEmail: string;
+  initialName: string;
+  loadError?: string | null;
+}
+
+export default function AccountCenter({ userEmail, initialName, loadError = null }: AccountCenterProps) {
   const router = useRouter();
-  const [userEmail, setUserEmail] = useState("");
-  const [name, setName] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [name, setName] = useState(initialName);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -71,6 +75,18 @@ export default function AccountCenter() {
 
   if (loading) {
     return <main className="mx-auto max-w-5xl px-4 py-16 text-center text-sm text-muted-foreground">Cargando tu cuenta...</main>;
+  }
+
+  if (loadError) {
+    return (
+      <main className="mx-auto max-w-3xl px-4 py-16">
+        <section className="rounded-3xl border border-border bg-card p-8 text-center shadow-sm sm:p-10">
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-destructive">Cuenta</p>
+          <h1 className="mt-3 text-3xl font-black text-foreground">No fue posible cargar tu cuenta</h1>
+          <p className="mt-3 text-sm leading-6 text-muted-foreground">{loadError}</p>
+        </section>
+      </main>
+    );
   }
 
   if (!userEmail) {
