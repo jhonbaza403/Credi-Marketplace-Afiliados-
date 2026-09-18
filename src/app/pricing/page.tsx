@@ -27,11 +27,15 @@ type CheckoutButtonProps = {
   interval: "monthly" | "yearly";
 };
 
-function CheckoutButton({ planCode, interval }: CheckoutButtonProps) {
+function CheckoutButton({ planCode }: { planCode: string }) {
   return (
     <form action="/api/billing/checkout" method="post">
       <input type="hidden" name="plan" value={planCode} />
-      <input type="hidden" name="interval" value={interval} />
+      <label className="sr-only" htmlFor={`billing-interval-${planCode}`}>Periodicidad de facturación</label>
+      <select id={`billing-interval-${planCode}`} name="interval" defaultValue="monthly" className="w-full rounded-2xl border border-[var(--border)] bg-[var(--surface-secondary)] px-4 py-3 text-sm font-bold text-[var(--foreground)] outline-none focus:ring-2 focus:ring-[var(--primary)]/30">
+        <option value="monthly">Facturación mensual</option>
+        <option value="yearly">Facturación anual</option>
+      </select>
       <button
         type="submit"
         className="w-full rounded-2xl bg-[var(--foreground)] px-4 py-3 text-center text-sm font-black text-[var(--background)] shadow-[0_14px_30px_rgba(15,23,42,.12)] transition hover:-translate-y-0.5 hover:shadow-[0_18px_36px_rgba(15,23,42,.18)]"
@@ -52,7 +56,7 @@ export default async function PricingPage() {
           <span className="inline-flex rounded-full border border-[var(--border)] bg-[var(--surface)] px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-[var(--primary)] shadow-sm">
             Monetización freemium
           </span>
-          <h1 className="mt-6 text-4xl font-black tracking-tight text-[var(--foreground)] sm:text-6xl [text-shadow:0_2px_0_var(--surface),0_8px_22px_rgba(15,23,42,.16)]">
+          <h1 className="mt-6 text-4xl font-black tracking-tight text-[var(--foreground)] sm:text-6xl">
             Credi Marketplace es gratis para empezar
           </h1>
           <p className="mx-auto mt-5 max-w-3xl text-base leading-8 text-[var(--muted)] sm:text-lg">
@@ -87,7 +91,7 @@ export default async function PricingPage() {
                 <p className="text-xs font-black uppercase tracking-[.16em] text-[var(--primary)]">
                   {audienceLabel[plan.audience] ?? "Plan comercial"}
                 </p>
-                <h2 className="mt-3 text-3xl font-black text-[var(--foreground)] [text-shadow:0_2px_0_var(--surface),0_5px_12px_rgba(15,23,42,.12)]">{plan.name}</h2>
+                <h2 className="mt-3 text-3xl font-black text-[var(--foreground)]">{plan.name}</h2>
                 <p className="mt-3 min-h-16 text-sm leading-6 text-[var(--muted)]">{plan.description}</p>
                 <div className="mt-7 flex items-end gap-2">
                   <span className="text-4xl font-black text-[var(--foreground)]">{monthly}</span>
@@ -110,8 +114,7 @@ export default async function PricingPage() {
                     </Link>
                   ) : (
                     <>
-                      <CheckoutButton planCode={plan.code} interval="monthly" />
-                      <CheckoutButton planCode={plan.code} interval="yearly" />
+                      <CheckoutButton planCode={plan.code} />
                     </>
                   )}
                 </div>
