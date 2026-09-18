@@ -22,11 +22,6 @@ const audienceLabel: Record<string, string> = {
   enterprise: "Empresas",
 };
 
-type CheckoutButtonProps = {
-  planCode: string;
-  interval: "monthly" | "yearly";
-};
-
 function CheckoutButton({ planCode }: { planCode: string }) {
   return (
     <form action="/api/billing/checkout" method="post">
