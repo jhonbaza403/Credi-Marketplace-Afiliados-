@@ -37,7 +37,7 @@ test.describe("Public route availability", () => {
     await expect(page.getByRole("alert")).toContainText("código de país");
   });
 
-  test("production health endpoint is reachable", async ({ request }) =>
+  test("production health endpoint is reachable", async ({ request }) => {
     const response = await request.get("/api/health", { maxRedirects: 5 });
     expect(response.status()).toBe(200);
     await expect(response.json()).resolves.toMatchObject({
