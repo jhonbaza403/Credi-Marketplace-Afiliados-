@@ -35,7 +35,7 @@ function CheckoutButton({ planCode }: { planCode: string }) {
         type="submit"
         className="w-full rounded-2xl bg-[var(--foreground)] px-4 py-3 text-center text-sm font-black text-[var(--background)] shadow-[0_14px_30px_rgba(15,23,42,.12)] transition hover:-translate-y-0.5 hover:shadow-[0_18px_36px_rgba(15,23,42,.18)]"
       >
-        Suscribirme {interval === "yearly" ? "anual" : "mensual"}
+        Continuar con el plan
       </button>
     </form>
   );
