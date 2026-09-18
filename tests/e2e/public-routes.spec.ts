@@ -26,7 +26,18 @@ test.describe("Public route availability", () => {
     });
   }
 
-  test("production health endpoint is reachable", async ({ request }) => {
+  test("register rejects an invalid international phone before submission", async ({ page }) => {
+    await page.goto("/register", { waitUntil: "domcontentloaded" });
+    await page.getByLabel("Nombre completo").fill("Usuario de prueba");
+    await page.getByLabel("Correo").fill("e2e-invalid-phone@example.com");
+    await page.getByLabel("Número telefónico internacional").fill("04121234567");
+    await page.getByLabel("Contraseña").fill("ValidPassword123!");
+    await page.getByLabel("Confirmar contraseña").fill("ValidPassword123!");
+    await page.getByRole("button", { name: "Crear cuenta" }).click();
+    await expect(page.getByRole("alert")).toContainText("código de país");
+  });
+
+  test("production health endpoint is reachable", async ({ request }) =>
     const response = await request.get("/api/health", { maxRedirects: 5 });
     expect(response.status()).toBe(200);
     await expect(response.json()).resolves.toMatchObject({
