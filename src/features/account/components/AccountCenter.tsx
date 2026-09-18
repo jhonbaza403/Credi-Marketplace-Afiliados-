@@ -17,31 +17,6 @@ export default function AccountCenter({ userEmail, initialName, loadError = null
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
-  useEffect(() => {
-    let active = true;
-    void (async () => {
-      try {
-        const supabase = createClient();
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
-        if (!active) return;
-        if (userError || !user) {
-          setLoading(false);
-          return;
-        }
-        setUserEmail(user.email ?? "");
-        const { data: profile } = await supabase.from("profiles").select("full_name").eq("id", user.id).maybeSingle();
-        if (!active) return;
-        setName(profile?.full_name ?? user.user_metadata?.full_name ?? "");
-      } catch (error: unknown) {
-        console.error("[AccountCenter] account load error", error);
-        if (active) setMessage("No fue posible cargar la cuenta. Revisa la configuración pública de Supabase.");
-      } finally {
-        if (active) setLoading(false);
-      }
-    })();
-    return () => { active = false; };
-  }, []);
-
   async function saveProfile() {
     setSaving(true);
     setMessage(null);
@@ -71,10 +46,6 @@ export default function AccountCenter({ userEmail, initialName, loadError = null
       router.replace("/");
       router.refresh();
     }
-  }
-
-  if (loading) {
-    return <main className="mx-auto max-w-5xl px-4 py-16 text-center text-sm text-muted-foreground">Cargando tu cuenta...</main>;
   }
 
   if (loadError) {
