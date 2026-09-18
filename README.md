@@ -293,3 +293,5 @@ npx skills add supabase/agent-skills
 ```
 
 La skill `supabase/server` puede instalarse como conocimiento adicional cuando sea necesaria, pero no implica migrar el cliente SSR de Next.js desde `@supabase/ssr`.
+
+<!-- Vercel deployment verification checkpoint -->
