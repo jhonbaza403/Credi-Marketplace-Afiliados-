@@ -102,7 +102,7 @@ export async function getPublicCommercialPlans(): Promise<CommercialPlan[]> {
     if (error || !data?.length) return fallbackPlans.filter((plan) => !HIDDEN_NON_COMMERCIAL_PLAN_CODES.has(plan.code));
     return (data as unknown as CommercialPlan[]).filter((plan) => !HIDDEN_NON_COMMERCIAL_PLAN_CODES.has(plan.code));
   } catch {
-    return fallbackPlans;
+    return fallbackPlans.filter((plan) => !HIDDEN_NON_COMMERCIAL_PLAN_CODES.has(plan.code));
   }
 }
 
