@@ -84,6 +84,8 @@ const fallbackPlans: CommercialPlan[] = [
   },
 ];
 
+const HIDDEN_NON_COMMERCIAL_PLAN_CODES = new Set(["creator", "admin"])
+
 export async function getPublicCommercialPlans(): Promise<CommercialPlan[]> {
   try {
     const supabase = await createClient();
@@ -94,10 +96,11 @@ export async function getPublicCommercialPlans(): Promise<CommercialPlan[]> {
       )
       .eq("is_public", true)
       .eq("is_active", true)
+      .not("code", "in", "(creator,admin)")
       .order("sort_order", { ascending: true });
 
     if (error || !data?.length) return fallbackPlans;
-    return data as unknown as CommercialPlan[];
+    return (data as unknown as CommercialPlan[]).filter((plan) => !HIDDEN_NON_COMMERCIAL_PLAN_CODES.has(plan.code));
   } catch {
     return fallbackPlans;
   }
