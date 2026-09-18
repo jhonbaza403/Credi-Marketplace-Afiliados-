@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/client'
 
 export const MARKETPLACE_MEDIA_BUCKET = 'marketplace-media'
 
-export type MarketplaceMediaKind = 'image' | 'video'
+export type MarketplaceMediaKind = 'image' | 'video' | 'audio'
 
 export interface UploadedMarketplaceMedia {
   kind: MarketplaceMediaKind
@@ -15,29 +15,35 @@ export interface UploadedMarketplaceMedia {
 
 const IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
 const VIDEO_TYPES = new Set(['video/mp4', 'video/webm', 'video/quicktime'])
+const AUDIO_TYPES = new Set(['audio/aac', 'audio/flac', 'audio/m4a', 'audio/mp4', 'audio/mpeg', 'audio/ogg', 'audio/opus', 'audio/webm', 'audio/wav', 'audio/x-m4a', 'audio/x-wav'])
 const MAX_IMAGE_SIZE = 20 * 1024 * 1024
 const MAX_VIDEO_SIZE = 500 * 1024 * 1024
+const MAX_AUDIO_SIZE = 500 * 1024 * 1024
 
 export function validateMarketplaceMedia(file: File, kind?: MarketplaceMediaKind) {
-  const validKind = kind ?? (file.type.startsWith('video/') ? 'video' : 'image')
-  const allowed = validKind === 'video' ? VIDEO_TYPES : IMAGE_TYPES
-  const maxSize = validKind === 'video' ? MAX_VIDEO_SIZE : MAX_IMAGE_SIZE
+  const validKind = kind ?? (file.type.startsWith('video/') ? 'video' : file.type.startsWith('audio/') ? 'audio' : 'image')
+  const allowed = validKind === 'video' ? VIDEO_TYPES : validKind === 'audio' ? AUDIO_TYPES : IMAGE_TYPES
+  const maxSize = validKind === 'video' ? MAX_VIDEO_SIZE : validKind === 'audio' ? MAX_AUDIO_SIZE : MAX_IMAGE_SIZE
 
   if (!allowed.has(file.type)) {
     throw new Error(validKind === 'video'
       ? 'Formato de vídeo no compatible. Usa MP4, WebM o MOV.'
-      : 'Formato de imagen no compatible. Usa JPG, PNG, WebP o GIF.')
+      : validKind === 'audio'
+        ? 'Formato de audio no compatible. Usa MP3, MP4, OGG, WebM o WAV.'
+        : 'Formato de imagen no compatible. Usa JPG, PNG, WebP o GIF.')
   }
 
   if (file.size > maxSize) {
     throw new Error(validKind === 'video'
       ? 'El vídeo supera el máximo de 500 MB.'
-      : 'La imagen supera el máximo de 20 MB.')
+      : validKind === 'audio'
+        ? 'El audio supera el máximo de 500 MB.'
+        : 'La imagen supera el máximo de 20 MB.')
   }
 }
 
 export async function uploadMarketplaceMedia(file: File, kind?: MarketplaceMediaKind) {
-  const resolvedKind = kind ?? (file.type.startsWith('video/') ? 'video' : 'image')
+  const resolvedKind = kind ?? (file.type.startsWith('video/') ? 'video' : file.type.startsWith('audio/') ? 'audio' : 'image')
   validateMarketplaceMedia(file, resolvedKind)
 
   const supabase = createClient()
@@ -60,14 +66,9 @@ export async function uploadMarketplaceMedia(file: File, kind?: MarketplaceMedia
       upsert: false,
     })
 
-  if (uploadError) {
-    throw new Error('No fue posible completar la carga del archivo.')
-  }
+  if (uploadError) throw new Error('No fue posible completar la carga del archivo.')
 
-  const { data } = supabase.storage
-    .from(String(signed.bucket))
-    .getPublicUrl(String(signed.path))
-
+  const { data } = supabase.storage.from(String(signed.bucket)).getPublicUrl(String(signed.path))
   return {
     kind: resolvedKind,
     name: file.name,
