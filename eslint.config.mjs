@@ -36,6 +36,7 @@ export default defineConfig([
     rules: {
       ...nextRules,
       "no-console": ["warn", { allow: ["warn", "error"] }],
+      "@typescript-eslint/no-explicit-any": "warn",
       "no-debugger": "error",
       "no-unused-vars": "off",
       "no-eval": "error",
