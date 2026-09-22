@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 const ROOT=process.cwd();
-const IGNORE=new Set(["NODE_ENV","CI","NEXT_TELEMETRY_DISABLED","VERCEL","VERCEL_ENV","VERCEL_URL","VERCEL_REGION","VERCEL_TARGET_ENV","npm_config_user_agent","npm_config_node_gyp"]);
+const IGNORE=new Set(["NODE_ENV","CI","NEXT_TELEMETRY_DISABLED","CI_ENV_CONTRACT_STRICT","VERCEL","VERCEL_ENV","VERCEL_URL","VERCEL_REGION","VERCEL_TARGET_ENV","VERCEL_DEPLOYMENT_ID","npm_config_user_agent","npm_config_node_gyp"]);
 const roots=["src","scripts","supabase/functions","next.config.ts","playwright.config.ts","vitest.config.ts"];
 const extensions=new Set([".ts",".tsx",".js",".jsx",".mjs",".cjs",".sql"]);
 function filesUnder(input,out=[]){
