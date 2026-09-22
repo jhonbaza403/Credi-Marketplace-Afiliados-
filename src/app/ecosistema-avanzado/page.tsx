@@ -4,12 +4,12 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { ArrowRight, BarChart3, Bot, Code2, Coins, Handshake, LayoutGrid, RefreshCw, ShieldCheck, WalletCards } from 'lucide-react'
 
-type Json = Record<string, any>
+type Json = Record<string, unknown>
 
 async function getJson(url: string) {
   const response = await fetch(url, { cache: 'no-store' })
   const data = await response.json().catch(() => ({}))
-  if (!response.ok) throw new Error(data.error || 'REQUEST_FAILED')
+  if (!response.ok) throw new Error((typeof data.error==='string'?data.error:'REQUEST_FAILED'))
   return data
 }
 
