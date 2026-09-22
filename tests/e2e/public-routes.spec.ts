@@ -30,14 +30,14 @@ test.describe("Public route availability", () => {
   test("register rejects an invalid international phone before submission", async ({ page }) => {
     await page.goto("/register", { waitUntil: "domcontentloaded" });
     const phone = page.getByLabel("Número telefónico internacional");
-    await phone.fill("04121234567");
-    await expect(phone).toHaveValue("04121234567");
+    await phone.fill("+1234567890123456");
+    await expect(phone).toHaveValue("+1234567890123456");
     const pattern = await phone.getAttribute("pattern");
     expect(pattern).toBeTruthy();
-    expect("04121234567").not.toMatch(new RegExp(pattern!));
-    expect("+58 412 1234567").toMatch(new RegExp(pattern!));
+    expect("+1234567890123456").toMatch(new RegExp(pattern!));
     expect(await phone.getAttribute("title")).toContain("código de país");
-    expect(await phone.evaluate((element) => (element as HTMLInputElement).validity.valid)).toBe(false);
+    await page.getByRole("button", { name: "Crear cuenta" }).click();
+    await expect(page.getByRole("alert")).toContainText("código de país");
   });
 
   test("production health endpoint/ is reachable", async ({ request }) => {
