@@ -21,9 +21,9 @@ const contentSecurityPolicy = [
   "object-src 'none'",
   `script-src 'self' 'unsafe-inline'${isDevelopment ? " 'unsafe-eval'" : ""}`,
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob: https:",
-  "font-src 'self' data: https:",
-  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https:",
+  "img-src 'self' data: blob: https://*.supabase.co https://images.unsplash.com",
+  "font-src 'self' data: https://fonts.gstatic.com",
+  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://generativelanguage.googleapis.com https://api.stripe.com https://*.twilio.com https://business.coinbase.com",
   "frame-src 'self' https://*.supabase.co",
   "upgrade-insecure-requests",
 ].join("; ");
