@@ -67,6 +67,8 @@ export async function POST(request: Request) {
       return jsonError('No fue posible verificar la sesión.', 401, 'AUTHENTICATION_ERROR')
     }
     if (!user) return jsonError('Debes iniciar sesión para continuar con el checkout.', 401, 'UNAUTHENTICATED')
+    const limit = await distributedRateLimit(supabase, `checkout:${user.id}:${getRequestIp(request)}`, { limit: 20, windowMs: 60_000 })
+    if (!limit.success) return jsonError('Demasiadas solicitudes. Inténtalo nuevamente más tarde.', 429, 'RATE_LIMITED')
 
     let body: CheckoutRequestBody
     try {
