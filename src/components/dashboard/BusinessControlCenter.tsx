@@ -74,7 +74,7 @@ export default function BusinessControlCenter() {
     setError(null)
 
     try {
-      let { data: store, error: storeError } = await supabase
+      const { data: initialStore, error: storeError } = await supabase
         .from('stores')
         .select('id,store_name,slug')
         .eq('vendor_id', user.id)
@@ -82,6 +82,7 @@ export default function BusinessControlCenter() {
 
       if (storeError) throw storeError
 
+      let store = initialStore
       if (!store) {
         const base = (profile?.fullName || user.email?.split('@')[0] || 'empresa').trim().toLowerCase()
         const slugBase = base.replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'empresa'
