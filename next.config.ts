@@ -23,8 +23,8 @@ const contentSecurityPolicy = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data: https:",
-  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https:",
-  "frame-src 'self' https://*.supabase.co",
+  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.stripe.com https://business.coinbase.com",
+  "frame-src 'self' https://*.supabase.co https://checkout.stripe.com",
   "upgrade-insecure-requests",
 ].join("; ");
 
