@@ -30,7 +30,7 @@ export function useProducts(
     setError(null);
 
     try {
-      const response = await fetch("/api/products", {
+      const response = await fetch("/api/agentic/catalog", {
         method: "GET",
         headers: {
           Accept: "application/json",
