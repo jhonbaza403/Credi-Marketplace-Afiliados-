@@ -12,6 +12,21 @@ const PROTECTED_PREFIXES = [
   "/admin",
   "/publish",
   "/products/create",
+  "/security",
+  "/gestion-empresarial",
+  "/business-os",
+  "/wallet",
+  "/analytics",
+  "/developer",
+  "/apps",
+  "/ecosistema-avanzado",
+  "/product-graph",
+  "/intelligence",
+  "/automation",
+  "/escrow",
+  "/locker",
+  "/credi-flex",
+  "/abastecimiento",
 ] as const;
 
 const GUEST_ONLY_PREFIXES = [
