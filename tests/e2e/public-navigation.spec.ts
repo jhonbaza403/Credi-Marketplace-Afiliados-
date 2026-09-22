@@ -58,6 +58,7 @@ test.describe("Public navigation", () => {
 
   test("products expose universal sharing controls", async ({ page }) => {
     await page.goto("/products", { waitUntil: "domcontentloaded" });
+    if (!process.env.PLAYWRIGHT_BASE_URL) test.skip(true, "Product sharing data requires a configured production Supabase target.");
 
     const share = page.getByRole("heading", { name: "Haz viral este producto" }).first();
     const bodyText = await page.locator("body").innerText();
