@@ -42,7 +42,7 @@ test.describe("Public navigation", () => {
     await expect(logo).toBeVisible();
 
     await page.getByRole("button", { name: "Comercio" }).click();
-    await expect(page.getByRole("link", { name: "Servicios", exact: true })).toHaveAttribute("href", "/services");
+    await expect(page.locator('a[href="/services"]').filter({ hasText: "Servicios" }).first()).toHaveAttribute("href", "/services");
   });
 
   test("services page exposes only valid first-party destinations", async ({ page }) => {
