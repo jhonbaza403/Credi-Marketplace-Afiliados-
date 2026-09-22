@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { ArrowRight, BadgeCheck, Building2, Globe2, LockKeyhole, MessageCircle, ShoppingBag, Sparkles, Store } from 'lucide-react'
+import { ArrowRight, BadgeCheck, Building2 , LockKeyhole, MessageCircle, ShoppingBag, Sparkles, Store } from 'lucide-react'
 import HeroPortal from '@/components/layout/HeroPortal'
 import '@/styles/hero-portal.css'
 
