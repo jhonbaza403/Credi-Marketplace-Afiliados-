@@ -8,7 +8,7 @@ import { createClient } from "@/lib/supabase/client";
 const MIN_PASSWORD_LENGTH = 8;
 type PublicRole = "customer" | "vendor";
 
-function normalizePhone(value: string) {
+export function normalizePhone(value: string) {
   const compact = value.trim().replace(/[\s().-]/g, "");
   if (!/^\+[1-9]\d{6,14}$/.test(compact)) return null;
   return compact;
