@@ -31,6 +31,7 @@ test.describe("Public route availability", () => {
     await page.goto("/register", { waitUntil: "domcontentloaded" });
     const phone = page.getByLabel("Número telefónico internacional");
     await phone.fill("04121234567");
+    await expect(phone).toHaveValue("04121234567");
     const pattern = await phone.getAttribute("pattern");
     expect(pattern).toBeTruthy();
     expect("04121234567").not.toMatch(new RegExp(pattern!));
