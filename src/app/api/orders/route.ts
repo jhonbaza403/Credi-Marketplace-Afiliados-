@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { distributedRateLimit } from '@/lib/security/rate-limit'
+import { getRequestIp } from '@/lib/security/auth'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -20,6 +22,8 @@ export async function POST(request:Request){
   if(!(request.headers.get('content-type')??'').toLowerCase().includes('application/json')) return jsonError('La solicitud debe utilizar Content-Type: application/json.',415,'UNSUPPORTED_MEDIA_TYPE')
   const supabase=await createClient(); const {data:{user},error:authError}=await supabase.auth.getUser()
   if(authError||!user) return jsonError('Debes iniciar sesión para continuar con el checkout.',401,'UNAUTHENTICATED')
+  const limit=await distributedRateLimit(supabase,`orders:${user.id}:${getRequestIp(request)}`,{limit:30,windowMs:60_000});
+  if(!limit.success) return jsonError('Demasiadas solicitudes. Inténtalo nuevamente más tarde.',429,'RATE_LIMITED')
   let raw:unknown; try{raw=await request.json()}catch{return jsonError('El cuerpo de la solicitud no contiene JSON válido.',400,'INVALID_JSON')}
   const parsed=checkoutSchema.safeParse(raw); if(!parsed.success)return jsonError('Los datos del checkout no son válidos.',400,'INVALID_CHECKOUT_DATA')
   const totals=new Map<string,number>(); for(const item of parsed.data.items){const next=(totals.get(item.product_id)??0)+item.quantity;if(next>MAX_QUANTITY_PER_ITEM)return jsonError(`La cantidad máxima por producto es ${MAX_QUANTITY_PER_ITEM}.`,400,'QUANTITY_LIMIT_EXCEEDED');totals.set(item.product_id,next)}
