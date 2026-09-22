@@ -79,6 +79,8 @@ export default function BusinessControlCenter() {
         .select('id,store_name,slug')
         .eq('vendor_id', user.id)
         .maybeSingle()
+      const storeError = storeResult.error
+      let store = storeResult.data
 
       if (storeError) throw storeError
 
