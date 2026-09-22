@@ -32,7 +32,7 @@ test.describe("Public route availability", () => {
     await page.getByLabel("Nombre completo").fill("Usuario de prueba");
     await page.getByLabel("Correo").fill("e2e-invalid-phone@example.com");
     await page.getByLabel("Número telefónico internacional").fill("04121234567");
-    await page.getByLabel("Contraseña").fill("ValidPassword123!");
+    await page.getByRole("textbox", { name: "Contraseña", exact: true }).fill("ValidPassword123!");
     await page.getByLabel("Confirmar contraseña").fill("ValidPassword123!");
     await page.getByRole("button", { name: "Crear cuenta" }).click();
     await expect(page.getByRole("alert")).toContainText("código de país");
