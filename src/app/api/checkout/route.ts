@@ -5,6 +5,8 @@ import { PAYMENT_PROVIDERS } from '@/lib/payments/constants'
 import type { PaymentProvider } from '@/lib/payments/types'
 import { createStripeCheckoutSession } from '@/lib/payments/stripe'
 import { isSameOrigin } from '@/lib/security/csrf'
+import { distributedRateLimit } from '@/lib/security/rate-limit'
+import { getRequestIp } from '@/lib/security/auth'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
