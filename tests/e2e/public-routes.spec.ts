@@ -35,7 +35,7 @@ test.describe("Public route availability", () => {
     expect(pattern).toBeTruthy();
     expect("04121234567").not.toMatch(new RegExp(pattern!));
     expect("+58 412 1234567").toMatch(new RegExp(pattern!));
-    expect(await phone.getAttribute("aria-invalid")).toBe("true");
+    expect(await phone.evaluate((input) => (input as HTMLInputElement).validationMessage)).toContain("código de país");
   });
 
   test("production health endpoint/ is reachable", async ({ request }) => {
