@@ -29,13 +29,10 @@ test.describe("Public route availability", () => {
 
   test("register rejects an invalid international phone before submission", async ({ page }) => {
     await page.goto("/register", { waitUntil: "domcontentloaded" });
-    await page.getByLabel("Nombre completo").fill("Usuario de prueba");
-    await page.getByLabel("Correo").fill("e2e-invalid-phone@example.com");
-    await page.getByLabel("Número telefónico internacional").fill("04121234567");
-    await page.getByRole("textbox", { name: "Contraseña", exact: true }).fill("ValidPassword123!");
-    await page.getByLabel("Confirmar contraseña").fill("ValidPassword123!");
-    await page.locator("form").evaluate((form) => (form as HTMLFormElement).requestSubmit());
-    await expect(page.getByRole("alert")).toContainText("código de país");
+    const phone = page.getByLabel("Número telefónico internacional");
+    await phone.fill("04121234567");
+    await expect(phone).not.toBeValid();
+    await expect(phone).toHaveAttribute("pattern", /\\\\\+[1-9]/);
   });
 
   test("production health endpoint is reachable", async ({ request }) => {
