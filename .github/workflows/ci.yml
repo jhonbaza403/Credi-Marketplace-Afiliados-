@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - main
+      - develop
+      - audit-360-credi-20260922
   pull_request:
     branches:
       - main
@@ -158,6 +160,12 @@ jobs:
 
       - name: Verify project structure
         run: npm run verify:structure
+
+      - name: Audit environment contract
+        run: npm run audit:env
+
+      - name: Audit API security matrix
+        run: npm run audit:api
 
       - name: Run ESLint
         run: npm run lint
