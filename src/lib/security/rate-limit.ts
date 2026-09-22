@@ -46,10 +46,12 @@ export async function distributedRateLimit(
   const row=Array.isArray(data)?data[0]:data;
   if(!row||typeof row!=="object") throw new Error("Invalid distributed rate-limit response");
   const record=row as Record<string,unknown>;
+  const resetValue=record.reset_at;
+  const resetAt=typeof resetValue==="string" ? Date.parse(resetValue) : Number(record.reset_at_epoch_ms ?? Date.now()+options.windowMs);
   return {
-    success:Boolean(record.allowed ?? Number(record.count??0)<=options.limit),
-    limit:Number(record.limit??options.limit),
+    success:Boolean(record.allowed),
+    limit:options.limit,
     remaining:Number(record.remaining??0),
-    resetAt:Number(record.reset_at_epoch_ms??Date.now()+options.windowMs),
+    resetAt:Number.isFinite(resetAt)?resetAt:Date.now()+options.windowMs,
   };
 }
