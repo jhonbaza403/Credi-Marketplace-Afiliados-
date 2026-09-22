@@ -120,6 +120,9 @@ jobs:
       - name: Verify critical dependency tree
         run: npm ls esbuild postcss sharp vite vitest --depth=10
 
+      - name: Audit environment and routes
+        run: npm run audit:security
+
       - name: Run Security Audit
         run: npm audit --audit-level=high
 
