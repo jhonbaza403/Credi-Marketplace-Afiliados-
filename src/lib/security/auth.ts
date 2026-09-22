@@ -31,8 +31,7 @@ export async function requireRole(allowed: readonly UserRole[]) {
   const ctx = await requireAuthenticatedUser();
   if (!ctx.ok) return ctx;
   if (!ctx.role || !allowed.includes(ctx.role)) {
-    const { ok: _ok, ...rest } = ctx;
-    return { ok:false as const, response:NextResponse.json({success:false,error:"Acceso denegado.",code:"FORBIDDEN"},{status:403,headers:{"Cache-Control":"no-store"}}), ...rest };
+    return { ok:false as const, response:NextResponse.json({success:false,error:"Acceso denegado.",code:"FORBIDDEN"},{status:403,headers:{"Cache-Control":"no-store"}}), supabase:ctx.supabase, user:ctx.user, role:ctx.role, error:ctx.error };
   }
   return ctx;
 }
