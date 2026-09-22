@@ -14,7 +14,7 @@ async function requireUser() {
 }
 
 export async function GET(_: Request, context: { params: Promise<{ id: string }> }) {
-  const { supabase, user } = await requireUser()
+  const { user } = await requireUser()
   if (!user) return json({ error: 'UNAUTHORIZED' }, 401)
   const { id } = await context.params
   const admin = createAdminClient()
