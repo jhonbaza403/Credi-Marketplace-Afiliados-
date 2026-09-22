@@ -74,7 +74,7 @@ export default function BusinessControlCenter() {
     setError(null)
 
     try {
-      let { data: store, error: storeError } = await supabase
+      const { data: store, error: storeError } = await supabase
         .from('stores')
         .select('id,store_name,slug')
         .eq('vendor_id', user.id)
