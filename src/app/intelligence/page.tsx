@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, BarChart3, Brain, RefreshCw } from 'lucide-react'
 export default function IntelligencePage(){
- const [data,setData]=useState<any>(null); const [status,setStatus]=useState('Cargando…')
+ type IntelligenceData={metrics?:Record<string,unknown>;data_quality?:Record<string,unknown>}; const [data,setData]=useState<IntelligenceData|null>(null); const [status,setStatus]=useState('Cargando…')
  async function load(){setStatus('Sincronizando…'); const r=await fetch('/api/intelligence/overview',{cache:'no-store'}); const d=await r.json(); if(!r.ok){setStatus(d.error||'Error');return}setData(d);setStatus('Actualizado')}
  useEffect(()=>{void load()},[])
  const m=data?.metrics||{}
