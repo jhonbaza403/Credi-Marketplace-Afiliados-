@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { ChevronDown, LayoutDashboard, Menu, MessageCircle, PackageSearch, Store, Users, WalletCards, X , CreditCard, LockKeyhole } from 'lucide-react'
+import { ChevronDown, LayoutDashboard, Menu, MessageCircle, PackageSearch, Store, Users, WalletCards, X  , CreditCard } from 'lucide-react'
 import { useState } from 'react'
 
 const groups = [
