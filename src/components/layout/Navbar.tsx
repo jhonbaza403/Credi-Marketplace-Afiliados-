@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { ChevronDown, LayoutDashboard, Menu, MessageCircle, PackageSearch, Store, Users, WalletCards, X, Bot, ShieldCheck, BrainCircuit, Zap, CreditCard, LockKeyhole, Truck, BookOpen, Radio } from 'lucide-react'
+import { ChevronDown, LayoutDashboard, Menu, MessageCircle, PackageSearch, Store, Users, WalletCards, X  , CreditCard } from 'lucide-react'
 import { useState } from 'react'
 
 const groups = [
@@ -39,7 +39,7 @@ export default function Navbar() {
         <span className="hidden truncate text-base font-black tracking-tight text-white sm:block sm:text-lg">Credi Marketplace</span>
       </Link>
       <div className="hidden items-center gap-1 lg:flex">
-        <Link href="/" className="rounded-lg px-3 py-2 text-sm font-bold text-white/90 hover:bg-white/10">Inicio</Link>
+        <Link href="/" className="rounded-lg px-3 py-2 text-sm font-bold text-white/90 hover:bg-white/10">Inicio</Link><Link href="/services" className="rounded-lg px-3 py-2 text-sm font-bold text-white/90 hover:bg-white/10">Servicios</Link>
         {groups.map((group) => { const Icon = group.icon; const isOpen = activeGroup === group.label; return <div key={group.label} className="relative"><button type="button" onClick={() => setActiveGroup(isOpen ? null : group.label)} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-bold text-white/90 hover:bg-white/10" aria-expanded={isOpen}><Icon className="size-4" />{group.label}<ChevronDown className={`size-3.5 ${isOpen ? 'rotate-180' : ''}`} /></button>{isOpen && <div className="absolute left-0 top-full mt-2 w-72 rounded-2xl border border-white/10 bg-[#0a1020]/98 p-2 shadow-2xl">{group.items.map(([name, href]) => <Link key={href} href={href} onClick={close} className="block rounded-xl px-3 py-2.5 text-sm font-semibold text-white/80 hover:bg-white/10 hover:text-white">{name}</Link>)}</div>}</div> })}
         <Link href="/chat" className="ml-2 inline-flex items-center gap-2 rounded-xl bg-white/10 px-3.5 py-2 text-sm font-black text-white"><MessageCircle className="size-4" />Chat</Link>
       </div>
