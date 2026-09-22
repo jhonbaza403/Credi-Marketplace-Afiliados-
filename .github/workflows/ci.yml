@@ -159,6 +159,12 @@ jobs:
       - name: Verify project structure
         run: npm run verify:structure
 
+      - name: Audit environment contract
+        run: npm run audit:env
+
+      - name: Audit API security matrix
+        run: npm run audit:api
+
       - name: Run ESLint
         run: npm run lint
 
