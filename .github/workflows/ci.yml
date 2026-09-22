@@ -175,6 +175,9 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Run E2E tests
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://fusnmvmveqdzmzohhlzm.supabase.co
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_68VV9wzImMYuu7cnrfLpzg_zYCL_OLV
         run: npm run test:e2e
 
       - name: Build project
