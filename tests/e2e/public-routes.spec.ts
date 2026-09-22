@@ -30,6 +30,10 @@ test.describe("Public route availability", () => {
   test("register rejects an invalid international phone before submission", async ({ page }) => {
     await page.goto("/register", { waitUntil: "domcontentloaded" });
     const phone = page.getByLabel("Número telefónico internacional");
+    await page.getByLabel("Nombre completo").fill("Credi Test");
+    await page.getByLabel("Correo").fill("credi-e2e@example.com");
+    await page.getByLabel("Contraseña", { exact: true }).fill("ValidPassword123!");
+    await page.getByLabel("Confirmar contraseña").fill("ValidPassword123!");
     await phone.fill("+1234567890123456");
     await expect(phone).toHaveValue("+1234567890123456");
     const pattern = await phone.getAttribute("pattern");
