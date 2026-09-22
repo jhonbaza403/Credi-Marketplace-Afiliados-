@@ -23,7 +23,9 @@
     "audit:routes": "node scripts/audit-routes.mjs",
     "check": "npm run verify:structure && npm run audit:routes && npm run lint && npm run typecheck && npm run test",
     "check:all": "npm run check && npm run test:e2e && npm run build",
-    "security:audit": "npm audit --audit-level=critical"
+    "security:audit": "npm audit --audit-level=critical",
+    "validate:env": "node scripts/validate-env-contract.mjs",
+    "audit:security": "npm run validate:env && npm run audit:routes"
   },
   "dependencies": {
     "@google/genai": "2.21.0",
