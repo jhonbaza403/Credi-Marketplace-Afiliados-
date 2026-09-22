@@ -2,10 +2,11 @@ import "server-only";
 
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import type { User } from "@supabase/supabase-js";
 import type { UserRole } from "@/types/user";
 
 export type AuthenticatedContext = {
-  user: NonNullable<Awaited<ReturnType<ReturnType<typeof createClient>["auth"]["getUser"]>>["data"]["user"]>;
+  user: User;
   role: UserRole | null;
   supabase: Awaited<ReturnType<typeof createClient>>;
 };
