@@ -5,6 +5,8 @@ import { PAYMENT_PROVIDERS } from '@/lib/payments/constants'
 import type { PaymentProvider } from '@/lib/payments/types'
 import { createStripeCheckoutSession } from '@/lib/payments/stripe'
 import { isSameOrigin } from '@/lib/security/csrf'
+import { distributedRateLimit } from '@/lib/security/rate-limit'
+import { getRequestIp } from '@/lib/security/auth'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -67,6 +69,8 @@ export async function POST(request: Request) {
       return jsonError('No fue posible verificar la sesión.', 401, 'AUTHENTICATION_ERROR')
     }
     if (!user) return jsonError('Debes iniciar sesión para continuar con el checkout.', 401, 'UNAUTHENTICATED')
+    const limit = await distributedRateLimit(supabase, `checkout:${user.id}:${getRequestIp(request)}`, { limit: 20, windowMs: 60_000 })
+    if (!limit.success) return jsonError('Demasiadas solicitudes. Inténtalo nuevamente más tarde.', 429, 'RATE_LIMITED')
 
     let body: CheckoutRequestBody
     try {
