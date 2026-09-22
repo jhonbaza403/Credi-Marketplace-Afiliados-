@@ -35,9 +35,10 @@ test.describe("Public route availability", () => {
     expect(pattern).toBeTruthy();
     expect("04121234567").not.toMatch(new RegExp(pattern!));
     expect("+58 412 1234567").toMatch(new RegExp(pattern!));
+    expect(await phone.getAttribute("aria-invalid")).toBe("true");
   });
 
-  test("production health endpoint is reachable", async ({ request }) => {
+  test("production health endpoint/ is reachable", async ({ request }) => {
     const response = await request.get("/api/health", { maxRedirects: 5 });
     const body = await response.json();
     expect(body).toMatchObject({ service: "credi-marketplace" });
