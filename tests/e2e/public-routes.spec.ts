@@ -33,8 +33,8 @@ test.describe("Public route availability", () => {
     await phone.fill("04121234567");
     const pattern = await phone.getAttribute("pattern");
     expect(pattern).toBeTruthy();
-    expect(new RegExp(pattern!)).not.toMatch("04121234567");
-    expect(new RegExp(pattern!)).toMatch("+58 412 1234567");
+    expect("04121234567").not.toMatch(new RegExp(pattern!));
+    expect("+58 412 1234567").toMatch(new RegExp(pattern!));
   });
 
   test("production health endpoint is reachable", async ({ request }) => {
