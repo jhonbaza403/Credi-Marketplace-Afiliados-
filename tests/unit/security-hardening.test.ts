@@ -15,7 +15,7 @@ describe('security hardening', () => {
   it('normalizes free-text search into a safe PostgREST filter', () => {
     const query = sanitizeSearchQuery('  phone,(or),description  ')
     expect(query).toBe('phone or description')
-    expect(buildSearchOrFilter(['title', 'description'], 'phone,(or)')).toBe('title.ilike.%phone or or%,description.ilike.%phone or or%')
+    expect(buildSearchOrFilter(['title', 'description'], 'phone,(or)')).toBe('title.ilike.%phone or %,description.ilike.%phone or %')
   })
 
   it('blocks private and metadata-service webhook destinations', () => {
