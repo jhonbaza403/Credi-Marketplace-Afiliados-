@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import type { ReactNode } from 'react'
-import { Bot, Boxes, Building2, ChartNoAxesCombined, MessageSquareText, PackageSearch, ReceiptText, ShieldCheck, Sparkles, Workflow, ArrowUpRight, BarChart3, Scale, WalletCards, UsersRound } from 'lucide-react'
+import { Boxes, Building2, ChartNoAxesCombined, MessageSquareText, PackageSearch, ShieldCheck, Sparkles, Workflow, ArrowUpRight, BarChart3, Scale, WalletCards, UsersRound } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 
 export const metadata: Metadata={title:'Credi Business OS | Credi Marketplace',description:'Centro operativo inteligente para ventas, compras, inventario, B2B, IA, reputación y automatización.',robots:{index:false,follow:false}}
