@@ -31,8 +31,8 @@ test.describe("Public route availability", () => {
     await page.goto("/register", { waitUntil: "domcontentloaded" });
     const phone = page.getByLabel("Número telefónico internacional");
     await phone.fill("04121234567");
-    await expect(phone).not.toBeValid();
-    await expect(phone).toHaveAttribute("pattern", /\\\\\+[1-9]/);
+    expect(await phone.evaluate((el) => (el as HTMLInputElement).validity.patternMismatch)).toBe(true);
+    await expect(phone).toHaveAttribute("pattern", /\\\\+[1-9]/);
   });
 
   test("production health endpoint is reachable", async ({ request }) => {
