@@ -118,7 +118,7 @@ Deno.serve(async (request) => {
   const bucketLimit = isPrivateChat ? PRIVATE_CHAT_MAX : PUBLIC_MAX
   const allowedForContext = isPrivateChat
     ? PRIVATE_CHAT_ALLOWED
-    : new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'video/mp4', 'video/webm', 'video/quicktime'])
+    : new Set(ALLOWED.filter((type) => type.startsWith('image/') || type.startsWith('video/') || type.startsWith('audio/')))
   if (!allowedForContext.has(contentType)) return response({ error: 'UNSUPPORTED_MEDIA_TYPE' }, 415, origin)
   if (fileSize > bucketLimit) return response({ error: 'FILE_TOO_LARGE' }, 413, origin)
 
