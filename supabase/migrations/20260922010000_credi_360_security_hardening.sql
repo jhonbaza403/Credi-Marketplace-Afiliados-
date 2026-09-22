@@ -68,3 +68,7 @@ alter function public.create_b2b_award(uuid, uuid, uuid, uuid) set search_path=p
 
 revoke all on function public.settle_order_inventory(uuid, text) from public, anon;
 grant execute on function public.settle_order_inventory(uuid, text) to authenticated;
+
+
+-- SECURITY DEFINER hardening: never include pg_temp in privileged search_path.
+alter function public.create_pending_b2b_order(uuid, uuid, text) set search_path = public;
