@@ -28,16 +28,16 @@
     "audit:api": "node scripts/audit-api-security.mjs"
   },
   "dependencies": {
-    "@google/genai": "2.21.0",
+    "@google/genai": "2.23.0",
     "@hookform/resolvers": "^3.9.0",
     "@supabase/ssr": "^0.12.6",
     "@supabase/supabase-js": "^2.115.0",
     "date-fns": "^3.6.0",
     "lucide-react": "^0.453.0",
-    "next": "16.3.4",
-    "react": "19.2.8",
-    "react-dom": "19.2.8",
-    "react-hook-form": "^7.53.0",
+    "next": "16.3.5",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "react-hook-form": "^7.88.0",
     "server-only": "^0.0.1",
     "sharp": "^0.35.4",
     "zod": "^3.23.8"
