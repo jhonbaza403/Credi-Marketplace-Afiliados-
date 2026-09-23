@@ -245,7 +245,7 @@ create policy tax_rules_read on public.tax_rules for select to authenticated usi
 drop policy if exists tax_rates_read on public.tax_rates;
 create policy tax_rates_read on public.tax_rates for select to authenticated using (active = true);
 
-drop policy if exists tax_transactions_owner_read on public.tax_transactions_owner;
+drop policy if exists tax_transactions_owner_read on public.tax_transactions;
 create policy tax_transactions_owner_read on public.tax_transactions
   for select to authenticated
   using (
@@ -254,7 +254,7 @@ create policy tax_transactions_owner_read on public.tax_transactions
     or (select auth.uid()) = affiliate_id
   );
 
-drop policy if exists tax_transaction_lines_owner_read on public.tax_transaction_lines_owner;
+drop policy if exists tax_transaction_lines_owner_read on public.tax_transaction_lines;
 create policy tax_transaction_lines_owner_read on public.tax_transaction_lines
   for select to authenticated
   using (
@@ -265,7 +265,7 @@ create policy tax_transaction_lines_owner_read on public.tax_transaction_lines
     )
   );
 
-drop policy if exists tax_withholdings_owner_read on public.tax_withholdings_owner;
+drop policy if exists tax_withholdings_owner_read on public.tax_withholdings;
 create policy tax_withholdings_owner_read on public.tax_withholdings
   for select to authenticated
   using (
@@ -276,7 +276,7 @@ create policy tax_withholdings_owner_read on public.tax_withholdings
     )
   );
 
-drop policy if exists tax_collections_owner_read on public.tax_collections_owner;
+drop policy if exists tax_collections_owner_read on public.tax_collections;
 create policy tax_collections_owner_read on public.tax_collections
   for select to authenticated
   using (
