@@ -1,4 +1,5 @@
 -- Credi 360 SECURITY DEFINER contract.
+-- This regression test is intentionally part of the production gate.
 -- The Supabase advisor warning for authenticated callers is intentional only for
 -- user-facing RPCs in this allowlist. Internal accounting/settlement RPCs must
 -- remain inaccessible to authenticated and anon roles.
