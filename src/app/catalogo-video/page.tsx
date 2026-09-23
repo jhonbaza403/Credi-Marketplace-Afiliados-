@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
-import { ArrowLeft, CheckCircle2, FileVideo, Loader2, Save, Video } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, FileVideo, Loader2, Save } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import MarketplaceMediaUploader from '@/components/media/MarketplaceMediaUploader'
 import type { UploadedMarketplaceMedia } from '@/lib/storage/marketplace-media'

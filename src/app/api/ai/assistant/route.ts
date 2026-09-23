@@ -1,4 +1,7 @@
 import { NextResponse } from 'next/server'
+import { createClient } from '@/lib/supabase/server'
+import { distributedRateLimit } from '@/lib/security/rate-limit'
+import { getRequestIp } from '@/lib/security/auth'
 
 /**
  * POST /api/ai/assistant
@@ -213,6 +216,20 @@ export async function POST(request: Request) {
   const requestId = crypto.randomUUID()
 
   try {
+    const supabase = await createClient()
+    const limit = await distributedRateLimit(
+      supabase,
+      `ai:assistant:${getRequestIp(request)}`,
+      { limit: 20, windowMs: 60_000 },
+    )
+    if (!limit.success) {
+      return jsonError(
+        'Demasiadas solicitudes. Inténtalo nuevamente más tarde.',
+        429,
+        'RATE_LIMITED',
+      )
+    }
+
     /*
      * ---------------------------------------------------------
      * 1. Content-Type
