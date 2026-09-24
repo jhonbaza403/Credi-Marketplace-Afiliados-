@@ -77,12 +77,25 @@ export async function POST(request:Request){
    const summary={open_rfqs:openRfqs??0,active_automations:activeAutomations??0}; await admin.from('agent_action_audit').update({status:'executed',output:{summary}}).eq('owner_id',auth.user.id).eq('request_id',requestId).in('status',['executing','authorized']); return json({ok:true,action,request_id:requestId,summary})
   }
   if(action==='create_payment'){
-   const amount=Number(body.amount); const method=typeof body.method_type==='string'?body.method_type:'manual'; const currency=typeof body.currency==='string'?body.currency.toUpperCase():'USD'
-   if(!Number.isFinite(amount)||amount<=0)return json({error:'INVALID_AMOUNT',request_id:requestId},400)
+   if(!resourceId)return json({error:'ORDER_ID_REQUIRED',request_id:requestId},400)
+   const method=typeof body.method_type==='string'?body.method_type.trim().toLowerCase():'manual'
+   const allowedMethods=['stripe','crypto','bank_transfer','wallet','manual']
+   if(!allowedMethods.includes(method))return json({error:'INVALID_PAYMENT_METHOD',request_id:requestId},400)
+   const {data:order,error:orderError}=await supabase.from('orders').select('id,buyer_id,total_amount,currency,status').eq('id',resourceId).eq('buyer_id',auth.user.id).maybeSingle()
+   if(orderError)throw orderError
+   if(!order)return json({error:'ORDER_NOT_FOUND',request_id:requestId},404)
+   if(order.status!=='pending')return json({error:'ORDER_NOT_PAYABLE',request_id:requestId},409)
+   const amount=Number(order.total_amount)
+   const currency=typeof order.currency==='string'?order.currency.toUpperCase():''
+   if(!Number.isFinite(amount)||amount<=0||!/^[A-Z]{3}$/.test(currency))return json({error:'INVALID_ORDER_TOTAL',request_id:requestId},409)
+   const {data:items,error:itemsError}=await supabase.from('order_items').select('quantity,unit_price,subtotal').eq('order_id',order.id)
+   if(itemsError||!items?.length)return json({error:'ORDER_ITEMS_UNAVAILABLE',request_id:requestId},409)
+   const itemTotal=items.reduce((sum,r)=>sum+Number(r.subtotal),0)
+   if(!Number.isFinite(itemTotal)||Math.round(itemTotal*100)!==Math.round(amount*100))return json({error:'ORDER_TOTAL_MISMATCH',request_id:requestId},409)
    if(amount>AGENT_MAX_PAYMENT_AMOUNT)return json({error:'AGENT_PAYMENT_LIMIT_EXCEEDED',request_id:requestId,max_amount:AGENT_MAX_PAYMENT_AMOUNT},403)
-   const {data:payment,error}=await supabase.from('payment_orchestrations').insert({user_id:auth.user.id,order_id:typeof body.order_id==='string'?body.order_id:null,amount,currency,method_type:method,provider:method,status:method==='manual'?'requires_action':'pending',client_reference:typeof body.client_reference==='string'?body.client_reference.slice(0,200):null,idempotency_key:`agent:${requestId}`,metadata:{agent:true,request_id:requestId},expires_at:new Date(Date.now()+30*60*1000).toISOString()}).select('id,status,method_type,amount,currency,expires_at').single()
+   const {data:payment,error}=await supabase.from('payment_orchestrations').insert({user_id:auth.user.id,order_id:order.id,amount,currency,method_type:method,provider:method,status:method==='manual'?'requires_action':'pending',client_reference:order.id,idempotency_key:`agent:${requestId}`,metadata:{agent:true,request_id:requestId,server_derived_amount:true},expires_at:new Date(Date.now()+30*60*1000).toISOString()}).select('id,status,method_type,amount,currency,expires_at').single()
    if(error||!payment)throw error??new Error('payment')
-   await admin.from('agent_action_audit').update({status:'executed',output:{payment_id:payment.id}}).eq('owner_id',auth.user.id).eq('request_id',requestId).in('status',['executing','authorized']); return json({ok:true,action,request_id:requestId,status:'executed',requires_human_confirmation:true,payment})
+   await admin.from('agent_action_audit').update({status:'executed',output:{payment_id:payment.id,server_derived_amount:true}}).eq('owner_id',auth.user.id).eq('request_id',requestId).in('status',['executing','authorized']); return json({ok:true,action,request_id:requestId,status:'executed',requires_human_confirmation:true,payment})
   }
   if(action==='prepare_rfq_followup'){
    if(!resourceId)return json({error:'RESOURCE_REQUIRED',request_id:requestId},400)
