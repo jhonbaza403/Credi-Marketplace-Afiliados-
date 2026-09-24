@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { distributedRateLimit } from '@/lib/security/rate-limit'
+import { getRequestIp } from '@/lib/security/auth'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -19,6 +21,8 @@ export async function POST(request: Request) {
   const supabase = await createClient()
   const { data: auth } = await supabase.auth.getUser()
   if (!auth.user) return json({ error: 'UNAUTHORIZED' }, 401)
+  const limit = await distributedRateLimit(supabase, `wallet:${auth.user.id}:${getRequestIp(request)}`, { limit: 20, windowMs: 60_000 })
+  if (!limit.success) return json({ error: 'RATE_LIMITED' }, 429)
   let body: Record<string, unknown>
   try { body = await request.json() as Record<string, unknown> } catch { return json({ error: 'INVALID_JSON' }, 400) }
   const recipient = typeof body.to_user_id === 'string' ? body.to_user_id : ''
