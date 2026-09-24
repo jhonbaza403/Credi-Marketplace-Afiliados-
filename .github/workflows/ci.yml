@@ -167,6 +167,9 @@ jobs:
       - name: Audit API security matrix
         run: npm run audit:api
 
+      - name: Dependency vulnerability audit
+        run: npm run security:audit
+
       - name: Run ESLint
         run: npm run lint
 
