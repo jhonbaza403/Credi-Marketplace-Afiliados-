@@ -3,9 +3,14 @@ import { createHash, createHmac } from 'node:crypto'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getAgentAuthorizationLevel, isCrediAgentAction } from '@/lib/ai/agent-permissions'
+import { distributedRateLimit } from '@/lib/security/rate-limit'
+import { getRequestIp } from '@/lib/security/auth'
+import { isSameOrigin } from '@/lib/security/csrf'
 
 export const runtime='nodejs'
 export const dynamic='force-dynamic'
+
+const MAX_BODY_SIZE=32_768
 
 const json=(data:unknown,status=200)=>NextResponse.json(data,{status,headers:{'Cache-Control':'no-store'}})
 const APPROVAL_TTL_MS=10*60*1000
@@ -33,7 +38,14 @@ function verifyApprovalToken(token:string,requestId:string,ownerId:string,action
 }
 
 export async function POST(request:Request){
+ if(!isSameOrigin(request))return json({error:'Origen no autorizado'},403)
+ const contentType=request.headers.get('content-type')??''
+ if(!contentType.toLowerCase().includes('application/json'))return json({error:'JSON requerido'},415)
+ const contentLength=request.headers.get('content-length')
+ if(contentLength&&Number.isFinite(Number(contentLength))&&Number(contentLength)>MAX_BODY_SIZE)return json({error:'Solicitud demasiado grande'},413)
  const supabase=await createClient(); const {data:auth}=await supabase.auth.getUser(); if(!auth.user)return json({error:'No autenticado'},401)
+ const limit=await distributedRateLimit(supabase,`ai-agent:${auth.user.id}:${getRequestIp(request)}`,{limit:30,windowMs:60_000})
+ if(!limit.success)return json({error:'RATE_LIMITED'},429)
  let body:Record<string,unknown>; try{body=await request.json() as Record<string,unknown>}catch{return json({error:'JSON inválido'},400)}
  const action=body.action
  const allowed=['inventory_summary','b2b_pipeline','prepare_rfq_followup','publish_offer','send_commercial_message','create_payment']
