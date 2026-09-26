@@ -161,6 +161,9 @@ jobs:
       - name: Verify project structure
         run: npm run verify:structure
 
+      - name: Audit route and HTTP method contracts
+        run: npm run audit:routes
+
       - name: Audit environment contract
         run: npm run audit:env
 
