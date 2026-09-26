@@ -10,6 +10,8 @@ const required = [
 
 const ready = required.every((key) => Boolean(process.env[key]))
 
+test.use({ launchOptions: { args: ['--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream'] } })
+
 test.describe('Credi real chat + audio/video E2E', () => {
   test.skip(!ready, 'Real media E2E requires two dedicated test accounts and E2E_CONVERSATION_ID.')
 
