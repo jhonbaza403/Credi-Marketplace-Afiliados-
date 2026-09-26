@@ -64,6 +64,7 @@ function buildLoginRedirect(request: NextRequest): NextResponse {
 }
 
 export async function proxy(request: NextRequest) {
+  const requestId = crypto.randomUUID();
   const canonicalRedirect = redirectToCanonicalHost(request);
   if (canonicalRedirect) return canonicalRedirect;
 
@@ -71,7 +72,7 @@ export async function proxy(request: NextRequest) {
   const requiresAuth = matchesPrefix(pathname, PROTECTED_PREFIXES);
   const guestOnly = matchesPrefix(pathname, GUEST_ONLY_PREFIXES);
 
-  if (!requiresAuth && !guestOnly) return NextResponse.next();
+  if (!requiresAuth && !guestOnly) { const response = NextResponse.next(); response.headers.set("X-Request-ID", requestId); return response; }
 
   const response = NextResponse.next({ request });
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
