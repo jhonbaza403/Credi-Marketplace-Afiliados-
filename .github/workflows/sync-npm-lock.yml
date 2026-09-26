@@ -1,6 +1,8 @@
 name: Sync npm lockfile
 
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
