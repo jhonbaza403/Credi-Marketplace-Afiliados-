@@ -66,7 +66,7 @@ function buildLoginRedirect(request: NextRequest): NextResponse {
 export async function proxy(request: NextRequest) {
   const requestId = crypto.randomUUID();
   const canonicalRedirect = redirectToCanonicalHost(request);
-  if (canonicalRedirect) return canonicalRedirect;
+  if (canonicalRedirect) { canonicalRedirect.headers.set("X-Request-ID", requestId); return canonicalRedirect; }
 
   const { pathname } = request.nextUrl;
   const requiresAuth = matchesPrefix(pathname, PROTECTED_PREFIXES);
@@ -79,6 +79,7 @@ export async function proxy(request: NextRequest) {
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim();
 
   if (!supabaseUrl || !supabaseKey) {
+    response.headers.set("X-Request-ID", requestId);
     return requiresAuth ? buildLoginRedirect(request) : response;
   }
 
@@ -101,11 +102,20 @@ export async function proxy(request: NextRequest) {
       data: { user },
     } = await supabase.auth.getUser();
 
-    if (requiresAuth && !user) return buildLoginRedirect(request);
-    if (guestOnly && user) return NextResponse.redirect(new URL("/dashboard", request.url));
+    if (requiresAuth && !user) {
+      response.headers.set("X-Request-ID", requestId);
+      return buildLoginRedirect(request);
+    }
+    if (guestOnly && user) {
+      const redirect = NextResponse.redirect(new URL("/dashboard", request.url));
+      redirect.headers.set("X-Request-ID", requestId);
+      return redirect;
+    }
+    response.headers.set("X-Request-ID", requestId);
     return response;
   } catch (error) {
     console.error("[proxy] Session check failed", error);
+    response.headers.set("X-Request-ID", requestId);
     return requiresAuth ? buildLoginRedirect(request) : response;
   }
 }
