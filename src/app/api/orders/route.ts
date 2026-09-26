@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { distributedRateLimit } from '@/lib/security/rate-limit'
 import { getRequestIp } from '@/lib/security/auth'
+import { isSameOrigin } from '@/lib/security/csrf'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -19,6 +20,7 @@ function getRequestId(request:Request){const supplied=request.headers.get('x-req
 export async function POST(request:Request){
  const requestId=getRequestId(request)
  try{
+  if(!isSameOrigin(request)) return jsonError('Origen no autorizado.',403,'CSRF_VALIDATION_FAILED')
   if(!(request.headers.get('content-type')??'').toLowerCase().includes('application/json')) return jsonError('La solicitud debe utilizar Content-Type: application/json.',415,'UNSUPPORTED_MEDIA_TYPE')
   const supabase=await createClient(); const {data:{user},error:authError}=await supabase.auth.getUser()
   if(authError||!user) return jsonError('Debes iniciar sesión para continuar con el checkout.',401,'UNAUTHENTICATED')
