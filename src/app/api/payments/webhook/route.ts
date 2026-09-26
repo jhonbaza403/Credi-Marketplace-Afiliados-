@@ -1,3 +1,4 @@
+
 import { createServiceClient } from '@/lib/supabase/service'
 import { verifyStripeWebhookSignature } from '@/lib/payments/stripe'
 import { logger } from '@/lib/logging'
@@ -16,39 +17,67 @@ function jsonResponse(body: Record<string, unknown>, status = 200, requestId?: s
   })
 }
 
+function requestIdFrom(request: Request) {
+  const supplied = request.headers.get('x-request-id')?.trim()
+  return supplied && /^[A-Za-z0-9._:-]{8,128}$/.test(supplied) ? supplied : crypto.randomUUID()
+}
+
+type StripeEvent = {
+  id?: string
+  type?: string
+  data?: {
+    object?: {
+      id?: string
+      payment_status?: string
+      amount_total?: number | null
+      currency?: string | null
+      metadata?: Record<string, string> | null
+    }
+  }
+}
+
 export async function POST(request: Request) {
-  const requestId = request.headers.get('x-request-id')?.trim() || crypto.randomUUID()
+  const requestId = requestIdFrom(request)
+
   try {
     const contentType = request.headers.get('content-type') ?? ''
-    if (!contentType.toLowerCase().includes('application/json')) return jsonResponse({ success: false, error: 'Webhook debe utilizar JSON.' }, 415, requestId)
+    if (!contentType.toLowerCase().includes('application/json')) {
+      return jsonResponse({ success: false, error: 'Webhook debe utilizar JSON.' }, 415, requestId)
+    }
 
     const rawBody = await request.text()
-    if (rawBody.length > 512_000) return jsonResponse({ success: false, error: 'Webhook demasiado grande.' }, 413, requestId)
+    if (rawBody.length > 512_000) {
+      return jsonResponse({ success: false, error: 'Webhook demasiado grande.' }, 413, requestId)
+    }
 
     const signature = request.headers.get('stripe-signature')
     if (!verifyStripeWebhookSignature(rawBody, signature)) {
-      logger.warn('Invalid Stripe webhook signature', { requestId, action: 'stripe_webhook_invalid_signature' })
+      logger.warn('Invalid Stripe webhook signature', {
+        requestId,
+        action: 'stripe_webhook_invalid_signature',
+      })
       return jsonResponse({ success: false, error: 'Firma de webhook inválida.' }, 400, requestId)
     }
 
-    let event: {
-      id?: string
-      type?: string
-      data?: { object?: {
-        id?: string
-        payment_status?: string
-        amount_total?: number | null
-        currency?: string | null
-        metadata?: Record<string, string> | null
-      }}
+    let event: StripeEvent
+    try {
+      event = JSON.parse(rawBody) as StripeEvent
+    } catch {
+      return jsonResponse({ success: false, error: 'JSON de webhook inválido.' }, 400, requestId)
     }
-    try { event = JSON.parse(rawBody) } catch { return jsonResponse({ success: false, error: 'JSON de webhook inválido.' }, 400, requestId) }
 
-    if (!event.id || !event.type) return jsonResponse({ success: false, error: 'Evento Stripe incompleto.' }, 400, requestId)
+    if (!event.id || !event.type) {
+      return jsonResponse({ success: false, error: 'Evento Stripe incompleto.' }, 400, requestId)
+    }
 
+    const session = event.data?.object
     const supabase = createServiceClient()
     const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(rawBody))
-    const payloadHash = Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, '0')).join('')
+    const payloadHash = Array.from(new Uint8Array(digest))
+      .map((byte) => byte.toString(16).padStart(2, '0'))
+      .join('')
+
+    let webhookId: string | null = null
 
     const { data: inserted, error: insertError } = await supabase
       .from('webhook_events')
@@ -61,79 +90,155 @@ export async function POST(request: Request) {
         payload: event,
         status: 'received',
       })
-      .select('id')
+      .select('id,status')
       .maybeSingle()
 
-    if (insertError?.code === '23505') return jsonResponse({ success: true, received: true, duplicate: true }, 200, requestId)
-    if (insertError || !inserted) return jsonResponse({ success: false, error: 'No fue posible registrar el webhook.' }, 500, requestId)
+    if (!insertError && inserted) {
+      webhookId = inserted.id
+    } else if (insertError?.code === '23505') {
+      const { data: existing, error: existingError } = await supabase
+        .from('webhook_events')
+        .select('id,status,processing_attempts,created_at')
+        .eq('provider', 'stripe')
+        .eq('event_id', event.id)
+        .maybeSingle()
 
-    await supabase.from('webhook_events').update({ status: 'processing', processing_attempts: 1 }).eq('id', inserted.id)
+      if (existingError || !existing) {
+        return jsonResponse({ success: false, error: 'No fue posible recuperar el webhook duplicado.' }, 500, requestId)
+      }
+
+      if (existing.status === 'processed') {
+        return jsonResponse({ success: true, received: true, processed: true, duplicate: true }, 200, requestId)
+      }
+
+      if (existing.status === 'processing') {
+        const ageMs = Date.now() - new Date(existing.created_at).getTime()
+        if (ageMs < 10 * 60 * 1000) {
+          return jsonResponse({ success: true, received: true, processing: true, duplicate: true }, 200, requestId)
+        }
+      }
+
+      const { data: claimed, error: claimError } = await supabase
+        .from('webhook_events')
+        .update({
+          status: 'processing',
+          processing_attempts: (existing.processing_attempts ?? 0) + 1,
+          failed_at: null,
+          error_message: null,
+        })
+        .eq('id', existing.id)
+        .neq('status', 'processed')
+        .select('id')
+        .maybeSingle()
+
+      if (claimError || !claimed) {
+        return jsonResponse({ success: true, received: true, processing: true, duplicate: true }, 200, requestId)
+      }
+
+      webhookId = claimed.id
+    } else if (insertError || !inserted) {
+      return jsonResponse({ success: false, error: 'No fue posible registrar el webhook.' }, 500, requestId)
+    }
+
+    if (!webhookId) {
+      return jsonResponse({ success: false, error: 'Webhook sin identificador interno.' }, 500, requestId)
+    }
+
+    if (inserted) {
+      const { error: claimError } = await supabase
+        .from('webhook_events')
+        .update({ status: 'processing', processing_attempts: 1 })
+        .eq('id', webhookId)
+        .eq('status', 'received')
+
+      if (claimError) {
+        return jsonResponse({ success: false, error: 'No fue posible iniciar el procesamiento del webhook.' }, 500, requestId)
+      }
+    }
 
     try {
-      const session = event.data?.object
       const orderId = session?.metadata?.order_id
+      const userId = session?.metadata?.user_id
 
-      if (event.type === 'checkout.session.completed' && session && orderId) {
-        if (session.payment_status !== 'paid') throw new Error('checkout_session_not_paid')
-
-        const { data: order, error: orderError } = await supabase
-          .from('orders')
-          .select('id,buyer_id,status,payment_status,total_amount,currency')
-          .eq('id', orderId)
-          .maybeSingle()
-
-        if (orderError || !order) throw new Error('order_not_found')
-        if (session.amount_total !== Math.round(Number(order.total_amount) * 100)) throw new Error('stripe_amount_mismatch')
-        if ((session.currency || '').toUpperCase() !== String(order.currency || 'USD').trim().toUpperCase()) throw new Error('stripe_currency_mismatch')
-        if (session.metadata?.user_id && session.metadata.user_id !== order.buyer_id) throw new Error('stripe_buyer_mismatch')
-
-        const { data: payment } = await supabase
-          .from('payment_orchestrations')
-          .select('id,order_id,status')
-          .eq('provider', 'stripe')
-          .eq('provider_reference', session.id)
-          .maybeSingle()
-
-        if (!payment || payment.order_id !== order.id) throw new Error('payment_orchestration_not_found')
-
-        await supabase.from('payment_orchestrations').update({ status: 'succeeded', updated_at: new Date().toISOString() }).eq('id', payment.id)
-
-        if (order.status === 'pending') {
-          const { error: updateOrderError } = await supabase
-            .from('orders')
-            .update({ status: 'paid', payment_status: 'paid', paid_at: new Date().toISOString(), updated_at: new Date().toISOString() })
-            .eq('id', order.id)
-            .eq('status', 'pending')
-          if (updateOrderError) throw new Error(updateOrderError.message)
-
-          await supabase.from('commerce_events').insert({
-            user_id: order.buyer_id,
-            event_type: 'order_paid',
-            amount: Number(order.total_amount),
-            currency: String(order.currency || 'USD').trim(),
-            metadata: { provider: 'stripe', session_id: session.id, webhook_event_id: event.id },
-          })
+      if (event.type === 'checkout.session.completed') {
+        if (!session?.id || !orderId || !userId || session.payment_status !== 'paid') {
+          throw new Error('checkout_session_not_payable')
         }
+        if (session.amount_total == null || !session.currency) {
+          throw new Error('checkout_session_amount_or_currency_missing')
+        }
+
+        const { error } = await supabase.rpc('process_stripe_checkout_session', {
+          p_order_id: orderId,
+          p_session_id: session.id,
+          p_event_id: event.id,
+          p_amount_total: session.amount_total,
+          p_currency: session.currency,
+          p_buyer_id: userId,
+        })
+
+        if (error) throw new Error(error.message || 'stripe_checkout_processing_failed')
       }
 
-      if ((event.type === 'checkout.session.expired' || event.type === 'checkout.session.async_payment_failed') && session && orderId) {
-        const { data: order } = await supabase.from('orders').select('id,status').eq('id', orderId).maybeSingle()
-        if (order?.status === 'pending') {
-          await supabase.from('orders').update({ status: 'failed', payment_status: 'failed', updated_at: new Date().toISOString() }).eq('id', order.id).eq('status', 'pending')
-        }
-        await supabase.from('payment_orchestrations').update({ status: 'failed', updated_at: new Date().toISOString() }).eq('provider', 'stripe').eq('provider_reference', session.id)
+      if (
+        (event.type === 'checkout.session.expired' ||
+          event.type === 'checkout.session.async_payment_failed') &&
+        session?.id &&
+        orderId
+      ) {
+        const { error } = await supabase.rpc('process_stripe_checkout_failure', {
+          p_order_id: orderId,
+          p_session_id: session.id,
+        })
+        if (error) throw new Error(error.message || 'stripe_checkout_failure_processing_failed')
       }
 
-      await supabase.from('webhook_events').update({ status: 'processed', processed_at: new Date().toISOString() }).eq('id', inserted.id)
-      return jsonResponse({ success: true, received: true, processed: true }, 200, requestId)
+      const { error: processedError } = await supabase
+        .from('webhook_events')
+        .update({
+          status: 'processed',
+          processed_at: new Date().toISOString(),
+          error_message: null,
+        })
+        .eq('id', webhookId)
+
+      if (processedError) throw new Error(processedError.message)
+
+      return jsonResponse(
+        { success: true, received: true, processed: true, eventType: event.type },
+        200,
+        requestId,
+      )
     } catch (error) {
       const message = error instanceof Error ? error.message : 'unknown_error'
-      await supabase.from('webhook_events').update({ status: 'failed', failed_at: new Date().toISOString(), error_message: message.slice(0, 1000) }).eq('id', inserted.id)
-      logger.error('Stripe webhook processing failed', { requestId, action: 'stripe_webhook_processing_failed', metadata: message })
-      return jsonResponse({ success: false, error: 'No fue posible procesar el evento de pago.' }, 500, requestId)
+
+      await supabase
+        .from('webhook_events')
+        .update({
+          status: 'failed',
+          failed_at: new Date().toISOString(),
+          error_message: message.slice(0, 1000),
+        })
+        .eq('id', webhookId)
+
+      logger.error('Stripe webhook processing failed', {
+        requestId,
+        action: 'stripe_webhook_processing_failed',
+        metadata: message,
+      })
+
+      return jsonResponse(
+        { success: false, error: 'No fue posible procesar el evento de pago.' },
+        500,
+        requestId,
+      )
     }
   } catch (error) {
-    logger.error('Stripe webhook handler error', { requestId, action: 'stripe_webhook_error', metadata: error instanceof Error ? error.message : 'Unknown error' })
+    logger.error('Stripe webhook handler error', {
+      requestId,
+      action: 'stripe_webhook_error',
+      metadata: error instanceof Error ? error.message : 'Unknown error',
+    })
     return jsonResponse({ success: false, error: 'Webhook inválido.' }, 400, requestId)
   }
 }
