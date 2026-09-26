@@ -16,6 +16,20 @@ test.describe("API HTTP method and auth contracts", () => {
     expect(putResponse.status()).toBe(405);
   });
 
+  test("unknown API route returns a real 404", async ({ request }) => {
+    const response = await request.get("/api/__contract_test_missing__");
+    expect(response.status()).toBe(404);
+  });
+
+  test("products endpoint exposes GET/HEAD and rejects mutations", async ({ request }) => {
+    const getResponse = await request.get("/api/products");
+    expect([200, 503]).toContain(getResponse.status());
+
+    const postResponse = await request.post("/api/products");
+    expect(postResponse.status()).toBe(405);
+    expect(postResponse.headers()["allow"] ?? "").toContain("GET");
+  });
+
   test("protected catalog endpoint fails closed without a session", async ({ request }) => {
     const response = await request.get("/api/catalog");
     expect(response.status()).toBe(401);
