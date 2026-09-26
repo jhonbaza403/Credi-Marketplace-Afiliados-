@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
+import { apiJson, requestIdFrom } from "@/lib/api/contract"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
-export async function GET() {
+export async function GET(request: Request) {\n  const requestId = requestIdFrom(request)
   const timestamp = new Date().toISOString()
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim()
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim() || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim()
@@ -42,7 +43,7 @@ export async function GET() {
     },
     {
       status: status === "ok" ? 200 : 503,
-      headers: { "Cache-Control": "no-store, max-age=0", "X-Content-Type-Options": "nosniff" },
+      headers: { "Cache-Control": "no-store, max-age=0", "X-Content-Type-Options": "nosniff", "X-Request-ID": requestId }, requestId,
     },
   )
 }
