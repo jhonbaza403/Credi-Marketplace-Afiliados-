@@ -206,7 +206,7 @@
 button:disabled,
 .app-readable-surface button:disabled,
 .credi-business-chat button:disabled {
-  cursor: pointer !important;
+  cursor: not-allowed !important;
 }
 
 @media (prefers-reduced-motion: reduce) {
