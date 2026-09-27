@@ -13,7 +13,7 @@ function requiredPublicEnv(name: "NEXT_PUBLIC_SUPABASE_URL" | "NEXT_PUBLIC_SUPAB
   if (!value) {
     throw new Error(
       name === "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY"
-        ? "Falta la clave pública de Supabase: configure NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY o NEXT_PUBLIC_SUPABASE_ANON_KEY."
+        ? "Falta la clave pública de Supabase: configure NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY."
         : "Falta la variable de entorno NEXT_PUBLIC_SUPABASE_URL.",
     );
   }
