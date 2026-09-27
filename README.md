@@ -129,12 +129,6 @@ public.credi_intelligence_events
 public.credi_intelligence_decisions
 ```
 
-La migración inicial es:
-
-```text
-supabase/migrations/credi_intelligence_core.sql
-```
-
 `credi_intelligence_modules` actúa como registro canónico de capacidades. `credi_intelligence_events` permite auditar señales y resultados. `credi_intelligence_decisions` conserva decisiones versionadas con puntuación, confianza, racional y estado.
 
 Las tablas tienen RLS habilitado y no deben recibir acceso público por defecto. Las operaciones privilegiadas deben ejecutarse server-side mediante los clientes y servicios canónicos.
