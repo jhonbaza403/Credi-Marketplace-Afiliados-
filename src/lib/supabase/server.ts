@@ -7,7 +7,7 @@ import { cookies } from "next/headers";
 
 function requiredPublicEnv(name: "NEXT_PUBLIC_SUPABASE_URL" | "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY"): string {
   const value = name === "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY"
-    ? process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim() || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim()
+    ? process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim()
     : process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
 
   if (!value) {
