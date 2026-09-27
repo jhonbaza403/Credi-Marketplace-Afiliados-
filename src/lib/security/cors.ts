@@ -1,4 +1,4 @@
-const originPattern = /^https:\/\/[A-Za-z0-9.-]+(?::\\d{1,5})?$/
+const originPattern = /^https:\/\/[A-Za-z0-9.-]+(?::\d{1,5})?$/
 
 function configuredOrigins(): Set<string> {
   const raw = process.env.DEVELOPER_CORS_ORIGINS ?? ''
