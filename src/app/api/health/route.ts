@@ -8,7 +8,7 @@ export async function GET(request: Request) {
   const requestId = requestIdFrom(request)
   const timestamp = new Date().toISOString()
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim()
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim() || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim()
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim()
 
   let database = "unconfigured"
   let databaseError: string | null = null
