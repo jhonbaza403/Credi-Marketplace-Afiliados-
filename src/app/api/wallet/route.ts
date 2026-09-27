@@ -26,7 +26,7 @@ function json(data: unknown, status = 200, requestId?: string) {
   })
 }
 
-export async function GET(request: Request) {
+export async function GET(_request: Request) {
   const requestId = crypto.randomUUID()
   const supabase = await createClient()
   const { data: auth } = await supabase.auth.getUser()
