@@ -31,6 +31,12 @@ export default defineConfig({
           url: baseURL,
           reuseExistingServer: !process.env.CI,
           timeout: 120_000,
+          env: {
+            ...process.env,
+            NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL ?? "http://127.0.0.1:54321",
+            NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:
+              process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? "ci-placeholder-publishable-key",
+          },
         },
       }),
 });
