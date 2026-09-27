@@ -1,16 +1,17 @@
-import Link from 'next/link'
-import { ArrowRight, BadgeCheck, Building2 , LockKeyhole, MessageCircle, ShoppingBag, Sparkles } from 'lucide-react'
-import HeroPortal from '@/components/layout/HeroPortal'
-import '@/styles/hero-portal.css'
+import Link from "next/link";
+import { ArrowRight, BadgeCheck, Building2, LockKeyhole, MessageCircle, ShoppingBag, Sparkles, TrendingUp, Users } from "lucide-react";
+import HeroPortal from "@/components/layout/HeroPortal";
+import { getProducts } from "@/lib/database/queries";
+import "@/styles/hero-portal.css";
 
-type Item = { title: string; description: string; href: string; icon: React.ReactNode }
+type Item = { title: string; description: string; href: string; icon: React.ReactNode };
 
 const highlights: Item[] = [
-  { title: 'Marketplace', description: 'Descubre productos y oportunidades comerciales B2C.', href: '/marketplace', icon: <ShoppingBag /> },
-  { title: 'B2B empresarial', description: 'Conecta con empresas, proveedores y compras mayoristas.', href: '/b2b', icon: <Building2 /> },
-  { title: 'Credi Chat', description: 'Comunícate, negocia y comparte información comercial.', href: '/chat', icon: <MessageCircle /> },
-  { title: 'Proveedores verificados', description: 'Opera dentro de un ecosistema con controles de confianza.', href: '/proveedores-verificados', icon: <BadgeCheck /> },
-]
+  { title: "Marketplace", description: "Descubre productos y oportunidades comerciales B2C.", href: "/marketplace", icon: <ShoppingBag /> },
+  { title: "B2B empresarial", description: "Conecta con empresas, proveedores y compras mayoristas.", href: "/b2b", icon: <Building2 /> },
+  { title: "Credi Chat", description: "Comunícate, negocia y comparte información comercial.", href: "/chat", icon: <MessageCircle /> },
+  { title: "Proveedores verificados", description: "Opera dentro de un ecosistema con controles de confianza.", href: "/proveedores-verificados", icon: <BadgeCheck /> },
+];
 
 function Highlight({ item }: { item: Item }) {
   return (
@@ -19,24 +20,38 @@ function Highlight({ item }: { item: Item }) {
       <h3 className="text-base font-black text-[var(--foreground)]">{item.title}</h3>
       <p className="mt-2 text-sm leading-6 text-[var(--muted)]">{item.description}</p>
     </Link>
-  )
+  );
 }
 
-export default function HomePage() {
+export default async function HomePage() {
+  let productCount = 0;
+  try {
+    productCount = (await getProducts(8)).length;
+  } catch {
+    productCount = 0;
+  }
+
+  const pulse = [
+    { label: "Marketplace", value: productCount > 0 ? "Activo" : "Listo para publicar", icon: <ShoppingBag className="size-4" /> },
+    { label: "Comercio B2B", value: "Conectado", icon: <Building2 className="size-4" /> },
+    { label: "Credi Chat", value: "Disponible", icon: <MessageCircle className="size-4" /> },
+    { label: "Ecosistema", value: "En evolución", icon: <TrendingUp className="size-4" /> },
+  ];
+
   return (
     <main className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
-      <section className="hero-stage premium-portal-stage px-4 py-20 text-white sm:px-6 sm:py-28 lg:py-32">
+      <section className="hero-stage premium-portal-stage px-4 py-16 text-white sm:px-6 sm:py-24 lg:py-28">
         <HeroPortal />
         <div className="hero-content mx-auto max-w-6xl text-center">
           <div className="hero-kicker inline-flex items-center gap-2 rounded-full border border-cyan-300/20 bg-white/5 px-4 py-2 text-xs font-bold uppercase tracking-[0.16em] text-cyan-100 shadow-[0_0_28px_rgba(34,211,238,.12)]">
-            <Sparkles className="size-4" /> Plataforma empresarial
+            <Sparkles className="size-4" /> Plataforma comercial digital
           </div>
           <h1 className="mx-auto mt-7 max-w-5xl text-balance text-4xl font-black tracking-tight sm:text-6xl lg:text-7xl">
             <span className="hero-main-text">Credi Marketplace</span>
             <span className="hero-highlight"> conecta negocios</span>
           </h1>
           <p className="mx-auto mt-6 max-w-3xl text-lg font-medium leading-8 text-slate-100 drop-shadow-[0_2px_12px_rgba(0,0,0,.8)] sm:text-xl">
-            Un portal digital para descubrir, vender, comprar, negociar y construir relaciones comerciales en un mismo ecosistema.
+            Descubre, vende, compra, negocia y crea relaciones comerciales dentro de un mismo ecosistema.
           </p>
           <div className="hero-actions mt-9 flex flex-col justify-center gap-3 sm:flex-row">
             <Link href="/explorar" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-brand-600 px-7 py-3.5 text-sm font-black shadow-[0_10px_38px_rgba(37,99,235,.28)] hover:bg-brand-500">
@@ -49,29 +64,56 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="premium-portal-strip border-y border-[var(--border)] bg-[var(--surface)] py-12 sm:py-16">
-        <div className="container-marketplace">
-          <div className="mx-auto max-w-3xl text-center">
-            <span className="inline-flex items-center gap-2 rounded-full bg-brand-50 px-3 py-1.5 text-xs font-black text-brand-700 dark:bg-brand-950 dark:text-brand-300">
-              Ecosistema Credi
-            </span>
-            <h2 className="mt-4 text-2xl font-black text-[var(--foreground)] sm:text-4xl">Todo lo esencial, sin saturar el portal</h2>
-            <p className="mt-4 leading-7 text-[var(--muted)]">Las funciones completas viven en el menú principal. Aquí solo dejamos accesos rápidos a las áreas más importantes.</p>
-          </div>
-          <div className="mx-auto mt-8 grid max-w-6xl gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {highlights.map((item) => <Highlight key={item.title} item={item} />)}
-          </div>
+      <section className="border-b border-[var(--border)] bg-[var(--surface)] px-4 py-5 sm:px-6">
+        <div className="mx-auto grid max-w-6xl grid-cols-2 gap-3 sm:grid-cols-4">
+          {pulse.map((item) => (
+            <div key={item.label} className="rounded-2xl border border-[var(--border)] bg-[var(--surface-secondary)] px-4 py-3">
+              <div className="flex items-center gap-2 text-xs font-black uppercase tracking-[.12em] text-[var(--muted)]">{item.icon}{item.label}</div>
+              <p className="mt-2 text-sm font-black text-[var(--foreground)]">{item.value}</p>
+            </div>
+          ))}
         </div>
       </section>
 
-      <section className="premium-portal-footer px-4 pb-16 pt-10 sm:px-6 sm:pt-14">
+      <section className="premium-portal-strip border-y border-[var(--border)] bg-[var(--surface)] py-12 sm:py-16">
+        <div className="container-marketplace">
+          <div className="mx-auto max-w-3xl text-center">
+            <span className="inline-flex items-center gap-2 rounded-full bg-brand-50 px-3 py-1.5 text-xs font-black text-brand-700 dark:bg-brand-950 dark:text-brand-300">Ecosistema Credi</span>
+            <h2 className="mt-4 text-2xl font-black text-[var(--foreground)] sm:text-4xl">Un inicio que te lleva directo a lo que necesitas</h2>
+            <p className="mt-4 leading-7 text-[var(--muted)]">Accede rápidamente a comercio, empresas, conversación y confianza sin llenar la pantalla de funciones desconectadas.</p>
+          </div>
+          <div className="mx-auto mt-8 grid max-w-6xl gap-4 sm:grid-cols-2 lg:grid-cols-4">{highlights.map((item) => <Highlight key={item.title} item={item} />)}</div>
+        </div>
+      </section>
+
+      <section className="px-4 py-12 sm:px-6">
+        <div className="mx-auto grid max-w-6xl gap-5 lg:grid-cols-[1.4fr_.8fr]">
+          <Link href="/social" className="group rounded-[2rem] border border-[var(--border)] bg-[var(--surface)] p-7 shadow-sm transition hover:-translate-y-1 hover:shadow-xl">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <span className="text-xs font-black uppercase tracking-[.16em] text-[var(--primary)]">Muro Credi</span>
+                <h2 className="mt-2 text-2xl font-black text-[var(--foreground)] sm:text-3xl">Contenido que también mueve comercio</h2>
+              </div>
+              <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-[var(--surface-secondary)] text-[var(--primary)]"><MessageCircle className="size-5" /></span>
+            </div>
+            <p className="mt-4 max-w-2xl text-sm leading-7 text-[var(--muted)]">Historias, publicaciones, reels y oportunidades comerciales en un solo muro.</p>
+            <span className="mt-6 inline-flex items-center gap-2 text-sm font-black text-[var(--primary)]">Entrar al muro <ArrowRight className="size-4 transition group-hover:translate-x-1" /></span>
+          </Link>
+          <Link href="/pricing" className="rounded-[2rem] border border-brand-500/20 bg-gradient-to-br from-brand-50 to-[var(--surface)] p-7 shadow-sm transition hover:-translate-y-1 hover:shadow-xl dark:from-brand-950/40">
+            <span className="inline-flex items-center gap-2 rounded-full bg-white/70 px-3 py-1.5 text-xs font-black text-brand-700 dark:bg-white/10 dark:text-brand-200"><Users className="size-4" /> Credi Free</span>
+            <h2 className="mt-4 text-2xl font-black text-[var(--foreground)]">Empieza gratis y crece cuando lo necesites</h2>
+            <p className="mt-3 text-sm leading-7 text-[var(--muted)]">La experiencia básica permanece disponible sin convertir al creador o administrador en un plan comercial.</p>
+            <span className="mt-6 inline-flex items-center gap-2 text-sm font-black text-[var(--primary)]">Conocer capacidades <ArrowRight className="size-4" /></span>
+          </Link>
+        </div>
+      </section>
+
+      <section className="premium-portal-footer px-4 pb-16 pt-4 sm:px-6 sm:pt-6">
         <div className="container-marketplace rounded-[2rem] border border-white/10 bg-neutral-950 px-6 py-10 text-center text-white shadow-2xl sm:px-12 sm:py-12">
           <div className="mx-auto flex max-w-4xl flex-col items-center">
-            <div className="mb-4 flex size-12 items-center justify-center rounded-2xl border border-cyan-300/20 bg-cyan-300/10">
-              <LockKeyhole className="size-5 text-cyan-200" />
-            </div>
+            <div className="mb-4 flex size-12 items-center justify-center rounded-2xl border border-cyan-300/20 bg-cyan-300/10"><LockKeyhole className="size-5 text-cyan-200" /></div>
             <h2 className="text-2xl font-black sm:text-4xl">Confianza, comercio y conexión</h2>
-            <p className="mt-4 max-w-2xl leading-7 text-neutral-300">Inicia sesión para acceder a tu espacio de trabajo, tus operaciones y todas las herramientas de Credi Marketplace.</p>
+            <p className="mt-4 max-w-2xl leading-7 text-neutral-300">Crea tu cuenta para acceder a tu espacio de trabajo, operaciones y herramientas de Credi Marketplace.</p>
             <div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row">
               <Link href="/register" className="inline-flex items-center justify-center rounded-xl bg-brand-600 px-7 py-3.5 text-sm font-black hover:bg-brand-500">Crear cuenta</Link>
               <Link href="/chat" className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 px-7 py-3.5 text-sm font-black hover:bg-white/10"><MessageCircle className="size-4" /> Credi Chat</Link>
@@ -80,5 +122,5 @@ export default function HomePage() {
         </div>
       </section>
     </main>
-  )
+  );
 }
