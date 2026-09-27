@@ -21,7 +21,7 @@ export async function getDatabaseServerClient() {
 
   return createServerClient(
     required("NEXT_PUBLIC_SUPABASE_URL"),
-    required("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", "NEXT_PUBLIC_SUPABASE_ANON_KEY"),
+    required("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY"),
     {
       cookies: {
         getAll() {
