@@ -12,7 +12,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "INVALID_MEDIA_PATH" }, { status: 400 });
   }
 
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !(process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)) {
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY) {
     return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
   }
 
