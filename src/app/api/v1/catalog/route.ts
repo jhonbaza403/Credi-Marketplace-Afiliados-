@@ -30,7 +30,9 @@ export async function GET(request: Request) {
   if(quotaError)return json({error:'RATE_LIMIT_SERVICE_UNAVAILABLE'},503,request)
   if(quotaAllowed===false)return json({error:'RATE_LIMITED',retry_after_seconds:60},429,request,{'Retry-After':'60','Cache-Control':'no-store'})
   await admin.from('developer_api_keys').update({last_used_at:now.toISOString()}).eq('id',keyRow.id)
-  const url=new URL(request.url); const q=url.searchParams.get('q')?.trim().slice(0,200).toLowerCase()||''; const parsedLimit=Number(url.searchParams.get('limit')||50); const limit=Math.min(Math.max(Number.isFinite(parsedLimit)?parsedLimit:50,1),100)
+  const url=new URL(request.url); const q=url.searchParams.get('q')?.trim().slice(0,200).toLowerCase()||'';
+  if(q && !/^[\p{L}\p{N}\s-]+$/u.test(q)) return json({error:'INVALID_QUERY'},422,request)
+  const parsedLimit=Number(url.searchParams.get('limit')||50); const limit=Math.min(Math.max(Number.isFinite(parsedLimit)?parsedLimit:50,1),100)
   let query=admin.from('published_products').select('id,title,slug,description,price,stock,image_url,images,is_active,updated_at').eq('is_active',true).gt('stock',0).limit(limit)
   if(q)query=query.or(`title.ilike.%${q}%,description.ilike.%${q}%`)
   const {data,error}=await query
