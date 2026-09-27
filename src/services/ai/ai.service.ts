@@ -1,54 +1,33 @@
-// ==========================================================
-// AI Service
-// Gemini Integration Layer
-// ==========================================================
+import "server-only";
 
+import { generateGeminiText } from "@/lib/ai/gemini";
 
 export interface AIRequest {
-
- prompt:string;
-
- userId:string;
-
+  prompt: string;
+  userId: string;
 }
 
-
-
-export async function askAI(
- input:AIRequest
-){
-
-
- if(
-  input.prompt.length > 4000
- ){
-
-  throw new Error(
-   'Prompt too long'
-  );
-
- }
-
-
-
- /*
- 
- Aquí irá:
-
- - Gemini API
- - rate limit
- - token budget
- - logging
- - timeout
- 
+/**
+ * Compatibility service.
+ * The provider integration and model configuration are centralized
+ * in src/lib/ai/gemini.ts. Authentication and rate limiting remain
+ * responsibilities of the calling route/application service.
  */
+export async function askAI(input: AIRequest): Promise<{ message: string }> {
+  if (!input || typeof input.prompt !== "string") {
+    throw new Error("Prompt inválido");
+  }
 
+  const prompt = input.prompt.trim();
+  if (!prompt) {
+    throw new Error("Prompt vacío");
+  }
 
- return {
+  if (prompt.length > 10_000) {
+    throw new Error("Prompt demasiado largo");
+  }
 
-  message:
-  'AI service ready'
-
- };
-
+  return {
+    message: await generateGeminiText(prompt),
+  };
 }
