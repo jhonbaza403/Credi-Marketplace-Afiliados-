@@ -98,7 +98,7 @@ export async function POST(request: Request) {
     } else if (insertError?.code === '23505') {
       const { data: existing, error: existingError } = await supabase
         .from('webhook_events')
-        .select('id,status,processing_attempts,created_at')
+        .select('id,status,processing_attempts,created_at,processing_started_at')
         .eq('provider', 'stripe')
         .eq('event_id', event.id)
         .maybeSingle()
@@ -112,30 +112,54 @@ export async function POST(request: Request) {
       }
 
       if (existing.status === 'processing') {
-        const ageMs = Date.now() - new Date(existing.created_at).getTime()
+        const startedAt = existing.processing_started_at
+          ? new Date(existing.processing_started_at).getTime()
+          : new Date(existing.created_at).getTime()
+        const ageMs = Date.now() - startedAt
         if (ageMs < 10 * 60 * 1000) {
           return jsonResponse({ success: true, received: true, processing: true, duplicate: true }, 200, requestId)
         }
+
+        const staleCutoff = new Date(Date.now() - 10 * 60 * 1000).toISOString()
+        const { data: claimed, error: claimError } = await supabase
+          .from('webhook_events')
+          .update({
+            status: 'processing',
+            processing_attempts: (existing.processing_attempts ?? 0) + 1,
+            processing_started_at: new Date().toISOString(),
+            failed_at: null,
+            error_message: null,
+          })
+          .eq('id', existing.id)
+          .eq('status', 'processing')
+          .lt('processing_started_at', staleCutoff)
+          .select('id')
+          .maybeSingle()
+
+        if (claimError || !claimed) {
+          return jsonResponse({ success: true, received: true, processing: true, duplicate: true }, 200, requestId)
+        }
+        webhookId = claimed.id
+      } else {
+        const { data: claimed, error: claimError } = await supabase
+          .from('webhook_events')
+          .update({
+            status: 'processing',
+            processing_attempts: (existing.processing_attempts ?? 0) + 1,
+            processing_started_at: new Date().toISOString(),
+            failed_at: null,
+            error_message: null,
+          })
+          .eq('id', existing.id)
+          .in('status', ['received', 'failed'])
+          .select('id')
+          .maybeSingle()
+
+        if (claimError || !claimed) {
+          return jsonResponse({ success: true, received: true, processing: true, duplicate: true }, 200, requestId)
+        }
+        webhookId = claimed.id
       }
-
-      const { data: claimed, error: claimError } = await supabase
-        .from('webhook_events')
-        .update({
-          status: 'processing',
-          processing_attempts: (existing.processing_attempts ?? 0) + 1,
-          failed_at: null,
-          error_message: null,
-        })
-        .eq('id', existing.id)
-        .neq('status', 'processed')
-        .select('id')
-        .maybeSingle()
-
-      if (claimError || !claimed) {
-        return jsonResponse({ success: true, received: true, processing: true, duplicate: true }, 200, requestId)
-      }
-
-      webhookId = claimed.id
     } else if (insertError || !inserted) {
       return jsonResponse({ success: false, error: 'No fue posible registrar el webhook.' }, 500, requestId)
     }
@@ -147,7 +171,7 @@ export async function POST(request: Request) {
     if (inserted) {
       const { error: claimError } = await supabase
         .from('webhook_events')
-        .update({ status: 'processing', processing_attempts: 1 })
+        .update({ status: 'processing', processing_attempts: 1, processing_started_at: new Date().toISOString() })
         .eq('id', webhookId)
         .eq('status', 'received')
 
