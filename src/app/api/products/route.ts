@@ -5,7 +5,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 function methodNotAllowed(request: Request) {
-  return new Response(null, { status: 405, headers: { Allow: "GET, HEAD", "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff", "X-Content-Type-Options": "nosniff", "X-Request-ID": request.headers.get("x-request-id") ?? crypto.randomUUID() } });
+  return new Response(null, { status: 405, headers: { Allow: "GET, HEAD", "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff", "X-Request-ID": request.headers.get("x-request-id") ?? crypto.randomUUID() } });
 }
 
 export async function GET() {
