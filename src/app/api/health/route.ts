@@ -4,59 +4,33 @@ import { apiJson, requestIdFrom } from "@/lib/api/contract"
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
+function methodNotAllowed(request: Request) {
+  const requestId = requestIdFrom(request)
+  return new Response(null, { status: 405, headers: { Allow: "GET, HEAD", "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff", "X-Request-ID": requestId } })
+}
+
 export async function GET(request: Request) {
   const requestId = requestIdFrom(request)
   const timestamp = new Date().toISOString()
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim()
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim()
-
   let database = "unconfigured"
   let databaseError: string | null = null
-
   if (supabaseUrl && supabaseKey) {
     try {
       const supabase = createClient(supabaseUrl, supabaseKey, { auth: { persistSession: false, autoRefreshToken: false } })
       const { error } = await supabase.from("products").select("id", { count: "exact", head: true })
-      if (error) {
-        database = "degraded"
-        databaseError = error.message
-      } else {
-        database = "ok"
-      }
-    } catch (error) {
-      database = "degraded"
-      databaseError = error instanceof Error ? error.message : "database_check_failed"
-    }
+      if (error) { database = "degraded"; databaseError = error.message } else database = "ok"
+    } catch (error) { database = "degraded"; databaseError = error instanceof Error ? error.message : "database_check_failed" }
   }
-
   const status = database === "ok" ? "ok" : "degraded"
-
-  return apiJson(
-    {
-      status,
-      service: "credi-marketplace",
-      timestamp,
-      deployment: process.env.VERCEL_DEPLOYMENT_ID ?? null,
-      environment: process.env.VERCEL_ENV ?? process.env.NODE_ENV ?? null,
-      database,
-      databaseError: process.env.NODE_ENV === "development" ? databaseError : null,
-    },
-    {
-      status: status === "ok" ? 200 : 503,
-      headers: { "Cache-Control": "no-store, max-age=0" },
-      requestId,
-    },
-  )
+  return apiJson({ status, service: "credi-marketplace", timestamp, deployment: process.env.VERCEL_DEPLOYMENT_ID ?? null, environment: process.env.VERCEL_ENV ?? process.env.NODE_ENV ?? null, database, databaseError: process.env.NODE_ENV === "development" ? databaseError : null }, { status: status === "ok" ? 200 : 503, headers: { "Cache-Control": "no-store, max-age=0" }, requestId })
 }
 
 export async function HEAD(request: Request) {
   const requestId = requestIdFrom(request)
-  return new Response(null, {
-    status: 200,
-    headers: {
-      "Cache-Control": "no-store, max-age=0",
-      "X-Content-Type-Options": "nosniff",
-      "X-Request-ID": requestId,
-    },
-  })
+  return new Response(null, { status: 200, headers: { "Cache-Control": "no-store, max-age=0", "X-Content-Type-Options": "nosniff", "X-Request-ID": requestId } })
 }
+
+export async function POST(request: Request) { return methodNotAllowed(request) }
+export async function PUT(request: Request) { return methodNotAllowed(request) }
