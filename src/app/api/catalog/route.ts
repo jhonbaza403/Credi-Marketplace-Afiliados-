@@ -31,3 +31,13 @@ export async function POST(request: Request) {
   if (error || !catalog) return NextResponse.json({ error: 'CATALOG_CREATE_FAILED' }, { status: 500 })
   return NextResponse.json({ catalog }, { status: 201 })
 }
+
+export async function PUT(request: Request) {
+  if (!isSameOrigin(request)) return NextResponse.json({ error: 'CSRF_VALIDATION_FAILED' }, { status: 403, headers: { 'Cache-Control': 'no-store' } })
+  return new Response(null, { status: 405, headers: { Allow: 'GET, POST', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', 'X-Request-ID': request.headers.get('x-request-id') ?? crypto.randomUUID() } })
+}
+
+export async function DELETE(request: Request) {
+  if (!isSameOrigin(request)) return NextResponse.json({ error: 'CSRF_VALIDATION_FAILED' }, { status: 403, headers: { 'Cache-Control': 'no-store' } })
+  return new Response(null, { status: 405, headers: { Allow: 'GET, POST', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', 'X-Request-ID': request.headers.get('x-request-id') ?? crypto.randomUUID() } })
+}
