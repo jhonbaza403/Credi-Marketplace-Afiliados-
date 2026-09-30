@@ -10,9 +10,6 @@ ALTER TABLE public.payment_orchestrations
 ALTER TABLE public.affiliate_attributions
   ADD COLUMN IF NOT EXISTS operation_id uuid;
 
-ALTER TABLE public.affiliate_conversions
-  ADD COLUMN IF NOT EXISTS operation_id uuid;
-
 ALTER TABLE public.affiliate_commission_ledger
   ADD COLUMN IF NOT EXISTS operation_id uuid;
 
@@ -34,7 +31,6 @@ ALTER TABLE public.notifications
 CREATE INDEX IF NOT EXISTS idx_orders_operation_id ON public.orders(operation_id);
 CREATE INDEX IF NOT EXISTS idx_payment_orchestrations_operation_id ON public.payment_orchestrations(operation_id);
 CREATE INDEX IF NOT EXISTS idx_affiliate_attributions_operation_id ON public.affiliate_attributions(operation_id);
-CREATE INDEX IF NOT EXISTS idx_affiliate_conversions_operation_id ON public.affiliate_conversions(operation_id);
 CREATE INDEX IF NOT EXISTS idx_affiliate_commission_ledger_operation_id ON public.affiliate_commission_ledger(operation_id);
 CREATE INDEX IF NOT EXISTS idx_settlement_allocations_operation_id ON public.settlement_allocations(operation_id);
 CREATE INDEX IF NOT EXISTS idx_wallet_journals_operation_id ON public.wallet_journals(operation_id);
@@ -50,12 +46,6 @@ WHERE p.order_id = o.id
   AND p.operation_id IS NULL;
 
 UPDATE public.affiliate_attributions a
-SET operation_id = o.operation_id
-FROM public.orders o
-WHERE a.order_id = o.id
-  AND a.operation_id IS NULL;
-
-UPDATE public.affiliate_conversions a
 SET operation_id = o.operation_id
 FROM public.orders o
 WHERE a.order_id = o.id
@@ -98,7 +88,7 @@ BEGIN
   IF TG_TABLE_NAME = 'payment_orchestrations' AND NEW.order_id IS NOT NULL THEN
     SELECT operation_id INTO v_operation FROM public.orders WHERE id = NEW.order_id;
     NEW.operation_id := coalesce(NEW.operation_id, v_operation);
-  ELSIF TG_TABLE_NAME IN ('affiliate_attributions','affiliate_conversions','affiliate_commission_ledger','settlement_allocations') AND NEW.order_id IS NOT NULL THEN
+  ELSIF TG_TABLE_NAME IN ('affiliate_attributions','affiliate_commission_ledger','settlement_allocations') AND NEW.order_id IS NOT NULL THEN
     SELECT operation_id INTO v_operation FROM public.orders WHERE id = NEW.order_id;
     NEW.operation_id := coalesce(NEW.operation_id, v_operation);
   ELSIF TG_TABLE_NAME = 'wallet_ledger' AND NEW.reference_type = 'settlement_allocation' AND NEW.reference_id IS NOT NULL THEN
@@ -122,11 +112,6 @@ FOR EACH ROW EXECUTE FUNCTION public.sync_credi_operation_id();
 DROP TRIGGER IF EXISTS trg_sync_affiliate_attribution_operation_id ON public.affiliate_attributions;
 CREATE TRIGGER trg_sync_affiliate_attribution_operation_id
 BEFORE INSERT OR UPDATE ON public.affiliate_attributions
-FOR EACH ROW EXECUTE FUNCTION public.sync_credi_operation_id();
-
-DROP TRIGGER IF EXISTS trg_sync_affiliate_conversion_operation_id ON public.affiliate_conversions;
-CREATE TRIGGER trg_sync_affiliate_conversion_operation_id
-BEFORE INSERT OR UPDATE ON public.affiliate_conversions
 FOR EACH ROW EXECUTE FUNCTION public.sync_credi_operation_id();
 
 DROP TRIGGER IF EXISTS trg_sync_affiliate_commission_operation_id ON public.affiliate_commission_ledger;
