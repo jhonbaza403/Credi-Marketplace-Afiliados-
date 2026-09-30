@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import DomainBridge from "@/components/portal/DomainBridge"
 import Link from "next/link";
 
 import ProductCard from "@/features/marketplace/components/ProductCard";
