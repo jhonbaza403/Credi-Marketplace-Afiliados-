@@ -1,95 +1,143 @@
 import { NextResponse } from "next/server";
+import { createHash } from "node:crypto";
+import { z } from "zod";
 
 import { AI_LIMITS } from "@/lib/ai/limits";
-import {
-  generateGeminiText,
-  isGeminiConfigured,
-} from "@/lib/ai/gemini";
+import { generateOpenAIText, isOpenAIConfigured, type CrediAiMode } from "@/lib/ai/openai";
+import { generateGeminiText, isGeminiConfigured } from "@/lib/ai/gemini";
+import { distributedRateLimit } from "@/lib/security/rate-limit";
+import { getRequestIp } from "@/lib/security/auth";
+import { isSameOrigin } from "@/lib/security/csrf";
 import { createClient } from "@/lib/supabase/server";
-
-interface AiRequestBody {
-  prompt?: unknown;
-}
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-function isAiRequestBody(value: unknown): value is AiRequestBody {
-  return typeof value === "object" && value !== null;
+const schema = z.object({
+  prompt: z.string().trim().min(1).max(AI_LIMITS.maxInputCharacters),
+  mode: z.enum(["copilot","sales","marketing","strategy","intelligence"]).default("copilot"),
+  sessionId: z.string().uuid().nullable().optional(),
+});
+
+const errorResponse = (error: string, status: number, code: string, requestId?: string) =>
+  NextResponse.json({ error, code, request_id: requestId }, { status, headers: { "Cache-Control": "no-store" } });
+
+function safetyIdentifier(userId: string) {
+  return "credi_" + createHash("sha256").update(userId).digest("hex").slice(0, 32);
 }
 
 export async function POST(request: Request) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: "No autenticado" }, { status: 401 });
-  }
-
-  if (!isGeminiConfigured()) {
-    return NextResponse.json(
-      { error: "El servicio de IA no está configurado" },
-      { status: 503 },
-    );
-  }
-
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: "JSON inválido" }, { status: 400 });
-  }
-
-  const prompt =
-    isAiRequestBody(body) && typeof body.prompt === "string"
-      ? body.prompt.trim()
-      : "";
-
-  if (!prompt) {
-    return NextResponse.json(
-      { error: "El campo prompt es obligatorio" },
-      { status: 400 },
-    );
-  }
-
-  if (prompt.length > AI_LIMITS.maxInputCharacters) {
-    return NextResponse.json(
-      { error: `El prompt supera el máximo de ${AI_LIMITS.maxInputCharacters} caracteres` },
-      { status: 413 },
-    );
-  }
-
   const requestId = crypto.randomUUID();
-  const timeoutMs = Math.min(Math.max(AI_LIMITS.timeout, 8_000), 18_000);
 
   try {
-    const result = await Promise.race([
-      generateGeminiText(prompt, { maxOutputTokens: AI_LIMITS.maxTokens }),
-      new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error("Tiempo de espera agotado")), timeoutMs);
-      }),
-    ]);
+    if (!isSameOrigin(request)) return errorResponse("Origen no autorizado.", 403, "CSRF_VALIDATION_FAILED", requestId);
 
-    return NextResponse.json(
-      { text: result },
-      { status: 200, headers: { "Cache-Control": "no-store", "X-Credi-AI-Request": requestId } },
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError) return errorResponse("No fue posible verificar la sesión.", 401, "AUTHENTICATION_ERROR", requestId);
+    if (!user) return errorResponse("No autenticado.", 401, "UNAUTHENTICATED", requestId);
+
+    const limit = await distributedRateLimit(
+      supabase,
+      `ai:${user.id}:${getRequestIp(request)}`,
+      { limit: AI_LIMITS.requestsPerMinute, windowMs: 60_000 },
     );
-  } catch (error) {
-    const raw = error instanceof Error ? error.message : "Unknown error";
-    console.error("AI request failed", { requestId, userId: user.id, error: raw });
+    if (!limit.success) return errorResponse("Límite de solicitudes de IA alcanzado. Inténtalo más tarde.", 429, "AI_RATE_LIMITED", requestId);
 
-    const isTimeout = raw === "Tiempo de espera agotado";
-    return NextResponse.json(
-      {
-        error: isTimeout
-          ? "Credi AI está tardando más de lo esperado. Prueba una solicitud más concreta."
-          : "No fue posible procesar la solicitud de IA",
-        code: isTimeout ? "AI_TIMEOUT" : "AI_PROVIDER_ERROR",
+    const parsed = schema.safeParse(await request.json().catch(() => null));
+    if (!parsed.success) return errorResponse("La solicitud de IA no es válida.", 400, "INVALID_AI_REQUEST", requestId);
+
+    let sessionId = parsed.data.sessionId ?? null;
+    let previousResponseId: string | null = null;
+
+    if (sessionId) {
+      const { data: session } = await supabase
+        .from("ai_sessions")
+        .select("id,mode,last_response_id")
+        .eq("id", sessionId)
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (!session) return errorResponse("Sesión de IA no encontrada.", 404, "AI_SESSION_NOT_FOUND", requestId);
+      previousResponseId = session.last_response_id;
+    } else {
+      const { data: created, error: sessionError } = await supabase
+        .from("ai_sessions")
+        .insert({ user_id: user.id, mode: parsed.data.mode })
+        .select("id")
+        .single();
+
+      if (sessionError || !created) {
+        console.error("[credi-ai] session create failed", { requestId, userId: user.id });
+        return errorResponse("No fue posible iniciar la sesión de Credi AI.", 500, "AI_SESSION_CREATE_FAILED", requestId);
+      }
+      sessionId = created.id;
+    }
+
+    const prompt = [
+      `Modo de trabajo: ${parsed.data.mode}`,
+      "Contexto de plataforma: Credi Marketplace integra Marketplace, servicios profesionales, B2B, afiliados, contenido, LIVE, Marketing, Business OS, Wallet y operaciones comerciales.",
+      "Solicitud del usuario:",
+      parsed.data.prompt,
+    ].join("\n\n");
+
+    const identifier = safetyIdentifier(user.id);
+
+    if (isOpenAIConfigured()) {
+      try {
+        const result = await generateOpenAIText({
+          prompt,
+          mode: parsed.data.mode as CrediAiMode,
+          previousResponseId,
+          safetyIdentifier: identifier,
+        });
+
+        const { error: saveError } = await supabase
+          .from("ai_sessions")
+          .update({ mode: parsed.data.mode, last_response_id: result.responseId, updated_at: new Date().toISOString() })
+          .eq("id", sessionId)
+          .eq("user_id", user.id);
+
+        if (saveError) console.error("[credi-ai] session update failed", { requestId, userId: user.id, error: saveError.message });
+
+        return NextResponse.json({
+          text: result.text,
+          provider: "openai",
+          model: result.model,
+          session_id: sessionId,
+          request_id: requestId,
+        }, { headers: { "Cache-Control": "no-store" } });
+      } catch (openAiError) {
+        console.error("[credi-ai] OpenAI provider failed", {
+          requestId,
+          userId: user.id,
+          error: openAiError instanceof Error ? openAiError.message : String(openAiError),
+        });
+      }
+    }
+
+    if (isGeminiConfigured()) {
+      const result = await Promise.race([
+        generateGeminiText(prompt, { maxOutputTokens: AI_LIMITS.maxTokens }),
+        new Promise<never>((_, reject) => setTimeout(() => reject(new Error("AI_TIMEOUT")), Math.min(AI_LIMITS.timeout, 30_000))),
+      ]);
+
+      return NextResponse.json({
+        text: result,
+        provider: "gemini",
+        model: process.env.GEMINI_MODEL?.trim() || "configured",
+        session_id: sessionId,
         request_id: requestId,
-      },
-      { status: isTimeout ? 504 : 502, headers: { "Cache-Control": "no-store" } },
-    );
+        fallback: true,
+      }, { headers: { "Cache-Control": "no-store" } });
+    }
+
+    return errorResponse("El servicio de IA no está configurado.", 503, "AI_NOT_CONFIGURED", requestId);
+  } catch (error) {
+    console.error("[credi-ai] request failed", {
+      requestId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return errorResponse("No fue posible procesar la solicitud de IA.", 502, "AI_PROVIDER_ERROR", requestId);
   }
 }
