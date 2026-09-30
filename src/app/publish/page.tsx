@@ -21,7 +21,10 @@ export default async function PublishPage() {
   return (
     <main className="min-h-screen bg-background px-4 py-10 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-5xl">
-        <PublishCenter />
+        <DomainBridge context="publish" />
+        <div className="mt-6">
+          <PublishCenter />
+        </div>
       </div>
     </main>
   );
