@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { ArrowRight, Camera, Megaphone, Play, Sparkles } from "lucide-react";
 import { getDatabaseServerClient } from "@/lib/database/server";
-import CrediSocialNav from "@/components/layout/CrediSocialNav";
 
 type MediaItem = { type?: string; url?: string };
 
@@ -37,7 +36,6 @@ export default async function SocialPage() {
 
   return (
     <main className="min-h-screen bg-[var(--background)] px-4 pb-8 text-[var(--foreground)] sm:px-4 lg:px-8">
-      <CrediSocialNav active="wall" />
       <div className="mx-auto max-w-7xl space-y-8">
         <header className="overflow-hidden rounded-[2rem] border border-[var(--border)] bg-[var(--surface)] shadow-sm">
           <div className="bg-gradient-to-br from-brand-950 via-slate-950 to-slate-900 px-6 py-9 text-white sm:px-10 sm:py-12">
