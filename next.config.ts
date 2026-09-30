@@ -60,9 +60,12 @@ const nextConfig: NextConfig = {
       { source: "/seller/b2b/:path*", destination: "/b2b/:path*", permanent: false },
       { source: "/jobs", destination: "/services", permanent: false },
       { source: "/jobs/:path*", destination: "/services/:path*", permanent: false },
+      { source: "/explorar", destination: "/marketplace", permanent: false },
       { source: "/servicios", destination: "/services", permanent: false },
       { source: "/servicios/:path*", destination: "/services/:path*", permanent: false },
       { source: "/productos", destination: "/products", permanent: false },
+      { source: "/ads", destination: "/marketing", permanent: false },
+      { source: "/publicidad", destination: "/marketing", permanent: false },
       { source: "/productos/:path*", destination: "/products/:path*", permanent: false },
     ];
   },
