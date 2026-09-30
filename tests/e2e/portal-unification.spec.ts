@@ -18,18 +18,17 @@ test.describe("Credi unified portal", () => {
     await expect(page.getByRole("link", { name: /Ver planes/i })).toBeVisible();
   });
 
-  test("legacy entry points converge on canonical domains", async ({ request }) => {
-    const aliases = [
-      ["/explorar", "/marketplace"],
-      ["/servicios", "/services"],
-      ["/vender", "/publish"],
-    ] as const;
+  test("legacy entry points preserve canonical destinations and auth guard", async ({ page }) => {
+    await page.goto("/explorar");
+    expect(new URL(page.url()).pathname).toBe("/marketplace");
 
-    for (const [source, target] of aliases) {
-      const response = await request.get(source, { maxRedirects: 0 });
-      expect([301, 302, 303, 307, 308]).toContain(response.status());
-      expect(response.headers().location ?? "").toBe(target);
-    }
+    await page.goto("/servicios");
+    expect(new URL(page.url()).pathname).toBe("/services");
+
+    await page.goto("/vender");
+    const venderUrl = new URL(page.url());
+    expect(venderUrl.pathname).toBe("/login");
+    expect(venderUrl.searchParams.get("next")).toBe("/publish");
   });
 
   test("domains expose natural continuation paths without a second portal", async ({ page }) => {
