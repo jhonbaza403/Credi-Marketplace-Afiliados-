@@ -2,6 +2,7 @@
 
 import { useEffect,useMemo,useState } from "react";
 import { BarChart3,BrainCircuit,CalendarClock,ChevronRight,Megaphone,Pause,Play,Plus,Sparkles,Target,WalletCards } from "lucide-react";
+import MarketingCreativeBuilder from "@/features/marketing/MarketingCreativeBuilder";
 
 type Campaign={id:string;name:string;objective:string;status:string;currency:string;daily_budget:number;lifetime_budget:number|null;start_at:string|null;end_at:string|null;destination_url:string|null;optimization_goal:string;bid_strategy:string;placement_config:string[];metrics:{impressions:number;clicks:number;purchases:number;spend:number;revenue:number}};
 
@@ -67,6 +68,8 @@ export default function MarketingStudio(){
     </header>
 
     {message&&<p role="status" className="rounded-2xl border border-[var(--border)] bg-[var(--surface-secondary)] p-4 text-sm">{message}</p>}
+
+    <MarketingCreativeBuilder onSaved={()=>void load()} />
 
     {open&&<section aria-label="Crear campaña" className="rounded-[2rem] border border-cyan-300/15 bg-[var(--surface)] p-6 shadow-xl sm:p-8">
       <div className="flex items-start justify-between gap-4"><div><p className="text-xs font-black uppercase tracking-[.16em] text-[var(--primary)]">Campaign Builder</p><h2 className="mt-1 text-2xl font-black">Nueva campaña</h2></div><button type="button" onClick={()=>setOpen(false)} className="rounded-xl border border-[var(--border)] px-3 py-2 text-sm font-bold">Cerrar</button></div>
