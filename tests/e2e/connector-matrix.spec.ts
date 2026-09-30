@@ -56,7 +56,7 @@ test.describe("Credi connector matrix", () => {
     }
 
     await expect(page.locator('form[action="/api/billing/checkout"]')).toHaveCount(3);
-    await expect(page.getByRole("button", { name: /Continuar con el plan/i })).toHaveCount(2);
+    await expect(page.getByRole("button", { name: /Continuar con el plan/i })).toHaveCount(3);
     
   });
 
