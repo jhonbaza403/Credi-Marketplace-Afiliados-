@@ -21,6 +21,13 @@ const baseSchema = z.object({
   destinationUrl: z.string().trim().max(2048).optional().nullable(),
   budget: z.number().finite().min(0).max(100_000_000).optional().nullable(),
   disclosure: z.literal(true),
+  operationContext: z.object({
+    productId: z.string().uuid().optional().nullable(),
+    affiliateRef: z.string().trim().max(128).optional().nullable(),
+    conversationId: z.string().uuid().optional().nullable(),
+    orderId: z.string().uuid().optional().nullable(),
+    source: z.string().trim().max(32).optional().nullable(),
+  }).optional().default({}),
 })
 
 function jsonError(error: string, status: number, code: string) {
@@ -60,6 +67,20 @@ export async function POST(request: Request) {
     if (!parsed.success) return jsonError('Los datos de publicación no son válidos.', 400, 'INVALID_SOCIAL_DATA')
 
     const payload = parsed.data
+    const operationContext = {
+      product_id: payload.operationContext.productId || null,
+      affiliate_ref: payload.operationContext.affiliateRef?.trim() || null,
+      conversation_id: payload.operationContext.conversationId || null,
+      order_id: payload.operationContext.orderId || null,
+      source: payload.operationContext.source || 'publish',
+    }
+
+    if (operationContext.product_id) {
+      const { data: product, error: productError } = await supabase.from('products').select('id,is_active').eq('id', operationContext.product_id).maybeSingle()
+      if (productError) throw productError
+      if (!product?.is_active) return jsonError('El producto asociado ya no está disponible.', 409, 'PRODUCT_CONTEXT_NOT_AVAILABLE')
+    }
+
     const title = payload.title.trim()
     const body = payload.body.trim()
 
@@ -95,6 +116,7 @@ export async function POST(request: Request) {
         is_sponsored: false,
         affiliate_disclosure: false,
         moderation_status: 'pending',
+        operation_context: operationContext,
       }).select('id').single()
       if (error) throw error
       id = data.id
@@ -137,6 +159,7 @@ export async function POST(request: Request) {
         moderation_status: 'pending',
         budget_amount: payload.budget ?? null,
         starts_at: null,
+        operation_context: operationContext,
       }).select('id').single()
       if (error) throw error
       id = data.id
