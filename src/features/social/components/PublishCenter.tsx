@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import MarketplaceMediaUploader from "@/components/media/MarketplaceMediaUploader";
 import type { UploadedMarketplaceMedia } from "@/lib/storage/marketplace-media";
 
@@ -24,6 +25,10 @@ export default function PublishCenter() {
   const [disclosure, setDisclosure] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const searchParams = useSearchParams();
+  const productId = searchParams.get("product_id") || searchParams.get("product");
+  const affiliateRef = searchParams.get("ref");
+  const operationSource = searchParams.get("source") || "publish";
 
   const currentTab = useMemo(() => tabs.find((tab) => tab.value === type) ?? tabs[0], [type]);
 
@@ -71,6 +76,11 @@ export default function PublishCenter() {
           destinationUrl: normalizedDestination,
           budget: numericBudget,
           disclosure: true,
+          operationContext: {
+            productId,
+            affiliateRef,
+            source: operationSource,
+          },
         }),
       });
 
@@ -96,6 +106,8 @@ export default function PublishCenter() {
         <h1 className="mt-2 text-3xl font-black tracking-tight">Publica desde tu propia cuenta</h1>
         <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-300">Carga imagen o vídeo desde tu dispositivo. El servidor registra el contenido y lo deja en revisión antes de publicarlo.</p>
       </div>
+
+      {productId && <div className="mb-6 rounded-2xl border border-cyan-300/20 bg-cyan-300/5 p-4 text-sm"><p className="font-black text-cyan-700">Contexto comercial adjunto</p><p className="mt-1 text-[var(--muted)]">Esta publicación conserva el producto seleccionado y, cuando exista, la referencia de afiliado para conectar Muro → producto → Chat → Checkout.</p><code className="mt-2 inline-block rounded-lg bg-[var(--surface)] px-2 py-1 text-xs">{productId}</code>{affiliateRef && <code className="ml-2 inline-block rounded-lg bg-[var(--surface)] px-2 py-1 text-xs">ref={affiliateRef}</code>}</div>}
 
       <div className="mb-6 grid grid-cols-2 gap-2 sm:grid-cols-4" role="tablist" aria-label="Tipo de contenido">
         {tabs.map((tab) => (
