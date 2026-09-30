@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import DomainBridge from "@/components/portal/DomainBridge"
 import CrediBusinessChat from '@/components/chat/CrediBusinessChat'
 import CrediContactDirectory from '@/components/chat/CrediContactDirectory'
 import CrediLiveChatPanel from '@/components/chat/CrediLiveChatPanel'
