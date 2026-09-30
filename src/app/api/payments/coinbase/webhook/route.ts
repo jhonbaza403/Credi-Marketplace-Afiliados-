@@ -1,6 +1,6 @@
 import { createHmac, timingSafeEqual } from 'node:crypto'
 import { NextResponse } from 'next/server'
-import { createServiceClient } from '@/lib/supabase/service'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -31,7 +31,7 @@ type CoinbaseEvent = {
   settlement?: { totalAmount?: string; netAmount?: string; feeAmount?: string; currency?: string }
 }
 
-async function finalizeSettlement(db: ReturnType<typeof createServiceClient>, orderId: string) {
+async function finalizeSettlement(db: ReturnType<typeof createAdminClient>, orderId: string) {
   const { error } = await db.rpc('finalize_order_settlement_allocations', { p_order_id: orderId })
   if (error) throw error
 }
@@ -52,7 +52,7 @@ export async function POST(request: Request) {
   const orderId = event.metadata?.orderId?.trim() || ''
   if (!checkoutId || !eventType) return json({ error: 'INVALID_EVENT' }, 400)
 
-  const db = createServiceClient()
+  const db = createAdminClient()
   const { data: payment, error: paymentError } = await db.from('payment_orchestrations').select('id,order_id,user_id,amount,currency,method_type,provider,status,provider_reference,metadata').eq('method_type', 'crypto').eq('provider', 'coinbase_business').eq('provider_reference', checkoutId).maybeSingle()
   if (paymentError) return json({ error: 'PAYMENT_LOOKUP_FAILED' }, 500)
   if (!payment) return json({ ok: true, ignored: true, reason: 'UNKNOWN_CHECKOUT', checkout_id: checkoutId })
