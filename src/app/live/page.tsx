@@ -158,8 +158,8 @@ export default function LivePage(){
           </div>}
 
           {selected&&<div className="mt-6 grid gap-3 sm:grid-cols-4">{[
-            [Users,selected.viewer_count,'Espectadores'],[Heart,selected.likes_count,'Reacciones'],[MessageCircle,'Activo','Chat'],[BarChart3,selected.viewer_peak,'Pico']
-          ].map(([Icon,value,label])=><div key={String(label)} className="rounded-xl bg-[var(--surface-secondary)] p-3"><Icon className="size-4 text-[var(--primary)]"/><p className="mt-2 text-sm font-black">{String(value)}</p><p className="text-[10px] text-[var(--muted)]">{String(label)}</p></div>)}</div>}
+            [[Users,selected.viewer_count,'Espectadores'],[Heart,selected.likes_count,'Reacciones'],[MessageCircle,'Activo','Chat'],[BarChart3,selected.viewer_peak,'Pico']]
+          ].map(([Icon,value,label]:[typeof Users | typeof Heart | typeof MessageCircle | typeof BarChart3,number | string,string])=><div key={String(label)} className="rounded-xl bg-[var(--surface-secondary)] p-3"><Icon className="size-4 text-[var(--primary)]"/><p className="mt-2 text-sm font-black">{String(value)}</p><p className="text-[10px] text-[var(--muted)]">{String(label)}</p></div>)}</div>}
         </section>
 
         <aside className="space-y-5">
