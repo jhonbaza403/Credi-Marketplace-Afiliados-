@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { MessageCircle, PackagePlus, Share2, ShoppingBag, WalletCards, Wrench } from "lucide-react"
+import { MessageCircle, PackagePlus, Share2, ShoppingBag, Wrench } from "lucide-react"
 
 type DomainBridgeProps = {
   context?: "marketplace" | "services" | "chat" | "publish" | "affiliate" | "wallet"
