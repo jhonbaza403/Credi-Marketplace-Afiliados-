@@ -97,7 +97,7 @@ export default function PublishCenter() {
     }
   }
 
-  const uploaderKind = type === "reel" ? "video" : "image";
+  const uploaderKind = type === "reel" ? "video" : "mixed";
 
   return (
     <section className="overflow-hidden rounded-[2rem] border border-[var(--border)] bg-[var(--surface)]/95 p-6 text-[var(--foreground)] shadow-2xl backdrop-blur-xl sm:p-8">
@@ -123,7 +123,7 @@ export default function PublishCenter() {
         <label className="block text-sm font-semibold">{type === "story" ? "Texto de la historia" : "Contenido"}<textarea value={body} onChange={(event) => setBody(event.target.value)} rows={6} maxLength={5000} required={type !== "ad"} className="mt-2 w-full rounded-2xl border border-[var(--border-strong)] bg-[var(--surface)] px-4 py-3 outline-none focus:border-[var(--primary)] focus:ring-4 focus:ring-[var(--focus-ring)]" placeholder="Escribe aquí lo que quieres compartir..." /></label>
 
         <div>
-          <div className="mb-3"><p className="text-sm font-black">Multimedia</p><p className="text-xs text-[var(--muted)]">{type === "reel" ? "Selecciona un vídeo desde tu dispositivo." : "Selecciona una imagen desde tu dispositivo."}</p></div>
+          <div className="mb-3"><p className="text-sm font-black">Multimedia</p><p className="text-xs text-[var(--muted)]">{type === "reel" ? "El reel requiere vídeo. Puedes añadirlo desde computadora, Android o iPhone." : "Puedes combinar imágenes y vídeos en una misma pieza de contenido."}</p></div>
           <MarketplaceMediaUploader kind={uploaderKind} multiple={type === "post"} maxFiles={type === "post" ? 8 : 1} value={media} onChange={setMedia} />
         </div>
 
