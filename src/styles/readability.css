@@ -217,3 +217,15 @@ button:disabled,
     scroll-behavior: auto !important;
   }
 }
+
+/* Affiliate application: the page owns its hero contrast while form content uses the global readable surface. */
+.app-readable-surface .affiliate-page { background: var(--background) !important; color: var(--foreground) !important; }
+.app-readable-surface .affiliate-page .affiliate-hero { background-color: #080d1d !important; color: #fff !important; }
+.app-readable-surface .affiliate-page .affiliate-hero h1,
+.app-readable-surface .affiliate-page .affiliate-hero p,
+.app-readable-surface .affiliate-page .affiliate-hero a,
+.app-readable-surface .affiliate-page .affiliate-hero span { -webkit-text-stroke: 0 !important; text-shadow: none !important; }
+.app-readable-surface .affiliate-page .affiliate-form { background: var(--surface) !important; color: var(--foreground) !important; }
+.app-readable-surface .affiliate-page .affiliate-form label,
+.app-readable-surface .affiliate-page .affiliate-form p { color: var(--foreground) !important; }
+.app-readable-surface .affiliate-page .affiliate-form input[type=checkbox] { accent-color: var(--primary); }
