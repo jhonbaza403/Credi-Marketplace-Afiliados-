@@ -57,8 +57,8 @@ export default async function HomePage() {
             <Link href="/explorar" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-brand-600 px-7 py-3.5 text-sm font-black shadow-[0_10px_38px_rgba(37,99,235,.28)] hover:bg-brand-500">
               Explorar Marketplace <ArrowRight className="size-5" />
             </Link>
-            <Link href="/vender" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/8 px-7 py-3.5 text-sm font-black backdrop-blur-sm hover:bg-white/12">
-              Vender en Credi <ArrowRight className="size-4" />
+            <Link href="/publish" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/8 px-7 py-3.5 text-sm font-black backdrop-blur-sm hover:bg-white/12">
+              Publicar en Credi <ArrowRight className="size-4" />
             </Link>
           </div>
         </div>
