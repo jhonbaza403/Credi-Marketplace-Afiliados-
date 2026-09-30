@@ -45,17 +45,19 @@ test.describe("API HTTP method and auth contracts", () => {
     expect(postResponse.headers()["allow"] ?? "").toContain("GET");
   });
 
-  test("Stripe webhook fails closed without JSON/signature", async ({ request }) => {
-    const contentTypeResponse = await request.post("/api/payments/webhook", {
-      headers: { "content-type": "text/plain" },
-      data: "not-json",
-    });
-    expect(contentTypeResponse.status()).toBe(415);
+  test("Stripe payment and billing webhooks fail closed without JSON/signature", async ({ request }) => {
+    for (const path of ["/api/payments/webhook", "/api/billing/webhook"]) {
+      const contentTypeResponse = await request.post(path, {
+        headers: { "content-type": "text/plain" },
+        data: "not-json",
+      });
+      expect(contentTypeResponse.status()).toBe(415);
 
-    const signatureResponse = await request.post("/api/payments/webhook", {
-      headers: { "content-type": "application/json" },
-      data: JSON.stringify({ id: "evt_contract_test", type: "checkout.session.completed", data: { object: {} } }),
-    });
-    expect(signatureResponse.status()).toBe(400);
+      const signatureResponse = await request.post(path, {
+        headers: { "content-type": "application/json" },
+        data: JSON.stringify({ id: "evt_contract_test", type: "checkout.session.completed", data: { object: {} } }),
+      });
+      expect(signatureResponse.status()).toBe(400);
+    }
   });
 });
