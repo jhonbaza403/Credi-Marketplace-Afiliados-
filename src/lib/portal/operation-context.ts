@@ -28,6 +28,7 @@ export function withOperationContext(path: string, context: OperationContext): s
   if (normalized.affiliateRef) url.searchParams.set("ref", normalized.affiliateRef);
   if (normalized.conversationId) url.searchParams.set("conversation", normalized.conversationId);
   if (normalized.orderId) url.searchParams.set("order", normalized.orderId);
+  if (normalized.operationId) url.searchParams.set("operation_id", normalized.operationId);
   if (normalized.source) url.searchParams.set("source", normalized.source);
   return `${url.pathname}${url.search}`;
 }
