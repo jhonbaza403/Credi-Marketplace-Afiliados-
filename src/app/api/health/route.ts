@@ -99,13 +99,13 @@ export async function GET(request: Request) {
 }
 
 export async function HEAD(request: Request) {
-  const requestId = requestIdFrom(request)
+  const response = await GET(request)
   return new Response(null, {
-    status: 200,
+    status: response.status,
     headers: {
       "Cache-Control": "no-store, max-age=0",
       "X-Content-Type-Options": "nosniff",
-      "X-Request-ID": requestId,
+      "X-Request-ID": response.headers.get("X-Request-ID") ?? requestIdFrom(request),
     },
   })
 }
