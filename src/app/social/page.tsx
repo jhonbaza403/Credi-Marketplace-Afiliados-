@@ -92,7 +92,7 @@ export default async function SocialPage() {
                 <Link href="/marketplace" className="flex items-center rounded-xl px-3 py-2.5 text-sm font-black hover:bg-[var(--surface-secondary)]">Marketplace</Link>
                 <Link href="/services" className="flex items-center rounded-xl px-3 py-2.5 text-sm font-black hover:bg-[var(--surface-secondary)]">Servicios</Link>
                 <Link href="/chat" className="flex items-center rounded-xl px-3 py-2.5 text-sm font-black hover:bg-[var(--surface-secondary)]">Credi Chat</Link>
-                <Link href="/pricing" className="flex items-center rounded-xl bg-[var(--primary)]/[.08] px-3 py-2.5 text-sm font-black text-[var(--primary)]">Credi Free</Link>
+                <Link href="/free" className="flex items-center rounded-xl bg-[var(--primary)]/[.08] px-3 py-2.5 text-sm font-black text-[var(--primary)]">Credi Free</Link>
               </div>
               <div className="mt-4 border-t border-[var(--border)] pt-4">
                 <Link href="/publish" className="flex w-full items-center justify-center rounded-xl bg-[var(--primary)] px-3 py-2.5 text-xs font-black text-white shadow-sm">Crear publicación</Link>
