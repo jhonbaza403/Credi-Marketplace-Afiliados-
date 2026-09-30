@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import type { Product } from '@/types/product';
 import ProductShare from './ProductShare';
+import { withOperationContext } from '@/lib/portal/operation-context';
 
 export interface ProductCardProps {
   product: Product;
@@ -27,7 +28,10 @@ export function ProductCard({ product, onAddToCart, disabled = false, showBuyBut
   const affiliateRef = searchParams.get('ref')?.trim() || null;
   const image = Array.isArray(product.images) ? product.images.find((value: string) => value.trim().length > 0) : undefined;
   const isAvailable = Boolean(product.isActive) && product.stock > 0;
-  const productHref = `/products/${encodeURIComponent(product.id)}`;
+  const operationContext = { productId: product.id, affiliateRef, source: 'marketplace' as const };
+  const productHref = withOperationContext(`/products/${encodeURIComponent(product.id)}`, operationContext);
+  const checkoutHref = withOperationContext('/checkout', operationContext);
+  const chatHref = withOperationContext('/chat', operationContext);
 
   return (
     <article className="group flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-xl focus-within:ring-2 focus-within:ring-blue-500">
@@ -47,9 +51,9 @@ export function ProductCard({ product, onAddToCart, disabled = false, showBuyBut
         <div className="mt-auto pt-5">
           <div className="flex items-end justify-between gap-4">
             <div><p className="text-xs font-medium text-slate-400">Precio</p><p className="mt-1 text-xl font-black tracking-tight text-slate-950">{formatPrice(product.price)}</p></div>
-            {showBuyButton && <button type="button" onClick={() => onAddToCart?.(product)} disabled={disabled || !isAvailable || !onAddToCart} className="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500">{product.stock <= 0 ? 'Agotado' : 'Comprar'}</button>}
+            {showBuyButton && (onAddToCart ? <button type="button" onClick={() => onAddToCart(product)} disabled={disabled || !isAvailable} className="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500">{product.stock <= 0 ? 'Agotado' : 'Comprar'}</button> : <Link href={checkoutHref} aria-disabled={!isAvailable} className={`rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700 ${!isAvailable ? 'pointer-events-none opacity-50' : ''}`}>{product.stock <= 0 ? 'Agotado' : 'Comprar'}</Link>)}
           </div>
-          <Link href={`/chat?product=${encodeURIComponent(product.id)}`} className="mt-3 flex w-full items-center justify-center rounded-xl border border-cyan-300/30 bg-cyan-50 px-4 py-2.5 text-sm font-bold text-cyan-800 transition hover:bg-cyan-100">Contactar al proveedor</Link>
+          <Link href={chatHref} className="mt-3 flex w-full items-center justify-center rounded-xl border border-cyan-300/30 bg-cyan-50 px-4 py-2.5 text-sm font-bold text-cyan-800 transition hover:bg-cyan-100">Contactar al proveedor</Link>
         </div>
 
         <ProductShare productId={product.id} title={product.title} description={product.description} affiliateRef={affiliateRef} />
