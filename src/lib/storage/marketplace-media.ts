@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/client'
 
 export const MARKETPLACE_MEDIA_BUCKET = 'marketplace-media'
 
-export type MarketplaceMediaKind = 'image' | 'video' | 'audio'
+export type MarketplaceMediaKind = 'image' | 'video' | 'audio' | 'mixed'
 
 export interface UploadedMarketplaceMedia {
   kind: MarketplaceMediaKind
@@ -21,7 +21,8 @@ const MAX_VIDEO_SIZE = 500 * 1024 * 1024
 const MAX_AUDIO_SIZE = 500 * 1024 * 1024
 
 export function validateMarketplaceMedia(file: File, kind?: MarketplaceMediaKind) {
-  const validKind = kind ?? (file.type.startsWith('video/') ? 'video' : file.type.startsWith('audio/') ? 'audio' : 'image')
+  const inferredKind = file.type.startsWith('video/') ? 'video' : file.type.startsWith('audio/') ? 'audio' : 'image'
+  const validKind = kind === 'mixed' ? inferredKind : (kind ?? inferredKind)
   const allowed = validKind === 'video' ? VIDEO_TYPES : validKind === 'audio' ? AUDIO_TYPES : IMAGE_TYPES
   const maxSize = validKind === 'video' ? MAX_VIDEO_SIZE : validKind === 'audio' ? MAX_AUDIO_SIZE : MAX_IMAGE_SIZE
 
