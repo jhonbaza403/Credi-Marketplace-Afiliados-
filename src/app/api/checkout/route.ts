@@ -204,6 +204,7 @@ export async function POST(request: Request) {
     const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin).replace(/\/$/, '')
     const session = await createStripeCheckoutSession({
       orderId,
+      operationId: order.operation_id,
       userId: user.id,
       customerEmail: user.email,
       currency,
@@ -218,7 +219,7 @@ export async function POST(request: Request) {
       idempotencyKey,
     })
 
-    const metadata = { request_id: requestId, region, checkout_url: session.url }
+    const metadata = { request_id: requestId, region, checkout_url: session.url, operation_id: order.operation_id }
     const { error: updateError } = await supabase
       .from('payment_orchestrations')
       .update({ status: 'pending', provider_reference: session.id, metadata })
@@ -232,7 +233,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
-      order: { id: order.id, status: order.status, amount, currency },
+      order: { id: order.id, status: order.status, amount, currency, operation_id: order.operation_id },
       checkout: { provider: 'stripe', region, ready: true, url: session.url, session_id: session.id },
       payment: { id: orchestration.id, status: 'pending', provider: 'stripe' },
       message: 'Checkout Stripe creado. La orden se marcará como pagada únicamente después de verificar el webhook de Stripe.',
