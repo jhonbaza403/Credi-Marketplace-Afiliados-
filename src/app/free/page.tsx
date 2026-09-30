@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, MessageCircle, Play, ShoppingBag, Sparkles, Store, Users } from "lucide-react";
+import { ArrowRight, MessageCircle, ShoppingBag, Sparkles, Store, Users } from "lucide-react";
 import { getProducts } from "@/lib/database/queries";
 
 export const metadata: Metadata = {
