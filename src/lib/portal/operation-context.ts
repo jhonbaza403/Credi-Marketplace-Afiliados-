@@ -5,6 +5,7 @@ export type OperationContext = {
   affiliateRef?: string | null;
   conversationId?: string | null;
   orderId?: string | null;
+  operationId?: string | null;
   source?: OperationSource | null;
 };
 
@@ -15,6 +16,7 @@ export function normalizeOperationContext(input: OperationContext = {}): Operati
     affiliateRef: clean(input.affiliateRef, 128),
     conversationId: clean(input.conversationId),
     orderId: clean(input.orderId),
+    operationId: clean(input.operationId),
     source: clean(input.source, 32) as OperationSource | null,
   };
 }
@@ -36,6 +38,7 @@ export function operationContextFromSearchParams(params: URLSearchParams): Opera
     affiliateRef: params.get("ref"),
     conversationId: params.get("conversation"),
     orderId: params.get("order"),
+    operationId: params.get("operation_id"),
     source: params.get("source") as OperationSource | null,
   });
 }
