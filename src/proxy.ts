@@ -11,6 +11,7 @@ const PROTECTED_PREFIXES = [
   "/chat",
   "/admin",
   "/publish",
+  "/vender",
   "/products/create",
   "/security",
   "/gestion-empresarial",
