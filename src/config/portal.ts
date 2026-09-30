@@ -24,6 +24,11 @@ export const PORTAL_DOMAINS: readonly PortalDomain[] = [
   { key: "wallet", label: "Wallet", href: "/wallet", description: "Operaciones y saldos financieros.", group: "capability" },
   { key: "business", label: "Business", href: "/business-os", description: "Herramientas de gestión empresarial.", group: "capability" },
   { key: "intelligence", label: "Intelligence", href: "/intelligence", description: "Capacidades inteligentes de Credi.", group: "capability" },
+  { key: "commerce_studio", label: "Commerce Studio", href: "/commerce-studio", description: "Operación comercial, catálogo y gestión del negocio.", group: "capability" },
+  { key: "inventory", label: "Inventario", href: "/inventario", description: "Stock, reservas y movimientos comerciales.", group: "capability" },
+  { key: "negotiations", label: "Negociaciones", href: "/negociaciones", description: "Cotizaciones, acuerdos y negociación comercial.", group: "capability" },
+  { key: "payments", label: "Pagos", href: "/pagos", description: "Pagos, cobros y conciliación operativa.", group: "capability" },
+  { key: "escrow", label: "Escrow", href: "/escrow", description: "Custodia, liberación y protección de operaciones.", group: "capability" },
   { key: "security", label: "Seguridad", href: "/security", description: "Seguridad, sesiones y controles.", group: "capability" },
 ] as const
 
