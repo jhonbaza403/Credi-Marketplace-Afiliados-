@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import DomainBridge from "@/components/portal/DomainBridge"
 
 import PublishCenter from "@/features/social/components/PublishCenter";
 import { getDatabaseServerClient } from "@/lib/database/server";
