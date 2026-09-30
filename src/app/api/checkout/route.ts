@@ -96,7 +96,7 @@ export async function POST(request: Request) {
 
     const { data: order, error: orderError } = await supabase
       .from('orders')
-      .select('id, buyer_id, total_amount, status, currency, platform_commission, seller_amount, affiliate_commission')
+      .select('id, buyer_id, total_amount, status, currency, platform_commission, seller_amount, affiliate_commission, operation_id')
       .eq('id', orderId)
       .eq('buyer_id', user.id)
       .maybeSingle()
@@ -177,7 +177,7 @@ export async function POST(request: Request) {
         client_reference: orderId,
         idempotency_key: idempotencyKey,
         expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
-        metadata: { request_id: requestId, region },
+        metadata: { request_id: requestId, region, operation_id: order.operation_id },
       })
       .select('id')
       .single()
