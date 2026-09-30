@@ -45,6 +45,12 @@ export async function PATCH(request:Request,{params}:{params:Promise<{id:string}
       budget=Number(existing?.daily_budget??0);
     }
     if(budget<=0) return err("La campaña necesita presupuesto diario mayor que cero.",409,"BUDGET_REQUIRED");
+
+    const {data:sets}=await supabase.from("marketing_ad_sets").select("id").eq("campaign_id",id);
+    const setIds=(sets??[]).map((item)=>item.id);
+    if(!setIds.length) return err("La campaña necesita al menos una creatividad antes de activarse.",409,"CREATIVE_REQUIRED");
+    const {count}=await supabase.from("marketing_ads").select("id",{count:"exact",head:true}).in("ad_set_id",setIds);
+    if(!count) return err("La campaña necesita al menos un anuncio preparado antes de activarse.",409,"AD_REQUIRED");
   }
 
   const {data:campaign,error}=await supabase.from("marketing_campaigns").update(updates).eq("id",id).eq("owner_id",user.id)
