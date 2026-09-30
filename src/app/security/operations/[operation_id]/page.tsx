@@ -75,6 +75,21 @@ export default function OperationObservabilityPage({
   }, [load])
 
   const events = useMemo(() => operation?.timeline ?? [], [operation])
+  const stages = useMemo(() => {
+    const has = (patterns: string[]) => events.some((event) => patterns.some((pattern) => event.event_type.startsWith(pattern) || event.source === pattern))
+    return [
+      ["Producto/comercio", has(["commerce."]), "commerce_events"],
+      ["Conversación", has(["conversation.", "chat."]), "conversations"],
+      ["Checkout/pago", has(["payment.", "checkout."]), "payment_orchestrations"],
+      ["Orden", has(["order."]), "orders"],
+      ["Stripe webhook", has(["stripe.webhook"]), "webhook_events"],
+      ["Afiliado", has(["affiliate.attribution"]), "affiliate_attributions"],
+      ["Comisión", has(["affiliate.commission"]), "affiliate_commission_ledger"],
+      ["Settlement", has(["settlement."]), "settlement_allocations"],
+      ["Wallet", has(["wallet."]), "wallet_ledger"],
+      ["Notificación", has(["notification."]), "notifications"],
+    ] as const
+  }, [events])
 
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
@@ -133,6 +148,24 @@ export default function OperationObservabilityPage({
               <span className="text-xs font-black uppercase tracking-wider text-[var(--muted-foreground)]">Orden</span>
               <p className="mt-2 truncate text-sm font-black">{operation.order_id ?? "—"}</p>
             </article>
+          </section>
+
+          <section className="mt-6 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 sm:p-7">
+            <div className="mb-6">
+              <h2 className="text-lg font-black">Cobertura de extremo a extremo</h2>
+              <p className="mt-1 text-sm text-[var(--muted-foreground)]">Cada etapa debe quedar asociada al mismo operation_id. Una etapa ausente queda visible como pendiente de trazabilidad.</p>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+              {stages.map(([label, present, source]) => (
+                <div key={source} className="rounded-xl border border-[var(--border)] bg-[var(--background)] p-3">
+                  <div className="flex items-center gap-2">
+                    {present ? <CheckCircle2 className="size-4" aria-hidden="true" /> : <Clock3 className="size-4" aria-hidden="true" />}
+                    <span className="text-xs font-black">{label}</span>
+                  </div>
+                  <p className="mt-1 text-[11px] text-[var(--muted-foreground)]">{present ? "Trazado" : "Pendiente"}</p>
+                </div>
+              ))}
+            </div>
           </section>
 
           <section className="mt-6 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 sm:p-7">
