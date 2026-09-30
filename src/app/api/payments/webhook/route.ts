@@ -71,6 +71,7 @@ export async function POST(request: Request) {
     }
 
     const session = event.data?.object
+    const operationId = session?.metadata?.operation_id ?? null
     const supabase = createAdminClient()
     const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(rawBody))
     const payloadHash = Array.from(new Uint8Array(digest))
@@ -88,6 +89,7 @@ export async function POST(request: Request) {
         signature,
         payload_hash: payloadHash,
         payload: event,
+        operation_id: operationId,
         status: 'received',
       })
       .select('id,status')
@@ -217,6 +219,20 @@ export async function POST(request: Request) {
         if (error) throw new Error(error.message || 'stripe_checkout_failure_processing_failed')
       }
 
+      if (operationId) {
+        await supabase.rpc('record_credi_operation_event', {
+          p_operation_id: operationId,
+          p_event_type: 'stripe.webhook.processed',
+          p_source: 'payments/webhook',
+          p_status: 'success',
+          p_severity: 'normal',
+          p_entity_type: 'webhook',
+          p_entity_id: webhookId,
+          p_message: `Stripe webhook procesado: ${event.type}`,
+          p_metadata: { event_id: event.id, request_id: requestId },
+        })
+      }
+
       const { error: processedError } = await supabase
         .from('webhook_events')
         .update({
@@ -244,6 +260,21 @@ export async function POST(request: Request) {
           error_message: message.slice(0, 1000),
         })
         .eq('id', webhookId)
+
+      if (operationId) {
+        await supabase.rpc('record_credi_operation_event', {
+          p_operation_id: operationId,
+          p_event_type: 'stripe.webhook.failed',
+          p_source: 'payments/webhook',
+          p_status: 'error',
+          p_severity: 'high',
+          p_entity_type: 'webhook',
+          p_entity_id: webhookId,
+          p_message: 'Stripe webhook no pudo procesarse',
+          p_error_code: message.slice(0, 120),
+          p_metadata: { event_id: event.id, event_type: event.type, request_id: requestId },
+        })
+      }
 
       logger.error('Stripe webhook processing failed', {
         requestId,
