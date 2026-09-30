@@ -20,6 +20,7 @@ export default function ChatPage() {
           <h1 className="mt-2 text-3xl font-black tracking-tight text-[var(--foreground)] sm:text-5xl">Comunicación comercial inteligente</h1>
           <p className="mt-3 max-w-4xl text-sm leading-7 text-[var(--muted)]">Conecta con vendedores y proveedores mediante Credi Business Chat, trabaja sobre operaciones reales y utiliza Credi AI como copiloto para preparar consultas, ofertas y estrategias comerciales.</p>
         </section>
+        <DomainBridge context="chat" />
         <CrediContactDirectory />
         <CrediBusinessChat />
         <CrediLiveChatPanel />
