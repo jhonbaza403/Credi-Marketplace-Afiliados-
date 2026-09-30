@@ -18,6 +18,15 @@ test.describe("Credi unified portal", () => {
     await expect(page.getByRole("link", { name: /Ver planes/i })).toBeVisible();
   });
 
+  test("legacy entry points converge on canonical domains", async ({ page }) => {
+    await page.goto("/explorar");
+    await expect(page).toHaveURL(/\/marketplace$/);
+    await page.goto("/servicios");
+    await expect(page).toHaveURL(/\/services$/);
+    await page.goto("/vender");
+    await expect(page).toHaveURL(/\/publish$/);
+  });
+
   test("wall keeps social and commerce navigation connected", async ({ page }) => {
     await page.goto("/social");
     await expect(page.getByRole("heading", { name: /Descubre lo que está pasando/i })).toBeVisible();
