@@ -85,7 +85,22 @@ export default async function SocialPage() {
           ) : <p className="rounded-2xl border border-dashed border-[var(--border)] bg-[var(--surface)] p-7 text-sm text-[var(--muted)]">Aún no hay historias públicas. Sé de los primeros en publicar.</p>}
         </section>
 
-        <section aria-labelledby="feed-title" className="grid gap-7 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <section aria-labelledby="feed-title" className="grid gap-7 lg:grid-cols-[220px_minmax(0,1fr)_320px]">
+          <aside className="hidden space-y-4 lg:block">
+            <div className="sticky top-20 rounded-[1.5rem] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm">
+              <p className="px-2 text-[11px] font-black uppercase tracking-[.15em] text-[var(--muted)]">Tu espacio</p>
+              <div className="mt-3 space-y-1">
+                <Link href="/" className="flex items-center rounded-xl px-3 py-2.5 text-sm font-black hover:bg-[var(--surface-secondary)]">Inicio</Link>
+                <Link href="/marketplace" className="flex items-center rounded-xl px-3 py-2.5 text-sm font-black hover:bg-[var(--surface-secondary)]">Marketplace</Link>
+                <Link href="/services" className="flex items-center rounded-xl px-3 py-2.5 text-sm font-black hover:bg-[var(--surface-secondary)]">Servicios</Link>
+                <Link href="/chat" className="flex items-center rounded-xl px-3 py-2.5 text-sm font-black hover:bg-[var(--surface-secondary)]">Credi Chat</Link>
+                <Link href="/pricing" className="flex items-center rounded-xl bg-[var(--primary)]/[.08] px-3 py-2.5 text-sm font-black text-[var(--primary)]">Credi Free</Link>
+              </div>
+              <div className="mt-4 border-t border-[var(--border)] pt-4">
+                <Link href="/publish" className="flex w-full items-center justify-center rounded-xl bg-[var(--primary)] px-3 py-2.5 text-xs font-black text-white shadow-sm">Crear publicación</Link>
+              </div>
+            </div>
+          </aside>
           <div>
             <div className="mb-4"><p className="text-xs font-black uppercase tracking-[.16em] text-[var(--primary)]">Feed</p><h2 id="feed-title" className="mt-1 text-2xl font-black">Publicaciones y reels</h2></div>
             <div className="space-y-5">
