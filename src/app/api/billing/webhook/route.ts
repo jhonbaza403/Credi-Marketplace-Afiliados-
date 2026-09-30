@@ -345,8 +345,6 @@ async function invoiceEvent(event: StripeEvent) {
 
 export async function POST(request: Request) {
   const requestId = requestIdFrom(request)
-  const admin = createAdminClient()
-
   try {
     const contentType = request.headers.get('content-type') ?? ''
     if (!contentType.toLowerCase().includes('application/json')) {
@@ -378,6 +376,7 @@ export async function POST(request: Request) {
       return jsonResponse({ success: false, error: 'Evento Stripe incompleto.' }, 400, requestId)
     }
 
+    const admin = createAdminClient()
     const claim = await claimEvent(admin, event)
     if (claim.state === 'duplicate') {
       return jsonResponse({ success: true, received: true, processed: true, duplicate: true }, 200, requestId)
