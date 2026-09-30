@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { createServiceClient } from '@/lib/supabase/service'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -21,7 +21,7 @@ export async function POST(request: Request) {
   const reference = typeof body.reference === 'string' ? body.reference.trim().slice(0, 255) : null
   if (!paymentId) return json({ error: 'PAYMENT_ID_REQUIRED' }, 400)
 
-  const db = createServiceClient()
+  const db = createAdminClient()
   const { data: payment, error: paymentError } = await db.from('payment_orchestrations').select('id,order_id,user_id,amount,currency,method_type,status,provider_reference').eq('id', paymentId).maybeSingle()
   if (paymentError || !payment) return json({ error: 'PAYMENT_NOT_FOUND' }, 404)
   if (!['crypto', 'bank_transfer', 'manual'].includes(payment.method_type)) return json({ error: 'RAIL_NOT_CONFIRMABLE' }, 422)
