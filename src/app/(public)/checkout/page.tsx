@@ -18,6 +18,9 @@ export default function CheckoutPage() {
   const searchParams = useSearchParams()
   const productId = searchParams.get('product_id')
   const affiliateRef = searchParams.get('ref')
+  const source = searchParams.get('source') || 'checkout'
+  const conversationId = searchParams.get('conversation')
+  const contextOrderId = searchParams.get('order')
 
   const [product, setProduct] = useState<Product | null>(null)
   const [quantity, setQuantity] = useState(1)
@@ -80,7 +83,7 @@ export default function CheckoutPage() {
       const { data: auth } = await supabase.auth.getUser()
 
       if (!auth.user) {
-        const currentUrl = `/checkout?product_id=${encodeURIComponent(product.id)}${affiliateRef ? `&ref=${encodeURIComponent(affiliateRef)}` : ''}`
+        const currentUrl = `/checkout?product_id=${encodeURIComponent(product.id)}${affiliateRef ? `&ref=${encodeURIComponent(affiliateRef)}` : ''}${source ? `&source=${encodeURIComponent(source)}` : ''}${conversationId ? `&conversation=${encodeURIComponent(conversationId)}` : ''}`
         router.push(`/login?redirectTo=${encodeURIComponent(currentUrl)}`)
         return
       }
@@ -92,6 +95,13 @@ export default function CheckoutPage() {
           items: [{ product_id: product.id, quantity }],
           affiliate_ref: affiliateRef || null,
           region: 'GLOBAL',
+          operation_context: {
+            productId: product.id,
+            affiliateRef: affiliateRef || null,
+            conversationId,
+            orderId: contextOrderId,
+            source,
+          },
         }),
       })
 
@@ -132,7 +142,7 @@ export default function CheckoutPage() {
   return (
     <main className="min-h-screen px-4 py-10 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-5xl">
-        <Link href={`/products/${product.id}${affiliateRef ? `?ref=${encodeURIComponent(affiliateRef)}` : ''}`} className="text-sm font-semibold text-[var(--muted)] hover:text-[var(--foreground)]">← Volver al producto</Link>
+        <Link href={`/products/${product.id}${affiliateRef ? `?ref=${encodeURIComponent(affiliateRef)}` : ''}${source ? `${affiliateRef ? '&' : '?'}source=${encodeURIComponent(source)}` : ''}`} className="text-sm font-semibold text-[var(--muted)] hover:text-[var(--foreground)]">← Volver al producto</Link>
 
         <header className="mt-6 rounded-3xl border border-cyan-300/15 bg-[linear-gradient(135deg,rgba(8,15,40,.96),rgba(7,21,36,.92))] p-7 text-white shadow-2xl sm:p-10">
           <span className="inline-flex rounded-full border border-cyan-200/20 bg-cyan-200/10 px-3 py-1 text-[10px] font-black uppercase tracking-[.18em] text-cyan-100">Checkout seguro</span>
