@@ -1,7 +1,7 @@
 'use client'
 
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react'
-import { Flame, Heart, MessageCircle, Send, ThumbsUp, Wifi, WifiOff } from 'lucide-react'
+import { Heart, MessageCircle, Send, Wifi, WifiOff } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
 type Profile={id:string;full_name:string|null;avatar_url:string|null}
