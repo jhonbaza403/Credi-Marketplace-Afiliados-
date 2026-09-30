@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, Check, Sparkles, Zap } from "lucide-react";
 import { commercialPlanFeatures, formatPlanPrice, getPublicCommercialPlans } from "@/lib/billing/plans";
+import CrediSocialNav from "@/components/layout/CrediSocialNav";
 
 export const metadata: Metadata = {
   title: "Planes comerciales | Credi Marketplace",
@@ -42,6 +43,7 @@ export default async function PricingPage() {
 
   return (
     <main className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
+      <CrediSocialNav active="free" />
       <section className="mx-auto w-full max-w-7xl px-4 py-10 sm:px-6 lg:px-8 lg:py-16">
         <div className="mx-auto max-w-4xl text-center">
           <span className="inline-flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--surface)] px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-[var(--primary)] shadow-sm"><Sparkles className="size-4" /> Credi Free primero</span>
