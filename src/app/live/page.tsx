@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { BarChart3, CalendarClock, Camera, CircleStop, Heart, MessageCircle, Package, Play, Radio, ShieldCheck, Sparkles, Users, Video } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
+import { CrediLiveChat } from '@/components/live/CrediLiveChat'
 
 type Room={id:string;host_user_id:string;title:string;status:string;viewer_count:number;started_at:string|null;ended_at?:string|null;description:string;cover_media:unknown;scheduled_at:string|null;replay_url:string|null;playback_url:string|null;stream_provider:string;viewer_peak:number;likes_count:number;shares_count:number;settings:Record<string,unknown>}
 type Product={room_id:string;product_id:string;position:number;is_pinned:boolean;pinned_at:string|null;products?:{id:string;title:string;price:number;image_url:string|null}|null}
@@ -184,6 +185,15 @@ export default function LivePage(){
           </section>
         </aside>
       </div>
+
+      {selected&&<section className="grid gap-7 lg:grid-cols-[1.15fr_.85fr]">
+        <div className="rounded-[2rem] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-xl sm:p-7">
+          <p className="text-xs font-black uppercase tracking-[.16em] text-[var(--primary)]">Experiencia social</p>
+          <h2 className="mt-1 text-2xl font-black">Credi LIVE · conversación en tiempo real</h2>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--muted)]">Un solo espacio para mirar, comentar, reaccionar y descubrir productos. Los mensajes persistentes viven en Supabase y se actualizan mediante Realtime, sin crear un segundo portal.</p>
+        </div>
+        <CrediLiveChat roomId={selected.id} active={selected.status==='live'}/>
+      </section>}
 
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{[
         [ShieldCheck,'Moderación','Moderadores y palabras bloqueadas para proteger la conversación.'],
