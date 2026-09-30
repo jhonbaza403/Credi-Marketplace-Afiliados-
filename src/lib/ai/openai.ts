@@ -11,6 +11,15 @@ export const OPENAI_MODELS = {
 } as const;
 
 export type CrediAiMode = keyof typeof OPENAI_MODELS;
+type OpenAIModel = (typeof OPENAI_MODELS)[CrediAiMode];
+const VALID_MODELS = new Set<string>(Object.values(OPENAI_MODELS));
+
+function resolveModel(mode: CrediAiMode): OpenAIModel {
+  const configured = process.env.OPENAI_MODEL?.trim();
+  return configured && VALID_MODELS.has(configured)
+    ? configured as OpenAIModel
+    : OPENAI_MODELS[mode];
+}
 
 function getClient() {
   const apiKey = process.env.OPENAI_API_KEY?.trim();
@@ -33,7 +42,7 @@ export async function generateOpenAIText(input: {
   safetyIdentifier: string;
 }) {
   const client = getClient();
-  const model = OPENAI_MODELS[input.mode] ?? OPENAI_MODELS.copilot;
+  const model = resolveModel(input.mode);
 
   const enableWebSearch =
     process.env.OPENAI_ENABLE_WEB_SEARCH === "true" &&
