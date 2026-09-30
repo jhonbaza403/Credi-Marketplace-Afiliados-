@@ -218,7 +218,7 @@ button:disabled,
   }
 }
 
-/* Premium form heading contract: titles/subtitles stay above decorative layers. */
+/* Premium form heading contract: titles/subtitles stay readable without opaque blocks that hide fields. */
 .app-readable-surface form h1,
 .app-readable-surface form h2,
 .app-readable-surface form h3,
@@ -232,10 +232,26 @@ button:disabled,
   z-index: 40;
   isolation: isolate;
   color: var(--foreground) !important;
-  background: var(--surface) !important;
+  background: transparent !important;
   background-image: none !important;
   -webkit-text-stroke: 0 !important;
-  text-shadow: none !important;
+  text-shadow: 0 1px 2px color-mix(in srgb, var(--background) 70%, transparent) !important;
+}
+
+/* Form shells own a readable surface; decorative media never sits above controls. */
+.app-readable-surface .form-shell,
+.app-readable-surface .affiliate-form {
+  position: relative;
+  z-index: 20;
+  isolation: isolate;
+  background: var(--surface) !important;
+  background-image: none !important;
+  color: var(--foreground) !important;
+  border-color: var(--border) !important;
+}
+.app-readable-surface .form-shell::before,
+.app-readable-surface .affiliate-form::before {
+  content: none !important;
 }
 
 /* Affiliate application: the page owns its hero contrast while form content uses the global readable surface. */
