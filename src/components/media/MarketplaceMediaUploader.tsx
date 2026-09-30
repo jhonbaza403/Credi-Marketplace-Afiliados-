@@ -65,10 +65,12 @@ export default function MarketplaceMediaUploader({
 
   const accept = kind === 'video'
     ? 'video/mp4,video/webm,video/quicktime'
-    : 'image/jpeg,image/png,image/webp,image/gif'
+    : kind === 'mixed'
+      ? 'image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime'
+      : 'image/jpeg,image/png,image/webp,image/gif'
 
-  const label = kind === 'video' ? 'vídeo' : 'imágenes'
-  const Icon = kind === 'video' ? Video : ImagePlus
+  const label = kind === 'video' ? 'vídeo' : kind === 'mixed' ? 'imágenes y vídeos' : 'imágenes'
+  const Icon = kind === 'video' ? Video : kind === 'mixed' ? FileUp : ImagePlus
 
   return (
     <div className="space-y-4">
@@ -123,7 +125,7 @@ export default function MarketplaceMediaUploader({
           <div className="mt-4 flex flex-wrap items-center justify-center gap-3 text-[11px] text-slate-400">
             <span className="inline-flex items-center gap-1.5"><Smartphone className="size-3.5" aria-hidden="true" />Computadora · Android · iPhone</span>
             <span aria-hidden="true">•</span>
-            <span>{kind === 'video' ? 'MP4, WebM o MOV · hasta 500 MB' : 'JPG, PNG, WebP o GIF · hasta 20 MB por imagen'}</span>
+            <span>{kind === 'video' ? 'MP4, WebM o MOV · hasta 500 MB' : kind === 'mixed' ? 'Imágenes hasta 20 MB · vídeo hasta 500 MB' : 'JPG, PNG, WebP o GIF · hasta 20 MB por imagen'}</span>
           </div>
 
           <p className="mt-3 text-[11px] text-slate-500">
