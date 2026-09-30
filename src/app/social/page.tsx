@@ -33,11 +33,12 @@ function firstMedia(media: unknown): MediaItem | null {
 function MediaPreview({ media, alt = "" }: { media: unknown; alt?: string }) {
   const item = firstMedia(media);
   if (!item) return null;
+  const url = item.url;
 
-  if (item.type === "video" || item.url.match(/\.(mp4|webm|mov)(?:\?|$)/i)) {
+  if (item.type === "video" || url.match(/\.(mp4|webm|mov)(?:\?|$)/i)) {
     return (
       <video
-        src={item.url}
+        src={url}
         controls
         playsInline
         preload="metadata"
@@ -49,7 +50,7 @@ function MediaPreview({ media, alt = "" }: { media: unknown; alt?: string }) {
 
   return (
     // eslint-disable-next-line @next/next/no-img-element
-    <img src={item.url} alt={alt} loading="lazy" className="h-full w-full object-cover" />
+    <img src={url} alt={alt} loading="lazy" className="h-full w-full object-cover" />
   );
 }
 
