@@ -3,11 +3,11 @@ import "server-only";
 import OpenAI from "openai";
 
 export const OPENAI_MODELS = {
-  copilot: "gpt-6-luna",
-  sales: "gpt-6-luna",
-  marketing: "gpt-6-sol",
-  strategy: "gpt-6-sol",
-  intelligence: "gpt-6-sol",
+  copilot: "gpt-5.6-luna",
+  sales: "gpt-5.6-luna",
+  marketing: "gpt-5.6-sol",
+  strategy: "gpt-5.6-sol",
+  intelligence: "gpt-5.6-sol",
 } as const;
 
 export type CrediAiMode = keyof typeof OPENAI_MODELS;
