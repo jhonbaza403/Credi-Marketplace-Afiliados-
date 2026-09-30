@@ -1,8 +1,24 @@
 import Link from "next/link";
 import { ArrowRight, Camera, Megaphone, Play, Sparkles } from "lucide-react";
 import { getDatabaseServerClient } from "@/lib/database/server";
+import { withOperationContext } from "@/lib/portal/operation-context";
 
 type MediaItem = { type?: string; url?: string };
+type OperationContextRecord = Record<string, unknown>;
+
+function commerceActions(context: unknown) {
+  if (!context || typeof context !== "object") return null;
+  const value = context as OperationContextRecord;
+  const productId = typeof value.product_id === "string" ? value.product_id : null;
+  const affiliateRef = typeof value.affiliate_ref === "string" ? value.affiliate_ref : null;
+  if (!productId) return null;
+  const operation = { productId, affiliateRef, source: "wall" as const };
+  return {
+    product: withOperationContext(`/products/${encodeURIComponent(productId)}`, operation),
+    chat: withOperationContext("/chat", operation),
+    checkout: withOperationContext("/checkout", operation),
+  };
+}
 
 function mediaLabel(media: unknown): string | null {
   if (!Array.isArray(media)) return null;
@@ -22,10 +38,10 @@ export default async function SocialPage() {
   const now = new Date().toISOString();
 
   const [postsResult, storiesResult, reelsResult, adsResult] = await Promise.all([
-    supabase.from("feed_posts").select("id,title,body,media,published_at,created_at").eq("status", "published").eq("visibility", "public").order("created_at", { ascending: false }).limit(20),
-    supabase.from("stories").select("id,body,media,expires_at,created_at").eq("visibility", "public").gt("expires_at", now).order("created_at", { ascending: false }).limit(20),
-    supabase.from("reels").select("id,title,body,media,published_at,created_at").eq("status", "published").eq("visibility", "public").order("created_at", { ascending: false }).limit(20),
-    supabase.from("advertisements").select("id,title,body,media,destination_url,starts_at,ends_at,created_at").eq("status", "active").or(`starts_at.is.null,starts_at.lte.${now}`).or(`ends_at.is.null,ends_at.gt.${now}`).order("created_at", { ascending: false }).limit(10),
+    supabase.from("feed_posts").select("id,title,body,media,published_at,created_at,operation_context").eq("status", "published").eq("visibility", "public").order("created_at", { ascending: false }).limit(20),
+    supabase.from("stories").select("id,body,media,expires_at,created_at,operation_context").eq("visibility", "public").gt("expires_at", now).order("created_at", { ascending: false }).limit(20),
+    supabase.from("reels").select("id,title,body,media,published_at,created_at,operation_context").eq("status", "published").eq("visibility", "public").order("created_at", { ascending: false }).limit(20),
+    supabase.from("advertisements").select("id,title,body,media,destination_url,starts_at,ends_at,created_at,operation_context").eq("status", "active").or(`starts_at.is.null,starts_at.lte.${now}`).or(`ends_at.is.null,ends_at.gt.${now}`).order("created_at", { ascending: false }).limit(10),
   ]);
 
   const stories = storiesResult.data ?? [];
@@ -106,7 +122,7 @@ export default async function SocialPage() {
                 const media = mediaLabel(reel.media);
                 return <article key={`reel-${reel.id}`} className="overflow-hidden rounded-[1.75rem] border border-[var(--border)] bg-[var(--surface)] shadow-sm">
                   <div className="aspect-video bg-[var(--surface-secondary)]">{media ? <video className="h-full w-full object-cover" controls preload="metadata" src={media} /> : <div className="flex h-full items-center justify-center gap-2 text-sm font-semibold text-[var(--muted)]"><Play className="size-5" /> Reel sin multimedia</div>}</div>
-                  <div className="p-6"><span className="text-[11px] font-black uppercase tracking-[.14em] text-[var(--primary)]">Reel</span><h3 className="mt-2 text-xl font-black">{reel.title || "Reel de la comunidad"}</h3><p className="mt-2 text-sm leading-7 text-[var(--muted)]">{reel.body || "Contenido comercial de la comunidad Credi."}</p></div>
+                  <div className="p-6"><span className="text-[11px] font-black uppercase tracking-[.14em] text-[var(--primary)]">Reel</span><h3 className="mt-2 text-xl font-black">{reel.title || "Reel de la comunidad"}</h3><p className="mt-2 text-sm leading-7 text-[var(--muted)]">{reel.body || "Contenido comercial de la comunidad Credi."}</p>{commerceActions(reel.operation_context) && <div className="mt-5 flex flex-wrap gap-2"><Link href={commerceActions(reel.operation_context)!.product} className="rounded-xl bg-[var(--primary)] px-4 py-2 text-xs font-black text-white">Ver producto</Link><Link href={commerceActions(reel.operation_context)!.chat} className="rounded-xl border border-[var(--border)] px-4 py-2 text-xs font-black">Contactar</Link><Link href={commerceActions(reel.operation_context)!.checkout} className="rounded-xl border border-emerald-400/30 bg-emerald-400/10 px-4 py-2 text-xs font-black text-emerald-700">Comprar</Link></div>}</div>
                 </article>;
               })}
               {posts.map((post) => {
@@ -114,7 +130,7 @@ export default async function SocialPage() {
                 return <article key={`post-${post.id}`} className="rounded-[1.75rem] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-sm">
                   <span className="text-[11px] font-black uppercase tracking-[.14em] text-[var(--primary)]">Publicación</span>
                   <h3 className="mt-2 text-xl font-black">{post.title || "Publicación de la comunidad"}</h3>
-                  <p className="mt-2 whitespace-pre-wrap text-sm leading-7">{post.body}</p>
+                  <p className="mt-2 whitespace-pre-wrap text-sm leading-7">{post.body}</p>{commerceActions(post.operation_context) && <div className="mt-5 flex flex-wrap gap-2"><Link href={commerceActions(post.operation_context)!.product} className="rounded-xl bg-[var(--primary)] px-4 py-2 text-xs font-black text-white">Ver producto</Link><Link href={commerceActions(post.operation_context)!.chat} className="rounded-xl border border-[var(--border)] px-4 py-2 text-xs font-black">Contactar</Link><Link href={commerceActions(post.operation_context)!.checkout} className="rounded-xl border border-emerald-400/30 bg-emerald-400/10 px-4 py-2 text-xs font-black text-emerald-700">Comprar</Link></div>
                   {media && <a className="mt-5 inline-flex items-center gap-2 rounded-xl bg-[var(--surface-secondary)] px-4 py-2.5 text-sm font-bold text-[var(--primary)] hover:opacity-80" href={media} target="_blank" rel="noreferrer">Abrir multimedia <ArrowRight className="size-4" /></a>}
                 </article>;
               })}
@@ -135,7 +151,7 @@ export default async function SocialPage() {
               <div className="flex items-center gap-2 text-[var(--primary)]"><Megaphone className="size-5" /><span className="text-xs font-black uppercase tracking-[.14em]">Oportunidades</span></div>
               <h3 className="mt-3 text-xl font-black">Publicidad activa</h3>
               <p className="mt-2 text-sm leading-6 text-[var(--muted)]">{ads.length ? `${ads.length} campaña${ads.length === 1 ? "" : "s"} disponible${ads.length === 1 ? "" : "s"} ahora.` : "No hay campañas activas en este momento."}</p>
-              {ads[0]?.destination_url && <a href={ads[0].destination_url} target="_blank" rel="noreferrer" className="mt-5 inline-flex items-center gap-2 text-sm font-black text-[var(--primary)]">Ver oportunidad <ArrowRight className="size-4" /></a>}
+              {(ads[0]?.destination_url || commerceActions(ads[0]?.operation_context)) && <div className="mt-5 flex flex-wrap gap-2">{ads[0]?.destination_url && <a href={ads[0].destination_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-sm font-black text-[var(--primary)]">Ver oportunidad <ArrowRight className="size-4" /></a>}{commerceActions(ads[0]?.operation_context) && <Link href={commerceActions(ads[0]?.operation_context)!.product} className="inline-flex items-center gap-2 text-sm font-black text-[var(--primary)]">Ver producto <ArrowRight className="size-4" /></Link>}</div>}
             </div>
           </aside>
         </section>
