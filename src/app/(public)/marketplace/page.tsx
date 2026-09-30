@@ -66,6 +66,8 @@ export default async function MarketplacePage() {
         </p>
       </header>
 
+      <DomainBridge context="marketplace" />
+
       {products.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-border p-12 text-center">
           <h2 className="text-xl font-bold text-foreground">Catálogo disponible</h2>
