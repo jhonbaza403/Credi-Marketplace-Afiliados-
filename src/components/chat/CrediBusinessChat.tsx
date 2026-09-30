@@ -90,7 +90,7 @@ export default function CrediBusinessChat() {
     let targetUser = target
     let storeId: string | null = null
     let title = 'Nueva conversación comercial'
-    const metadata: Record<string, unknown> = { source: 'credibusiness-chat', country, affiliate_ref: affiliateRef, order_id: orderId }
+    const metadata: Record<string, unknown> = { source: 'credibusiness-chat', country, affiliate_ref: affiliateRef, order_id: orderId, operation_context: { productId, affiliateRef, orderId, source: 'chat' } }
     if (productId) {
       const { data: product, error: productError } = await supabase.from('products').select('id,title,store_id').eq('id', productId).maybeSingle()
       if (productError) throw productError
