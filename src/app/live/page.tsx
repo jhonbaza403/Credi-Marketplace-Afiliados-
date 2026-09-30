@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { BarChart3, CalendarClock, Camera, CircleStop, Heart, MessageCircle, Package, Play, Radio, ShieldCheck, Sparkles, Users, Video } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 
 type Room={id:string;host_user_id:string;title:string;status:string;viewer_count:number;started_at:string|null;ended_at?:string|null;description:string;cover_media:unknown;scheduled_at:string|null;replay_url:string|null;playback_url:string|null;stream_provider:string;viewer_peak:number;likes_count:number;shares_count:number;settings:Record<string,unknown>}
 type Product={room_id:string;product_id:string;position:number;is_pinned:boolean;pinned_at:string|null;products?:{id:string;title:string;price:number;image_url:string|null}|null}
@@ -157,9 +158,12 @@ export default function LivePage(){
             {selected.status==='scheduled'&&<button type="button" onClick={()=>void updateRoom(selected.id,'cancel')} disabled={busy} className="inline-flex items-center gap-2 rounded-xl border border-[var(--border)] px-4 py-2.5 text-xs font-black">Cancelar</button>}
           </div>}
 
-          {selected&&<div className="mt-6 grid gap-3 sm:grid-cols-4">{[
-            [[Users,selected.viewer_count,'Espectadores'],[Heart,selected.likes_count,'Reacciones'],[MessageCircle,'Activo','Chat'],[BarChart3,selected.viewer_peak,'Pico']]
-          ].map(([Icon,value,label]:[typeof Users | typeof Heart | typeof MessageCircle | typeof BarChart3,number | string,string])=><div key={String(label)} className="rounded-xl bg-[var(--surface-secondary)] p-3"><Icon className="size-4 text-[var(--primary)]"/><p className="mt-2 text-sm font-black">{String(value)}</p><p className="text-[10px] text-[var(--muted)]">{String(label)}</p></div>)}</div>}
+          {selected&&<div className="mt-6 grid gap-3 sm:grid-cols-4">{([
+            [Users,selected.viewer_count,'Espectadores'],
+            [Heart,selected.likes_count,'Reacciones'],
+            [MessageCircle,'Activo','Chat'],
+            [BarChart3,selected.viewer_peak,'Pico'],
+          ] satisfies Array<[LucideIcon,number | string,string]>).map(([Icon,value,label])=><div key={label} className="rounded-xl bg-[var(--surface-secondary)] p-3"><Icon className="size-4 text-[var(--primary)]"/><p className="mt-2 text-sm font-black">{String(value)}</p><p className="text-[10px] text-[var(--muted)]">{label}</p></div>)}</div>}
         </section>
 
         <aside className="space-y-5">
