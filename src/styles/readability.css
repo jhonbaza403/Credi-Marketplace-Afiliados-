@@ -218,6 +218,26 @@ button:disabled,
   }
 }
 
+/* Premium form heading contract: titles/subtitles stay above decorative layers. */
+.app-readable-surface form h1,
+.app-readable-surface form h2,
+.app-readable-surface form h3,
+.app-readable-surface form .form-title,
+.app-readable-surface form .form-subtitle,
+.app-readable-surface .form-shell h1,
+.app-readable-surface .form-shell h2,
+.app-readable-surface .form-shell h3,
+.app-readable-surface .form-shell p {
+  position: relative;
+  z-index: 40;
+  isolation: isolate;
+  color: var(--foreground) !important;
+  background: var(--surface) !important;
+  background-image: none !important;
+  -webkit-text-stroke: 0 !important;
+  text-shadow: none !important;
+}
+
 /* Affiliate application: the page owns its hero contrast while form content uses the global readable surface. */
 .app-readable-surface .affiliate-page { background: var(--background) !important; color: var(--foreground) !important; }
 .app-readable-surface .affiliate-page .affiliate-hero { background-color: #080d1d !important; color: #fff !important; }
