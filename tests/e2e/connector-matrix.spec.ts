@@ -51,11 +51,11 @@ test.describe("Credi connector matrix", () => {
     const response = await page.goto("/pricing", { waitUntil: "domcontentloaded" });
     expect(response?.ok()).toBeTruthy();
 
-    for (const plan of ["Free", "Business", "Enterprise"]) {
+    for (const plan of ["Free", "Creator", "Business", "Enterprise"]) {
       await expect(page.getByRole("heading", { name: plan, exact: true })).toBeVisible();
     }
 
-    await expect(page.locator('form[action="/api/billing/checkout"]')).toHaveCount(2);
+    await expect(page.locator('form[action="/api/billing/checkout"]')).toHaveCount(3);
     await expect(page.getByRole("button", { name: /Continuar con el plan/i })).toHaveCount(2);
     
   });
