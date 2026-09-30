@@ -34,6 +34,7 @@ function MediaPreview({ media, alt = "" }: { media: unknown; alt?: string }) {
   const item = firstMedia(media);
   if (!item) return null;
   const url = item.url;
+  if (!url) return null;
 
   if (item.type === "video" || url.match(/\.(mp4|webm|mov)(?:\?|$)/i)) {
     return (
