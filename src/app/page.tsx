@@ -99,7 +99,7 @@ export default async function HomePage() {
             <p className="mt-4 max-w-2xl text-sm leading-7 text-[var(--muted)]">Historias, publicaciones, reels y oportunidades comerciales en un solo muro.</p>
             <span className="mt-6 inline-flex items-center gap-2 text-sm font-black text-[var(--primary)]">Entrar al muro <ArrowRight className="size-4 transition group-hover:translate-x-1" /></span>
           </Link>
-          <Link href="/pricing" className="rounded-[2rem] border border-brand-500/20 bg-gradient-to-br from-brand-50 to-[var(--surface)] p-7 shadow-sm transition hover:-translate-y-1 hover:shadow-xl dark:from-brand-950/40">
+          <Link href="/free" className="rounded-[2rem] border border-brand-500/20 bg-gradient-to-br from-brand-50 to-[var(--surface)] p-7 shadow-sm transition hover:-translate-y-1 hover:shadow-xl dark:from-brand-950/40">
             <span className="inline-flex items-center gap-2 rounded-full bg-white/70 px-3 py-1.5 text-xs font-black text-brand-700 dark:bg-white/10 dark:text-brand-200"><Users className="size-4" /> Credi Free</span>
             <h2 className="mt-4 text-2xl font-black text-[var(--foreground)]">Empieza gratis y crece cuando lo necesites</h2>
             <p className="mt-3 text-sm leading-7 text-[var(--muted)]">La experiencia básica permanece disponible sin convertir al creador o administrador en un plan comercial.</p>
