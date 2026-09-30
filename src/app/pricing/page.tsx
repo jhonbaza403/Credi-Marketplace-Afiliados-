@@ -85,6 +85,22 @@ export default async function PricingPage() {
           </section>
         )}
 
+        <section aria-labelledby="free-hub-title" className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            ["Muro", "Historias, publicaciones y reels de la comunidad.", "/social"],
+            ["Marketplace", "Descubre productos y oportunidades comerciales.", "/marketplace"],
+            ["Servicios", "Encuentra servicios profesionales dentro de Credi.", "/services"],
+            ["Chat", "Conversa y negocia dentro del ecosistema.", "/chat"],
+          ].map(([title, description, href]) => (
+            <Link key={title} href={href} className="group rounded-[1.5rem] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-lg">
+              <span className="text-xs font-black uppercase tracking-[.14em] text-[var(--primary)]">Credi Free</span>
+              <h2 id={title === "Muro" ? "free-hub-title" : undefined} className="mt-2 text-lg font-black">{title}</h2>
+              <p className="mt-2 text-sm leading-6 text-[var(--muted)]">{description}</p>
+              <span className="mt-4 inline-flex items-center gap-1 text-xs font-black text-[var(--primary)]">Entrar <ArrowRight className="size-3 transition group-hover:translate-x-1" /></span>
+            </Link>
+          ))}
+        </section>
+
         <div className="mt-12">
           <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div><p className="text-xs font-black uppercase tracking-[.16em] text-[var(--primary)]">Escala comercial</p><h2 className="mt-1 text-2xl font-black sm:text-3xl">Planes opcionales</h2></div>
