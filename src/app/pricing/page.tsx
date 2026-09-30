@@ -129,7 +129,7 @@ export default async function PricingPage() {
         </div>
 
         <div className="mx-auto mt-12 max-w-4xl rounded-[2rem] border border-[var(--border)] bg-[var(--surface)] p-6 text-center text-sm leading-7 text-[var(--muted)] shadow-sm">
-          <strong className="text-[var(--foreground)]">La cuenta gratuita sigue siendo la puerta de entrada.</strong> Al terminar o cancelar una suscripción de pago, las capacidades premium dejan de considerarse efectivas según el estado real de la suscripción.
+          <strong className="text-[var(--foreground)]">La cuenta gratuita sigue siendo la puerta de entrada.</strong> La propiedad y administración de la plataforma son roles internos de autorización, no planes comerciales. Los planes mostrados aquí son únicamente opciones comerciales; al terminar o cancelar una suscripción de pago, las capacidades premium dejan de considerarse efectivas según el estado real de la suscripción.
         </div>
       </section>
     </main>
