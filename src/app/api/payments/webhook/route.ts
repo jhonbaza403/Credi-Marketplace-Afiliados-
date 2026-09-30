@@ -1,5 +1,5 @@
 
-import { createServiceClient } from '@/lib/supabase/service'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { verifyStripeWebhookSignature } from '@/lib/payments/stripe'
 import { logger } from '@/lib/logging'
 
@@ -71,7 +71,7 @@ export async function POST(request: Request) {
     }
 
     const session = event.data?.object
-    const supabase = createServiceClient()
+    const supabase = createAdminClient()
     const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(rawBody))
     const payloadHash = Array.from(new Uint8Array(digest))
       .map((byte) => byte.toString(16).padStart(2, '0'))
