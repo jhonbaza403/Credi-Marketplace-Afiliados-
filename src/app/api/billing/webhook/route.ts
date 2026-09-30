@@ -182,7 +182,7 @@ async function syncSubscription(event: StripeEvent, override?: StripeSubscriptio
         user_id: metadata.user_id,
         plan_id: metadata.plan_id,
         status: statusOf(String(subscription.status)),
-        billing_interval: subscription.billing_interval === 'yearly' ? 'yearly' : 'monthly',
+        billing_interval: subscription.items?.data?.[0]?.price?.recurring?.interval === 'year' ? 'yearly' : 'monthly',
         current_period_start: iso(subscription.current_period_start),
         current_period_end: iso(subscription.current_period_end),
         cancel_at_period_end: Boolean(subscription.cancel_at_period_end),
@@ -359,7 +359,7 @@ export async function POST(request: Request) {
     }
 
     const signature = request.headers.get('stripe-signature')
-    if (!verifyStripeWebhookSignature(rawBody, signature)) {
+    if (!verifyStripeWebhookSignature(rawBody, signature ?? '')) {
       logger.warn('Invalid Stripe billing webhook signature', {
         requestId,
         action: 'stripe_billing_webhook_invalid_signature',
