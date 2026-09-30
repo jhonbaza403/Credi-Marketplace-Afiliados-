@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, BadgeCheck, Building2, LockKeyhole, MessageCircle, ShoppingBag, Sparkles, TrendingUp, Users } from "lucide-react";
 import HeroPortal from "@/components/layout/HeroPortal";
+import CrediSocialNav from "@/components/layout/CrediSocialNav";
 import { getProducts } from "@/lib/database/queries";
 import "@/styles/hero-portal.css";
 
@@ -40,6 +41,7 @@ export default async function HomePage() {
 
   return (
     <main className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
+      <CrediSocialNav active="home" />
       <section className="hero-stage premium-portal-stage px-4 py-16 text-white sm:px-6 sm:py-24 lg:py-28">
         <HeroPortal />
         <div className="hero-content mx-auto max-w-6xl text-center">
