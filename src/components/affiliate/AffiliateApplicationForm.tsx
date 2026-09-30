@@ -44,13 +44,13 @@ export default function AffiliateApplicationForm() {
     finally { setSending(false) }
   }
 
-  return <form onSubmit={submit} className="rounded-[2rem] border border-white/10 bg-white/[.035] p-6 shadow-[inset_0_1px_0_rgba(255,255,255,.06),0_24px_70px_rgba(2,8,28,.28)] sm:p-8">
+  return <form onSubmit={submit} className="affiliate-form rounded-[2rem] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-marketplace-xl)] sm:p-8">
     <div className="grid gap-5 sm:grid-cols-2">
       <Field label="Nombre legal" value={form.legalName} onChange={(value) => setForm({ ...form, legalName: value })} required />
       <Field label="Nombre público" value={form.displayName} onChange={(value) => setForm({ ...form, displayName: value })} />
       <Field label="Correo" type="email" value={form.email} onChange={(value) => setForm({ ...form, email: value })} required />
       <Field label="Teléfono" value={form.phone} onChange={(value) => setForm({ ...form, phone: value })} />
-      <label className="text-sm font-bold text-slate-100">País<select value={form.country} onChange={(e) => setForm({ ...form, country: e.target.value })} className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-white">{COUNTRIES.map(([code, name]) => <option key={code} value={code}>{name}</option>)}</select></label>
+      <label className="text-sm font-bold text-[var(--foreground)]">País<select value={form.country} onChange={(e) => setForm({ ...form, country: e.target.value })} className="mt-2 w-full rounded-2xl border border-[var(--border-strong)] bg-[var(--surface)] px-4 py-3 text-[var(--foreground)]">{COUNTRIES.map(([code, name]) => <option key={code} value={code}>{name}</option>)}</select></label>
       <Field label="Sitio web" type="url" value={form.websiteUrl} onChange={(value) => setForm({ ...form, websiteUrl: value })} />
       <Field label="Instagram" value={form.instagram} onChange={(value) => setForm({ ...form, instagram: value })} />
       <Field label="TikTok" value={form.tiktok} onChange={(value) => setForm({ ...form, tiktok: value })} />
@@ -58,13 +58,13 @@ export default function AffiliateApplicationForm() {
       <Field label="País de residencia fiscal" value={form.taxCountry} onChange={(value) => setForm({ ...form, taxCountry: value })} />
       <Field label="Identificación fiscal" value={form.taxId} onChange={(value) => setForm({ ...form, taxId: value })} />
     </div>
-    <div className="mt-7"><p className="text-sm font-black text-white">¿Cómo promocionarás productos?</p><div className="mt-3 grid gap-2 sm:grid-cols-2">{METHODS.map((item) => <label key={item} className="flex cursor-pointer items-center gap-3 rounded-2xl border border-white/10 bg-white/[.025] px-4 py-3 text-sm text-slate-200"><input type="checkbox" checked={methods.includes(item)} onChange={() => toggleMethod(item)} className="accent-cyan-300" />{item}</label>)}</div></div>
-    <label className="mt-6 flex items-start gap-3 rounded-2xl border border-cyan-300/10 bg-cyan-300/5 p-4 text-xs leading-5 text-slate-200"><input type="checkbox" checked={accepted} onChange={(e) => setAccepted(e.target.checked)} className="mt-0.5 accent-cyan-300" />Acepto las condiciones del programa, la política de privacidad y las reglas de divulgación del contenido afiliado.</label>
-    {status && <p role="status" aria-live="polite" className="mt-5 rounded-2xl border border-cyan-300/15 bg-cyan-300/5 p-4 text-sm text-cyan-100">{status}</p>}
-    <button disabled={sending} type="submit" className="mt-6 w-full rounded-2xl bg-cyan-300 px-5 py-4 text-sm font-black text-slate-950 disabled:opacity-50">{sending ? "Enviando solicitud…" : "Solicitar ingreso al programa"}</button>
+    <div className="mt-7"><p className="text-sm font-black text-[var(--foreground)]">¿Cómo promocionarás productos?</p><div className="mt-3 grid gap-2 sm:grid-cols-2">{METHODS.map((item) => <label key={item} className="flex cursor-pointer items-center gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface-secondary)] px-4 py-3 text-sm text-[var(--foreground)]"><input type="checkbox" checked={methods.includes(item)} onChange={() => toggleMethod(item)} className="accent-cyan-300" />{item}</label>)}</div></div>
+    <label className="mt-6 flex items-start gap-3 rounded-2xl border border-[var(--primary)]/15 bg-[var(--primary)]/[.05] p-4 text-xs leading-5 text-[var(--foreground)]"><input type="checkbox" checked={accepted} onChange={(e) => setAccepted(e.target.checked)} className="mt-0.5 accent-cyan-300" />Acepto las condiciones del programa, la política de privacidad y las reglas de divulgación del contenido afiliado.</label>
+    {status && <p role="status" aria-live="polite" className="mt-5 rounded-2xl border border-[var(--primary)]/15 bg-[var(--primary)]/[.06] p-4 text-sm text-[var(--foreground)]">{status}</p>}
+    <button disabled={sending} type="submit" className="mt-6 w-full rounded-2xl bg-[var(--primary)] px-5 py-4 text-sm font-black text-white shadow-lg disabled:opacity-50">{sending ? "Enviando solicitud…" : "Solicitar ingreso al programa"}</button>
   </form>
 }
 
 function Field({ label, value, onChange, type = "text", required = false }: { label: string; value: string; onChange: (value: string) => void; type?: string; required?: boolean }) {
-  return <label className="text-sm font-bold text-slate-100">{label}<input required={required} type={type} value={value} onChange={(e) => onChange(e.target.value)} maxLength={240} className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-white outline-none focus:border-cyan-300/50" /></label>
+  return <label className="text-sm font-bold text-slate-100">{label}<input required={required} type={type} value={value} onChange={(e) => onChange(e.target.value)} maxLength={240} className="mt-2 w-full rounded-2xl border border-[var(--border-strong)] bg-[var(--surface)] px-4 py-3 text-[var(--foreground)] outline-none focus:border-[var(--primary)]" /></label>
 }
