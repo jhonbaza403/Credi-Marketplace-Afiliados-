@@ -5,24 +5,8 @@ import Link from "next/link";
 import { ChevronDown, Menu, MessageCircle, MoreHorizontal, Sparkles, X } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import { CAPABILITY_DOMAINS, PRIMARY_DOMAINS } from "@/config/portal";
 
-const primary = [
-  ["Inicio", "/"],
-  ["Muro", "/social"],
-  ["Marketplace", "/marketplace"],
-  ["Servicios", "/services"],
-  ["Free", "/free"],
-] as const;
-
-const more = [
-  ["Chat", "/chat"],
-  ["B2B", "/b2b"],
-  ["Afiliados", "/dashboard/affiliate"],
-  ["Wallet", "/wallet"],
-  ["Business", "/business-os"],
-  ["Intelligence", "/intelligence"],
-  ["Seguridad", "/security"],
-] as const;
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -41,7 +25,7 @@ export default function Navbar() {
       </Link>
 
       <div className="hidden min-w-0 flex-1 items-center justify-center gap-1 lg:flex">
-        {primary.map(([label, href]) => (
+        {PRIMARY_DOMAINS.map(({label, href}) => (
           <Link key={href} href={href} className={`rounded-xl px-3.5 py-2.5 text-sm font-black transition ${active(href) ? "bg-white/14 text-white shadow-sm" : "text-white/75 hover:bg-white/8 hover:text-white"}`}>
             {label}
           </Link>
@@ -52,7 +36,7 @@ export default function Navbar() {
           </button>
           {moreOpen && (
             <div className="absolute left-0 top-full z-[100] mt-2 grid w-[320px] grid-cols-2 gap-1 rounded-2xl border border-white/10 bg-[#07101f]/98 p-2 shadow-2xl backdrop-blur-xl">
-              {more.map(([label, href]) => <Link key={href} href={href} onClick={close} className="rounded-xl px-3 py-2.5 text-sm font-semibold text-white/80 hover:bg-white/10 hover:text-white">{label}</Link>)}
+              {CAPABILITY_DOMAINS.map(({label, href}) => <Link key={href} href={href} onClick={close} className="rounded-xl px-3 py-2.5 text-sm font-semibold text-white/80 hover:bg-white/10 hover:text-white">{label}</Link>)}
             </div>
           )}
         </div>
