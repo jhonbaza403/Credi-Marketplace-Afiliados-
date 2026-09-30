@@ -186,6 +186,7 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Run E2E tests
+        # Browser E2E is a hard gate; the build only starts after this passes.
         run: npm run test:e2e
 
       - name: Build project
