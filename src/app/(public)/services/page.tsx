@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import DomainBridge from "@/components/portal/DomainBridge"
 import type { Metadata } from 'next';
 import { ArrowRight, Building2, CreditCard, Share2, ShoppingBag } from 'lucide-react';
 
