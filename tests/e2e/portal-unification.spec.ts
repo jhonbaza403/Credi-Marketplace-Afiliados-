@@ -12,6 +12,7 @@ test.describe("Credi unified portal", () => {
 
   test("free is a hub inside the same portal", async ({ page }) => {
     await page.goto("/free");
+    await expect(page).toHaveURL(/\/free$/);
     await expect(page.getByRole("heading", { name: /Un solo lugar para descubrir/i })).toBeVisible();
     await expect(page.getByRole("link", { name: /Entrar al Muro/i })).toBeVisible();
     await expect(page.getByRole("link", { name: /Explorar Marketplace/i })).toBeVisible();
