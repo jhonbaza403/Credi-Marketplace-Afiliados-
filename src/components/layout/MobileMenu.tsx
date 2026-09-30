@@ -1,167 +1,59 @@
-// ==========================================================
-// ARCHIVO: src/components/layout/MobileMenu.tsx
-// Credi Marketplace
-//
-// Menú móvil responsive
-// Next.js 16.3 · React 19.2 · TypeScript
-// ==========================================================
-
 'use client';
 
-import { useState } from 'react';
 import Link from 'next/link';
-
-interface MobileMenuItem {
-  label: string;
-  href: string;
-}
-
-const menuItems: readonly MobileMenuItem[] = [
-  {
-    label: 'Inicio',
-    href: '/',
-  },
-  {
-    label: 'Marketplace',
-    href: '/marketplace',
-  },
-  {
-    label: 'Productos',
-    href: '/products',
-  },
-  {
-    label: 'Afiliados',
-    href: '/affiliate',
-  },
-  {
-    label: 'B2B',
-    href: '/b2b',
-  },
-  {
-    label: 'Cuenta',
-    href: '/account',
-  },
-] as const;
-
+import { useState } from 'react';
+import { Menu, X, Sparkles, MessageCircle } from 'lucide-react';
+import { CAPABILITY_DOMAINS, PRIMARY_DOMAINS } from '@/config/portal';
 
 export default function MobileMenu() {
   const [open, setOpen] = useState(false);
+  const close = () => setOpen(false);
 
   return (
     <div className="md:hidden">
-
-      {/* Botón menú */}
       <button
         type="button"
-        aria-label="Abrir menú"
+        aria-label={open ? 'Cerrar menú' : 'Abrir menú'}
         aria-expanded={open}
         onClick={() => setOpen((value) => !value)}
-        className="
-          inline-flex
-          items-center
-          justify-center
-          rounded-md
-          p-2
-          text-gray-700
-          hover:bg-gray-100
-          focus:outline-none
-          focus:ring-2
-          focus:ring-blue-500
-        "
+        className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/10 p-2.5 text-white"
       >
-        <span className="sr-only">
-          Abrir menú
-        </span>
-
-        {open ? (
-          <svg
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-          >
-            <path
-              d="M18 6L6 18"
-            />
-
-            <path
-              d="M6 6l12 12"
-            />
-          </svg>
-        ) : (
-          <svg
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-          >
-            <path
-              d="M4 6h16"
-            />
-
-            <path
-              d="M4 12h16"
-            />
-
-            <path
-              d="M4 18h16"
-            />
-          </svg>
-        )}
+        {open ? <X className="size-5" /> : <Menu className="size-5" />}
       </button>
 
-
-      {/* Panel móvil */}
       {open && (
-        <div
-          className="
-            absolute
-            left-0
-            right-0
-            top-full
-            z-50
-            border-t
-            bg-white
-            shadow-lg
-          "
-        >
+        <div className="absolute left-0 right-0 top-full z-[100] border-t border-white/10 bg-[#07101f]/98 p-4 shadow-2xl backdrop-blur-xl">
+          <nav aria-label="Navegación móvil Credi" className="space-y-4">
+            <div className="grid grid-cols-2 gap-2">
+              {PRIMARY_DOMAINS.map(({ label, href }) => (
+                <Link key={href} href={href} onClick={close} className="rounded-xl bg-white/5 px-3 py-3 text-sm font-black text-white/90">
+                  {label}
+                </Link>
+              ))}
+            </div>
 
-          <nav
-            className="
-              flex
-              flex-col
-              gap-2
-              p-4
-            "
-          >
+            <div>
+              <p className="px-1 pb-2 text-[10px] font-black uppercase tracking-[.18em] text-white/50">Capacidades</p>
+              <div className="grid grid-cols-2 gap-2">
+                {CAPABILITY_DOMAINS.map(({ label, href }) => (
+                  <Link key={href} href={href} onClick={close} className="rounded-xl bg-white/5 px-3 py-3 text-sm font-semibold text-white/80">
+                    {label}
+                  </Link>
+                ))}
+              </div>
+            </div>
 
-            {menuItems.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={() => setOpen(false)}
-                className="
-                  rounded-md
-                  px-4
-                  py-3
-                  text-gray-700
-                  transition
-                  hover:bg-gray-100
-                "
-              >
-                {item.label}
+            <div className="grid grid-cols-2 gap-2">
+              <Link href="/publish" onClick={close} className="inline-flex items-center justify-center gap-2 rounded-xl bg-white/10 px-3 py-3 text-sm font-black text-white">
+                <Sparkles className="size-4" /> Publicar
               </Link>
-            ))}
-
+              <Link href="/chat" onClick={close} className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand-600 px-3 py-3 text-sm font-black text-white">
+                <MessageCircle className="size-4" /> Chat
+              </Link>
+            </div>
           </nav>
-
         </div>
       )}
-
     </div>
   );
 }
