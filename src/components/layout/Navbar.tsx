@@ -58,10 +58,10 @@ export default function Navbar() {
       {mobile && (
         <div className="absolute left-0 top-16 z-[100] w-full border-b border-white/10 bg-[#07101f]/98 p-4 shadow-2xl backdrop-blur-xl lg:hidden">
           <div className="grid grid-cols-2 gap-2">
-            {primary.map(([label, href]) => <Link key={href} href={href} onClick={close} className={`rounded-xl px-3 py-3 text-sm font-black ${active(href) ? "bg-white/15 text-white" : "bg-white/5 text-white/80"}`}>{label}</Link>)}
+            {PRIMARY_DOMAINS.map(({label, href}) => <Link key={href} href={href} onClick={close} className={`rounded-xl px-3 py-3 text-sm font-black ${active(href) ? "bg-white/15 text-white" : "bg-white/5 text-white/80"}`}>{label}</Link>)}
           </div>
           <div className="mt-3 grid grid-cols-2 gap-2">
-            {more.map(([label, href]) => <Link key={href} href={href} onClick={close} className="rounded-xl bg-white/5 px-3 py-3 text-sm font-semibold text-white/80 hover:bg-white/10">{label}</Link>)}
+            {CAPABILITY_DOMAINS.map(({label, href}) => <Link key={href} href={href} onClick={close} className="rounded-xl bg-white/5 px-3 py-3 text-sm font-semibold text-white/80 hover:bg-white/10">{label}</Link>)}
           </div>
           <div className="mt-3 grid grid-cols-2 gap-2">
             <Link href="/publish" onClick={close} className="inline-flex items-center justify-center gap-2 rounded-xl bg-white/10 px-3 py-3 text-sm font-black text-white"><Sparkles className="size-4" /> Publicar</Link>
