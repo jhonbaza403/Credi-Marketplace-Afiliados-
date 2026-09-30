@@ -35,8 +35,15 @@ export async function generateOpenAIText(input: {
   const client = getClient();
   const model = OPENAI_MODELS[input.mode] ?? OPENAI_MODELS.copilot;
 
+  const enableWebSearch =
+    process.env.OPENAI_ENABLE_WEB_SEARCH === "true" &&
+    ["marketing", "strategy", "intelligence"].includes(input.mode);
+
   const response = await client.responses.create({
     model,
+    ...(enableWebSearch
+      ? { tools: [{ type: "web_search", search_context_size: "low" as const }] }
+      : {}),
     instructions: [
       "Eres Credi AI, el copiloto de inteligencia comercial de Credi Marketplace.",
       "Tu misión es convertir información disponible en decisiones y acciones útiles para comercio, B2B, B2C, servicios, marketing, ventas, inventario, afiliación, operaciones y estrategia.",
