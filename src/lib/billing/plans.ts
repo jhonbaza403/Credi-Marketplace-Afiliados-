@@ -102,7 +102,13 @@ export async function getPublicCommercialPlans(): Promise<CommercialPlan[]> {
       .order("sort_order", { ascending: true });
 
     if (error || !data?.length) return fallbackPlans;
-    return data as unknown as CommercialPlan[];
+
+    // The free entry experience must never expose a paid checkout form, even if
+    // the persisted is_free flag is stale or null.
+    return (data as unknown as CommercialPlan[]).map((plan) => ({
+      ...plan,
+      is_free: plan.code === "free" || plan.is_free === true,
+    }));
   } catch {
     return fallbackPlans;
   }

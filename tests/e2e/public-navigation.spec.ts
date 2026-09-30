@@ -35,14 +35,14 @@ test.describe("Public navigation", () => {
     await expect(email).toHaveAttribute("aria-required", "true");
   });
 
-  test("home exposes the real logo and service navigation", async ({ page }) => {
+  test("home exposes the real logo and unified service navigation", async ({ page }) => {
     await page.goto("/", { waitUntil: "domcontentloaded" });
 
-    const logo = page.getByRole("link", { name: /Credi Marketplace - Inicio/i }).first();
+    const logo = page.getByRole("link", { name: /Credi Marketplace - Inicio|Credi Marketplace — Inicio/i }).first();
     await expect(logo).toBeVisible();
 
-    await page.getByRole("button", { name: "Comercio" }).click();
-    await expect(page.locator('a[href="/services"]').filter({ hasText: "Servicios" }).first()).toHaveAttribute("href", "/services");
+    const nav = page.getByRole("navigation", { name: "Navegación principal" });
+    await expect(nav.getByRole("link", { name: "Servicios", exact: true })).toHaveAttribute("href", "/services");
   });
 
   test("services page exposes only valid first-party destinations", async ({ page }) => {
