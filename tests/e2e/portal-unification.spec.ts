@@ -27,6 +27,21 @@ test.describe("Credi unified portal", () => {
     await expect(page).toHaveURL(/\/publish$/);
   });
 
+
+  test("domains expose natural continuation paths without a second portal", async ({ page }) => {
+    await page.goto("/marketplace");
+    await expect(page.getByRole("link", { name: "Publicar" })).toHaveAttribute("href", "/publish");
+    await expect(page.getByRole("link", { name: "Contactar" })).toHaveAttribute("href", "/chat");
+    await expect(page.getByRole("link", { name: "Afiliados" })).toHaveAttribute("href", "/affiliate");
+
+    await page.goto("/services");
+    await expect(page.getByRole("link", { name: "Marketplace" })).toHaveAttribute("href", "/marketplace");
+    await expect(page.getByRole("link", { name: "Contactar" })).toHaveAttribute("href", "/chat");
+
+    await page.goto("/publish");
+    await expect(page.getByRole("link", { name: "Abrir Chat" })).toHaveAttribute("href", "/chat");
+  });
+
   test("wall keeps social and commerce navigation connected", async ({ page }) => {
     await page.goto("/social");
     await expect(page.getByRole("heading", { name: /Descubre lo que está pasando/i })).toBeVisible();
