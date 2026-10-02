@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { requireApiAccountAccess } from "@/lib/auth/api-account-access";
 
 const CHAT_BUCKET = "credichat-private";
 const SIGNED_URL_TTL_SECONDS = 300;
@@ -21,6 +22,9 @@ export async function GET(request: Request) {
   if (authError || !auth.user) {
     return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
   }
+
+  const access = await requireApiAccountAccess(supabase, auth.user.id);
+  if (!access.ok) return NextResponse.json({ error: access.code, required: access.required }, { status: access.status });
 
   const admin = createAdminClient();
   const { data: attachment, error: attachmentError } = await admin
