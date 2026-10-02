@@ -45,7 +45,8 @@ function isPublicPath(pathname: string): boolean {
 }
 
 function isSetupPath(pathname: string): boolean {
-  return matchesPrefix(pathname, SETUP_PREFIXES);
+  if (pathname === "/security") return true;
+  return SETUP_PREFIXES.some((prefix) => prefix !== "/security" && matchesPrefix(pathname, [prefix]));
 }
 
 function isDevelopmentHost(hostname: string): boolean {
