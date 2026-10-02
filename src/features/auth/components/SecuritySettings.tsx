@@ -108,6 +108,18 @@ export default function SecuritySettings() {
     }
   }
 
+  async function syncPasskeyState() {
+    const response = await fetch('/api/security/passkey/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'sync' }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || 'No fue posible comprobar la llave de seguridad.');
+    await supabase.auth.refreshSession();
+    return Boolean(data.securityKeyEnrolled);
+  }
+
   async function addPasskey() {
     setWorking(true);
     setMessage(null);
@@ -115,7 +127,10 @@ export default function SecuritySettings() {
       const { error } = await supabase.auth.registerPasskey();
       if (error) throw error;
 
-      setMessage('Llave de acceso registrada correctamente para este dispositivo.');
+      const enrolled = await syncPasskeyState();
+      setMessage(enrolled
+        ? 'Llave de seguridad registrada y verificada. El acceso protegido ya reconoce esta cuenta.'
+        : 'La llave se registró, pero no pudo confirmarse su estado. Revisa la configuración.');
       await loadSecurityState();
     } catch (error) {
       console.error('[SecuritySettings] passkey registration failed', error);
@@ -131,7 +146,8 @@ export default function SecuritySettings() {
     try {
       const { error } = await supabase.auth.passkey.delete({ passkeyId: id });
       if (error) throw error;
-      setMessage('Llave de acceso eliminada.');
+      await syncPasskeyState();
+      setMessage('Llave de acceso eliminada. El acceso protegido volverá a exigir una nueva llave.');
       await loadSecurityState();
     } catch (error) {
       console.error('[SecuritySettings] passkey deletion failed', error);
