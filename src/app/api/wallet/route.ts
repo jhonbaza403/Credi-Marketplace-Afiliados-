@@ -58,6 +58,8 @@ export async function POST(request: Request) {
   const supabase = await createClient()
   const { data: auth } = await supabase.auth.getUser()
   if (!auth.user) return json({ error: 'UNAUTHORIZED', request_id: requestId }, 401, requestId)
+  const access = await requireApiAccountAccess(supabase, auth.user.id)
+  if (!access.ok) return json({ error: access.code, required: access.required, request_id: requestId }, access.status, requestId)
 
   const limit = await distributedRateLimit(supabase, `wallet:${auth.user.id}:${getRequestIp(request)}`, { limit: 20, windowMs: 60_000 })
   if (!limit.success) return json({ error: 'RATE_LIMITED', request_id: requestId }, 429, requestId)
