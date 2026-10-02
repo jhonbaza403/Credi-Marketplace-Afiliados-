@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { BarChart3, CalendarClock, Camera, CircleStop, Copy, Eye, Heart, KeyRound, MessageCircle, Package, Play, Radio, ShieldCheck, Sparkles, Users, Video } from 'lucide-react'
+import { BarChart3, CalendarClock, Camera, CircleStop, Eye, Heart, KeyRound, MessageCircle, Package, Play, Radio, ShieldCheck, Sparkles, Users, Video } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { CrediLiveChat } from '@/components/live/CrediLiveChat'
 
@@ -25,8 +25,6 @@ export default function LivePage(){
   const streamRef=useRef<MediaStream|null>(null)
   const [transport,setTransport]=useState<{inputId:string;rtmps:{url:string;streamKey:string}|null;playback:{hls?:string;dash?:string}|null;webRTC:{url:string}|null;status?:string|null;enabled?:boolean}|null>(null)
   const [transportBusy,setTransportBusy]=useState(false)
-  const [captureDevice,setCaptureDevice]=useState('')
-  const [captureDevices,setCaptureDevices]=useState<MediaDeviceInfo[]>([])
 
   async function load(){
     const response=await fetch('/api/live',{cache:'no-store'})
@@ -69,12 +67,10 @@ export default function LivePage(){
       return
     }
     try{
-      const stream=await navigator.mediaDevices.getUserMedia({video:captureDevice?{deviceId:{exact:captureDevice},width:{ideal:1920},height:{ideal:1080}}:{facingMode:'user',width:{ideal:1920},height:{ideal:1080}},audio:true})
+      const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:1920},height:{ideal:1080}},audio:true})
       streamRef.current=stream
       if(previewRef.current){previewRef.current.srcObject=stream;await previewRef.current.play().catch(()=>{})}
       setCameraOn(true)
-      const devices=await navigator.mediaDevices.enumerateDevices()
-      setCaptureDevices(devices.filter(device=>device.kind==='videoinput'))
       setMediaReady(true)
       setMessage('Fuente de captura y audio listos. Para producción, OBS puede tomar la señal de Elgato 4K Pro y enviarla por RTMPS a Credi LIVE.')
     }catch(error){setMessage(error instanceof Error?error.message:'No fue posible activar cámara y micrófono.')}

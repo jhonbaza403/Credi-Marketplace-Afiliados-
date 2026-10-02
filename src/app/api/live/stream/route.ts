@@ -25,7 +25,7 @@ export async function POST(request:Request){
   const {data:room}=await supabase.from('chat_live_rooms').select('id,title,status,host_user_id,metadata').eq('id',roomId).eq('host_user_id',user.id).maybeSingle()
   if(!room)return errorResponse('Sala LIVE no encontrada.',404,'LIVE_ROOM_NOT_FOUND')
   const metadata=(room.metadata&&typeof room.metadata==='object'?room.metadata:{}) as Record<string,unknown>
-  let inputId=typeof metadata.cloudflare_live_input_id==='string'?metadata.cloudflare_live_input_id:null
+  const inputId=typeof metadata.cloudflare_live_input_id==='string'?metadata.cloudflare_live_input_id:null
   try{
     if(action==='provision'){
       if(inputId){const input=await getLiveInput(inputId);return NextResponse.json({success:true,...credentials(input)},{headers:{'Cache-Control':'no-store'}})}

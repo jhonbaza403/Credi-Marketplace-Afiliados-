@@ -23,7 +23,7 @@ export async function POST(request: Request) {
     }
 
     const admin = createAdminClient();
-    const [{ data: freePlan, error: planError }, { data: profile, error: profileError }] = await Promise.all([
+    const [{ data: freePlan, error: planError }, { data: profile }] = await Promise.all([
       admin.from("plans").select("id,code,is_free,is_active").eq("code", "free").eq("is_active", true).maybeSingle(),
       admin.from("profiles").select("platform_owner,role").eq("id", auth.user.id).maybeSingle(),
     ]);

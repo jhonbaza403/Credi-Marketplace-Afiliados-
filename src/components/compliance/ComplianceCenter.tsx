@@ -62,7 +62,6 @@ export default function ComplianceCenter() {
       fetch("/api/compliance/status").then((r) => r.json()),
       fetch("/api/security/profile-verification").then((r) => r.json()),
     ])
-      .then((r) => r.json())
       .then(([complianceData, photoData]) => {
         setKyc(complianceData.kyc ?? null);
         setKyb(complianceData.kyb ?? null);
