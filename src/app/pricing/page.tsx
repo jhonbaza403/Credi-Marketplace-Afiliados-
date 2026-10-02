@@ -46,7 +46,7 @@ export default async function PricingPage() {
         <div className="mx-auto max-w-4xl text-center">
           <span className="inline-flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--surface)] px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-[var(--primary)] shadow-sm"><Sparkles className="size-4" /> Credi Free primero</span>
           <h1 className="mt-6 text-4xl font-black tracking-tight sm:text-6xl">Empieza gratis. Escala cuando realmente lo necesites.</h1>
-          <p className="mx-auto mt-5 max-w-3xl text-base leading-8 text-[var(--muted)] sm:text-lg">La experiencia básica de Credi permanece disponible sin suscripción. Los planes comerciales amplían capacidades; no sustituyen el acceso fundamental a la plataforma.</p>
+          <p className="mx-auto mt-5 max-w-3xl text-base leading-8 text-[var(--muted)] sm:text-lg">Para utilizar la plataforma debes tener un plan activo. Puedes activar el plan Free sin pago o contratar un plan comercial para ampliar capacidades.</p>
           <div className="mt-7 flex flex-wrap justify-center gap-3">
             <Link href="/register" className="inline-flex items-center gap-2 rounded-2xl bg-[var(--primary)] px-5 py-3 text-sm font-black text-white shadow-lg transition hover:-translate-y-0.5">Empezar gratis <ArrowRight className="size-4" /></Link>
             <Link href="/marketplace" className="rounded-2xl border border-[var(--border-strong)] bg-[var(--surface)] px-5 py-3 text-sm font-black shadow-sm transition hover:-translate-y-0.5 hover:bg-[var(--surface-secondary)]">Explorar Marketplace</Link>
@@ -66,10 +66,10 @@ export default async function PricingPage() {
                 <p className="mt-3 max-w-2xl text-sm leading-7 text-[var(--muted)]">{freePlan.description}</p>
                 <div className="mt-6 flex flex-wrap items-end gap-x-3 gap-y-1">
                   <span className="text-5xl font-black tracking-tight">{formatPlanPrice(freePlan, "monthly")}</span>
-                  <span className="pb-1 text-sm font-bold text-[var(--muted)]">sin suscripción</span>
+                  <span className="pb-1 text-sm font-bold text-[var(--muted)]">plan gratuito que debe activarse</span>
                 </div>
                 <div className="mt-7 flex flex-wrap gap-3">
-                  <Link href="/register" className="inline-flex items-center gap-2 rounded-xl bg-[var(--primary)] px-5 py-3 text-sm font-black text-white shadow-md transition hover:-translate-y-0.5">Crear cuenta gratis <ArrowRight className="size-4" /></Link>
+                  <form action="/api/billing/activate-free" method="post"><button type="submit" className="inline-flex items-center gap-2 rounded-xl bg-[var(--primary)] px-5 py-3 text-sm font-black text-white shadow-md transition hover:-translate-y-0.5">Activar plan Free <ArrowRight className="size-4" /></button></form>
                   <Link href="/social" className="inline-flex items-center gap-2 rounded-xl border border-[var(--border-strong)] bg-[var(--surface)] px-5 py-3 text-sm font-black transition hover:-translate-y-0.5">Ver el Muro <ArrowRight className="size-4" /></Link>
                 </div>
               </div>
@@ -102,7 +102,7 @@ export default async function PricingPage() {
         <div className="mt-12">
           <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div><p className="text-xs font-black uppercase tracking-[.16em] text-[var(--primary)]">Escala comercial</p><h2 className="mt-1 text-2xl font-black sm:text-3xl">Planes opcionales</h2></div>
-            <p className="text-sm text-[var(--muted)]">{paidPlans.length} opciones para ampliar capacidades.</p>
+            <p className="text-sm text-[var(--muted)]">{paidPlans.length} planes comerciales además del plan Free.</p>
           </div>
           <div className="grid gap-6 lg:grid-cols-3">
             {paidPlans.map((plan) => {
