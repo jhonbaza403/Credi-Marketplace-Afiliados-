@@ -25,6 +25,31 @@ function errorResponse(error: string, status: number, code: string) {
   );
 }
 
+export async function GET() {
+  const supabase = await createClient();
+  const { data: auth, error: authError } = await supabase.auth.getUser();
+
+  if (authError || !auth.user) {
+    return errorResponse("Debes iniciar sesión.", 401, "UNAUTHENTICATED");
+  }
+
+  const { data, error } = await supabase
+    .from("profile_verification_photos")
+    .select("user_id,status,created_at,updated_at,rejection_reason")
+    .eq("user_id", auth.user.id)
+    .maybeSingle();
+
+  if (error) {
+    console.error("[identity-profile-photos] status failed", error);
+    return errorResponse("No fue posible consultar el estado de las fotografías.", 500, "IDENTITY_PHOTO_STATUS_FAILED");
+  }
+
+  return NextResponse.json(
+    { success: true, verification: data ?? { user_id: auth.user.id, status: "not_submitted" } },
+    { headers: { "Cache-Control": "private, no-store" } },
+  );
+}
+
 export async function POST(request: Request) {
   if (!isSameOrigin(request)) {
     return errorResponse("Origen no autorizado.", 403, "CSRF_VALIDATION_FAILED");
