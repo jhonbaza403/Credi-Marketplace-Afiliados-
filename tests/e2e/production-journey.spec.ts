@@ -65,6 +65,7 @@ test.describe("Credi production journey — real operation verification", () => 
     const room = rooms.find((item: { id?: string }) => item.id === liveRoomId);
 
     expect(room, "Configured E2E LIVE room was not returned by the authenticated LIVE API").toBeTruthy();
+    if (!room) throw new Error("Configured E2E LIVE room was not returned.");
     expect(room.status).toMatch(/live|ended/);
     expect(room.stream_provider).toBeTruthy();
     expect(room.playback_url || room.replay_url, "LIVE has no playback/replay URL").toBeTruthy();
