@@ -65,7 +65,12 @@ export default function AIAssistant() {
       if (typeof (result as { session_id?: unknown }).session_id === 'string') setSessionId((result as { session_id: string }).session_id)
       if (typeof (result as { provider?: unknown }).provider === 'string') setProvider((result as { provider: string }).provider)
       if (typeof (result as { model?: unknown }).model === 'string') setModel((result as { model: string }).model)
-      if (!response.ok || !generatedText) throw new Error(apiError || `No fue posible obtener una respuesta de Credi AI (HTTP ${response.status}).`)
+      if (!response.ok || !generatedText) {
+        const diagnosticCode = typeof (result as { code?: unknown }).code === 'string' ? (result as { code: string }).code : `HTTP_${response.status}`
+        const requestId = typeof (result as { request_id?: unknown }).request_id === 'string' ? (result as { request_id: string }).request_id : ''
+        const suffix = requestId ? ` · solicitud ${requestId}` : ''
+        throw new Error((apiError || `No fue posible obtener una respuesta de Credi AI (HTTP ${response.status}).`) + ` [${diagnosticCode}]${suffix}`)
+      }
 
       setMessages((current) => [...current, { id: crypto.randomUUID(), role: 'assistant', content: generatedText, timestamp: 'Ahora' }])
     } catch (error: unknown) {
