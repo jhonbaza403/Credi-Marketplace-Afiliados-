@@ -34,7 +34,11 @@ jobs:
 
           p = Path('src/app/api/checkout/route.ts')
           s = p.read_text()
-          s = s.replace("import { requireApiAccountAccess } from '@/lib/auth/api-account-access'\n", '')
+          if "import { requireApiAccountAccess } from '@/lib/auth/api-account-access'" not in s:
+              s = s.replace("import { getRequestIp } from '@/lib/security/auth'\n", "import { getRequestIp } from '@/lib/security/auth'\nimport { requireApiAccountAccess } from '@/lib/auth/api-account-access'\n")
+          guard = "    const access = await requireApiAccountAccess(supabase, user.id)\n    if (!access.ok) return jsonError('La cuenta no cumple los requisitos de seguridad.', access.status, access.code)\n"
+          if guard not in s:
+              s = s.replace("    if (!user) return jsonError('Debes iniciar sesión para continuar con el checkout.', 401, 'UNAUTHENTICATED')\n", "    if (!user) return jsonError('Debes iniciar sesión para continuar con el checkout.', 401, 'UNAUTHENTICATED')\n" + guard)
           p.write_text(s)
 
           p = Path('src/app/api/live/chat/route.ts')
