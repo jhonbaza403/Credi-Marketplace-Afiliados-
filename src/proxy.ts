@@ -15,7 +15,6 @@ const PUBLIC_PREFIXES = [
   "/auth",
   "/pricing",
   "/marketplace",
-  "/products",
   "/services",
   "/affiliate",
   "/b2b",
@@ -28,11 +27,6 @@ const PUBLIC_PREFIXES = [
   "/free",
   "/magazines",
   "/videos",
-  "/explorar",
-  "/servicios",
-  "/jobs",
-  "/seller/b2b",
-  "/vender",
   "/legal",
   "/privacy",
   "/terms",
@@ -120,6 +114,21 @@ export async function proxy(request: NextRequest) {
   }
 
   const { pathname } = request.nextUrl;
+
+  const canonicalAliases: Record<string, string> = {
+    "/explorar": "/marketplace",
+    "/servicios": "/services",
+    "/jobs": "/services",
+    "/seller/b2b": "/b2b",
+    "/vender": "/publish",
+  };
+  const aliasTarget = canonicalAliases[pathname];
+  if (aliasTarget) {
+    const redirect = NextResponse.redirect(new URL(aliasTarget, request.url), 308);
+    redirect.headers.set("X-Request-ID", requestId);
+    return redirect;
+  }
+
   const isPublic = isPublicPath(pathname);
   const isApiPath = pathname === "/api" || pathname.startsWith("/api/");
   const isSetup = isSetupPath(pathname);
