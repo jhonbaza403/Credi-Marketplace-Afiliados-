@@ -125,4 +125,72 @@ grant execute on function public.credi_account_security_status(uuid) to authenti
 revoke all on function public.get_credi_operation_timeline(uuid) from public, anon, authenticated;
 grant execute on function public.get_credi_operation_timeline(uuid) to service_role;
 
+create or replace function public.current_user_plan(p_user_id uuid default auth.uid())
+returns table(
+  plan_id uuid,
+  plan_code text,
+  plan_name text,
+  status text,
+  billing_interval text,
+  limits jsonb
+)
+language sql
+stable
+security invoker
+set search_path = public
+as $
+  select p.id, p.code, p.name, s.status, s.billing_interval, p.limits
+  from public.subscriptions s
+  join public.plans p on p.id = s.plan_id
+  where s.user_id = p_user_id
+    and s.status in ('trialing','active')
+    and (
+      s.status = 'trialing'
+      or s.cancel_at_period_end = false
+      or s.current_period_end is null
+      or s.current_period_end > now()
+    )
+    and p.is_active = true
+  order by s.created_at desc
+  limit 1;
+$;
+
+create or replace function public.get_user_entitlement(
+  p_feature_key text,
+  p_user_id uuid default auth.uid()
+)
+returns table(enabled boolean, quota bigint, plan_code text)
+language sql
+stable
+security invoker
+set search_path = public
+as $
+  select pf.enabled, pf.quota, c.plan_code
+  from public.current_user_plan(p_user_id) c
+  join public.plan_features pf on pf.plan_id = c.plan_id
+  where pf.feature_key = p_feature_key
+  limit 1;
+$;
+
+create or replace function public.user_has_plan_feature(
+  p_feature_key text,
+  p_user_id uuid default auth.uid()
+)
+returns boolean
+language sql
+stable
+security invoker
+set search_path = public
+as $
+  select exists (
+    select 1 from public.profiles p
+    where p.id = p_user_id
+      and (coalesce(p.platform_owner, false) or p.role = 'admin'::public.user_role)
+  )
+  or exists (
+    select 1 from public.get_user_entitlement(p_feature_key, p_user_id) e
+    where e.enabled = true
+  );
+$;
+
 commit;
