@@ -34,6 +34,8 @@ export async function GET() {
   const { data:{user}, error:authError } = await supabase.auth.getUser()
   if(authError) return errorResponse('No fue posible verificar la sesión.',401,'AUTHENTICATION_ERROR')
   if(!user) return errorResponse('Debes iniciar sesión.',401,'UNAUTHENTICATED')
+  const access = await requireApiAccountAccess(supabase, user.id)
+  if (!access.ok) return errorResponse('La cuenta no cumple los requisitos de seguridad.',access.status,access.code)
 
   const [{data:rooms,error:roomError},{data:liveRooms}] = await Promise.all([
     supabase.from('chat_live_rooms').select('id,host_user_id,conversation_id,title,status,viewer_count,started_at,ended_at,description,cover_media,scheduled_at,replay_url,playback_url,stream_provider,viewer_peak,likes_count,shares_count,settings,created_at').eq('host_user_id',user.id).order('created_at',{ascending:false}).limit(50),
@@ -100,6 +102,8 @@ export async function PATCH(request:Request) {
   const {data:{user},error:authError}=await supabase.auth.getUser()
   if(authError) return errorResponse('No fue posible verificar la sesión.',401,'AUTHENTICATION_ERROR')
   if(!user) return errorResponse('Debes iniciar sesión.',401,'UNAUTHENTICATED')
+  const access = await requireApiAccountAccess(supabase, user.id)
+  if (!access.ok) return errorResponse('La cuenta no cumple los requisitos de seguridad.',access.status,access.code)
 
   const parsed=patchSchema.safeParse(await request.json().catch(()=>null))
   if(!parsed.success) return errorResponse('La operación LIVE no es válida.',400,'INVALID_LIVE_OPERATION')
