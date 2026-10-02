@@ -32,9 +32,9 @@ $$;
 
 DO $$
 DECLARE
-  table_name text;
+  v_table_name text;
 BEGIN
-  FOREACH table_name IN ARRAY ARRAY[
+  FOREACH v_table_name IN ARRAY ARRAY[
     'profiles',
     'stores',
     'categories',
@@ -52,19 +52,17 @@ BEGIN
   ]
   LOOP
     IF to_regclass('public.' || v_table_name) IS NOT NULL THEN
-
       IF EXISTS (
         SELECT 1
-        FROM information_schema.columns
-        WHERE table_schema = 'public'
-          AND table_name = table_name
-          AND column_name = 'updated_at'
+        FROM information_schema.columns AS c
+        WHERE c.table_schema = 'public'
+          AND c.table_name = v_table_name
+          AND c.column_name = 'updated_at'
       ) THEN
-
         EXECUTE format(
           'DROP TRIGGER IF EXISTS trg_%I_updated_at ON public.%I',
-          table_name,
-          table_name
+          v_table_name,
+          v_table_name
         );
 
         EXECUTE format(
@@ -72,10 +70,9 @@ BEGIN
            BEFORE UPDATE ON public.%I
            FOR EACH ROW
            EXECUTE FUNCTION public.set_updated_at()',
-          table_name,
-          table_name
+          v_table_name,
+          v_table_name
         );
-
       END IF;
     END IF;
   END LOOP;
