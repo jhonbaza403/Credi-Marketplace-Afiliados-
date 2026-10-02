@@ -14,6 +14,25 @@ const PUBLIC_PREFIXES = [
   "/verify",
   "/auth",
   "/pricing",
+  "/marketplace",
+  "/products",
+  "/services",
+  "/affiliate",
+  "/b2b",
+  "/sellers",
+  "/seller",
+  "/search",
+  "/account",
+  "/orders",
+  "/social",
+  "/free",
+  "/magazines",
+  "/videos",
+  "/explorar",
+  "/servicios",
+  "/jobs",
+  "/seller/b2b",
+  "/vender",
   "/legal",
   "/privacy",
   "/terms",
@@ -102,9 +121,13 @@ export async function proxy(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
   const isPublic = isPublicPath(pathname);
+  const isApiPath = pathname === "/api" || pathname.startsWith("/api/");
   const isSetup = isSetupPath(pathname);
-  const requiresAuth = !isPublic;
-  const requiresPlatformAccess = !isPublic && !isSetup;
+  // API routes own their JSON authentication/error contract (401/403/404/405).
+  // Proxy must not redirect API calls to the HTML login page, because clients such as
+  // fetch/Playwright would follow the redirect and observe a misleading 200 response.
+  const requiresAuth = !isPublic && !isApiPath;
+  const requiresPlatformAccess = !isPublic && !isApiPath && !isSetup;
   const guestOnly = matchesPrefix(pathname, GUEST_ONLY_PREFIXES);
 
   if (!requiresAuth) {
