@@ -122,4 +122,7 @@ $$;
 revoke all on function public.credi_account_security_status(uuid) from public, anon;
 grant execute on function public.credi_account_security_status(uuid) to authenticated;
 
+revoke all on function public.get_credi_operation_timeline(uuid) from public, anon, authenticated;
+grant execute on function public.get_credi_operation_timeline(uuid) to service_role;
+
 commit;
