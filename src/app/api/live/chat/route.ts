@@ -30,7 +30,7 @@ async function getUser(request:Request){
   return {supabase,user}
 }
 
-export async function GET(){
+export async function GET(request:Request){
   const {supabase,user}=await getUser(request)
   if(!user) return errorResponse('Debes iniciar sesión.',401,'UNAUTHENTICATED')
   const access = await requireApiAccountAccess(supabase, user.id)
