@@ -1,0 +1,57 @@
+name: Credi Production E2E
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CI: "true"
+  NEXT_TELEMETRY_DISABLED: "1"
+  NODE_ENV: test
+  PLAYWRIGHT_BASE_URL: ${{ secrets.E2E_BASE_URL }}
+  E2E_STORAGE_STATE_PATH: /tmp/credi-e2e-storage-state.json
+  E2E_OPERATION_ID: ${{ secrets.E2E_OPERATION_ID }}
+  E2E_LIVE_ROOM_ID: ${{ secrets.E2E_LIVE_ROOM_ID }}
+
+jobs:
+  production-e2e:
+    name: Real LIVE + media + financial journey
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Validate required production E2E secrets
+        shell: bash
+        env:
+          E2E_STORAGE_STATE_JSON: ${{ secrets.E2E_STORAGE_STATE_JSON }}
+        run: |
+          set -euo pipefail
+          test -n "${PLAYWRIGHT_BASE_URL}" || { echo "::error::Missing E2E_BASE_URL"; exit 1; }
+          test -n "${E2E_OPERATION_ID}" || { echo "::error::Missing E2E_OPERATION_ID"; exit 1; }
+          test -n "${E2E_LIVE_ROOM_ID}" || { echo "::error::Missing E2E_LIVE_ROOM_ID"; exit 1; }
+          test -n "${E2E_STORAGE_STATE_JSON}" || { echo "::error::Missing E2E_STORAGE_STATE_JSON"; exit 1; }
+          printf '%s' "${E2E_STORAGE_STATE_JSON}" > "${E2E_STORAGE_STATE_PATH}"
+          node -e "JSON.parse(require('fs').readFileSync(process.env.E2E_STORAGE_STATE_PATH, 'utf8'));"
+
+      - name: Setup Node 24
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install npm
+        run: npm install --global npm@11.19.1
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Install Playwright
+        run: npx playwright install --with-deps chromium
+
+      - name: Run real production journey
+        run: npx playwright test tests/e2e/production-journey.spec.ts --reporter=line
