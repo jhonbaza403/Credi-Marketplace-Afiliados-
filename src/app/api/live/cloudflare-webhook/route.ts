@@ -31,7 +31,7 @@ export async function POST(request:Request){
   const room=rooms?.[0]
   if(!room)return NextResponse.json({success:true,ignored:true})
   const metadata=(room.metadata&&typeof room.metadata==='object'?room.metadata:{}) as Record<string,unknown>
-  const next={...metadata,cloudflare_last_event:eventType,cloudflare_last_event_at:payload.data?.updated_at||new Date().toISOString()}
+  const next: Record<string, unknown> = {...metadata,cloudflare_last_event:eventType,cloudflare_last_event_at:payload.data?.updated_at||new Date().toISOString()}
   const updates:{metadata:Record<string,unknown>;status?:string;ended_at?:string;replay_url?:string}={metadata:next}
   if(eventType==='live_input.connected')updates.status='live'
   if(eventType==='live_input.disconnected'){
