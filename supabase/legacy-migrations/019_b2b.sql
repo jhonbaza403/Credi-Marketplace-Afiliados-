@@ -257,8 +257,8 @@ ON public.b2b_suppliers(is_active, is_verified);
 CREATE INDEX IF NOT EXISTS idx_b2b_products_supplier
 ON public.b2b_products(supplier_id);
 
-CREATE INDEX IF NOT EXISTS idx_b2b_products_active
-ON public.b2b_products(is_active);
+CREATE INDEX IF NOT EXISTS idx_b2b_products_status
+ON public.b2b_products(status);
 
 CREATE INDEX IF NOT EXISTS idx_b2b_products_category
 ON public.b2b_products(category);
