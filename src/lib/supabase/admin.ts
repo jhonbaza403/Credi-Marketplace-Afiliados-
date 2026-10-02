@@ -19,7 +19,12 @@ export function createAdminClient(): SupabaseClient {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
   if (!url) throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL");
   adminClient = createSupabaseClient(url, requiredAdminKey(), {
-    auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+      detectSessionInUrl: false,
+      experimental: { passkey: true },
+    },
   });
   return adminClient;
 }
