@@ -70,7 +70,7 @@ export default async function PricingPage() {
                 </div>
                 <div className="mt-7 flex flex-wrap gap-3">
                   <form action="/api/billing/activate-free" method="post"><button type="submit" className="inline-flex items-center gap-2 rounded-xl bg-[var(--primary)] px-5 py-3 text-sm font-black text-white shadow-md transition hover:-translate-y-0.5">Activar plan Free <ArrowRight className="size-4" /></button></form>
-                  <Link href="/social" className="inline-flex items-center gap-2 rounded-xl border border-[var(--border-strong)] bg-[var(--surface)] px-5 py-3 text-sm font-black transition hover:-translate-y-0.5">Ver el Muro <ArrowRight className="size-4" /></Link>
+                  <Link href="/security" className="inline-flex items-center gap-2 rounded-xl border border-[var(--border-strong)] bg-[var(--surface)] px-5 py-3 text-sm font-black transition hover:-translate-y-0.5">Configurar seguridad <ArrowRight className="size-4" /></Link>
                 </div>
               </div>
               <div className="rounded-[1.5rem] border border-white/60 bg-white/60 p-6 backdrop-blur-sm dark:border-white/10 dark:bg-white/5">
