@@ -23,7 +23,7 @@ function errorResponse(message:string,status:number,code:string){
   return NextResponse.json({success:false,error:message,code},{status,headers:{'Cache-Control':'no-store'}})
 }
 
-async function getUser(request:Request){
+async function getUser(){
   const supabase=await createClient()
   const {data:{user},error}=await supabase.auth.getUser()
   if(error||!user) return {supabase,user:null}
@@ -31,7 +31,7 @@ async function getUser(request:Request){
 }
 
 export async function GET(request:Request){
-  const {supabase,user}=await getUser(request)
+  const {supabase,user}=await getUser()
   if(!user) return errorResponse('Debes iniciar sesión.',401,'UNAUTHENTICATED')
   const access = await requireApiAccountAccess(supabase, user.id)
   if (!access.ok) return errorResponse('La cuenta no cumple los requisitos de seguridad.',access.status,access.code)
@@ -49,7 +49,7 @@ export async function GET(request:Request){
 
 export async function POST(request:Request){
   if(!isSameOrigin(request)) return errorResponse('Origen no autorizado.',403,'CSRF_VALIDATION_FAILED')
-  const {supabase,user}=await getUser(request)
+  const {supabase,user}=await getUser()
   if(!user) return errorResponse('Debes iniciar sesión.',401,'UNAUTHENTICATED')
   const access = await requireApiAccountAccess(supabase, user.id)
   if (!access.ok) return errorResponse('La cuenta no cumple los requisitos de seguridad.',access.status,access.code)
@@ -71,7 +71,7 @@ export async function POST(request:Request){
 
 export async function PUT(request:Request){
   if(!isSameOrigin(request)) return errorResponse('Origen no autorizado.',403,'CSRF_VALIDATION_FAILED')
-  const {supabase,user}=await getUser(request)
+  const {supabase,user}=await getUser()
   if(!user) return errorResponse('Debes iniciar sesión.',401,'UNAUTHENTICATED')
   const access = await requireApiAccountAccess(supabase, user.id)
   if (!access.ok) return errorResponse('La cuenta no cumple los requisitos de seguridad.',access.status,access.code)
