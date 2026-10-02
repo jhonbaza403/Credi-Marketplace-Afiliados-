@@ -35,6 +35,10 @@ export default function ComplianceCenter() {
   const [kycPrimary, setKycPrimary] = useState<File | null>(null);
   const [kycBack, setKycBack] = useState<File | null>(null);
   const [kycSelfie, setKycSelfie] = useState<File | null>(null);
+  const [profileFront, setProfileFront] = useState<File | null>(null);
+  const [profileLeft, setProfileLeft] = useState<File | null>(null);
+  const [profileRight, setProfileRight] = useState<File | null>(null);
+  const [profilePhotoStatus, setProfilePhotoStatus] = useState("not_submitted");
   const [legalName, setLegalName] = useState("");
   const [tradeName, setTradeName] = useState("");
   const [taxId, setTaxId] = useState("");
@@ -54,11 +58,15 @@ export default function ComplianceCenter() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    void fetch("/api/compliance/status")
+    void Promise.all([
+      fetch("/api/compliance/status").then((r) => r.json()),
+      fetch("/api/security/profile-verification").then((r) => r.json()),
+    ])
       .then((r) => r.json())
-      .then((data) => {
-        setKyc(data.kyc ?? null);
-        setKyb(data.kyb ?? null);
+      .then(([complianceData, photoData]) => {
+        setKyc(complianceData.kyc ?? null);
+        setKyb(complianceData.kyb ?? null);
+        setProfilePhotoStatus(photoData.verification?.status ?? "not_submitted");
       })
       .catch(() => setMessage("No se pudo cargar el estado de cumplimiento."));
   }, []);
@@ -109,6 +117,28 @@ export default function ComplianceCenter() {
     for (const [type, file] of uploads) if (file) await upload("kyb", data.case.id, type, file);
   }
 
+  async function submitProfilePhotos() {
+    if (!profileFront || !profileLeft || !profileRight) {
+      throw new Error("Debes cargar las tres fotografías: frente, perfil izquierdo y perfil derecho.");
+    }
+
+    const form = new FormData();
+    form.set("front", profileFront);
+    form.set("left", profileLeft);
+    form.set("right", profileRight);
+
+    const response = await fetch("/api/security/profile-verification", {
+      method: "POST",
+      body: form,
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "No fue posible registrar las fotografías.");
+    setProfilePhotoStatus(data.verification?.status ?? "submitted");
+    setProfileFront(null);
+    setProfileLeft(null);
+    setProfileRight(null);
+  }
+
   async function submit(kind: "kyc" | "kyb") {
     setBusy(true);
     setMessage("");
@@ -132,6 +162,49 @@ export default function ComplianceCenter() {
       </header>
 
       {message && <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm">{message}</div>}
+
+      <section className="rounded-xl border border-amber-200 bg-amber-50 p-6 shadow-sm dark:border-amber-900/40 dark:bg-amber-950/20" aria-labelledby="profile-verification-title">
+        <div className="mb-5">
+          <h2 id="profile-verification-title" className="text-xl font-semibold">Verificación visual del perfil</h2>
+          <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+            Estas fotografías se almacenan en un bucket privado y se usan para verificar identidad. No se publican como fotos sociales.
+          </p>
+          <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Estado: {statusLabels[profilePhotoStatus] ?? profilePhotoStatus}</p>
+        </div>
+        <div className="grid gap-4 md:grid-cols-3">
+          {[
+            ["front", "Frente", profileFront, setProfileFront],
+            ["left", "Perfil izquierdo", profileLeft, setProfileLeft],
+            ["right", "Perfil derecho", profileRight, setProfileRight],
+          ].map(([key, label, value, setter]) => (
+            <label key={String(key)} className="rounded-xl border border-slate-200 bg-white p-4 text-sm font-medium dark:border-slate-800 dark:bg-slate-950">
+              <span>{String(label)}</span>
+              <input
+                className="mt-3 block w-full text-sm"
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={(e) => (setter as (file: File | null) => void)(e.target.files?.[0] ?? null)}
+              />
+              <span className="mt-2 block text-xs text-slate-500">JPG, PNG o WEBP · máximo 15 MB</span>
+              {value instanceof File && <span className="mt-2 block truncate text-xs font-semibold text-emerald-700">{value.name}</span>}
+            </label>
+          ))}
+        </div>
+        <button
+          disabled={busy}
+          onClick={() => {
+            setBusy(true);
+            setMessage("");
+            void submitProfilePhotos()
+              .then(() => setMessage("Las tres fotografías quedaron registradas para el proceso de verificación."))
+              .catch((error) => setMessage(error instanceof Error ? error.message : "No fue posible registrar las fotografías."))
+              .finally(() => setBusy(false));
+          }}
+          className="mt-5 rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white disabled:opacity-50"
+        >
+          {busy ? "Enviando…" : "Registrar fotografías"}
+        </button>
+      </section>
 
       <section className="grid gap-6 lg:grid-cols-2">
         <article className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
