@@ -186,8 +186,7 @@ export default function LivePage(){
             [MessageCircle,'Activo','Chat'],
             [BarChart3,selected.viewer_peak,'Pico'],
           ] satisfies Array<[LucideIcon,number | string,string]>).map(([Icon,value,label])=><div key={label} className="rounded-xl bg-[var(--surface-secondary)] p-3"><Icon className="size-4 text-[var(--primary)]"/><p className="mt-2 text-sm font-black">{String(value)}</p><p className="text-[10px] text-[var(--muted)]">{label}</p></div>)}</div>}
-        </section>
-        </section>
+        </section>}
 
         <aside className="space-y-5">
           <form onSubmit={createRoom} className="rounded-[2rem] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-xl sm:p-6">
