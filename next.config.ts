@@ -29,6 +29,7 @@ const contentSecurityPolicy = [
 ].join("; ");
 
 const nextConfig: NextConfig = {
+  ...(isDevelopment ? { allowedDevOrigins: ["127.0.0.1", "localhost"] } : {}),
   reactStrictMode: true,
   poweredByHeader: false,
   compress: true,
