@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { isSameOrigin } from '@/lib/security/csrf'
 import { createLiveInput,getLiveInput,rotateLiveInputKeys,setLiveInputEnabled } from '@/lib/cloudflare/stream'
+import { requireApiAccountAccess } from '@/lib/auth/api-account-access'
 
 export const runtime='nodejs'
 export const dynamic='force-dynamic'
@@ -19,6 +20,8 @@ export async function POST(request:Request){
   const supabase=await createClient()
   const {data:{user}}=await supabase.auth.getUser()
   if(!user)return errorResponse('Debes iniciar sesión.',401,'UNAUTHENTICATED')
+  const access = await requireApiAccountAccess(supabase, user.id)
+  if (!access.ok) return errorResponse('La cuenta no cumple los requisitos de seguridad.',access.status,access.code)
   const parsed=schema.safeParse(await request.json().catch(()=>null))
   if(!parsed.success)return errorResponse('Operación de transporte inválida.',400,'INVALID_TRANSPORT_OPERATION')
   const {roomId,action}=parsed.data
