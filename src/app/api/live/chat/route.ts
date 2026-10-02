@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { distributedRateLimit } from '@/lib/security/rate-limit'
 import { getRequestIp } from '@/lib/security/auth'
 import { isSameOrigin } from '@/lib/security/csrf'
+import { requireApiAccountAccess } from '@/lib/auth/api-account-access'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -32,6 +33,8 @@ async function getUser(request:Request){
 export async function GET(request:Request){
   const {supabase,user}=await getUser(request)
   if(!user) return errorResponse('Debes iniciar sesión.',401,'UNAUTHENTICATED')
+  const access = await requireApiAccountAccess(supabase, user.id)
+  if (!access.ok) return errorResponse('La cuenta no cumple los requisitos de seguridad.',access.status,access.code)
   const roomId=new URL(request.url).searchParams.get('roomId')
   const parsed=z.string().uuid().safeParse(roomId)
   if(!parsed.success) return errorResponse('La sala LIVE no es válida.',400,'INVALID_ROOM')
