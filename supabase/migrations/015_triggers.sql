@@ -51,7 +51,7 @@ BEGIN
     'b2b_orders'
   ]
   LOOP
-    IF to_regclass('public.' || table_name) IS NOT NULL THEN
+    IF to_regclass('public.' || v_table_name) IS NOT NULL THEN
 
       IF EXISTS (
         SELECT 1
