@@ -5,6 +5,7 @@ import { distributedRateLimit } from '@/lib/security/rate-limit'
 import { getRequestIp } from '@/lib/security/auth'
 import { isSameOrigin } from '@/lib/security/csrf'
 import { createLiveInput, isCloudflareConfigured } from '@/lib/cloudflare/stream'
+import { requireApiAccountAccess } from '@/lib/auth/api-account-access'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -50,6 +51,8 @@ export async function POST(request:Request) {
     const {data:{user},error:authError}=await supabase.auth.getUser()
     if(authError) return errorResponse('No fue posible verificar la sesión.',401,'AUTHENTICATION_ERROR')
     if(!user) return errorResponse('Debes iniciar sesión.',401,'UNAUTHENTICATED')
+    const access = await requireApiAccountAccess(supabase, user.id)
+    if (!access.ok) return errorResponse('La cuenta no cumple los requisitos de seguridad.',access.status,access.code)
 
     const limit=await distributedRateLimit(supabase,'live:'+user.id+':'+getRequestIp(request),{limit:20,windowMs:60_000})
     if(!limit.success) return errorResponse('Demasiadas solicitudes. Inténtalo más tarde.',429,'RATE_LIMITED')
