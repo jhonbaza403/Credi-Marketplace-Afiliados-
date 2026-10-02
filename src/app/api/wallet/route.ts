@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { distributedRateLimit } from '@/lib/security/rate-limit'
 import { getRequestIp } from '@/lib/security/auth'
 import { isSameOrigin } from '@/lib/security/csrf'
+import { requireApiAccountAccess } from '@/lib/auth/api-account-access'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -31,6 +32,8 @@ export async function GET() {
   const supabase = await createClient()
   const { data: auth } = await supabase.auth.getUser()
   if (!auth.user) return json({ error: 'UNAUTHORIZED', request_id: requestId }, 401, requestId)
+  const access = await requireApiAccountAccess(supabase, auth.user.id)
+  if (!access.ok) return json({ error: access.code, required: access.required, request_id: requestId }, access.status, requestId)
 
   const { data, error } = await supabase.rpc('ensure_my_wallet')
   if (error) return json({ error: 'WALLET_UNAVAILABLE', request_id: requestId }, 503, requestId)
