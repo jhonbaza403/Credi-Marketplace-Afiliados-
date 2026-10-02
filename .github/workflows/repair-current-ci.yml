@@ -1,0 +1,71 @@
+name: Repair current CI errors
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Apply deterministic CI fixes
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          p = Path('src/components/compliance/ComplianceCenter.tsx')
+          s = p.read_text()
+          s = s.replace('    ])\n      .then((r) => r.json())\n      .then(([complianceData, photoData]) => {', '    ])\n      .then(([complianceData, photoData]) => {')
+          p.write_text(s)
+
+          p = Path('src/app/api/billing/activate-free/route.ts')
+          s = p.read_text()
+          s = s.replace('{ data: profile, error: profileError }', '{ data: profile }')
+          p.write_text(s)
+
+          p = Path('src/app/api/checkout/route.ts')
+          s = p.read_text()
+          s = s.replace("import { requireApiAccountAccess } from '@/lib/auth/api-account-access'\n", '')
+          p.write_text(s)
+
+          p = Path('src/app/api/live/chat/route.ts')
+          s = p.read_text()
+          s = s.replace('export async function GET(request:Request){', 'export async function GET(){')
+          p.write_text(s)
+
+          p = Path('src/app/api/live/stream/route.ts')
+          s = p.read_text()
+          s = s.replace("  let inputId=typeof metadata.cloudflare_live_input_id==='string'?metadata.cloudflare_live_input_id:null", "  const inputId=typeof metadata.cloudflare_live_input_id==='string'?metadata.cloudflare_live_input_id:null")
+          p.write_text(s)
+
+          p = Path('src/app/live/page.tsx')
+          s = p.read_text()
+          s = s.replace('Copy, Eye,', 'Eye,')
+          s = s.replace("  const [captureDevice,setCaptureDevice]=useState('')\n", '')
+          s = s.replace("  const [captureDevices,setCaptureDevices]=useState<MediaDeviceInfo[]>([])\n", '')
+          s = s.replace("      const stream=await navigator.mediaDevices.getUserMedia({video:captureDevice?{deviceId:{exact:captureDevice},width:{ideal:1920},height:{ideal:1080}}:{facingMode:'user',width:{ideal:1920},height:{ideal:1080}},audio:true})", "      const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:1920},height:{ideal:1080}},audio:true})")
+          s = s.replace("      const devices=await navigator.mediaDevices.enumerateDevices()\n      setCaptureDevices(devices.filter(device=>device.kind==='videoinput'))\n", '')
+          p.write_text(s)
+          PY
+      - name: Commit repaired files
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          if git diff --quiet; then
+            echo 'No repair needed.'
+            exit 0
+          fi
+          git add src/components/compliance/ComplianceCenter.tsx src/app/api/billing/activate-free/route.ts src/app/api/checkout/route.ts src/app/api/live/chat/route.ts src/app/api/live/stream/route.ts src/app/live/page.tsx
+          git commit -m 'fix: repair current CI lint and type errors'
+          git push
