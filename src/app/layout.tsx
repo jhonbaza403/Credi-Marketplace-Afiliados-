@@ -11,6 +11,8 @@ import { CartProvider } from "@/context/CartContext";
 import { LanguageProvider } from "@/context/LanguageContext";
 import { RegionProvider } from "@/context/RegionContext";
 import { CANONICAL_APP_URL } from "@/lib/app-url";
+import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 export const metadata: Metadata = {
   metadataBase: new URL(CANONICAL_APP_URL),
@@ -54,6 +56,12 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
                   </main>
                   <Footer />
                 </div>
+                <Analytics beforeSend={(event) => {
+                  const pathname = new URL(event.url).pathname;
+                  if (pathname.startsWith("/admin") || pathname.startsWith("/api/")) return null;
+                  return event;
+                }} />
+                <SpeedInsights />
                 <CrediCallManager />
               </CartProvider>
             </AuthProvider>
