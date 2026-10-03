@@ -17,6 +17,7 @@ const schema = z.object({
   prompt: z.string().trim().min(1).max(AI_LIMITS.maxInputCharacters),
   mode: z.enum(["copilot", "sales", "marketing", "strategy", "intelligence"]).default("copilot"),
   sessionId: z.string().uuid().nullable().optional(),
+  idempotencyKey: z.string().uuid(),
 });
 
 type ProviderFailure = {
@@ -120,12 +121,31 @@ export async function POST(request: Request) {
       return errorResponse("No autenticado.", 401, "UNAUTHENTICATED", requestId);
     }
 
+    const [{ data: owner }, { data: entitlement }] = await Promise.all([
+      supabase.rpc("is_platform_owner", { p_user_id: user.id }),
+      supabase.rpc("get_user_entitlement", { p_feature_key: "ai.copilot", p_user_id: user.id }),
+    ]);
+    const isOwner = owner === true;
+    const hasAiEntitlement = Array.isArray(entitlement)
+      ? entitlement.some((row) => row?.enabled === true)
+      : Boolean(entitlement?.enabled === true);
+    if (!isOwner && !hasAiEntitlement) {
+      return errorResponse(
+        "Credi AI requiere una suscripción comercial activa. El acceso del propietario de la plataforma se gestiona por separado del plan comercial.",
+        402,
+        "AI_SUBSCRIPTION_REQUIRED",
+        requestId,
+      );
+    }
+
+
     const limit = await distributedRateLimit(
       supabase,
       `ai:${user.id}:${getRequestIp(request)}`,
       { limit: AI_LIMITS.requestsPerMinute, windowMs: 60_000 },
     );
     if (!limit.success) {
+      await releaseDedup();
       return errorResponse(
         "Límite de solicitudes de IA alcanzado. Inténtalo más tarde.",
         429,
@@ -138,6 +158,35 @@ export async function POST(request: Request) {
     if (!parsed.success) {
       return errorResponse("La solicitud de IA no es válida.", 400, "INVALID_AI_REQUEST", requestId);
     }
+
+    const dedupKey = parsed.data.idempotencyKey;
+    const { data: claimed, error: claimError } = await supabase
+      .from("ai_request_dedup")
+      .insert({ user_id: user.id, idempotency_key: dedupKey, status: "processing" })
+      .select("user_id,idempotency_key,status,response,status_code")
+      .maybeSingle();
+    if (claimError?.code === "23505") {
+      const { data: existing } = await supabase
+        .from("ai_request_dedup")
+        .select("status,response,status_code")
+        .eq("user_id", user.id)
+        .eq("idempotency_key", dedupKey)
+        .maybeSingle();
+      if (existing?.status === "completed" && existing.response) {
+        return NextResponse.json(existing.response, {
+          status: existing.status_code ?? 200,
+          headers: { "Cache-Control": "no-store", "X-Credi-Idempotent-Replay": "1" },
+        });
+      }
+      return errorResponse("La misma solicitud de IA ya está siendo procesada.", 409, "AI_REQUEST_IN_PROGRESS", requestId);
+    }
+    if (claimError || !claimed) {
+      return errorResponse("No fue posible registrar la solicitud de IA.", 503, "AI_IDEMPOTENCY_UNAVAILABLE", requestId);
+    }
+
+    const releaseDedup = async () => {
+      await supabase.from("ai_request_dedup").delete().eq("user_id", user.id).eq("idempotency_key", dedupKey);
+    };
 
     let sessionId = parsed.data.sessionId ?? null;
     let previousResponseId: string | null = null;
@@ -217,16 +266,15 @@ export async function POST(request: Request) {
           });
         }
 
-        return NextResponse.json(
-          {
-            text: result.text,
-            provider: "openai",
-            model: result.model,
-            session_id: sessionId,
-            request_id: requestId,
-          },
-          { headers: { "Cache-Control": "no-store" } },
-        );
+        const payload = {
+          text: result.text,
+          provider: "openai",
+          model: result.model,
+          session_id: sessionId,
+          request_id: requestId,
+        };
+        await supabase.from("ai_request_dedup").update({ status: "completed", response: payload, status_code: 200, session_id: sessionId, updated_at: new Date().toISOString() }).eq("user_id", user.id).eq("idempotency_key", dedupKey);
+        return NextResponse.json(payload, { headers: { "Cache-Control": "no-store" } });
       } catch (openAiError) {
         openAiFailure = classifyProviderFailure(openAiError);
         console.error("[credi-ai] OpenAI provider failed", {
@@ -248,17 +296,16 @@ export async function POST(request: Request) {
           ),
         ]);
 
-        return NextResponse.json(
-          {
-            text: result,
-            provider: "gemini",
-            model: process.env.GEMINI_MODEL?.trim() || "configured",
-            session_id: sessionId,
-            request_id: requestId,
-            fallback: Boolean(openAiFailure),
-          },
-          { headers: { "Cache-Control": "no-store" } },
-        );
+        const payload = {
+          text: result,
+          provider: "gemini",
+          model: process.env.GEMINI_MODEL?.trim() || "configured",
+          session_id: sessionId,
+          request_id: requestId,
+          fallback: Boolean(openAiFailure),
+        };
+        await supabase.from("ai_request_dedup").update({ status: "completed", response: payload, status_code: 200, session_id: sessionId, updated_at: new Date().toISOString() }).eq("user_id", user.id).eq("idempotency_key", dedupKey);
+        return NextResponse.json(payload, { headers: { "Cache-Control": "no-store" } });
       } catch (geminiError) {
         geminiFailure = classifyProviderFailure(geminiError);
         console.error("[credi-ai] Gemini provider failed", {
@@ -284,6 +331,7 @@ export async function POST(request: Request) {
       diagnostics,
     });
 
+    await releaseDedup();
     return errorResponse(
       "Credi AI no pudo conectar con ningún proveedor disponible.",
       openAiFailure?.status === 401 || openAiFailure?.status === 403
@@ -300,6 +348,7 @@ export async function POST(request: Request) {
       requestId,
       error: error instanceof Error ? error.message : String(error),
     });
+    if (typeof dedupKey === "string") await supabase.from("ai_request_dedup").delete().eq("user_id", user.id).eq("idempotency_key", dedupKey).catch(() => undefined);
     return errorResponse(
       "No fue posible procesar la solicitud de IA.",
       502,
