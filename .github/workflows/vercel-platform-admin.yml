@@ -26,19 +26,19 @@ on:
       build_machine_selection:
         description: "Optional Vercel build machine setting"
         required: false
-        default: ""
+        default: none
         type: choice
         options:
-          - ""
+          - none
           - elastic
           - fixed
       build_queue_configuration:
         description: "Optional Vercel build queue setting"
         required: false
-        default: ""
+        default: none
         type: choice
         options:
-          - ""
+          - none
           - SKIP_NAMESPACE_QUEUE
           - WAIT_FOR_NAMESPACE_QUEUE
       waf_rule_json:
@@ -144,7 +144,7 @@ jobs:
             --project "${VERCEL_PROJECT}" --scope "${VERCEL_SCOPE}"
 
       - name: Configure build machine and queue
-        if: ${{ inputs.build_machine_selection != '' || inputs.build_queue_configuration != '' }}
+        if: ${{ inputs.build_machine_selection != 'none' || inputs.build_queue_configuration != 'none' }}
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           BUILD_MACHINE: ${{ inputs.build_machine_selection }}
@@ -153,10 +153,10 @@ jobs:
         run: |
           set -euo pipefail
           PAYLOAD='{}'
-          if [ -n "${BUILD_MACHINE}" ]; then
+          if [ -n "${BUILD_MACHINE}" ] && [ "${BUILD_MACHINE}" != "none" ]; then
             PAYLOAD="$(printf '%s' "${PAYLOAD}" | jq --arg v "${BUILD_MACHINE}" '. + {buildMachineSelection:$v}')"
           fi
-          if [ -n "${BUILD_QUEUE}" ]; then
+          if [ -n "${BUILD_QUEUE}" ] && [ "${BUILD_QUEUE}" != "none" ]; then
             PAYLOAD="$(printf '%s' "${PAYLOAD}" | jq --arg v "${BUILD_QUEUE}" '. + {buildQueue:{configuration:$v}}')"
           fi
 
