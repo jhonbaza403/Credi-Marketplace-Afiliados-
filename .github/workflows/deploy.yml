@@ -80,7 +80,39 @@ jobs:
           echo "CI validation: PASSED"
 
       # ==========================================================
-      # 2. Expose immutable deployment metadata
+      # 2. Deployment Checks: Vercel must be successful
+      # ==========================================================
+      - name: Verify Vercel Deployment Check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          COMMIT_SHA: ${{ github.event.workflow_run.head_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "Checking Vercel status for ${COMMIT_SHA}..."
+
+          STATUS_JSON="$(gh api \\
+            -H 'Accept: application/vnd.github+json' \\
+            -H 'X-GitHub-Api-Version: 2026-03-10' \\
+            "/repos/${REPOSITORY}/commits/${COMMIT_SHA}/status")"
+
+          VERCEL_STATE="$(printf '%s' "${STATUS_JSON}" | jq -r '.statuses[] | select(.context == "Vercel") | .state' | head -n 1)"
+          VERCEL_TARGET="$(printf '%s' "${STATUS_JSON}" | jq -r '.statuses[] | select(.context == "Vercel") | .target_url' | head -n 1)"
+
+          echo "Vercel state : ${VERCEL_STATE:-missing}"
+          echo "Vercel target: ${VERCEL_TARGET:-missing}"
+
+          if [ "${VERCEL_STATE}" != "success" ]; then
+            echo "::error::Deployment Check failed: Vercel status is '${VERCEL_STATE:-missing}', expected 'success'."
+            exit 1
+          fi
+
+          echo "Deployment Check: Vercel PASSED"
+
+      # ==========================================================
+      # 3. Expose immutable deployment metadata
       # ==========================================================
       - name: Record deployment metadata
         shell: bash
@@ -101,7 +133,7 @@ jobs:
           } >> "${GITHUB_STEP_SUMMARY}"
 
       # ==========================================================
-      # 3. Authorize deployment
+      # 4. Authorize deployment
       # ==========================================================
       - name: Approve deployment gate
         shell: bash
@@ -114,7 +146,7 @@ jobs:
           echo "Gate status: APPROVED"
 
       # ==========================================================
-      # 4. Final gate summary
+      # 5. Final gate summary
       # ==========================================================
       - name: Deployment gate passed
         if: success()
