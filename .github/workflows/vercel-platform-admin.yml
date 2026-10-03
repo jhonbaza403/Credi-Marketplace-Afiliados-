@@ -1,0 +1,207 @@
+name: Vercel Platform Admin
+
+on:
+  workflow_dispatch:
+    inputs:
+      enable_analytics:
+        description: "Enable Vercel Web Analytics"
+        required: true
+        default: true
+        type: boolean
+      enable_speed_insights:
+        description: "Enable Vercel Speed Insights"
+        required: true
+        default: true
+        type: boolean
+      install_deployment_check:
+        description: "Create the native Vercel Deployment Check"
+        required: true
+        default: true
+        type: boolean
+      custom_domain:
+        description: "Real custom domain to assign (leave empty to skip)"
+        required: false
+        default: ""
+        type: string
+      build_machine_selection:
+        description: "Optional Vercel build machine setting"
+        required: false
+        default: ""
+        type: choice
+        options:
+          - ""
+          - elastic
+          - fixed
+      build_queue_configuration:
+        description: "Optional Vercel build queue setting"
+        required: false
+        default: ""
+        type: choice
+        options:
+          - ""
+          - SKIP_NAMESPACE_QUEUE
+          - WAIT_FOR_NAMESPACE_QUEUE
+      waf_rule_json:
+        description: "Optional complete JSON payload for one Vercel Firewall rule"
+        required: false
+        default: ""
+        type: string
+      apply_waf:
+        description: "Create and publish the WAF rule supplied above"
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+env:
+  VERCEL_SCOPE: "bazwjhon-2554s-projects"
+  VERCEL_PROJECT: "credi-marketplace-afiliados"
+
+jobs:
+  platform-admin:
+    name: Audit and Configure Vercel Platform
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Require Vercel token
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${VERCEL_TOKEN:-}" ]; then
+            echo "::error::Missing repository secret VERCEL_TOKEN."
+            echo "The token must have access to team scope ${VERCEL_SCOPE}."
+            exit 1
+          fi
+
+      - name: Inspect Vercel project
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes vercel@latest project inspect "${VERCEL_PROJECT}" \
+            --scope "${VERCEL_SCOPE}" --format json
+
+      - name: Enable Web Analytics
+        if: ${{ inputs.enable_analytics }}
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes vercel@latest project web-analytics "${VERCEL_PROJECT}" \
+            --scope "${VERCEL_SCOPE}" --yes
+
+      - name: Enable Speed Insights
+        if: ${{ inputs.enable_speed_insights }}
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes vercel@latest project speed-insights "${VERCEL_PROJECT}" \
+            --scope "${VERCEL_SCOPE}" --yes
+
+      - name: List native Deployment Checks before mutation
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes vercel@latest project checks "${VERCEL_PROJECT}" \
+            --scope "${VERCEL_SCOPE}" --format json || true
+
+      - name: Create native Deployment Check
+        if: ${{ inputs.install_deployment_check }}
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes vercel@latest project checks add "${VERCEL_PROJECT}" \
+            --check-name "Credi Marketplace Preview E2E" \
+            --requires deployment-url \
+            --blocks deployment-alias \
+            --scope "${VERCEL_SCOPE}" \
+            --yes
+
+      - name: Configure custom domain
+        if: ${{ inputs.custom_domain != '' }}
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          CUSTOM_DOMAIN: ${{ inputs.custom_domain }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes vercel@latest domains add "${CUSTOM_DOMAIN}" "${VERCEL_PROJECT}" \
+            --scope "${VERCEL_SCOPE}" --yes
+          npx --yes vercel@latest domains verify "${CUSTOM_DOMAIN}" \
+            --project "${VERCEL_PROJECT}" --scope "${VERCEL_SCOPE}"
+
+      - name: Configure build machine and queue
+        if: ${{ inputs.build_machine_selection != '' || inputs.build_queue_configuration != '' }}
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          BUILD_MACHINE: ${{ inputs.build_machine_selection }}
+          BUILD_QUEUE: ${{ inputs.build_queue_configuration }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          PAYLOAD='{}'
+          if [ -n "${BUILD_MACHINE}" ]; then
+            PAYLOAD="$(printf '%s' "${PAYLOAD}" | jq --arg v "${BUILD_MACHINE}" '. + {buildMachineSelection:$v}')"
+          fi
+          if [ -n "${BUILD_QUEUE}" ]; then
+            PAYLOAD="$(printf '%s' "${PAYLOAD}" | jq --arg v "${BUILD_QUEUE}" '. + {buildQueue:{configuration:$v}}')"
+          fi
+
+          curl --fail-with-body --silent --show-error \
+            -X PATCH \
+            -H "Authorization: Bearer ${VERCEL_TOKEN}" \
+            -H "Content-Type: application/json" \
+            --data "${PAYLOAD}" \
+            "https://api.vercel.com/v9/projects/${VERCEL_PROJECT}?teamId=${VERCEL_SCOPE}"
+
+      - name: Configure and publish optional WAF rule
+        if: ${{ inputs.apply_waf }}
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          WAF_RULE_JSON: ${{ inputs.waf_rule_json }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${WAF_RULE_JSON:-}" ]; then
+            echo "::error::apply_waf=true requires waf_rule_json."
+            exit 1
+          fi
+          npx --yes vercel@latest firewall rules add \
+            "Credi Marketplace managed rule" \
+            --json "${WAF_RULE_JSON}" \
+            --scope "${VERCEL_SCOPE}" --yes
+          npx --yes vercel@latest firewall publish \
+            --scope "${VERCEL_SCOPE}" --yes
+
+      - name: Final project audit
+        if: always()
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "=== Vercel project configuration ==="
+          npx --yes vercel@latest project inspect "${VERCEL_PROJECT}" \
+            --scope "${VERCEL_SCOPE}" --format json || true
+          echo "=== Deployment checks ==="
+          npx --yes vercel@latest project checks "${VERCEL_PROJECT}" \
+            --scope "${VERCEL_SCOPE}" --format json || true
+          echo "=== Firewall overview ==="
+          npx --yes vercel@latest firewall overview \
+            --scope "${VERCEL_SCOPE}" || true
+          echo "=== Recent deployments ==="
+          npx --yes vercel@latest list "${VERCEL_PROJECT}" \
+            --scope "${VERCEL_SCOPE}" --limit 10 || true
