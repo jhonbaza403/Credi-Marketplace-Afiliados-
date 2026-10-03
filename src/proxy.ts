@@ -79,9 +79,9 @@ function redirectToCanonicalHost(request: NextRequest): NextResponse | null {
   return NextResponse.redirect(canonicalUrl, 308);
 }
 
-function buildLoginRedirect(request: NextRequest): NextResponse {
+function buildLoginRedirect(request: NextRequest, overrideNextPath?: string): NextResponse {
   const url = new URL("/login", request.url);
-  const nextPath = `${request.nextUrl.pathname}${request.nextUrl.search}`;
+  const nextPath = overrideNextPath ?? `${request.nextUrl.pathname}${request.nextUrl.search}`;
   if (nextPath && nextPath !== "/login") url.searchParams.set("next", nextPath);
   return NextResponse.redirect(url);
 }
@@ -120,7 +120,6 @@ export async function proxy(request: NextRequest) {
     "/servicios": "/services",
     "/jobs": "/services",
     "/seller/b2b": "/b2b",
-    "/vender": "/publish",
   };
   const aliasTarget = canonicalAliases[pathname];
   if (aliasTarget) {
@@ -151,7 +150,7 @@ export async function proxy(request: NextRequest) {
 
   if (!supabaseUrl || !supabaseKey) {
     response.headers.set("X-Request-ID", requestId);
-    return buildLoginRedirect(request);
+    return buildLoginRedirect(request, pathname === "/vender" ? "/publish" : undefined);
   }
 
   try {
@@ -173,7 +172,7 @@ export async function proxy(request: NextRequest) {
 
     if (!user) {
       response.headers.set("X-Request-ID", requestId);
-      return buildLoginRedirect(request);
+      return buildLoginRedirect(request, pathname === "/vender" ? "/publish" : undefined);
     }
 
     if (guestOnly) {
