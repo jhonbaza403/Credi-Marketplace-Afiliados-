@@ -102,6 +102,7 @@ function providerDiagnostics(
 
 export async function POST(request: Request) {
   const requestId = crypto.randomUUID();
+  let releaseDedup: (() => Promise<void>) | null = null;
 
   try {
     if (!isSameOrigin(request)) {
@@ -139,21 +140,6 @@ export async function POST(request: Request) {
     }
 
 
-    const limit = await distributedRateLimit(
-      supabase,
-      `ai:${user.id}:${getRequestIp(request)}`,
-      { limit: AI_LIMITS.requestsPerMinute, windowMs: 60_000 },
-    );
-    if (!limit.success) {
-      await releaseDedup();
-      return errorResponse(
-        "Límite de solicitudes de IA alcanzado. Inténtalo más tarde.",
-        429,
-        "AI_RATE_LIMITED",
-        requestId,
-      );
-    }
-
     const parsed = schema.safeParse(await request.json().catch(() => null));
     if (!parsed.success) {
       return errorResponse("La solicitud de IA no es válida.", 400, "INVALID_AI_REQUEST", requestId);
@@ -184,9 +170,24 @@ export async function POST(request: Request) {
       return errorResponse("No fue posible registrar la solicitud de IA.", 503, "AI_IDEMPOTENCY_UNAVAILABLE", requestId);
     }
 
-    const releaseDedup = async () => {
+    releaseDedup = async () => {
       await supabase.from("ai_request_dedup").delete().eq("user_id", user.id).eq("idempotency_key", dedupKey);
     };
+
+    const limit = await distributedRateLimit(
+      supabase,
+      `ai:${user.id}:${getRequestIp(request)}`,
+      { limit: AI_LIMITS.requestsPerMinute, windowMs: 60_000 },
+    );
+    if (!limit.success) {
+      await releaseDedup?.();
+      return errorResponse(
+        "Límite de solicitudes de IA alcanzado. Inténtalo más tarde.",
+        429,
+        "AI_RATE_LIMITED",
+        requestId,
+      );
+    }
 
     let sessionId = parsed.data.sessionId ?? null;
     let previousResponseId: string | null = null;
@@ -348,7 +349,7 @@ export async function POST(request: Request) {
       requestId,
       error: error instanceof Error ? error.message : String(error),
     });
-    if (typeof dedupKey === "string") await supabase.from("ai_request_dedup").delete().eq("user_id", user.id).eq("idempotency_key", dedupKey).catch(() => undefined);
+    await releaseDedup?.();
     return errorResponse(
       "No fue posible procesar la solicitud de IA.",
       502,
