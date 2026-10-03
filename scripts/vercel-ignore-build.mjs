@@ -12,7 +12,7 @@ try {
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
   });
-} catch (error) {
+} catch {
   console.warn("[vercel-ignore-build] Unable to inspect Git diff; continuing with build.");
   process.exit(1);
 }
