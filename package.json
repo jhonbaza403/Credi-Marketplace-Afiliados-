@@ -23,7 +23,7 @@
     "audit:routes": "node scripts/audit-routes.mjs",
     "check": "npm run verify:structure && npm run audit:routes && npm run audit:env && npm run audit:api && npm run lint && npm run typecheck && npm run test",
     "check:all": "npm run check && npm run test:e2e && npm run build",
-    "security:audit": "npm audit --audit-level=high",
+    "security:audit": "node scripts/security-audit.mjs",
     "audit:env": "node scripts/audit-env.mjs",
     "audit:api": "node scripts/audit-api-security.mjs"
   },
