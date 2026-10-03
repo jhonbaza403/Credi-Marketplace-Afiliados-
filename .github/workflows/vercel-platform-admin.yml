@@ -154,10 +154,10 @@ jobs:
           set -euo pipefail
           PAYLOAD='{}'
           if [ -n "${BUILD_MACHINE}" ] && [ "${BUILD_MACHINE}" != "none" ]; then
-            PAYLOAD="$(printf '%s' "${PAYLOAD}" | jq --arg v "${BUILD_MACHINE}" '. + {buildMachineSelection:$v}')"
+            PAYLOAD="$(printf '%s' "${PAYLOAD}" | jq --arg v "${BUILD_MACHINE}" '.resourceConfig = (.resourceConfig // {}) | .resourceConfig.buildMachineSelection = $v')"
           fi
           if [ -n "${BUILD_QUEUE}" ] && [ "${BUILD_QUEUE}" != "none" ]; then
-            PAYLOAD="$(printf '%s' "${PAYLOAD}" | jq --arg v "${BUILD_QUEUE}" '. + {buildQueue:{configuration:$v}}')"
+            PAYLOAD="$(printf '%s' "${PAYLOAD}" | jq --arg v "${BUILD_QUEUE}" '.resourceConfig = (.resourceConfig // {}) | .resourceConfig.buildQueue = {configuration:$v}')"
           fi
 
           curl --fail-with-body --silent --show-error \
