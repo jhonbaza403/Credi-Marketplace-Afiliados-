@@ -1,3 +1,1 @@
--- Historical migration marker.
--- Already applied in the remote Supabase project.
--- Kept in Git so local migration history remains synchronized.
+alter table public.business_rfq_quotes add column if not exists product_id uuid references public.products(id) on delete set null; create index if not exists business_rfq_quotes_product_idx on public.business_rfq_quotes(product_id);

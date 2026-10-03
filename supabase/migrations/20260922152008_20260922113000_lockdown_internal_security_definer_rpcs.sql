@@ -1,3 +1,4 @@
--- Historical migration marker.
--- Already applied in the remote Supabase project.
--- Kept in Git so local migration history remains synchronized.
+revoke execute on function public.settle_order_inventory(uuid, text) from public, authenticated;
+revoke execute on function public.record_affiliate_product_click(uuid) from public, authenticated;
+grant execute on function public.settle_order_inventory(uuid, text) to service_role;
+grant execute on function public.record_affiliate_product_click(uuid) to service_role;

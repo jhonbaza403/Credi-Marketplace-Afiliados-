@@ -1,3 +1,1 @@
--- Historical migration marker.
--- Already applied in the remote Supabase project.
--- Kept in Git so local migration history remains synchronized.
+ALTER TABLE public.affiliate_products ENABLE ROW LEVEL SECURITY;

@@ -1,3 +1,1 @@
--- Historical migration marker.
--- Already applied in the remote Supabase project.
--- Kept in Git so local migration history remains synchronized.
+alter table public.message_attachments alter column storage_bucket set default 'credichat-private';

@@ -1,3 +1,17 @@
--- Historical migration marker.
--- Already applied in the remote Supabase project.
--- Kept in Git so local migration history remains synchronized.
+create table public.tax_collections (id uuid primary key default gen_random_uuid(), tax_transaction_id uuid references public.tax_transactions(id), order_id uuid references public.orders(id), collected_by uuid, beneficiary_role text not null check(beneficiary_role in('platform','seller','government','third_party','other')), jurisdiction_id uuid references public.tax_jurisdictions(id), tax_type text not null, amount numeric(20,8) not null check(amount>=0), currency char(3) not null, status text not null default 'collected' check(status in('collected','settled','reversed','void')), collected_at timestamptz not null default now(), metadata jsonb not null default '{}'::jsonb);
+create table public.tax_reports (id uuid primary key default gen_random_uuid(), jurisdiction_id uuid not null references public.tax_jurisdictions(id), reporting_entity_id uuid, tax_type text not null, period_start date not null, period_end date not null, currency char(3) not null, gross_base numeric(20,8) not null default 0, taxable_base numeric(20,8) not null default 0, tax_collected numeric(20,8) not null default 0, tax_withheld numeric(20,8) not null default 0, status text not null default 'draft' check(status in('draft','ready','filed','accepted','rejected','amended')), snapshot jsonb not null default '{}'::jsonb, created_at timestamptz not null default now(), updated_at timestamptz not null default now(), check(period_end>=period_start));
+create table public.tax_filings (id uuid primary key default gen_random_uuid(), tax_report_id uuid not null references public.tax_reports(id) on delete cascade, jurisdiction_id uuid not null references public.tax_jurisdictions(id), filing_reference text, filed_by uuid, filed_at timestamptz, status text not null default 'prepared' check(status in('prepared','submitted','accepted','rejected','amended')), response_payload jsonb not null default '{}'::jsonb, created_at timestamptz not null default now(), updated_at timestamptz not null default now());
+create table public.tax_certificates (id uuid primary key default gen_random_uuid(), taxpayer_id uuid not null, jurisdiction_id uuid references public.tax_jurisdictions(id), certificate_type text not null, certificate_number text, issuer text, issued_at date, expires_at date, document_url text, status text not null default 'active' check(status in('active','expired','revoked','pending')), metadata jsonb not null default '{}'::jsonb, created_at timestamptz not null default now(), updated_at timestamptz not null default now());
+create index idx_tax_rates_lookup on public.tax_rates(jurisdiction_id,tax_category_id,effective_from,effective_to);
+create index idx_tax_rules_lookup on public.tax_rules(jurisdiction_id,tax_category_id,effective_from,effective_to,priority);
+create index idx_tax_transactions_order on public.tax_transactions(order_id,created_at);
+create index idx_tax_transactions_seller on public.tax_transactions(seller_id,created_at);
+create index idx_tax_transaction_lines_transaction on public.tax_transaction_lines(tax_transaction_id);
+create index idx_tax_withholdings_payee on public.tax_withholdings(payee_id,created_at);
+create index idx_tax_collections_order on public.tax_collections(order_id,collected_at);
+create index idx_tax_reports_period on public.tax_reports(jurisdiction_id,period_start,period_end);
+create index idx_tax_filings_report on public.tax_filings(tax_report_id);
+create index idx_tax_certificates_taxpayer on public.tax_certificates(taxpayer_id,jurisdiction_id);
+comment on table public.tax_transactions is 'Fiscal transaction with immutable tax-rule/rate/jurisdiction snapshot at calculation time.';
+comment on table public.tax_transaction_lines is 'Line-level fiscal allocation: responsible party, collector, tax type, rate and taxable base.';
+comment on table public.tax_reports is 'Reporting aggregate generated from tax transactions; not a source of transaction truth.';

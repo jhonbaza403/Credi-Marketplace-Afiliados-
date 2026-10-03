@@ -1,3 +1,1 @@
--- Historical migration marker.
--- Already applied in the remote Supabase project.
--- Kept in Git so local migration history remains synchronized.
+alter table public.affiliate_products add constraint affiliate_products_affiliate_product_key unique (affiliate_id, product_id);

@@ -1,3 +1,5 @@
--- Historical migration marker.
--- Already applied in the remote Supabase project.
--- Kept in Git so local migration history remains synchronized.
+begin;
+
+grant execute on function private.credichat_member_profile_ids(uuid[]) to authenticated;
+
+commit;

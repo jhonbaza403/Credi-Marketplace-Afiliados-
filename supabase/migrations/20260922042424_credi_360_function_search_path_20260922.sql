@@ -1,3 +1,1 @@
--- Historical migration marker.
--- Already applied in the remote Supabase project.
--- Kept in Git so local migration history remains synchronized.
+alter function public.create_b2b_award(uuid,uuid,uuid,uuid) set search_path=public;

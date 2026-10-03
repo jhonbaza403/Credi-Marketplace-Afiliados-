@@ -1,3 +1,1 @@
--- Historical migration marker.
--- Already applied in the remote Supabase project.
--- Kept in Git so local migration history remains synchronized.
+alter table public.products add column if not exists cost_price numeric null check(cost_price is null or cost_price>=0); create index if not exists products_store_cost_idx on public.products(store_id,cost_price) where cost_price is not null;

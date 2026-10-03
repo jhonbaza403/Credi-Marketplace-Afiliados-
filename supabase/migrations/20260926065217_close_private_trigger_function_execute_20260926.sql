@@ -1,3 +1,2 @@
--- Historical migration marker.
--- Already applied in the remote Supabase project.
--- Kept in Git so local migration history remains synchronized.
+
+revoke all on function private.validate_settlement_binding_currency() from public, anon, authenticated;

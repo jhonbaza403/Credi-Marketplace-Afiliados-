@@ -1,3 +1,4 @@
--- Historical migration marker.
--- Already applied in the remote Supabase project.
--- Kept in Git so local migration history remains synchronized.
+DROP POLICY IF EXISTS notifications_select_own ON public.notifications;
+CREATE POLICY notifications_select_own ON public.notifications
+FOR SELECT TO authenticated
+USING (user_id=(select auth.uid()));

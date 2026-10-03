@@ -1,3 +1,1 @@
--- Historical migration marker.
--- Already applied in the remote Supabase project.
--- Kept in Git so local migration history remains synchronized.
+update storage.buckets set allowed_mime_types = array['image/jpeg','image/png','image/webp','image/gif','video/mp4','video/webm','video/quicktime','audio/aac','audio/flac','audio/m4a','audio/mp4','audio/mpeg','audio/ogg','audio/opus','audio/webm','audio/wav','audio/x-m4a','audio/x-wav'] where id = 'marketplace-media';

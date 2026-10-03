@@ -1,3 +1,6 @@
--- Historical migration marker.
--- Already applied in the remote Supabase project.
--- Kept in Git so local migration history remains synchronized.
+begin;
+alter function public.set_compliance_updated_at() set search_path = '';
+create index if not exists compliance_events_actor_idx on public.compliance_events(actor_id);
+create index if not exists compliance_reviews_reviewer_idx on public.compliance_reviews(reviewer_id);
+revoke all on table public.affiliate_commission_ledger, public.affiliate_products, public.idempotency_keys, public.inventory, public.webhook_events from anon, authenticated;
+commit;

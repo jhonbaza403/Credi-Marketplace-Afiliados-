@@ -1,3 +1,3 @@
--- Historical migration marker.
--- Already applied in the remote Supabase project.
--- Kept in Git so local migration history remains synchronized.
+revoke execute on function public.accept_negotiation(uuid,uuid) from anon;
+revoke execute on function public.ensure_my_wallet() from anon;
+revoke execute on function public.wallet_transfer(uuid,numeric,text,text) from anon;

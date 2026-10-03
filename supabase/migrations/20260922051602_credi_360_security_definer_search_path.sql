@@ -1,3 +1,1 @@
--- Historical migration marker.
--- Already applied in the remote Supabase project.
--- Kept in Git so local migration history remains synchronized.
+alter function public.create_pending_b2b_order(uuid, uuid, text) set search_path = public;

@@ -1,3 +1,1 @@
--- Historical migration marker.
--- Already applied in the remote Supabase project.
--- Kept in Git so local migration history remains synchronized.
+alter table public.stores add column if not exists stripe_connect_account_id text; alter table public.stores add column if not exists stripe_connect_status text not null default 'not_started' check(stripe_connect_status in ('not_started','pending','enabled','restricted','disabled')); create index if not exists stores_stripe_connect_idx on public.stores(stripe_connect_account_id) where stripe_connect_account_id is not null;
