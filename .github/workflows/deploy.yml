@@ -93,10 +93,7 @@ jobs:
 
           echo "Checking Vercel status for ${COMMIT_SHA}..."
 
-          STATUS_JSON="$(gh api \\
-            -H 'Accept: application/vnd.github+json' \\
-            -H 'X-GitHub-Api-Version: 2026-03-10' \\
-            "/repos/${REPOSITORY}/commits/${COMMIT_SHA}/status")"
+          STATUS_JSON="$(gh api -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2026-03-10' "/repos/${REPOSITORY}/commits/${COMMIT_SHA}/status")"
 
           VERCEL_STATE="$(printf '%s' "${STATUS_JSON}" | jq -r '.statuses[] | select(.context == "Vercel") | .state' | head -n 1)"
           VERCEL_TARGET="$(printf '%s' "${STATUS_JSON}" | jq -r '.statuses[] | select(.context == "Vercel") | .target_url' | head -n 1)"
