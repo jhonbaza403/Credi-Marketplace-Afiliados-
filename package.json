@@ -40,7 +40,7 @@
     "react-hook-form": "^7.53.0",
     "server-only": "^0.0.1",
     "sharp": "^0.35.4",
-    "zod": "^4.6.5",
+    "zod": "3.25.76",
     "openai": "7.23.0",
     "@vercel/analytics": "2.0.1",
     "@vercel/speed-insights": "2.0.0"
