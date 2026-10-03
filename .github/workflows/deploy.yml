@@ -93,16 +93,37 @@ jobs:
 
           echo "Checking Vercel status for ${COMMIT_SHA}..."
 
-          STATUS_JSON="$(gh api -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2026-03-10' "/repos/${REPOSITORY}/commits/${COMMIT_SHA}/status")"
+          VERCEL_STATE=""
+          VERCEL_TARGET=""
 
-          VERCEL_STATE="$(printf '%s' "${STATUS_JSON}" | jq -r '.statuses[] | select(.context == "Vercel") | .state' | head -n 1)"
-          VERCEL_TARGET="$(printf '%s' "${STATUS_JSON}" | jq -r '.statuses[] | select(.context == "Vercel") | .target_url' | head -n 1)"
+          for attempt in $(seq 1 12); do
+            STATUS_JSON="$(gh api -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2026-03-10' "/repos/${REPOSITORY}/commits/${COMMIT_SHA}/status")"
 
-          echo "Vercel state : ${VERCEL_STATE:-missing}"
-          echo "Vercel target: ${VERCEL_TARGET:-missing}"
+            VERCEL_STATE="$(printf '%s' "${STATUS_JSON}" | jq -r '[.statuses[] | select(.context == "Vercel")][0].state // ""')"
+            VERCEL_TARGET="$(printf '%s' "${STATUS_JSON}" | jq -r '[.statuses[] | select(.context == "Vercel")][0].target_url // ""')"
+
+            echo "Vercel state (attempt ${attempt}/12): ${VERCEL_STATE:-missing}"
+            echo "Vercel target: ${VERCEL_TARGET:-missing}"
+
+            case "${VERCEL_STATE}" in
+              success)
+                break
+                ;;
+              failure|error)
+                echo "::error::Deployment Check failed: Vercel status is '${VERCEL_STATE}'."
+                exit 1
+                ;;
+              pending|"")
+                if [ "${attempt}" -lt 12 ]; then
+                  sleep 10
+                  continue
+                fi
+                ;;
+            esac
+          done
 
           if [ "${VERCEL_STATE}" != "success" ]; then
-            echo "::error::Deployment Check failed: Vercel status is '${VERCEL_STATE:-missing}', expected 'success'."
+            echo "::error::Deployment Check failed: Vercel status did not reach success within the validation window."
             exit 1
           fi
 
