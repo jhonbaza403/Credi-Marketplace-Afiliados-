@@ -29,6 +29,13 @@ const schema = z.object({
     interests: z.array(z.string().trim().min(1).max(80)).max(50).default([]),
     excludeExistingCustomers: z.boolean().default(false),
   }).default({
+    type: "broad",
+    countries: [],
+    ageMin: 18,
+    ageMax: 65,
+    interests: [],
+    excludeExistingCustomers: false,
+  }),
   placements: z.array(z.enum(["credi_wall","credi_story","credi_reel","credi_marketplace","credi_live"])).min(1).max(5),
 });
 
