@@ -43,6 +43,7 @@ export default function AIAssistant() {
 
     const controller = new AbortController()
     const timeout = window.setTimeout(() => controller.abort(), AI_TIMEOUT_MS)
+    const idempotencyKey = crypto.randomUUID()
 
     try {
       const response = await fetch('/api/ai', {
@@ -54,6 +55,7 @@ export default function AIAssistant() {
           prompt,
           mode,
           sessionId,
+          idempotencyKey,
         }),
       })
 
