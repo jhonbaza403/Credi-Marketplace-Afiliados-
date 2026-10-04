@@ -33,14 +33,14 @@ export function CrediLiveChat({roomId,active=true}:{roomId:string;active?:boolea
     void load()
     if(!active)return()=>{mounted=false}
     const channel=supabase.channel('credi-live-chat:'+roomId)
-      .on('postgres_changes',{event:'INSERT',schema:'public',table:'chat_live_messages',filter:'room_id=eq.'+roomId},payload=>{
+      .on('postgres_changes',{event:'INSERT',schema:'public',table:'chat_live_messages',filter:'room_id=eq.'+roomId},(payload: { new: Message; old: Partial<Message> })=>{
         const next=payload.new as Message
         setMessages(current=>current.some(item=>item.id===next.id)?current:[...current,next].slice(-120))
       })
-      .on('postgres_changes',{event:'DELETE',schema:'public',table:'chat_live_messages',filter:'room_id=eq.'+roomId},payload=>{
+      .on('postgres_changes',{event:'DELETE',schema:'public',table:'chat_live_messages',filter:'room_id=eq.'+roomId},(payload: { new: Message; old: Partial<Message> })=>{
         setMessages(current=>current.filter(item=>item.id!==(payload.old as Message).id))
       })
-      .subscribe(status=>{if(mounted)setConnected(status==='SUBSCRIBED')})
+      .subscribe((status: string)=>{if(mounted)setConnected(status==='SUBSCRIBED')})
     return()=>{mounted=false;void supabase.removeChannel(channel)}
   },[roomId,active,supabase])
 
