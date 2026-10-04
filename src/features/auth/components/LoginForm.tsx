@@ -58,7 +58,17 @@ export function LoginForm() {
       if (!session) throw new Error('No fue posible establecer la sesión.');
 
       const { data: factorData, error: factorError } = await supabase.auth.mfa.listFactors();
-      if (factorError) throw factorError;
+
+      // Password authentication has already succeeded at this point. A transient
+      // MFA metadata failure must not discard the valid session or leave the user
+      // trapped on the login form. The server-side proxy remains authoritative and
+      // will route the authenticated account to the required security step.
+      if (factorError) {
+        console.error('[LoginForm] MFA factor lookup failed after successful sign-in', factorError);
+        finishLogin();
+        return;
+      }
+
       const verifiedTotp = (factorData?.totp ?? []).find((factor) => factor.status === 'verified');
 
       if (verifiedTotp) {
