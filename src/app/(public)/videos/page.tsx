@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 
 type Reel = { id:string; title:string; body:string; media:unknown; owner_id:string }
 type Media = { url?:unknown; public_url?:unknown; kind?:unknown; contentType?:unknown }
+type ProfileName = { id:string; full_name:string | null }
 
 function videoUrl(media: unknown) {
   if (!Array.isArray(media)) return null
@@ -39,8 +40,9 @@ export default function VideosFeedPage() {
       const {data:people,error:pe} = ids.length ? await supabase.from('profiles').select('id,full_name').in('id',ids) : {data:[],error:null}
       if (!alive) return
       if (pe) { setError(pe.message); setLoading(false); return }
-      const names = new Map((people ?? []).map(p => [p.id,p.full_name || 'Usuario Credi']))
-      setVideos(rows.flatMap(row => { const url=videoUrl(row.media); return url ? [{...row,videoUrl:url,creatorName:names.get(row.owner_id) || 'Usuario Credi'}] : [] }))
+      const profiles = (people ?? []) as ProfileName[]
+      const names = new Map<string,string>(profiles.map((p: ProfileName) => [p.id,p.full_name || 'Usuario Credi']))
+      setVideos(rows.flatMap(row => { const url=videoUrl(row.media); return url ? [{...row,videoUrl:url,creatorName:names.get(row.owner_id) ?? 'Usuario Credi'}] : [] }))
       setLoading(false)
     })()
     return () => { alive=false }
