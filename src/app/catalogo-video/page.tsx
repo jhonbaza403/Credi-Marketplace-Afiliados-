@@ -8,6 +8,9 @@ import MarketplaceMediaUploader from '@/components/media/MarketplaceMediaUploade
 import type { UploadedMarketplaceMedia } from '@/lib/storage/marketplace-media'
 
 type Catalog = { id: string; name: string; description: string | null; status: string; visibility: string; video_media: unknown }
+type AuthUser = { id: string }
+type AuthResult = { data: { user: AuthUser | null }; error: Error | null }
+type CatalogResult = { data: unknown[] | null; error: Error | null }
 
 export default function CatalogVideoPublisher() {
   const supabase = useMemo(() => createClient(), [])
@@ -23,16 +26,17 @@ export default function CatalogVideoPublisher() {
 
   useEffect(() => {
     let active = true
-    void supabase.auth.getUser().then(async ({ data, error: authError }) => {
+    void supabase.auth.getUser().then(async (result: AuthResult) => {
+      const { data, error: authError } = result
       if (authError) throw authError
       if (!active || !data.user) return
       setUserId(data.user.id)
-      const { data: rows, error: catalogError } = await supabase.from('business_catalogs').select('id,name,description,status,visibility,video_media').eq('owner_id', data.user.id).order('created_at', { ascending: false })
+      const { data: rows, error: catalogError } = await supabase.from('business_catalogs').select('id,name,description,status,visibility,video_media').eq('owner_id', data.user.id).order('created_at', { ascending: false }) as CatalogResult
       if (catalogError) throw catalogError
       if (!active) return
       setCatalogs((rows ?? []) as Catalog[])
-      if (rows?.[0]) setCatalogId(rows[0].id)
-    }).catch((e) => { if (active) setError(e instanceof Error ? e.message : 'No fue posible cargar los catálogos.') })
+      if (rows?.[0]) setCatalogId((rows[0] as Catalog).id)
+    }).catch((e: unknown) => { if (active) setError(e instanceof Error ? e.message : 'No fue posible cargar los catálogos.') })
     return () => { active = false }
   }, [supabase])
 
@@ -49,11 +53,11 @@ export default function CatalogVideoPublisher() {
         if (name.length < 2) throw new Error('Indica el nombre del nuevo catálogo.')
         const { data, error: insertError } = await supabase.from('business_catalogs').insert({ owner_id: userId, name, description: description.trim() || null, audience: 'b2c', visibility: 'private', status: 'draft', video_media: [{ kind: video.kind, name: video.name, path: video.path, url: video.url, size: video.size, contentType: video.contentType }] }).select('id,name,description,status,visibility,video_media').single()
         if (insertError || !data) throw insertError ?? new Error('No fue posible crear el catálogo.')
-        setCatalogs((current) => [data as Catalog, ...current]); setCatalogId(data.id as string); setCatalogName(''); setDescription('')
+        setCatalogs((current) => [data as Catalog, ...current]); setCatalogId((data as Catalog).id); setCatalogName(''); setDescription('')
       }
       setMedia([])
       setMessage('Vídeo de catálogo guardado. El catálogo permanece privado hasta que lo publiques desde Gestión empresarial.')
-    } catch (e) { setError(e instanceof Error ? e.message : 'No fue posible guardar el vídeo del catálogo.') }
+    } catch (e: unknown) { setError(e instanceof Error ? e.message : 'No fue posible guardar el vídeo del catálogo.') }
     finally { setSaving(false) }
   }
 
