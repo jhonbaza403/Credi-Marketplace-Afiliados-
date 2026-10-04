@@ -461,7 +461,13 @@ h3,
 h4,
 h5,
 h6 {
-  margin-top: 0;
+  /*
+   * Component surfaces own their heading color. Do not override explicit
+   * utilities such as text-white on dark hero sections.
+   */
+  color: inherit;
+  font-weight: 700;
+  letter-spacing: -0.025em;
 }
 
 h1,
