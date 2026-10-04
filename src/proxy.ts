@@ -21,8 +21,6 @@ const PUBLIC_PREFIXES = [
   "/sellers",
   "/seller",
   "/search",
-  "/account",
-  "/orders",
   "/social",
   "/free",
   "/magazines",
@@ -92,6 +90,19 @@ function buildSecurityRedirect(request: NextRequest, step: "mfa" | "security-key
   const nextPath = `${request.nextUrl.pathname}${request.nextUrl.search}`;
   if (nextPath && nextPath !== "/security") url.searchParams.set("next", nextPath);
   return NextResponse.redirect(url);
+}
+
+/**
+ * Supabase may refresh the auth cookies while getClaims() runs. Any redirect
+ * must carry those Set-Cookie headers forward; otherwise the browser can lose
+ * the refreshed session immediately and appear to be locked out.
+ */
+function copySessionCookies(source: NextResponse, target: NextResponse): NextResponse {
+  for (const cookie of source.cookies.getAll()) {
+    target.cookies.set(cookie);
+  }
+  target.headers.set("X-Request-ID", source.headers.get("X-Request-ID") ?? "");
+  return target;
 }
 
 function buildRequiredRedirect(request: NextRequest, path: "/pricing" | "/dashboard/compliance", required: string): NextResponse {
@@ -168,17 +179,21 @@ export async function proxy(request: NextRequest) {
       },
     });
 
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
+    // Verify the session on the server. Supabase recommends getClaims()
+    // for route protection; getSession() is not sufficient for authorization.
+    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims();
+    if (claimsError || !claimsData?.claims?.sub) {
       response.headers.set("X-Request-ID", requestId);
-      return buildLoginRedirect(request, pathname === "/vender" ? "/publish" : undefined);
+      return copySessionCookies(
+        response,
+        buildLoginRedirect(request, pathname === "/vender" ? "/publish" : undefined),
+      );
     }
 
+    const userId = String(claimsData.claims.sub);
+
     if (guestOnly) {
-      const redirect = NextResponse.redirect(new URL("/dashboard", request.url));
-      redirect.headers.set("X-Request-ID", requestId);
-      return redirect;
+      return copySessionCookies(response, NextResponse.redirect(new URL("/dashboard", request.url)));
     }
 
     if (!requiresPlatformAccess) {
@@ -186,33 +201,32 @@ export async function proxy(request: NextRequest) {
       return response;
     }
 
-    const access = await getAccountAccessState(supabase, user.id);
+    const access = await getAccountAccessState(supabase, userId);
     const required = nextRequiredSecurityStep(access);
 
     if (required === "mfa" || required === "security-key") {
-      const redirect = buildSecurityRedirect(request, required);
-      redirect.headers.set("X-Request-ID", requestId);
-      return redirect;
+      return copySessionCookies(response, buildSecurityRedirect(request, required));
     }
 
     if (required === "subscription") {
-      const redirect = buildRequiredRedirect(request, "/pricing", "subscription");
-      redirect.headers.set("X-Request-ID", requestId);
-      return redirect;
+      return copySessionCookies(
+        response,
+        buildRequiredRedirect(request, "/pricing", "subscription"),
+      );
     }
 
     if (required === "identity") {
-      const redirect = buildRequiredRedirect(request, "/dashboard/compliance", "identity");
-      redirect.headers.set("X-Request-ID", requestId);
-      return redirect;
+      return copySessionCookies(
+        response,
+        buildRequiredRedirect(request, "/dashboard/compliance", "identity"),
+      );
     }
 
     response.headers.set("X-Request-ID", requestId);
     return response;
   } catch (error) {
     console.error("[proxy] Access check failed", error);
-    response.headers.set("X-Request-ID", requestId);
-    return buildSecurityRedirect(request, "mfa");
+    return copySessionCookies(response, buildSecurityRedirect(request, "mfa"));
   }
 }
 
