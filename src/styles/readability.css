@@ -33,47 +33,28 @@
   color: var(--foreground) !important;
 }
 
-.app-readable-surface h1,
-.app-readable-surface h2,
-.app-readable-surface h3,
-.app-readable-surface h4,
-.app-readable-surface h5,
-.app-readable-surface h6,
-.app-readable-surface .font-black:not(button):not(a),
-.app-readable-surface .font-extrabold:not(button):not(a) {
+/* Heading readability is surface-aware. Explicit component utilities such as
+ * text-white/text-cyan-100 on dark hero surfaces must remain authoritative.
+ * The previous global !important rule forced dark text over dark hero imagery.
+ */
+.app-readable-surface :where(h1,h2,h3,h4,h5,h6) {
   position: relative;
   z-index: 30;
   isolation: isolate;
-  color: var(--foreground) !important;
-  -webkit-text-stroke: 0.45px var(--surface);
-  text-shadow:
-    0 0 1px var(--surface),
-    0 0 3px var(--surface),
-    0 1px 0 rgba(255, 255, 255, 0.68),
-    0 3px 0 rgba(15, 23, 42, 0.22),
-    0 7px 16px rgba(15, 23, 42, 0.18),
-    0 15px 30px rgba(15, 23, 42, 0.12) !important;
   -webkit-font-smoothing: antialiased;
   text-rendering: geometricPrecision;
 }
 
-.dark .app-readable-surface h1,
-.dark .app-readable-surface h2,
-.dark .app-readable-surface h3,
-.dark .app-readable-surface h4,
-.dark .app-readable-surface h5,
-.dark .app-readable-surface h6,
-.dark .app-readable-surface .font-black:not(button):not(a),
-.dark .app-readable-surface .font-extrabold:not(button):not(a) {
-  color: var(--foreground) !important;
-  -webkit-text-stroke: 0.45px oklch(0.14 0.018 247);
-  text-shadow:
-    0 0 1px oklch(0.14 0.018 247),
-    0 0 3px oklch(0.14 0.018 247),
-    0 1px 0 rgba(255, 255, 255, 0.2),
-    0 3px 0 rgba(2, 6, 23, 0.62),
-    0 8px 18px rgba(0, 0, 0, 0.55),
-    0 16px 32px rgba(0, 0, 0, 0.34) !important;
+/* Explicit dark/hero surfaces receive a local contrast contract. */
+.app-readable-surface :where(
+  .hero-stage,
+  .premium-portal-stage,
+  .affiliate-hero,
+  .dark-surface
+) :where(h1,h2,h3,h4,h5,h6) {
+  color: #fff !important;
+  -webkit-text-stroke: 0 !important;
+  text-shadow: 0 2px 14px rgba(0,0,0,.55) !important;
 }
 
 .app-readable-surface p,
