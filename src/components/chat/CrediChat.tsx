@@ -1,5 +1,9 @@
 'use client'
 
+type ChatRow = { id: string; [key: string]: unknown }
+type MemberRow = { id?: string; user_id?: string; [key: string]: unknown }
+type RealtimePayload<T> = { new: T; old: Partial<T> | null }
+
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { Paperclip, Search, Send, Smile, MessageCircle, X, Mic } from 'lucide-react'
@@ -41,7 +45,7 @@ export default function CrediChat() {
       .order('joined_at', { ascending: false })
 
     if (memberError) throw memberError
-    const ids = (memberships ?? []).map((row) => row.conversation_id)
+    const ids = (memberships ?? []).map((row: ChatRow) => row.conversation_id)
     if (!ids.length) {
       setConversations([])
       setLoading(false)
@@ -69,7 +73,7 @@ export default function CrediChat() {
     }
 
     const mapped = (rows ?? []).map((row) => {
-      const memberRows = (allMembers ?? []).filter((member) => member.conversation_id === row.id)
+      const memberRows = (allMembers ?? []).filter((member: MemberRow) => member.conversation_id === row.id)
       const other = memberRows.find((member) => member.user_id !== user.id)?.user_id ?? user.id
       const mine = memberRows.find((member) => member.user_id === user.id)
       return {
@@ -103,7 +107,7 @@ export default function CrediChat() {
     void loadMessages(selectedId).catch((e) => setError(e instanceof Error ? e.message : 'No fue posible cargar los mensajes.'))
     const channel = supabase
       .channel(`credichat:${selectedId}`)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `conversation_id=eq.${selectedId}` }, (payload) => {
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `conversation_id=eq.${selectedId}` }, (payload: RealtimePayload<ChatRow>) => {
         const next = payload.new as ChatMessage
         setMessages((current) => current.some((item) => item.id === next.id) ? current : [...current, next])
         requestAnimationFrame(() => messageBox.current?.scrollTo({ top: messageBox.current.scrollHeight, behavior: 'smooth' }))
