@@ -65,20 +65,20 @@ export default function CrediChat() {
       .in('conversation_id', ids)
     if (allMemberError) throw allMemberError
 
-    const memberIds = [...new Set((allMembers ?? []).map((row) => row.user_id))]
+    const memberIds = [...new Set((allMembers ?? []).map((row: MemberRow) => row.user_id))]
     if (memberIds.length) {
       const { data: profileRows, error: profileError } = await supabase.from('profiles').select('id,full_name,email,avatar_url,role').in('id', memberIds)
       if (profileError) throw profileError
       setProfiles(Object.fromEntries((profileRows ?? []).map((row) => [row.id, row as Profile])))
     }
 
-    const mapped = (rows ?? []).map((row) => {
+    const mapped = (rows ?? []).map((row: ChatRow) => {
       const memberRows = (allMembers ?? []).filter((member: MemberRow) => member.conversation_id === row.id)
-      const other = memberRows.find((member) => member.user_id !== user.id)?.user_id ?? user.id
-      const mine = memberRows.find((member) => member.user_id === user.id)
+      const other = memberRows.find((member: MemberRow) => member.user_id !== user.id)?.user_id ?? user.id
+      const mine = memberRows.find((member: MemberRow) => member.user_id === user.id)
       return {
         ...row,
-        member_ids: memberRows.map((member) => member.user_id),
+        member_ids: memberRows.map((member: MemberRow) => member.user_id),
         display_name: row.title || (profiles[other]?.full_name || profiles[other]?.email || 'Conversación comercial'),
         unread: 0,
         _last_read_at: mine?.last_read_at ?? null,
