@@ -1,9 +1,12 @@
 import { createBrowserClient } from "@supabase/ssr";
 
-const BUILD_PLACEHOLDER_URL = "https://placeholder.supabase.co";
-const BUILD_PLACEHOLDER_KEY = "build-placeholder-key";
+let browserClient: ReturnType<typeof createBrowserClient> | null = null;
 
 export function createClient() {
+  if (browserClient) {
+    return browserClient;
+  }
+
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim();
 
@@ -15,17 +18,14 @@ export function createClient() {
     },
   } as const;
 
-  if (url && key) {
-    return createBrowserClient(url, key, options);
+  if (!url || !key) {
+    console.warn(
+      "[Supabase] Missing public environment variables. Realtime features disabled.",
+    );
+    return null;
   }
 
-  // Permit static/build analysis only. Never allow a production browser session
-  // to continue with placeholder credentials.
-  if (process.env.NODE_ENV !== "production" && typeof window === "undefined") {
-    return createBrowserClient(BUILD_PLACEHOLDER_URL, BUILD_PLACEHOLDER_KEY, options);
-  }
+  browserClient = createBrowserClient(url, key, options);
 
-  throw new Error(
-    "Falta la configuración pública de Supabase. Configure NEXT_PUBLIC_SUPABASE_URL y NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY.",
-  );
+  return browserClient;
 }
