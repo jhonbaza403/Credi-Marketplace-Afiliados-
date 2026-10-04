@@ -1,5 +1,8 @@
 'use client'
 
+type RealtimePayload<T> = { new: T; old: Partial<T> | null }
+type CallEvent = { id?: string; call_id?: string; status?: string; [key: string]: unknown }
+
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Mic, MicOff, Phone, PhoneOff, Video, VideoOff } from 'lucide-react'
 import { usePathname } from 'next/navigation'
@@ -165,7 +168,7 @@ export default function CrediCallManager({ conversationId = null, peerUserId = n
     const contextualIncoming = Boolean(conversationId) && pathname === '/chat'
     if (!globalIncoming && !contextualIncoming) return
     const channel = supabase.channel(`credicall-manager:${user.id}:${conversationId ?? 'global'}`)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_calls' }, async (payload) => {
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_calls' }, async (payload: RealtimePayload<CallEvent>) => {
         const row = payload.new as CallRow
         if (row.initiated_by === user.id || row.status !== 'ringing' || activeId.current || incoming) return
         if (contextualIncoming && row.conversation_id !== conversationId) return
