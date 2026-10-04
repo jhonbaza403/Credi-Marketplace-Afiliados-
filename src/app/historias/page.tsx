@@ -6,6 +6,9 @@ import { createClient } from '@/lib/supabase/client'
 import MarketplaceMediaUploader from '@/components/media/MarketplaceMediaUploader'
 import type { UploadedMarketplaceMedia } from '@/lib/storage/marketplace-media'
 
+type AuthUser = { id: string }
+type AuthResult = { data: { user: AuthUser | null }; error: Error | null }
+
 export default function HistoriaVideoPublisher() {
   const supabase = createClient()
   const [userId, setUserId] = useState<string | null>(null)
@@ -16,7 +19,10 @@ export default function HistoriaVideoPublisher() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    void supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id ?? null))
+    void supabase.auth.getUser().then((result: AuthResult) => {
+      const { data } = result
+      setUserId(data.user?.id ?? null)
+    })
   }, [supabase])
 
   const publish = useCallback(async () => {
@@ -35,7 +41,7 @@ export default function HistoriaVideoPublisher() {
       const { error: insertError } = await supabase.from('stories').insert(payload)
       if (insertError) throw insertError
       setBody(''); setMedia([]); setNotice('Historia enviada a moderación y programada para 24 horas.')
-    } catch (e) { setError(e instanceof Error ? e.message : 'No fue posible publicar la historia.') }
+    } catch (e: unknown) { setError(e instanceof Error ? e.message : 'No fue posible publicar la historia.') }
     finally { setSaving(false) }
   }, [body, media, saving, supabase, userId])
 
