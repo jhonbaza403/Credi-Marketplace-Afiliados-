@@ -19,7 +19,9 @@ export function createClient() {
     return createBrowserClient(url, key, options);
   }
 
-  if (typeof window === "undefined") {
+  // Permit static/build analysis only. Never allow a production browser session
+  // to continue with placeholder credentials.
+  if (process.env.NODE_ENV !== "production" && typeof window === "undefined") {
     return createBrowserClient(BUILD_PLACEHOLDER_URL, BUILD_PLACEHOLDER_KEY, options);
   }
 
