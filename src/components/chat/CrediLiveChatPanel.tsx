@@ -56,14 +56,14 @@ export default function CrediLiveChatPanel() {
 
   useEffect(() => {
     let active = true
-    void supabase.auth.getUser().then(({ data, error: authError }) => {
+    void supabase.auth.getUser().then(({ data, error: authError }: { data: { user: { id: string } | null }; error: Error | null }) => {
       if (authError) throw authError
       if (!active) return
       if (data.user) {
         setUserId(data.user.id)
         void loadRoom(data.user.id).catch((e) => setError(e instanceof Error ? e.message : 'No fue posible cargar el LIVE.'))
       }
-    }).catch((e) => { if (active) setError(e instanceof Error ? e.message : 'No fue posible iniciar Credi LIVE.') })
+    }).catch((e: unknown) => { if (active) setError(e instanceof Error ? e.message : 'No fue posible iniciar Credi LIVE.') })
     return () => { active = false }
   }, [loadRoom, supabase])
 
@@ -73,13 +73,13 @@ export default function CrediLiveChatPanel() {
     const channel = supabase.channel(topic, { config: { private: true, presence: { key: userId } } })
       .on('broadcast', { event: 'message' }, ({ payload }) => {
         const incoming = payload as LiveMessage
-        setMessages((current) => current.some((item) => item.id === incoming.id) ? current : [...current, incoming].slice(-120))
+        setMessages((current) => current.some((item: LiveMessage) => item.id === incoming.id) ? current : [...current, incoming].slice(-120))
       })
       .on('presence', { event: 'sync' }, () => {
         const state = channel.presenceState()
-        setPresenceCount(Object.values(state).reduce((total, entries) => total + entries.length, 0))
+        setPresenceCount(Object.values(state).reduce((total: number, entries: LiveMessage[]) => total + entries.length, 0))
       })
-      .subscribe(async (status) => {
+      .subscribe(async (status: string) => {
         if (status === 'SUBSCRIBED') await channel.track({ user_id: userId, joined_at: new Date().toISOString() })
       })
     return () => { void supabase.removeChannel(channel) }
