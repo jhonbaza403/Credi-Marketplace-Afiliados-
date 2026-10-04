@@ -192,7 +192,7 @@ export default function BusinessControlCenter() {
         .eq('catalog_id', selectedCatalog)
         .eq('owner_id', user.id)
       if (itemError) return setError(itemError.message)
-      setCatalogItems(new Set((data ?? []).map((row) => row.product_id as string)))
+      setCatalogItems(new Set((data ?? []).map((row: { product_id: string }) => row.product_id)))
     })()
   }, [selectedCatalog, user])
 
