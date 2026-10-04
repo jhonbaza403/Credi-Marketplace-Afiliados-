@@ -53,7 +53,7 @@ export default function UserReputationBadge({
         if (!mounted) return;
 
         const validRatings = (data ?? []).filter(
-          (item): item is { rating: number } =>
+          (item: { rating?: unknown }): item is { rating: number } =>
             typeof item.rating === 'number' && Number.isFinite(item.rating) && item.rating >= 1 && item.rating <= 5,
         );
 
@@ -67,7 +67,7 @@ export default function UserReputationBadge({
 
         const total = validRatings.length;
         const average = Number(
-          (validRatings.reduce((sum, item) => sum + item.rating, 0) / total).toFixed(1),
+          (validRatings.reduce((sum: number, item: { rating: number }) => sum + item.rating, 0) / total).toFixed(1),
         );
         setReputation({ average, total });
       } catch (error) {
