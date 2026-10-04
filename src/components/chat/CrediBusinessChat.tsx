@@ -64,7 +64,7 @@ export default function CrediBusinessChat() {
     ])
     if (rowError) throw rowError
     if (membersError) throw membersError
-    const memberIds = [...new Set((members ?? []).map((m) => m.user_id))]
+    const memberIds = [...new Set((members ?? []).map((m: { user_id: string }) => m.user_id))]
     const profileMap: Record<string, Profile> = {}
     if (memberIds.length) {
       const { data: people, error: peopleError } = await supabase.from('profiles').select('id,full_name,avatar_url,role').in('id', memberIds)
@@ -73,12 +73,12 @@ export default function CrediBusinessChat() {
     }
     setProfiles(profileMap)
     const mapped = (rows ?? []).map((row: ConversationRow) => {
-      const ms = (members ?? []).filter((m) => m.conversation_id === row.id)
+      const ms = (members ?? []).filter((m: { conversation_id: string; user_id: string }) => m.conversation_id === row.id)
       const otherId = ms.find((m) => m.user_id !== auth.user!.id)?.user_id
-      return { ...row, member_ids: ms.map((m) => m.user_id), display_name: row.title || (otherId ? profileMap[otherId]?.full_name : null) || 'Usuario Credi', unread: 0 } as ChatConversation
+      return { ...row, member_ids: ms.map((m: { user_id: string }) => m.user_id), display_name: row.title || (otherId ? profileMap[otherId]?.full_name : null) || 'Usuario Credi', unread: 0 } as ChatConversation
     })
     setConversations(mapped)
-    setSelectedId((current) => current && mapped.some((c: ContactRow) => c.id === current) ? current : mapped[0]?.id ?? null)
+    setSelectedId((current) => current && mapped.some((c: ChatConversation) => c.id === current) ? current : mapped[0]?.id ?? null)
     return auth.user.id
   }, [router, supabase])
 
