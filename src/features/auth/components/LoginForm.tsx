@@ -4,6 +4,8 @@ import { FormEvent, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 
+import type { Factor } from '@supabase/supabase-js';
+
 import { signInUser } from '@/features/auth/services/authService';
 import { createClient } from '@/lib/supabase/client';
 import { isValidEmail } from '@/lib/validation';
@@ -69,7 +71,7 @@ export function LoginForm() {
         return;
       }
 
-      const verifiedTotp = (factorData?.totp ?? []).find((factor) => factor.status === 'verified');
+      const verifiedTotp = (factorData?.totp ?? []).find((factor: Factor) => factor.status === 'verified');
 
       if (verifiedTotp) {
         const { data: challenge, error: challengeError } = await supabase.auth.mfa.challenge({ factorId: verifiedTotp.id });
