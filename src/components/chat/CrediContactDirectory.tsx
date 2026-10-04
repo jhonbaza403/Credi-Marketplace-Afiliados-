@@ -28,9 +28,11 @@ export default function CrediContactDirectory() {
   const [notice, setNotice] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
+  type ContactResult = { data: string | null; rpcError: Error | null }
+
+useEffect(() => {
     const supabase = createClient()
-    void supabase.rpc('ensure_my_credi_pin').then(({ data, error: rpcError }) => {
+    void supabase.rpc('ensure_my_credi_pin').then(({ data, error: rpcError }: ContactResult) => {
       if (!rpcError && typeof data === 'string') setMyPin(data)
     })
   }, [])
