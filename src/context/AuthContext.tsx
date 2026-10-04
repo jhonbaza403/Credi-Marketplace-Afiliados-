@@ -10,7 +10,7 @@ import {
   type ReactNode,
 } from "react";
 
-import type { User } from "@supabase/supabase-js";
+import type { AuthChangeEvent, Session, User } from "@supabase/supabase-js";
 
 import { createClient } from "@/lib/supabase/client";
 import type { UserRole } from "@/types/user";
@@ -160,7 +160,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     void initialize();
 
     const { data: authState } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
+      (_event: AuthChangeEvent, session: Session | null) => {
         if (!mounted) return;
 
         const currentUser = session?.user ?? null;
