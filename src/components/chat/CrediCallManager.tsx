@@ -1,6 +1,6 @@
 'use client'
 
-type RealtimePayload<T> = { new: T; old: Partial<T> | null }
+type RealtimePayload<T> = { eventType: 'INSERT' | 'UPDATE' | 'DELETE'; new: T; old: Partial<T> | null }
 type CallEvent = { id?: string; call_id?: string; status?: string; [key: string]: unknown }
 
 import { useCallback, useEffect, useRef, useState } from 'react'
