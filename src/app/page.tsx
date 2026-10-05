@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, BadgeCheck, Building2, LockKeyhole, MessageCircle, ShoppingBag, Sparkles, TrendingUp, Users } from "lucide-react";
+import { ArrowRight, BadgeCheck, Building2, LockKeyhole, MessageCircle, Radio, Share2, ShoppingBag, Sparkles, TrendingUp, Users } from "lucide-react";
 import HeroPortal from "@/components/layout/HeroPortal";
 import { getProducts } from "@/lib/database/queries";
 import "@/styles/hero-portal.css";
@@ -80,9 +80,9 @@ export default async function HomePage() {
           <div className="mx-auto max-w-3xl text-center">
             <span className="inline-flex items-center gap-2 rounded-full bg-brand-50 px-3 py-1.5 text-xs font-black text-brand-700 dark:bg-brand-950 dark:text-brand-300">Ecosistema Credi</span>
             <h2 className="mt-4 text-2xl font-black text-[var(--foreground)] sm:text-4xl">Un inicio que te lleva directo a lo que necesitas</h2>
-            <p className="mt-4 leading-7 text-[var(--muted)]">Accede rápidamente a comercio, empresas, conversación y confianza sin llenar la pantalla de funciones desconectadas.</p>
+            <p className="mt-4 leading-7 text-[var(--muted)]">Accede rápidamente a comunidad, comercio, afiliación, LIVE y empresas sin salir de la misma experiencia Credi.</p>
           </div>
-          <div className="mx-auto mt-8 grid max-w-6xl gap-4 sm:grid-cols-2 lg:grid-cols-4">{highlights.map((item) => <Highlight key={item.title} item={item} />)}</div>
+          <div className="mx-auto mt-8 grid max-w-6xl gap-4 sm:grid-cols-2 lg:grid-cols-3">{highlights.map((item) => <Highlight key={item.title} item={item} />)}</div>
         </div>
       </section>
 
