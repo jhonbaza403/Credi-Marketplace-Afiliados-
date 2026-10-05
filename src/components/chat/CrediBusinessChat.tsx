@@ -74,7 +74,7 @@ export default function CrediBusinessChat() {
     setProfiles(profileMap)
     const mapped = (rows ?? []).map((row: ConversationRow) => {
       const ms = (members ?? []).filter((m: { conversation_id: string; user_id: string }) => m.conversation_id === row.id)
-      const otherId = ms.find((m) => m.user_id !== auth.user!.id)?.user_id
+      const otherId = ms.find((m: { user_id: string }) => m.user_id !== auth.user!.id)?.user_id
       return { ...row, member_ids: ms.map((m: { user_id: string }) => m.user_id), display_name: row.title || (otherId ? profileMap[otherId]?.full_name : null) || 'Usuario Credi', unread: 0 } as ChatConversation
     })
     setConversations(mapped)
