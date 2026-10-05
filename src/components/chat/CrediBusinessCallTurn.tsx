@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Mic, MicOff, Phone, PhoneOff, Video, VideoOff } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
-type RealtimePayload<T> = { new: T; old: Partial<T> | null }
+type RealtimePayload<T> = { eventType: 'INSERT' | 'UPDATE' | 'DELETE'; new: T; old: Partial<T> | null }
 type IceServer = RTCIceServer
 
 type CallRow = {
@@ -335,7 +335,7 @@ export default function CrediBusinessCallTurn({
         schema: 'public',
         table: 'chat_calls',
         filter: `conversation_id=eq.${conversation}`,
-      }, (payload) => {
+      }, (payload: RealtimePayload<CallRow>) => {
         const next = payload.new as CallRow
         if (next.initiated_by !== user && next.status === 'ringing') {
           setIncoming((current) => current ?? next)
