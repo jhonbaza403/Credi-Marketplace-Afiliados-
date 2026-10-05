@@ -24,9 +24,19 @@ type IdentityStats = {
   social: number;
 };
 
+type IdentityTable =
+  | "stores"
+  | "affiliates"
+  | "transaction_ratings"
+  | "b2b_products"
+  | "chat_live_rooms"
+  | "feed_posts"
+  | "stories"
+  | "reels";
+
 async function countOwned(
   supabase: Awaited<ReturnType<typeof createClient>>,
-  table: string,
+  table: IdentityTable,
   column: string,
   userId: string,
 ): Promise<number> {
