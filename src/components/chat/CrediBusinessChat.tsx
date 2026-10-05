@@ -9,7 +9,7 @@ import { uploadCrediBusinessChatMedia } from '@/lib/storage/credibusiness-chat-m
 import type { ChatConversation, ChatMessage } from '@/types/chat'
 
 type Profile = { id: string; full_name: string | null; avatar_url: string | null; role: string }
-type RealtimePayload<T> = { new: T; old: Partial<T> | null }
+type RealtimePayload<T> = { eventType: 'INSERT' | 'UPDATE' | 'DELETE'; new: T; old: Partial<T> | null }
 type ChatRow = ChatMessage
 type ConversationRow = { id: string; [key: string]: unknown }
 type ContactRow = { id?: string; user_id?: string; [key: string]: unknown }
@@ -64,7 +64,7 @@ export default function CrediBusinessChat() {
     ])
     if (rowError) throw rowError
     if (membersError) throw membersError
-    const memberIds = [...new Set((members ?? []).map((m: { user_id: string }) => m.user_id))]
+    const memberIds = [...new Set((members ?? []).map((m: ContactRow) => m.user_id).filter((id): id is string => typeof id === 'string'))]
     const profileMap: Record<string, Profile> = {}
     if (memberIds.length) {
       const { data: people, error: peopleError } = await supabase.from('profiles').select('id,full_name,avatar_url,role').in('id', memberIds)
