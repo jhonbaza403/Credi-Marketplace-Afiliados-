@@ -14,6 +14,8 @@ type LiveRoom = {
   started_at: string
 }
 
+type PresenceEntry = { user_id?: string; joined_at?: string }
+
 type LiveMessage = {
   id: string
   room_id: string
@@ -71,15 +73,15 @@ export default function CrediLiveChatPanel() {
     if (!room || !userId || !open) return
     const topic = `credichat-live-${room.id}`
     const channel = supabase.channel(topic, { config: { private: true, presence: { key: userId } } })
-      .on('broadcast', { event: 'message' }, ({ payload }) => {
+      .on('broadcast', { event: 'message' }, ({ payload }: { payload: unknown }) => {
         const incoming = payload as LiveMessage
         setMessages((current) => current.some((item: LiveMessage) => item.id === incoming.id) ? current : [...current, incoming].slice(-120))
       })
       .on('presence', { event: 'sync' }, () => {
         const state = channel.presenceState()
-        setPresenceCount(Object.values(state).reduce((total: number, entries: LiveMessage[]) => total + entries.length, 0))
+        setPresenceCount(Object.values(state as Record<string, PresenceEntry[]>).reduce((total, entries) => total + entries.length, 0))
       })
-      .subscribe(async (status: string) => {
+      .subscribe(async (status: 'SUBSCRIBED' | 'CHANNEL_ERROR' | 'TIMED_OUT' | 'CLOSED') => {
         if (status === 'SUBSCRIBED') await channel.track({ user_id: userId, joined_at: new Date().toISOString() })
       })
     return () => { void supabase.removeChannel(channel) }
