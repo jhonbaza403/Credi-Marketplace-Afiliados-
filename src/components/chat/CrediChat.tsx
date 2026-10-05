@@ -2,7 +2,7 @@
 
 type ChatRow = { id: string; [key: string]: unknown }
 type MemberRow = { id?: string; user_id?: string; [key: string]: unknown }
-type RealtimePayload<T> = { new: T; old: Partial<T> | null }
+type RealtimePayload<T> = { eventType: 'INSERT' | 'UPDATE' | 'DELETE'; new: T; old: Partial<T> | null }
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
@@ -69,7 +69,7 @@ export default function CrediChat() {
     if (memberIds.length) {
       const { data: profileRows, error: profileError } = await supabase.from('profiles').select('id,full_name,email,avatar_url,role').in('id', memberIds)
       if (profileError) throw profileError
-      setProfiles(Object.fromEntries((profileRows ?? []).map((row) => [row.id, row as Profile])))
+      setProfiles(Object.fromEntries((profileRows ?? []).map((row: Profile) => [row.id, row])))
     }
 
     const mapped = (rows ?? []).map((row: ChatRow) => {
@@ -107,8 +107,8 @@ export default function CrediChat() {
     void loadMessages(selectedId).catch((e) => setError(e instanceof Error ? e.message : 'No fue posible cargar los mensajes.'))
     const channel = supabase
       .channel(`credichat:${selectedId}`)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `conversation_id=eq.${selectedId}` }, (payload: RealtimePayload<ChatRow>) => {
-        const next = payload.new as ChatMessage
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `conversation_id=eq.${selectedId}` }, (payload: RealtimePayload<ChatMessage>) => {
+        const next = payload.new
         setMessages((current) => current.some((item) => item.id === next.id) ? current : [...current, next])
         requestAnimationFrame(() => messageBox.current?.scrollTo({ top: messageBox.current.scrollHeight, behavior: 'smooth' }))
       })
