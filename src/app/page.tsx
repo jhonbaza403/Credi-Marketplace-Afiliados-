@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, BadgeCheck, Building2, LockKeyhole, MessageCircle, Radio, Share2, ShoppingBag, Sparkles, TrendingUp, Users } from "lucide-react";
+import { ArrowRight, BadgeCheck, Building2, LockKeyhole, MessageCircle, ShoppingBag, Sparkles, TrendingUp, Users } from "lucide-react";
 import HeroPortal from "@/components/layout/HeroPortal";
 import { getProducts } from "@/lib/database/queries";
 import "@/styles/hero-portal.css";
