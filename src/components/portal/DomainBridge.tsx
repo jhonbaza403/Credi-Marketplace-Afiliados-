@@ -39,7 +39,13 @@ const actions = {
     { href: "/orders", label: "Mis pedidos", icon: ShoppingBag },
     { href: "/chat", label: "Soporte / Chat", icon: MessageCircle },
   ],
-  b2b: [\n    { href: "/marketplace", label: "Marketplace", icon: ShoppingBag },\n    { href: "/chat", label: "Negociar por Chat", icon: MessageCircle },\n    { href: "/affiliate", label: "Afiliados", icon: Share2 },\n    { href: "/live", label: "LIVE Commerce", icon: Radio },\n  ],\n  marketing: [
+  b2b: [
+    { href: "/marketplace", label: "Marketplace", icon: ShoppingBag },
+    { href: "/chat", label: "Negociar por Chat", icon: MessageCircle },
+    { href: "/affiliate", label: "Afiliados", icon: Share2 },
+    { href: "/live", label: "LIVE Commerce", icon: Radio },
+  ],
+  marketing: [
     { href: "/publish", label: "Crear contenido", icon: PackagePlus },
     { href: "/live", label: "Crear LIVE", icon: MessageCircle },
     { href: "/analytics", label: "Ver Analytics", icon: Share2 },
