@@ -4,7 +4,7 @@ import Link from "next/link"
 import { Building2, MessageCircle, PackagePlus, Radio, Share2, ShoppingBag, Wrench } from "lucide-react"
 
 type DomainBridgeProps = {
-  context?: "marketplace" | "services" | "chat" | "publish" | "affiliate" | "wallet" | "marketing"
+  context?: "marketplace" | "services" | "chat" | "publish" | "affiliate" | "wallet" | "marketing" | "b2b" | "live"
 }
 
 const actions = {
