@@ -34,7 +34,7 @@ function walk(directory, segments = [], routes = []) {
 }
 
 function normalizeRoute(value) {
-  const clean = value.split(/[?#]/, 1)[0].replace(/\\/g, "/").replace(/\\/+$/, "");
+  const clean = value.split(/[?#]/, 1)[0].replace(/\\/g, "/").replace(/\/+$/, "");
   return clean || "/";
 }
 
