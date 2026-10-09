@@ -181,6 +181,9 @@ jobs:
       - name: Audit route and HTTP method contracts
         run: npm run audit:routes
 
+      - name: Audit navigation destination contracts
+        run: npm run audit:menu
+
       - name: Audit GitHub and Vercel platform contract
         run: npm run audit:platform
 

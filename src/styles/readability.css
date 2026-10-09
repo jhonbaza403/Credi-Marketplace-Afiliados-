@@ -45,7 +45,23 @@
   text-rendering: geometricPrecision;
 }
 
+/* Social wall hero is intentionally dark; keep its title above inherited page-level colors. */
+.app-readable-surface .social-wall-hero h1 {
+  color: #ffffff !important;
+  -webkit-text-stroke: 0 !important;
+  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.55) !important;
+}
+
 /* Explicit dark/hero surfaces receive a local contrast contract. */
+
+/* The landing-page footer deliberately uses a near-black surface. Keep its
+ * title explicitly white even when shared page-level readability rules apply. */
+.app-readable-surface .premium-portal-footer h2 {
+  color: #ffffff !important;
+  -webkit-text-stroke: 0 !important;
+  text-shadow: none !important;
+}
+
 .app-readable-surface :where(
   .hero-stage,
   .premium-portal-stage,

@@ -1,6 +1,54 @@
 import { expect, test } from "@playwright/test";
 
 test.describe("Credi unified portal", () => {
+  test("primary navigation has readable social-portal links", async ({ page }) => {
+    await page.goto("/");
+    const nav = page.getByRole("navigation", { name: "Navegación principal" });
+    const expected = [
+      ["Inicio", "/"],
+      ["Muro", "/social"],
+      ["Marketplace", "/marketplace"],
+      ["Servicios", "/services"],
+      ["Free", "/free"],
+      ["LIVE", "/live"],
+    ] as const;
+
+    for (const [label, href] of expected) {
+      await expect(nav.getByRole("link", { name: label, exact: true })).toHaveAttribute("href", href);
+    }
+
+    const homeTitle = page.getByRole("heading", { name: /Personas, contenido y oportunidades/i });
+    await expect(homeTitle).toBeVisible();
+    await expect.poll(async () => homeTitle.evaluate((element) => getComputedStyle(element).color)).toBe("rgb(255, 255, 255)");
+    const footerTitle = page.getByRole("heading", { name: "Confianza, comercio y conexión" });
+    await expect(footerTitle).toBeVisible();
+    await expect.poll(async () => footerTitle.evaluate((element) => getComputedStyle(element).color)).toBe("rgb(255, 255, 255)");
+
+    await page.goto("/social");
+    const wallTitle = page.getByRole("heading", { name: /Tu comunidad\. Tus ideas\. Nuevas oportunidades\./i });
+    await expect(wallTitle).toBeVisible();
+    await expect.poll(async () => wallTitle.evaluate((element) => getComputedStyle(element).color)).toBe("rgb(255, 255, 255)");
+  });
+
+  test("solutions menu exposes implemented first-party destinations", async ({ page }) => {
+    await page.goto("/");
+    const nav = page.getByRole("navigation", { name: "Navegación principal" });
+    await nav.getByRole("button", { name: /Soluciones/ }).click();
+    const menu = page.locator("#credi-solutions-menu");
+    await expect(menu).toBeVisible();
+
+    const requiredPaths = [
+      "/historias", "/videos", "/chat", "/live", "/marketplace", "/b2b", "/publish",
+      "/services", "/affiliate", "/proveedores-verificados", "/catalogo-video",
+      "/dashboard/b2b", "/marketing", "/analytics", "/inventario", "/pagos",
+      "/wallet", "/intelligence", "/security",
+    ];
+    const actualPaths = await menu.locator("a[href]").evaluateAll((links) =>
+      links.map((link) => new URL((link as HTMLAnchorElement).href).pathname),
+    );
+    for (const href of requiredPaths) expect(actualPaths, `Missing menu destination: ${href}`).toContain(href);
+  });
+
   test("home exposes the canonical portal navigation", async ({ page }) => {
     await page.goto("/");
     const nav = page.getByRole("navigation", { name: "Navegación principal" });
@@ -48,7 +96,7 @@ test.describe("Credi unified portal", () => {
 
   test("wall keeps social and commerce navigation connected", async ({ page }) => {
     await page.goto("/social");
-    await expect(page.getByRole("heading", { name: /Descubre lo que está pasando/i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Tu comunidad\. Tus ideas\. Nuevas oportunidades\./i })).toBeVisible();
     const nav = page.getByRole("navigation", { name: "Navegación principal" });
     await expect(nav.getByRole("link", { name: "Marketplace", exact: true })).toBeVisible();
     await expect(nav.getByRole("link", { name: "Free", exact: true })).toBeVisible();

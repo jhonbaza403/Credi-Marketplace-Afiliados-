@@ -84,7 +84,7 @@ export default async function SocialPage() {
     <main className="min-h-screen bg-[var(--background)] px-4 pb-8 text-[var(--foreground)] sm:px-4 lg:px-8">
       <div className="mx-auto max-w-7xl space-y-8">
         <header className="overflow-hidden rounded-[2rem] border border-[var(--border)] bg-[var(--surface)] shadow-marketplace-xl">
-          <div className="relative isolate overflow-hidden bg-gradient-to-br from-[#07152a] via-[#10112e] to-[#21113f] px-5 py-7 text-white sm:px-8 sm:py-10 lg:px-10 lg:py-11">
+          <div className="social-wall-hero relative isolate overflow-hidden bg-gradient-to-br from-[#07152a] via-[#10112e] to-[#21113f] px-5 py-7 text-white sm:px-8 sm:py-10 lg:px-10 lg:py-11">
             <div aria-hidden="true" className="pointer-events-none absolute -left-24 -top-24 size-72 rounded-full bg-cyan-400/15 blur-3xl" />
             <div aria-hidden="true" className="pointer-events-none absolute -bottom-28 right-10 size-72 rounded-full bg-violet-400/15 blur-3xl" />
             <div className="relative grid items-center gap-7 lg:grid-cols-[minmax(0,1fr)_minmax(280px,.72fr)]">
@@ -92,7 +92,7 @@ export default async function SocialPage() {
                 <span className="inline-flex items-center gap-2 rounded-full border border-cyan-200/20 bg-white/[.07] px-3 py-1.5 text-xs font-black uppercase tracking-[.16em] text-cyan-100">
                   <Sparkles className="size-4" aria-hidden="true" /> Comunidad Credi
                 </span>
-                <h1 className="mt-4 text-balance text-3xl font-black tracking-tight sm:text-4xl lg:text-5xl">Tu comunidad. Tus ideas. Nuevas oportunidades.</h1>
+                <h1 className="mt-4 text-white text-balance text-3xl font-black tracking-tight sm:text-4xl lg:text-5xl">Tu comunidad. Tus ideas. Nuevas oportunidades.</h1>
                 <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-200 sm:text-base">Historias, reels, publicaciones y campañas en un espacio creado para conectar personas y comercio. Descubre lo que pasa y participa.</p>
                 <div className="mt-6 flex flex-wrap gap-3">
                   <Link href="/publish" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-300 to-blue-400 px-5 py-3 text-sm font-black text-slate-950 shadow-lg transition hover:brightness-105 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">
@@ -104,7 +104,7 @@ export default async function SocialPage() {
                 </div>
               </div>
               <div className="relative mx-auto hidden aspect-[4/3] w-full max-w-[440px] overflow-hidden rounded-3xl border border-white/10 shadow-2xl md:block">
-                <Image src="/visuals/credi-social-network.svg" alt="Vista ilustrativa del muro social y comercio integrado de Credi." fill sizes="(max-width: 1024px) 100vw, 38vw" className="object-cover" />
+                <Image src="/visuals/credi-social-network.svg" alt="Vista ilustrativa del muro social y comercio integrado de Credi." fill priority sizes="(max-width: 1024px) 100vw, 38vw" className="object-cover" />
               </div>
             </div>
           </div>
