@@ -30,6 +30,9 @@ test.describe("Credi unified portal", () => {
     await expect.poll(async () => mainHeadline.evaluate((element) => getComputedStyle(element).color)).toBe("rgb(255, 255, 255)");
     await expect.poll(async () => highlightedHeadline.evaluate((element) => getComputedStyle(element).color)).toBe("rgb(103, 232, 249)");
     await expect.poll(async () => homepageSubtitle.evaluate((element) => getComputedStyle(element).color)).toBe("rgb(241, 245, 249)");
+    await expect.poll(async () => mainHeadline.evaluate((element) => getComputedStyle(element).getPropertyValue("-webkit-text-fill-color"))).toBe("rgb(255, 255, 255)");
+    await expect.poll(async () => highlightedHeadline.evaluate((element) => getComputedStyle(element).getPropertyValue("-webkit-text-fill-color"))).toBe("rgb(103, 232, 249)");
+    await expect.poll(async () => homepageSubtitle.evaluate((element) => getComputedStyle(element).opacity)).toBe("1");
 
     const footerTitle = page.getByRole("heading", { name: "Confianza, comercio y conexión" });
     await expect(footerTitle).toBeVisible();
