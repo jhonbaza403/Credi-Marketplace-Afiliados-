@@ -174,7 +174,7 @@ export default function CrediCallManager({ conversationId = null, peerUserId = n
         if (contextualIncoming && row.conversation_id !== conversationId) return
         try { const remotePeer = await resolvePeer(row.conversation_id); setIncoming(row); setIncomingPeer(remotePeer) } catch (e) { console.error('[CrediCall] incoming peer lookup', e) }
       })
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_call_signals', filter: `recipient_id=eq.${user.id}` }, async (payload) => {
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_call_signals', filter: `recipient_id=eq.${user.id}` }, async (payload: RealtimePayload<Signal>) => {
         const next = payload.new as Signal
         if (!activeId.current || next.call_id !== activeId.current || !pc.current) return
         const connection = pc.current
