@@ -21,10 +21,11 @@
     "test:e2e:report": "playwright show-report",
     "verify:structure": "node scripts/verify-structure.mjs",
     "audit:routes": "node scripts/audit-routes.mjs",
-    "check": "npm run verify:structure && npm run audit:routes && npm run audit:env && npm run audit:api && npm run lint && npm run typecheck && npm run test",
+    "check": "npm run verify:structure && npm run audit:routes && npm run audit:env && npm run audit:api && npm run audit:platform && npm run lint && npm run typecheck && npm run test",
     "check:all": "npm run check && npm run test:e2e && npm run build",
     "security:audit": "node scripts/security-audit.mjs",
     "audit:env": "node scripts/audit-env.mjs",
+    "audit:platform": "node scripts/audit-platform-config.mjs",
     "audit:api": "node scripts/audit-api-security.mjs"
   },
   "dependencies": {

@@ -159,10 +159,11 @@ jobs:
         run: |
           set -euo pipefail
 
-          echo "CI check passed successfully."
+          echo "CI completed successfully on main."
           echo "Target branch: main"
           echo "Validated commit: ${{ github.event.workflow_run.head_sha }}"
-          echo "Gate status: APPROVED"
+          echo "Vercel status: success"
+          echo "This workflow records post-CI deployment validation; Vercel deployment protection and GitHub rulesets enforce blocking."
 
       # ==========================================================
       # 5. Final gate summary
@@ -175,6 +176,7 @@ jobs:
           echo "DEPLOYMENT GATE: PASSED"
           echo "=========================================="
           echo "The validated CI run on main completed successfully."
-          echo "Deployment may proceed using the validated commit."
+          echo "The canonical Vercel status for this commit is successful."
+          echo "This workflow observes and validates deployment state; it does not itself start or cancel a Vercel deployment."
           echo "Commit: ${{ github.event.workflow_run.head_sha }}"
           echo "=========================================="
