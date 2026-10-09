@@ -3,7 +3,9 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 
 import SecuritySettings from '@/features/auth/components/SecuritySettings';
-import { getCurrentUser } from '@/features/auth/services/authService';
+import { createClient as createSupabaseServerClient } from '@/lib/supabase/server';
+
+export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
   title: 'Seguridad de la cuenta | Credi Marketplace',
@@ -12,7 +14,12 @@ export const metadata: Metadata = {
 };
 
 export default async function SecurityPage() {
-  const user = await getCurrentUser();
+  const supabase = await createSupabaseServerClient();
+  const { data: { user }, error } = await supabase.auth.getUser();
+
+  if (error && error.name !== 'AuthSessionMissingError') {
+    throw error;
+  }
 
   if (!user) {
     redirect('/login?next=/security');

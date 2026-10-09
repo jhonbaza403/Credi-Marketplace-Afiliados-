@@ -9,7 +9,7 @@ export type PortalDomain = {
 export const PORTAL_DOMAINS: readonly PortalDomain[] = [
   { key: "home", label: "Inicio", href: "/", description: "Centro de entrada y actividad de Credi.", group: "primary" },
   { key: "wall", label: "Muro", href: "/social", description: "Comunidad, historias, reels y publicaciones.", group: "primary" },
-  { key: "marketplace", label: "Explorar", href: "/explorar", description: "Descubre productos, tiendas, ofertas y oportunidades comerciales.", group: "primary" },
+  { key: "marketplace", label: "Marketplace", href: "/marketplace", description: "Descubre productos, tiendas, ofertas y oportunidades comerciales.", group: "primary" },
   { key: "sell", label: "Vender", href: "/publish", description: "Publica productos, servicios, catálogos y ofertas comerciales.", group: "primary" },
   { key: "b2b", label: "B2B", href: "/b2b", description: "Compras empresariales, proveedores, mayoristas, cotizaciones y negociación.", group: "primary" },
   { key: "services", label: "Servicios", href: "/services", description: "Servicios profesionales y capacidades comerciales.", group: "primary" },
