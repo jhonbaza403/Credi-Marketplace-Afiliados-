@@ -92,7 +92,7 @@ export default async function SocialPage() {
                 <span className="inline-flex items-center gap-2 rounded-full border border-cyan-200/20 bg-white/[.07] px-3 py-1.5 text-xs font-black uppercase tracking-[.16em] text-cyan-100">
                   <Sparkles className="size-4" aria-hidden="true" /> Comunidad Credi
                 </span>
-                <h1 className="mt-4 text-balance text-3xl font-black tracking-tight sm:text-4xl lg:text-5xl">Tu comunidad. Tus ideas. Nuevas oportunidades.</h1>
+                <h1 className="mt-4 text-white text-balance text-3xl font-black tracking-tight sm:text-4xl lg:text-5xl">Tu comunidad. Tus ideas. Nuevas oportunidades.</h1>
                 <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-200 sm:text-base">Historias, reels, publicaciones y campañas en un espacio creado para conectar personas y comercio. Descubre lo que pasa y participa.</p>
                 <div className="mt-6 flex flex-wrap gap-3">
                   <Link href="/publish" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-300 to-blue-400 px-5 py-3 text-sm font-black text-slate-950 shadow-lg transition hover:brightness-105 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">
