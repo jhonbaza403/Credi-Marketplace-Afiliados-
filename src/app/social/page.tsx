@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, Camera, Megaphone, Play, Sparkles } from "lucide-react";
+import { ArrowRight, BadgeCheck, Building2, Camera, Megaphone, MessageCircle, Play, Radio, ShoppingBag, Sparkles, TrendingUp, Users } from "lucide-react";
 import { getDatabaseServerClient } from "@/lib/database/server";
 import { withOperationContext } from "@/lib/portal/operation-context";
 
