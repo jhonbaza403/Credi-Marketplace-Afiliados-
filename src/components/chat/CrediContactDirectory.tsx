@@ -30,7 +30,7 @@ export default function CrediContactDirectory() {
 
 useEffect(() => {
     const supabase = createClient()
-    void supabase.rpc('ensure_my_credi_pin').then(({ data, error: rpcError }) => {
+    void supabase.rpc('ensure_my_credi_pin').then(({ data, error: rpcError }: { data: string | null; error: { message: string } | null }) => {
       if (!rpcError && typeof data === 'string') setMyPin(data)
     })
   }, [])
