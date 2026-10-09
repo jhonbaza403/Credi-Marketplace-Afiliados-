@@ -10,7 +10,6 @@ test.describe("Credi unified portal", () => {
       ["Marketplace", "/marketplace"],
       ["Servicios", "/services"],
       ["Free", "/free"],
-      ["B2B", "/b2b"],
       ["LIVE", "/live"],
     ] as const;
 
@@ -39,7 +38,7 @@ test.describe("Credi unified portal", () => {
     await expect(menu).toBeVisible();
 
     const requiredPaths = [
-      "/historias", "/videos", "/chat", "/live", "/marketplace", "/publish",
+      "/historias", "/videos", "/chat", "/live", "/marketplace", "/b2b", "/publish",
       "/services", "/affiliate", "/proveedores-verificados", "/catalogo-video",
       "/dashboard/b2b", "/marketing", "/analytics", "/inventario", "/pagos",
       "/wallet", "/intelligence", "/security",

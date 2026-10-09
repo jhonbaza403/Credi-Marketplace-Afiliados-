@@ -32,7 +32,6 @@ const PRIMARY_LINKS = [
   { label: "Marketplace", href: "/marketplace", icon: ShoppingBag, description: "Productos y tiendas" },
   { label: "Servicios", href: "/services", icon: BadgeCheck, description: "Servicios del ecosistema" },
   { label: "Free", href: "/free", icon: Sparkles, description: "Explora Credi gratis" },
-  { label: "B2B", href: "/b2b", icon: Building2, description: "Negocios y mayoristas" },
   { label: "LIVE", href: "/live", icon: Radio, description: "Comercio en vivo" },
 ] as const;
 
@@ -53,6 +52,7 @@ const SOLUTION_GROUPS = [
     description: "Descubre y vende",
     items: [
       { label: "Marketplace", href: "/marketplace", icon: ShoppingBag },
+      { label: "B2B", href: "/b2b", icon: Building2 },
       { label: "Publicar", href: "/publish", icon: Sparkles },
       { label: "Servicios", href: "/services", icon: Store },
       { label: "Afiliados", href: "/affiliate", icon: TrendingUp },
@@ -110,7 +110,7 @@ export default function Navbar() {
   return (
     <nav
       aria-label="Navegación principal"
-      className="relative mx-auto flex min-h-[72px] max-w-[1600px] items-center gap-3 px-3 sm:px-6 lg:px-8"
+      className="relative mx-auto flex min-h-[72px] max-w-[1600px] items-center gap-3 px-3 sm:px-5 lg:px-6"
     >
       <Link
         href="/"
@@ -137,7 +137,7 @@ export default function Navbar() {
               href={item.href}
               aria-current={active ? "page" : undefined}
               className={
-                "inline-flex min-h-11 items-center gap-2 rounded-xl px-3 py-2 text-sm font-bold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 " +
+                "inline-flex min-h-11 items-center gap-2 rounded-xl px-2 py-2 text-sm font-bold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 " +
                 (active
                   ? "bg-[#e7f3ff] text-[#0866ff] shadow-sm ring-1 ring-[#0866ff]/10"
                   : "text-slate-600 hover:bg-slate-100 hover:text-slate-950")
@@ -161,7 +161,7 @@ export default function Navbar() {
             onClick={() => setSolutionsOpen((value) => !value)}
             aria-expanded={solutionsOpen}
             aria-controls="credi-solutions-menu"
-            className="inline-flex min-h-11 items-center gap-2 rounded-xl px-3 py-2 text-sm font-bold text-slate-700 transition hover:bg-slate-100 hover:text-slate-950 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
+            className="inline-flex min-h-11 items-center gap-2 rounded-xl px-2 py-2 text-sm font-bold text-slate-700 transition hover:bg-slate-100 hover:text-slate-950 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
           >
             <MoreHorizontal className="size-4" aria-hidden="true" />
             Soluciones
