@@ -10,7 +10,6 @@ import type { ChatConversation, ChatMessage } from '@/types/chat'
 
 type Profile = { id: string; full_name: string | null; avatar_url: string | null; role: string }
 type RealtimePayload<T> = { eventType: 'INSERT' | 'UPDATE' | 'DELETE'; new: T; old: Partial<T> | null }
-type ChatRow = ChatMessage
 type ConversationRow = { id: string; [key: string]: unknown }
 type ContactRow = { id?: string; user_id?: string; [key: string]: unknown }
 const QUICK = ['Consultar disponibilidad', 'Solicitar precio mayorista', 'Solicitar catálogo', 'Preguntar MOQ', 'Solicitar condiciones de envío', 'Preguntar tiempo de entrega', 'Solicitar factura', 'Negociar pedido', 'Solicitar cotización']
@@ -282,7 +281,7 @@ export default function CrediBusinessChat() {
   }
 
   const selected = conversations.find((c) => c.id === selectedId) ?? null
-  const peerId = selected?.member_ids.find((id) => id !== userId) ?? null
+  const peerId = selected?.member_ids.find((id: string) => id !== userId) ?? null
   const peer = peerId ? profiles[peerId] : null
   const list = conversations.filter((c) => { const q = search.toLowerCase().trim(); return !q || c.display_name.toLowerCase().includes(q) || Boolean(c.title?.toLowerCase().includes(q)) })
   const shown = messages.filter((m) => !chatSearch.trim() || Boolean(m.body?.toLowerCase().includes(chatSearch.toLowerCase()))).slice(-500)
