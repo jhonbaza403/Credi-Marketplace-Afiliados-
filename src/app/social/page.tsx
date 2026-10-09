@@ -104,7 +104,7 @@ export default async function SocialPage() {
                 </div>
               </div>
               <div className="relative mx-auto hidden aspect-[4/3] w-full max-w-[440px] overflow-hidden rounded-3xl border border-white/10 shadow-2xl md:block">
-                <Image src="/visuals/credi-social-network.svg" alt="Vista ilustrativa del muro social y comercio integrado de Credi." fill sizes="(max-width: 1024px) 100vw, 38vw" className="object-cover" />
+                <Image src="/visuals/credi-social-network.svg" alt="Vista ilustrativa del muro social y comercio integrado de Credi." fill priority sizes="(max-width: 1024px) 100vw, 38vw" className="object-cover" />
               </div>
             </div>
           </div>
