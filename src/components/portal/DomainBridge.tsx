@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { Building2, MessageCircle, PackagePlus, Radio, Share2, ShoppingBag, Wrench } from "lucide-react"
+import { MessageCircle, PackagePlus, Radio, Share2, ShoppingBag, Wrench } from "lucide-react"
 
 type DomainBridgeProps = {
   context?: "marketplace" | "services" | "chat" | "publish" | "affiliate" | "wallet" | "marketing" | "b2b" | "live"
@@ -49,6 +49,11 @@ const actions = {
     { href: "/publish", label: "Crear contenido", icon: PackagePlus },
     { href: "/live", label: "Crear LIVE", icon: MessageCircle },
     { href: "/analytics", label: "Ver Analytics", icon: Share2 },
+  ],
+  live: [
+    { href: "/marketplace", label: "Explorar productos", icon: ShoppingBag },
+    { href: "/chat", label: "Abrir Chat", icon: MessageCircle },
+    { href: "/publish", label: "Publicar contenido", icon: PackagePlus },
   ],
 } as const
 
