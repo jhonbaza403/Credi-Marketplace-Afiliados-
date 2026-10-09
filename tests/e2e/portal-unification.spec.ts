@@ -20,6 +20,17 @@ test.describe("Credi unified portal", () => {
     const homeTitle = page.getByRole("heading", { name: /Personas, contenido y oportunidades/i });
     await expect(homeTitle).toBeVisible();
     await expect.poll(async () => homeTitle.evaluate((element) => getComputedStyle(element).color)).toBe("rgb(255, 255, 255)");
+
+    const mainHeadline = homeTitle.locator(".hero-main-text");
+    const highlightedHeadline = homeTitle.locator(".hero-highlight");
+    const homepageSubtitle = page.locator(".hero-description");
+    await expect(mainHeadline).toBeVisible();
+    await expect(highlightedHeadline).toBeVisible();
+    await expect(homepageSubtitle).toBeVisible();
+    await expect.poll(async () => mainHeadline.evaluate((element) => getComputedStyle(element).color)).toBe("rgb(255, 255, 255)");
+    await expect.poll(async () => highlightedHeadline.evaluate((element) => getComputedStyle(element).color)).toBe("rgb(103, 232, 249)");
+    await expect.poll(async () => homepageSubtitle.evaluate((element) => getComputedStyle(element).color)).toBe("rgb(241, 245, 249)");
+
     const footerTitle = page.getByRole("heading", { name: "Confianza, comercio y conexión" });
     await expect(footerTitle).toBeVisible();
     await expect.poll(async () => footerTitle.evaluate((element) => getComputedStyle(element).color)).toBe("rgb(255, 255, 255)");
