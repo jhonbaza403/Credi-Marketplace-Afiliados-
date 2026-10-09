@@ -8,7 +8,7 @@ const checks = [];
 function readRequired(relativePath) {
   const absolutePath = path.join(ROOT, relativePath);
   if (!fs.existsSync(absolutePath) || !fs.statSync(absolutePath).isFile()) {
-    failures.push(\`Missing required file: \${relativePath}\`);
+    failures.push(`Missing required file: ${relativePath}`);
     return "";
   }
   return fs.readFileSync(absolutePath, "utf8");
@@ -52,7 +52,7 @@ assert(vercel.buildCommand === "npm run build", "Vercel build command must call 
 assert(vercel.ignoreCommand === "node scripts/vercel-ignore-build.mjs", "Vercel ignoreCommand must reference the tracked ignore script");
 
 for (const script of ["build", "audit:env", "audit:api", "audit:routes", "audit:platform", "security:audit", "test", "test:e2e"]) {
-  assert(typeof pkg.scripts?.[script] === "string", \`package.json must define npm script: \${script}\`);
+  assert(typeof pkg.scripts?.[script] === "string", `package.json must define npm script: ${script}`);
 }
 assert(ci.includes("npm run audit:platform"), "CI must execute the GitHub/Vercel platform contract audit");
 assert(ci.includes("npm ci --dry-run --ignore-scripts --no-audit --no-fund"), "CI must validate the committed lockfile without regenerating it");
@@ -64,7 +64,7 @@ assert(deploy.includes("Vercel – credi-marketplace-afiliados"), "Production de
 assert(preview.includes("Vercel – credi-marketplace-afiliados"), "Pull-request preview validation must use the canonical Vercel project status");
 assert(productionE2E.includes("workflow_dispatch:"), "Production E2E must remain manually triggered");
 for (const secret of ["E2E_BASE_URL", "E2E_OPERATION_ID", "E2E_LIVE_ROOM_ID", "E2E_STORAGE_STATE_JSON"]) {
-  assert(productionE2E.includes(\`secrets.\${secret}\`), \`Production E2E must validate its required secret: \${secret}\`);
+  assert(productionE2E.includes(`secrets.${secret}`), `Production E2E must validate its required secret: ${secret}`);
 }
 assert(admin.includes("secrets.VERCEL_TOKEN"), "Vercel administration workflow must require a dedicated VERCEL_TOKEN secret");
 assert(admin.includes('VERCEL_SCOPE: "bazwjhon-2554s-projects"'), "Vercel administration workflow must use the configured project scope");
@@ -76,14 +76,14 @@ if (fs.existsSync(workflowsDir)) {
   const workflowFiles = fs.readdirSync(workflowsDir).filter((name) => /\.ya?ml$/i.test(name));
   for (const name of workflowFiles) {
     const content = fs.readFileSync(path.join(workflowsDir, name), "utf8");
-    assert(!/\bnetlify\b/i.test(content), \`GitHub workflow \${name} must not call the retired Netlify integration\`);
+    assert(!/\bnetlify\b/i.test(content), `GitHub workflow ${name} must not call the retired Netlify integration`);
   }
 }
 
 console.log("=== Credi GitHub + Vercel Platform Contract ===");
-console.log(\`Checks run: \${checks.length}\`);
-console.log(\`Passed: \${checks.filter((x) => x.passed).length}\`);
-console.log(\`Failed: \${checks.filter((x) => !x.passed).length}\`);
-for (const failure of failures) console.error(\`FAIL: \${failure}\`);
+console.log(`Checks run: ${checks.length}`);
+console.log(`Passed: ${checks.filter((x) => x.passed).length}`);
+console.log(`Failed: ${checks.filter((x) => !x.passed).length}`);
+for (const failure of failures) console.error(`FAIL: ${failure}`);
 if (failures.length) process.exit(1);
 console.log("Platform contract: PASSED");
