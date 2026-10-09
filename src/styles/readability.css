@@ -46,6 +46,15 @@
 }
 
 /* Explicit dark/hero surfaces receive a local contrast contract. */
+
+/* The landing-page footer deliberately uses a near-black surface. Keep its
+ * title explicitly white even when shared page-level readability rules apply. */
+.app-readable-surface .premium-portal-footer h2 {
+  color: #ffffff !important;
+  -webkit-text-stroke: 0 !important;
+  text-shadow: none !important;
+}
+
 .app-readable-surface :where(
   .hero-stage,
   .premium-portal-stage,
