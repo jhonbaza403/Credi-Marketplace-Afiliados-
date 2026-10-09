@@ -99,8 +99,9 @@ jobs:
           for attempt in $(seq 1 12); do
             STATUS_JSON="$(gh api -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2026-03-10' "/repos/${REPOSITORY}/commits/${COMMIT_SHA}/status")"
 
-            VERCEL_STATE="$(printf '%s' "${STATUS_JSON}" | jq -r '[.statuses[] | select(.context == "Vercel")][0].state // ""')"
-            VERCEL_TARGET="$(printf '%s' "${STATUS_JSON}" | jq -r '[.statuses[] | select(.context == "Vercel")][0].target_url // ""')"
+            VERCEL_STATUS="$(printf '%s' "${STATUS_JSON}" | jq -c '[.statuses[] | select((.context == "Vercel") or ((.context // "") == "Vercel – credi-marketplace-afiliados"))] | first // {}')"
+            VERCEL_TARGET="$(printf '%s' "${VERCEL_STATUS}" | jq -r '.target_url // ""')"
+            VERCEL_STATE="$(printf '%s' "${VERCEL_STATUS}" | jq -r '.state // ""')"
 
             echo "Vercel state (attempt ${attempt}/12): ${VERCEL_STATE:-missing}"
             echo "Vercel target: ${VERCEL_TARGET:-missing}"
