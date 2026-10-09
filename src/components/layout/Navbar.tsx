@@ -115,10 +115,10 @@ export default function Navbar() {
       <Link
         href="/"
         onClick={closeMenus}
-        className="group flex shrink-0 items-center gap-2.5 rounded-xl focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-cyan-300"
+        className="group flex shrink-0 items-center gap-2.5 rounded-xl focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-600"
         aria-label="Credi Marketplace — Inicio"
       >
-        <span className="relative flex size-10 items-center justify-center overflow-hidden rounded-[14px] bg-white shadow-[0_6px_22px_rgba(34,211,238,.2)] ring-1 ring-white/20 transition group-hover:scale-[1.03]">
+        <span className="relative flex size-10 items-center justify-center overflow-hidden rounded-[14px] bg-white shadow-[0_6px_22px_rgba(34,211,238,.2)] ring-1 ring-slate-200 transition group-hover:scale-[1.03]">
           <Image src="/logo.png" alt="" fill sizes="40px" priority className="object-contain p-1" />
         </span>
         <span className="flex flex-col leading-none">
@@ -137,7 +137,7 @@ export default function Navbar() {
               href={item.href}
               aria-current={active ? "page" : undefined}
               className={
-                "inline-flex min-h-11 items-center gap-2 rounded-xl px-3 py-2 text-sm font-bold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-300 " +
+                "inline-flex min-h-11 items-center gap-2 rounded-xl px-3 py-2 text-sm font-bold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 " +
                 (active
                   ? "bg-[#e7f3ff] text-[#0866ff] shadow-sm ring-1 ring-[#0866ff]/10"
                   : "text-slate-600 hover:bg-slate-100 hover:text-slate-950")
@@ -161,7 +161,7 @@ export default function Navbar() {
             onClick={() => setSolutionsOpen((value) => !value)}
             aria-expanded={solutionsOpen}
             aria-controls="credi-solutions-menu"
-            className="inline-flex min-h-11 items-center gap-2 rounded-xl px-3 py-2 text-sm font-bold text-slate-700 transition hover:bg-white/[.08] hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-300"
+            className="inline-flex min-h-11 items-center gap-2 rounded-xl px-3 py-2 text-sm font-bold text-slate-700 transition hover:bg-slate-100 hover:text-slate-950 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
           >
             <MoreHorizontal className="size-4" aria-hidden="true" />
             Soluciones
@@ -188,7 +188,7 @@ export default function Navbar() {
                           href={item.href}
                           onClick={closeMenus}
                           aria-current={active ? "page" : undefined}
-                          className={"flex min-h-10 items-center gap-2.5 rounded-xl px-2.5 py-2 text-sm transition focus-visible:outline-2 focus-visible:outline-cyan-300 " + (active ? "bg-blue-50 font-bold text-blue-700" : "text-slate-700 hover:bg-slate-50 hover:text-slate-950")}
+                          className={"flex min-h-10 items-center gap-2.5 rounded-xl px-2.5 py-2 text-sm transition focus-visible:outline-2 focus-visible:outline-blue-600 " + (active ? "bg-blue-50 font-bold text-blue-700" : "text-slate-700 hover:bg-slate-50 hover:text-slate-950")}
                         >
                           <Icon className="size-4 shrink-0 text-blue-600" aria-hidden="true" />
                           <span>{item.label}</span>
@@ -257,7 +257,7 @@ export default function Navbar() {
                   href={item.href}
                   onClick={closeMenus}
                   aria-current={active ? "page" : undefined}
-                  className={"flex min-h-[88px] flex-col justify-between rounded-2xl border p-3 transition focus-visible:outline-2 focus-visible:outline-cyan-300 " + (active ? "border-blue-200 bg-blue-50 text-blue-700" : "border-slate-200 bg-white text-slate-800 hover:bg-blue-50")}
+                  className={"flex min-h-[88px] flex-col justify-between rounded-2xl border p-3 transition focus-visible:outline-2 focus-visible:outline-blue-600 " + (active ? "border-blue-200 bg-blue-50 text-blue-700" : "border-slate-200 bg-white text-slate-800 hover:bg-blue-50")}
                 >
                   <Icon className="size-5 text-blue-700" aria-hidden="true" />
                   <span className="text-sm font-black">{item.label}</span>
@@ -271,7 +271,7 @@ export default function Navbar() {
             {SOLUTION_GROUPS.map((group) => (
               <details key={group.title} className="group rounded-2xl border border-slate-200 bg-white">
                 <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-bold text-slate-900 focus-visible:outline-2 focus-visible:outline-blue-600 [&::-webkit-details-marker]:hidden">
-                  <span>{group.title}<span className="ml-2 text-xs font-normal text-slate-400">{group.description}</span></span>
+                  <span>{group.title}<span className="ml-2 text-xs font-normal text-slate-500">{group.description}</span></span>
                   <ChevronDown className="size-4 shrink-0 text-slate-400 transition-transform group-open:rotate-180" aria-hidden="true" />
                 </summary>
                 <div className="grid grid-cols-1 gap-1 px-2 pb-2 sm:grid-cols-2">
@@ -279,7 +279,7 @@ export default function Navbar() {
                     const Icon = item.icon;
                     const active = isPathActive(pathname, item.href);
                     return (
-                      <Link key={item.href + item.label} href={item.href} onClick={closeMenus} aria-current={active ? "page" : undefined} className={"flex min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition focus-visible:outline-2 focus-visible:outline-cyan-300 " + (active ? "bg-white/10 font-bold text-white" : "text-slate-700 hover:bg-slate-50 hover:text-white")}>
+                      <Link key={item.href + item.label} href={item.href} onClick={closeMenus} aria-current={active ? "page" : undefined} className={"flex min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition focus-visible:outline-2 focus-visible:outline-blue-600 " + (active ? "bg-white/10 font-bold text-white" : "text-slate-700 hover:bg-slate-50 hover:text-white")}>
                         <Icon className="size-4 text-blue-600" aria-hidden="true" />
                         {item.label}
                       </Link>
@@ -300,7 +300,7 @@ export default function Navbar() {
             <Link href="/login" onClick={closeMenus} className="inline-flex min-h-11 items-center justify-center rounded-xl px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-blue-600">
               Iniciar sesión
             </Link>
-            <Link href="/free" onClick={closeMenus} className="inline-flex min-h-11 items-center justify-center rounded-xl px-4 py-2 text-sm font-semibold text-slate-200 hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-cyan-300">
+            <Link href="/free" onClick={closeMenus} className="inline-flex min-h-11 items-center justify-center rounded-xl px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-blue-600">
               Explorar Credi Free
             </Link>
           </div>
