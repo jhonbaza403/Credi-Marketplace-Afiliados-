@@ -122,8 +122,8 @@ export default function Navbar() {
           <Image src="/logo.png" alt="" fill sizes="40px" priority className="object-contain p-1" />
         </span>
         <span className="flex flex-col leading-none">
-          <span className="text-[17px] font-black tracking-tight text-white">Credi</span>
-          <span className="mt-1 text-[9px] font-bold tracking-[.19em] text-cyan-200/75">COMERCIO EN RED</span>
+          <span className="text-[17px] font-black tracking-tight text-slate-950">Credi</span>
+          <span className="mt-1 text-[9px] font-bold tracking-[.19em] text-blue-700">COMERCIO EN RED</span>
         </span>
       </Link>
 
@@ -139,8 +139,8 @@ export default function Navbar() {
               className={
                 "inline-flex min-h-11 items-center gap-2 rounded-xl px-3 py-2 text-sm font-bold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-300 " +
                 (active
-                  ? "bg-white/15 text-white shadow-sm ring-1 ring-white/10"
-                  : "text-slate-200/80 hover:bg-white/[.08] hover:text-white")
+                  ? "bg-[#e7f3ff] text-[#0866ff] shadow-sm ring-1 ring-[#0866ff]/10"
+                  : "text-slate-600 hover:bg-slate-100 hover:text-slate-950")
               }
             >
               <Icon className="size-4" aria-hidden="true" />
@@ -161,7 +161,7 @@ export default function Navbar() {
             onClick={() => setSolutionsOpen((value) => !value)}
             aria-expanded={solutionsOpen}
             aria-controls="credi-solutions-menu"
-            className="inline-flex min-h-11 items-center gap-2 rounded-xl px-3 py-2 text-sm font-bold text-slate-200/80 transition hover:bg-white/[.08] hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-300"
+            className="inline-flex min-h-11 items-center gap-2 rounded-xl px-3 py-2 text-sm font-bold text-slate-700 transition hover:bg-white/[.08] hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-300"
           >
             <MoreHorizontal className="size-4" aria-hidden="true" />
             Soluciones
@@ -170,14 +170,14 @@ export default function Navbar() {
           {solutionsOpen && (
             <div
               id="credi-solutions-menu"
-              className="absolute right-0 top-full z-[100] mt-3 grid w-[min(850px,calc(100vw-2rem))] grid-cols-1 gap-4 rounded-3xl border border-white/10 bg-[#07101f]/[.98] p-4 shadow-[0_24px_80px_rgba(0,0,0,.45)] backdrop-blur-2xl sm:grid-cols-3 sm:p-5"
+              className="absolute right-0 top-full z-[100] mt-3 grid w-[min(850px,calc(100vw-2rem))] grid-cols-1 gap-4 rounded-3xl border border-slate-200 bg-white p-4 shadow-[0_24px_80px_rgba(0,0,0,.45)] backdrop-blur-2xl sm:grid-cols-3 sm:p-5"
             >
               {SOLUTION_GROUPS.map((group) => (
                 <section key={group.title} aria-labelledby={"solution-" + group.title.replace(/\s+/g, "-").toLowerCase()}>
-                  <h2 id={"solution-" + group.title.replace(/\s+/g, "-").toLowerCase()} className="px-2 text-xs font-black uppercase tracking-[.16em] text-cyan-200">
+                  <h2 id={"solution-" + group.title.replace(/\s+/g, "-").toLowerCase()} className="px-2 text-xs font-black uppercase tracking-[.16em] text-blue-700">
                     {group.title}
                   </h2>
-                  <p className="px-2 pb-2 pt-1 text-xs text-slate-400">{group.description}</p>
+                  <p className="px-2 pb-2 pt-1 text-xs text-slate-500">{group.description}</p>
                   <div className="space-y-1">
                     {group.items.map((item) => {
                       const Icon = item.icon;
@@ -188,9 +188,9 @@ export default function Navbar() {
                           href={item.href}
                           onClick={closeMenus}
                           aria-current={active ? "page" : undefined}
-                          className={"flex min-h-10 items-center gap-2.5 rounded-xl px-2.5 py-2 text-sm transition focus-visible:outline-2 focus-visible:outline-cyan-300 " + (active ? "bg-white/10 font-bold text-white" : "text-slate-200/80 hover:bg-white/[.07] hover:text-white")}
+                          className={"flex min-h-10 items-center gap-2.5 rounded-xl px-2.5 py-2 text-sm transition focus-visible:outline-2 focus-visible:outline-cyan-300 " + (active ? "bg-blue-50 font-bold text-blue-700" : "text-slate-700 hover:bg-slate-50 hover:text-slate-950")}
                         >
-                          <Icon className="size-4 shrink-0 text-cyan-200/80" aria-hidden="true" />
+                          <Icon className="size-4 shrink-0 text-blue-600" aria-hidden="true" />
                           <span>{item.label}</span>
                         </Link>
                       );
@@ -204,23 +204,23 @@ export default function Navbar() {
       </div>
 
       <div className="hidden shrink-0 items-center gap-2 xl:flex">
-        <Link href="/search" aria-label="Buscar en Credi" title="Buscar" className="inline-flex size-11 items-center justify-center rounded-xl text-slate-200/80 transition hover:bg-white/10 hover:text-white focus-visible:outline-2 focus-visible:outline-cyan-300">
+        <Link href="/search" aria-label="Buscar en Credi" title="Buscar" className="inline-flex size-11 items-center justify-center rounded-xl text-slate-700 transition hover:bg-slate-100 hover:text-slate-950 focus-visible:outline-2 focus-visible:outline-blue-600">
           <Search className="size-[18px]" aria-hidden="true" />
         </Link>
         <Link href="/publish" className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-300 to-blue-400 px-4 py-2.5 text-sm font-black text-slate-950 shadow-[0_8px_26px_rgba(34,211,238,.16)] transition hover:brightness-105 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">
           <Sparkles className="size-4" aria-hidden="true" />
           Publicar
         </Link>
-        <Link href="/chat" aria-label="Abrir Credi Chat" title="Credi Chat" className="inline-flex size-11 items-center justify-center rounded-xl border border-white/10 bg-white/[.06] text-white transition hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-cyan-300">
+        <Link href="/chat" aria-label="Abrir Credi Chat" title="Credi Chat" className="inline-flex size-11 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-blue-600">
           <MessageCircle className="size-[18px]" aria-hidden="true" />
         </Link>
-        <Link href="/login" className="rounded-xl px-3 py-2.5 text-sm font-bold text-slate-200/85 transition hover:bg-white/[.08] hover:text-white focus-visible:outline-2 focus-visible:outline-cyan-300">
+        <Link href="/login" className="rounded-xl px-3 py-2.5 text-sm font-bold text-slate-700 transition hover:bg-slate-100 hover:text-slate-950 focus-visible:outline-2 focus-visible:outline-blue-600">
           Entrar
         </Link>
       </div>
 
       <div className="ml-auto flex items-center gap-1.5 xl:hidden">
-        <Link href="/search" aria-label="Buscar en Credi" title="Buscar" className="inline-flex size-10 items-center justify-center rounded-xl text-white/85 transition hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-cyan-300">
+        <Link href="/search" aria-label="Buscar en Credi" title="Buscar" className="inline-flex size-10 items-center justify-center rounded-xl text-slate-700 transition hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-blue-600">
           <Search className="size-5" aria-hidden="true" />
         </Link>
         <button
@@ -229,20 +229,20 @@ export default function Navbar() {
           aria-label={mobileOpen ? "Cerrar menú de navegación" : "Abrir menú de navegación"}
           aria-expanded={mobileOpen}
           aria-controls="credi-mobile-menu"
-          className="inline-flex size-10 items-center justify-center rounded-xl border border-white/10 bg-white/[.07] text-white transition hover:bg-white/15 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-300"
+          className="inline-flex size-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-800 transition hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
         >
           {mobileOpen ? <X className="size-5" aria-hidden="true" /> : <Menu className="size-5" aria-hidden="true" />}
         </button>
       </div>
 
       {mobileOpen && (
-        <div id="credi-mobile-menu" className="absolute left-0 right-0 top-full z-[100] max-h-[calc(100dvh-72px)] overflow-y-auto border-t border-white/10 bg-[#07101f]/[.99] p-4 pb-6 shadow-[0_24px_80px_rgba(0,0,0,.45)] backdrop-blur-2xl xl:hidden sm:p-6">
+        <div id="credi-mobile-menu" className="absolute left-0 right-0 top-full z-[100] max-h-[calc(100dvh-72px)] overflow-y-auto border-t border-slate-200 bg-white p-4 pb-6 shadow-[0_24px_80px_rgba(0,0,0,.45)] backdrop-blur-2xl xl:hidden sm:p-6">
           <div className="mb-5 flex items-center justify-between gap-3">
             <div>
-              <p className="text-sm font-black text-white">¿Qué quieres hacer hoy?</p>
-              <p className="mt-1 text-xs text-slate-400">Todo Credi, organizado para ti.</p>
+              <p className="text-sm font-black text-slate-950">¿Qué quieres hacer hoy?</p>
+              <p className="mt-1 text-xs text-slate-500">Todo Credi, organizado para ti.</p>
             </div>
-            <Link href="/register" onClick={closeMenus} className="rounded-xl bg-cyan-300 px-3.5 py-2.5 text-xs font-black text-slate-950 transition hover:bg-cyan-200 focus-visible:outline-2 focus-visible:outline-white">
+            <Link href="/register" onClick={closeMenus} className="rounded-xl bg-[#0866ff] px-3.5 py-2.5 text-xs font-black text-white transition hover:bg-[#075ce5] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600">
               Crear cuenta
             </Link>
           </div>
@@ -257,11 +257,11 @@ export default function Navbar() {
                   href={item.href}
                   onClick={closeMenus}
                   aria-current={active ? "page" : undefined}
-                  className={"flex min-h-[88px] flex-col justify-between rounded-2xl border p-3 transition focus-visible:outline-2 focus-visible:outline-cyan-300 " + (active ? "border-cyan-300/40 bg-cyan-300/10 text-white" : "border-white/10 bg-white/[.04] text-slate-100 hover:bg-white/[.08]")}
+                  className={"flex min-h-[88px] flex-col justify-between rounded-2xl border p-3 transition focus-visible:outline-2 focus-visible:outline-cyan-300 " + (active ? "border-blue-200 bg-blue-50 text-blue-700" : "border-slate-200 bg-white text-slate-800 hover:bg-blue-50")}
                 >
-                  <Icon className="size-5 text-cyan-200" aria-hidden="true" />
+                  <Icon className="size-5 text-blue-700" aria-hidden="true" />
                   <span className="text-sm font-black">{item.label}</span>
-                  <span className="text-[11px] leading-4 text-slate-400">{item.description}</span>
+                  <span className="text-[11px] leading-4 text-slate-500">{item.description}</span>
                 </Link>
               );
             })}
@@ -269,8 +269,8 @@ export default function Navbar() {
 
           <div className="mt-5 space-y-2">
             {SOLUTION_GROUPS.map((group) => (
-              <details key={group.title} className="group rounded-2xl border border-white/10 bg-white/[.03]">
-                <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-bold text-white focus-visible:outline-2 focus-visible:outline-cyan-300 [&::-webkit-details-marker]:hidden">
+              <details key={group.title} className="group rounded-2xl border border-slate-200 bg-white">
+                <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-bold text-slate-900 focus-visible:outline-2 focus-visible:outline-blue-600 [&::-webkit-details-marker]:hidden">
                   <span>{group.title}<span className="ml-2 text-xs font-normal text-slate-400">{group.description}</span></span>
                   <ChevronDown className="size-4 shrink-0 text-slate-400 transition-transform group-open:rotate-180" aria-hidden="true" />
                 </summary>
@@ -279,8 +279,8 @@ export default function Navbar() {
                     const Icon = item.icon;
                     const active = isPathActive(pathname, item.href);
                     return (
-                      <Link key={item.href + item.label} href={item.href} onClick={closeMenus} aria-current={active ? "page" : undefined} className={"flex min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition focus-visible:outline-2 focus-visible:outline-cyan-300 " + (active ? "bg-white/10 font-bold text-white" : "text-slate-200/80 hover:bg-white/[.06] hover:text-white")}>
-                        <Icon className="size-4 text-cyan-200/80" aria-hidden="true" />
+                      <Link key={item.href + item.label} href={item.href} onClick={closeMenus} aria-current={active ? "page" : undefined} className={"flex min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition focus-visible:outline-2 focus-visible:outline-cyan-300 " + (active ? "bg-white/10 font-bold text-white" : "text-slate-700 hover:bg-slate-50 hover:text-white")}>
+                        <Icon className="size-4 text-blue-600" aria-hidden="true" />
                         {item.label}
                       </Link>
                     );
@@ -294,13 +294,13 @@ export default function Navbar() {
             <Link href="/publish" onClick={closeMenus} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-300 to-blue-400 px-4 py-3 text-sm font-black text-slate-950 focus-visible:outline-2 focus-visible:outline-white">
               <Sparkles className="size-4" aria-hidden="true" /> Publicar
             </Link>
-            <Link href="/chat" onClick={closeMenus} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/[.06] px-4 py-3 text-sm font-bold text-white focus-visible:outline-2 focus-visible:outline-cyan-300">
+            <Link href="/chat" onClick={closeMenus} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-800 focus-visible:outline-2 focus-visible:outline-blue-600">
               <MessageCircle className="size-4" aria-hidden="true" /> Chat
             </Link>
-            <Link href="/login" onClick={closeMenus} className="inline-flex min-h-11 items-center justify-center rounded-xl px-4 py-2 text-sm font-semibold text-slate-200 hover:bg-white/[.06] focus-visible:outline-2 focus-visible:outline-cyan-300">
+            <Link href="/login" onClick={closeMenus} className="inline-flex min-h-11 items-center justify-center rounded-xl px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-blue-600">
               Iniciar sesión
             </Link>
-            <Link href="/free" onClick={closeMenus} className="inline-flex min-h-11 items-center justify-center rounded-xl px-4 py-2 text-sm font-semibold text-slate-200 hover:bg-white/[.06] focus-visible:outline-2 focus-visible:outline-cyan-300">
+            <Link href="/free" onClick={closeMenus} className="inline-flex min-h-11 items-center justify-center rounded-xl px-4 py-2 text-sm font-semibold text-slate-200 hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-cyan-300">
               Explorar Credi Free
             </Link>
           </div>
