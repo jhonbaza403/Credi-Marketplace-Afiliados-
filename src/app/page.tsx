@@ -131,7 +131,7 @@ export default async function HomePage() {
         <div className="container-marketplace rounded-[2rem] border border-white/10 bg-neutral-950 px-6 py-10 text-center text-white shadow-2xl sm:px-12 sm:py-12">
           <div className="mx-auto flex max-w-4xl flex-col items-center">
             <div className="mb-4 flex size-12 items-center justify-center rounded-2xl border border-cyan-300/20 bg-cyan-300/10"><LockKeyhole className="size-5 text-cyan-200" /></div>
-            <h2 className="text-2xl font-black sm:text-4xl">Confianza, comercio y conexión</h2>
+            <h2 className="text-2xl font-black text-white sm:text-4xl">Confianza, comercio y conexión</h2>
             <p className="mt-4 max-w-2xl leading-7 text-neutral-300">Crea tu cuenta para acceder a tu espacio de trabajo, operaciones y herramientas de Credi Marketplace.</p>
             <div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row">
               <Link href="/register" className="inline-flex items-center justify-center rounded-xl bg-brand-600 px-7 py-3.5 text-sm font-black hover:bg-brand-500">Crear cuenta</Link>
