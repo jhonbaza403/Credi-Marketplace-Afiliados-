@@ -48,7 +48,7 @@ test.describe("Credi unified portal", () => {
 
   test("wall keeps social and commerce navigation connected", async ({ page }) => {
     await page.goto("/social");
-    await expect(page.getByRole("heading", { name: /Descubre lo que está pasando/i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Tu comunidad\. Tus ideas\. Nuevas oportunidades\./i })).toBeVisible();
     const nav = page.getByRole("navigation", { name: "Navegación principal" });
     await expect(nav.getByRole("link", { name: "Marketplace", exact: true })).toBeVisible();
     await expect(nav.getByRole("link", { name: "Free", exact: true })).toBeVisible();
