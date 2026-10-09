@@ -18,8 +18,10 @@ test.describe("Credi unified portal", () => {
       await expect(nav.getByRole("link", { name: label, exact: true })).toHaveAttribute("href", href);
     }
 
-    const socialTitle = page.getByRole("heading", { name: /Personas, contenido y oportunidades/i });
-    await expect(socialTitle).toHaveCount(0);
+    const homeTitle = page.getByRole("heading", { name: /Personas, contenido y oportunidades/i });
+    await expect(homeTitle).toBeVisible();
+    await expect.poll(async () => homeTitle.evaluate((element) => getComputedStyle(element).color)).toBe("rgb(255, 255, 255)");
+
     await page.goto("/social");
     const wallTitle = page.getByRole("heading", { name: /Tu comunidad\. Tus ideas\. Nuevas oportunidades\./i });
     await expect(wallTitle).toBeVisible();
