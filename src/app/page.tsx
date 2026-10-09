@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, BadgeCheck, Building2, LockKeyhole, MessageCircle, ShoppingBag, Sparkles, TrendingUp, Users } from "lucide-react";
 import HeroPortal from "@/components/layout/HeroPortal";
@@ -42,24 +43,42 @@ export default async function HomePage() {
     <main className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
       <section className="hero-stage premium-portal-stage px-4 py-16 text-white sm:px-6 sm:py-24 lg:py-28">
         <HeroPortal />
-        <div className="hero-content mx-auto max-w-6xl text-center">
-          <div className="hero-kicker inline-flex items-center gap-2 rounded-full border border-cyan-300/20 bg-white/5 px-4 py-2 text-xs font-bold uppercase tracking-[0.16em] text-cyan-100 shadow-[0_0_28px_rgba(34,211,238,.12)]">
-            <Sparkles className="size-4" /> Plataforma comercial digital
+        <div className="hero-content mx-auto grid w-full max-w-7xl items-center gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(380px,0.95fr)] lg:gap-12">
+          <div className="max-w-3xl">
+            <div className="hero-kicker inline-flex items-center gap-2 rounded-full border border-cyan-300/25 bg-white/[.07] px-4 py-2 text-xs font-bold uppercase tracking-[.16em] text-cyan-100 shadow-[0_0_28px_rgba(34,211,238,.12)]">
+              <Sparkles className="size-4" /> La red social del comercio
+            </div>
+            <h1 className="mt-7 max-w-3xl text-balance text-4xl font-black tracking-tight sm:text-5xl lg:text-6xl xl:text-7xl">
+              <span className="hero-main-text">Personas, contenido y oportunidades.</span>{" "}
+              <span className="hero-highlight">Todo conecta en Credi.</span>
+            </h1>
+            <p className="mt-6 max-w-2xl text-base font-medium leading-8 text-slate-100 drop-shadow-[0_2px_12px_rgba(0,0,0,.8)] sm:text-lg">
+              Una comunidad para descubrir, conversar, publicar, vender y crecer. Tu muro social y tu comercio viven en la misma experiencia.
+            </p>
+            <div className="hero-actions mt-8 flex flex-col gap-3 sm:flex-row">
+              <Link href="/social" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-300 to-blue-400 px-6 py-3.5 text-sm font-black text-slate-950 shadow-[0_10px_38px_rgba(34,211,238,.2)] transition hover:brightness-105 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">
+                Entrar al muro <ArrowRight className="size-5" />
+              </Link>
+              <Link href="/marketplace" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/[.07] px-6 py-3.5 text-sm font-black text-white backdrop-blur-sm transition hover:bg-white/[.12] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-300">
+                Explorar Marketplace <ShoppingBag className="size-4" />
+              </Link>
+            </div>
+            <div className="mt-7 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs font-semibold text-slate-300">
+              <span className="inline-flex items-center gap-2"><Users className="size-4 text-cyan-200" /> Comunidad</span>
+              <span className="inline-flex items-center gap-2"><Radio className="size-4 text-cyan-200" /> LIVE Commerce</span>
+              <span className="inline-flex items-center gap-2"><Building2 className="size-4 text-cyan-200" /> B2B y afiliados</span>
+            </div>
           </div>
-          <h1 className="mx-auto mt-7 max-w-5xl text-balance text-4xl font-black tracking-tight sm:text-6xl lg:text-7xl">
-            <span className="hero-main-text">Credi Marketplace</span>
-            <span className="hero-highlight"> conecta negocios</span>
-          </h1>
-          <p className="mx-auto mt-6 max-w-3xl text-lg font-medium leading-8 text-slate-100 drop-shadow-[0_2px_12px_rgba(0,0,0,.8)] sm:text-xl">
-            Descubre, vende, compra, negocia y crea relaciones comerciales dentro de un mismo ecosistema.
-          </p>
-          <div className="hero-actions mt-9 flex flex-col justify-center gap-3 sm:flex-row">
-            <Link href="/explorar" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-brand-600 px-7 py-3.5 text-sm font-black shadow-[0_10px_38px_rgba(37,99,235,.28)] hover:bg-brand-500">
-              Explorar Marketplace <ArrowRight className="size-5" />
-            </Link>
-            <Link href="/publish" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/8 px-7 py-3.5 text-sm font-black backdrop-blur-sm hover:bg-white/12">
-              Publicar en Credi <ArrowRight className="size-4" />
-            </Link>
+          <div className="relative mx-auto mt-2 aspect-[4/3] w-full max-w-[640px] overflow-hidden rounded-[2rem] border border-white/10 shadow-[0_28px_90px_rgba(2,6,23,.48)] sm:mt-0">
+            <Image
+              src="/visuals/credi-social-network.svg"
+              alt="Ilustración del ecosistema social de Credi: publicaciones, comunidad y comercio conectado."
+              fill
+              priority
+              sizes="(max-width: 1024px) 100vw, 50vw"
+              className="object-cover"
+            />
+            <div className="pointer-events-none absolute inset-0 rounded-[2rem] ring-1 ring-inset ring-white/10" />
           </div>
         </div>
       </section>

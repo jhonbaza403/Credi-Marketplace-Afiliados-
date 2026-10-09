@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, Camera, Megaphone, Play, Sparkles } from "lucide-react";
 import { getDatabaseServerClient } from "@/lib/database/server";
@@ -82,18 +83,32 @@ export default async function SocialPage() {
   return (
     <main className="min-h-screen bg-[var(--background)] px-4 pb-8 text-[var(--foreground)] sm:px-4 lg:px-8">
       <div className="mx-auto max-w-7xl space-y-8">
-        <header className="overflow-hidden rounded-[2rem] border border-[var(--border)] bg-[var(--surface)] shadow-sm">
-          <div className="bg-gradient-to-br from-brand-950 via-slate-950 to-slate-900 px-6 py-9 text-white sm:px-10 sm:py-12">
-            <div className="flex flex-col gap-7 lg:flex-row lg:items-end lg:justify-between">
+        <header className="overflow-hidden rounded-[2rem] border border-[var(--border)] bg-[var(--surface)] shadow-marketplace-xl">
+          <div className="relative isolate overflow-hidden bg-gradient-to-br from-[#07152a] via-[#10112e] to-[#21113f] px-5 py-7 text-white sm:px-8 sm:py-10 lg:px-10 lg:py-11">
+            <div aria-hidden="true" className="pointer-events-none absolute -left-24 -top-24 size-72 rounded-full bg-cyan-400/15 blur-3xl" />
+            <div aria-hidden="true" className="pointer-events-none absolute -bottom-28 right-10 size-72 rounded-full bg-violet-400/15 blur-3xl" />
+            <div className="relative grid items-center gap-7 lg:grid-cols-[minmax(0,1fr)_minmax(280px,.72fr)]">
               <div className="max-w-3xl">
-                <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-black uppercase tracking-[.16em] text-cyan-100"><Sparkles className="size-4" /> Muro Credi</span>
-                <h1 className="mt-4 text-4xl font-black tracking-tight sm:text-5xl">Descubre lo que está pasando.</h1>
-                <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-200 sm:text-base">Un muro orientado a comunidad y comercio: historias rápidas, reels, publicaciones y campañas activas, todo conectado a acciones reales.</p>
+                <span className="inline-flex items-center gap-2 rounded-full border border-cyan-200/20 bg-white/[.07] px-3 py-1.5 text-xs font-black uppercase tracking-[.16em] text-cyan-100">
+                  <Sparkles className="size-4" aria-hidden="true" /> Comunidad Credi
+                </span>
+                <h1 className="mt-4 text-balance text-3xl font-black tracking-tight sm:text-4xl lg:text-5xl">Tu comunidad. Tus ideas. Nuevas oportunidades.</h1>
+                <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-200 sm:text-base">Historias, reels, publicaciones y campañas en un espacio creado para conectar personas y comercio. Descubre lo que pasa y participa.</p>
+                <div className="mt-6 flex flex-wrap gap-3">
+                  <Link href="/publish" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-300 to-blue-400 px-5 py-3 text-sm font-black text-slate-950 shadow-lg transition hover:brightness-105 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">
+                    Crear publicación <ArrowRight className="size-4" aria-hidden="true" />
+                  </Link>
+                  <Link href="/marketplace" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/[.06] px-5 py-3 text-sm font-bold text-white transition hover:bg-white/[.12] focus-visible:outline-2 focus-visible:outline-cyan-300">
+                    Descubrir productos <ShoppingBag className="size-4" aria-hidden="true" />
+                  </Link>
+                </div>
               </div>
-              <Link href="/publish" className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand-500 px-5 py-3 text-sm font-black shadow-lg hover:bg-brand-400">Publicar <ArrowRight className="size-4" /></Link>
+              <div className="relative mx-auto hidden aspect-[4/3] w-full max-w-[440px] overflow-hidden rounded-3xl border border-white/10 shadow-2xl md:block">
+                <Image src="/visuals/credi-social-network.svg" alt="Vista ilustrativa del muro social y comercio integrado de Credi." fill sizes="(max-width: 1024px) 100vw, 38vw" className="object-cover" />
+              </div>
             </div>
           </div>
-          <div className="grid grid-cols-2 border-t border-[var(--border)] sm:grid-cols-4">
+          <div className="grid grid-cols-2 border-t border-[var(--border)] bg-[var(--surface)] sm:grid-cols-4">
             {[
               ["Historias", stories.length],
               ["Reels", reels.length],
@@ -107,6 +122,23 @@ export default async function SocialPage() {
             ))}
           </div>
         </header>
+
+        <nav aria-label="Accesos rápidos del ecosistema Credi" className="flex gap-2 overflow-x-auto pb-1">
+          {[
+            { label: "Muro", href: "/social", icon: Users },
+            { label: "Marketplace", href: "/marketplace", icon: ShoppingBag },
+            { label: "LIVE", href: "/live", icon: Radio },
+            { label: "Afiliados", href: "/affiliate", icon: TrendingUp },
+            { label: "B2B", href: "/b2b", icon: Building2 },
+            { label: "Servicios", href: "/services", icon: BadgeCheck },
+            { label: "Chat", href: "/chat", icon: MessageCircle },
+          ].map((item) => {
+            const Icon = item.icon;
+            return <Link key={item.href} href={item.href} aria-current={item.href === "/social" ? "page" : undefined} className={"inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full border px-4 py-2.5 text-sm font-bold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary)] " + (item.href === "/social" ? "border-[var(--primary)]/20 bg-[var(--primary)]/[.08] text-[var(--primary)]" : "border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] hover:border-[var(--primary)]/30 hover:bg-[var(--surface-secondary)]")}>
+              <Icon className="size-4" aria-hidden="true" /> {item.label}
+            </Link>;
+          })}
+        </nav>
 
               {ads.length > 0 && <section aria-labelledby="active-ads-title" className="rounded-[1.75rem] border border-[var(--primary)]/20 bg-[var(--surface)] p-6 shadow-sm">
                 <div className="flex items-center gap-2 text-[var(--primary)]"><Megaphone className="size-5" /><span className="text-xs font-black uppercase tracking-[.14em]">Campañas</span></div>
