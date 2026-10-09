@@ -64,6 +64,30 @@ test.describe("Credi unified portal", () => {
     await expect(page.getByRole("link", { name: /Ver planes/i })).toBeVisible();
   });
 
+  test("all primary and solutions menu destinations resolve without server errors", async ({ page }) => {
+    await page.goto("/");
+    const routes = [
+      "/", "/social", "/marketplace", "/services", "/free", "/b2b", "/live",
+      "/historias", "/videos", "/chat", "/search", "/publish", "/affiliate",
+      "/proveedores-verificados", "/catalogo-video", "/dashboard/b2b",
+      "/marketing", "/analytics", "/inventario", "/pagos", "/wallet",
+      "/intelligence", "/security", "/login", "/register",
+    ];
+
+    const results: Array<{ route: string; status: number; finalPath: string }> = [];
+    for (const route of routes) {
+      const response = await page.request.get(new URL(route, page.url()).toString(), { timeout: 20000 });
+      results.push({
+        route,
+        status: response.status(),
+        finalPath: new URL(response.url()).pathname,
+      });
+    }
+
+    const broken = results.filter(({ status }) => status === 404 || status >= 500);
+    expect(broken, JSON.stringify(broken, null, 2)).toEqual([]);
+  });
+
   test("legacy entry points preserve canonical destinations and auth guard", async ({ page }) => {
     await page.goto("/explorar");
     expect(new URL(page.url()).pathname).toBe("/marketplace");
