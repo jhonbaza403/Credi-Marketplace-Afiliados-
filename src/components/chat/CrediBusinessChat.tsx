@@ -63,7 +63,7 @@ export default function CrediBusinessChat() {
     ])
     if (rowError) throw rowError
     if (membersError) throw membersError
-    const memberIds = [...new Set((members ?? []).map((m: ContactRow) => m.user_id).filter((id): id is string => typeof id === 'string'))]
+    const memberIds = [...new Set((members ?? []).map((m: ContactRow) => m.user_id).filter((id: unknown): id is string => typeof id === 'string'))]
     const profileMap: Record<string, Profile> = {}
     if (memberIds.length) {
       const { data: people, error: peopleError } = await supabase.from('profiles').select('id,full_name,avatar_url,role').in('id', memberIds)
