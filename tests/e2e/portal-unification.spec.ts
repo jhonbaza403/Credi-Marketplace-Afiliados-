@@ -21,6 +21,9 @@ test.describe("Credi unified portal", () => {
     const homeTitle = page.getByRole("heading", { name: /Personas, contenido y oportunidades/i });
     await expect(homeTitle).toBeVisible();
     await expect.poll(async () => homeTitle.evaluate((element) => getComputedStyle(element).color)).toBe("rgb(255, 255, 255)");
+    const footerTitle = page.getByRole("heading", { name: "Confianza, comercio y conexión" });
+    await expect(footerTitle).toBeVisible();
+    await expect.poll(async () => footerTitle.evaluate((element) => getComputedStyle(element).color)).toBe("rgb(255, 255, 255)");
 
     await page.goto("/social");
     const wallTitle = page.getByRole("heading", { name: /Tu comunidad\. Tus ideas\. Nuevas oportunidades\./i });
