@@ -27,8 +27,11 @@ import {
 } from "lucide-react";
 
 const PRIMARY_LINKS = [
+  { label: "Inicio", href: "/", icon: Store, description: "Tu portal Credi" },
   { label: "Muro", href: "/social", icon: Users, description: "Comunidad y publicaciones" },
   { label: "Marketplace", href: "/marketplace", icon: ShoppingBag, description: "Productos y tiendas" },
+  { label: "Servicios", href: "/services", icon: BadgeCheck, description: "Servicios del ecosistema" },
+  { label: "Free", href: "/free", icon: Sparkles, description: "Explora Credi gratis" },
   { label: "B2B", href: "/b2b", icon: Building2, description: "Negocios y mayoristas" },
   { label: "LIVE", href: "/live", icon: Radio, description: "Comercio en vivo" },
 ] as const;
@@ -106,7 +109,7 @@ export default function Navbar() {
 
   return (
     <nav
-      aria-label="Navegación principal de Credi"
+      aria-label="Navegación principal"
       className="relative mx-auto flex min-h-[72px] max-w-[1600px] items-center gap-3 px-3 sm:px-6 lg:px-8"
     >
       <Link
