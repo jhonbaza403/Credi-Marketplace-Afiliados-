@@ -84,7 +84,7 @@ export default async function SocialPage() {
     <main className="min-h-screen bg-[var(--background)] px-4 pb-8 text-[var(--foreground)] sm:px-4 lg:px-8">
       <div className="mx-auto max-w-7xl space-y-8">
         <header className="overflow-hidden rounded-[2rem] border border-[var(--border)] bg-[var(--surface)] shadow-marketplace-xl">
-          <div className="relative isolate overflow-hidden bg-gradient-to-br from-[#07152a] via-[#10112e] to-[#21113f] px-5 py-7 text-white sm:px-8 sm:py-10 lg:px-10 lg:py-11">
+          <div className="social-wall-hero relative isolate overflow-hidden bg-gradient-to-br from-[#07152a] via-[#10112e] to-[#21113f] px-5 py-7 text-white sm:px-8 sm:py-10 lg:px-10 lg:py-11">
             <div aria-hidden="true" className="pointer-events-none absolute -left-24 -top-24 size-72 rounded-full bg-cyan-400/15 blur-3xl" />
             <div aria-hidden="true" className="pointer-events-none absolute -bottom-28 right-10 size-72 rounded-full bg-violet-400/15 blur-3xl" />
             <div className="relative grid items-center gap-7 lg:grid-cols-[minmax(0,1fr)_minmax(280px,.72fr)]">
