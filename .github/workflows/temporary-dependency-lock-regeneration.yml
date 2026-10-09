@@ -1,0 +1,46 @@
+name: Temporary dependency lock regeneration
+on:
+  push:
+    branches:
+      - fix/security-audit-deps-20261009
+permissions:
+  contents: write
+concurrency:
+  group: security-dependency-refresh
+  cancel-in-progress: false
+jobs:
+  refresh-and-validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout isolated dependency-fix branch
+        uses: actions/checkout@v4
+        with:
+          ref: fix/security-audit-deps-20261009
+          persist-credentials: true
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Use repository-pinned npm
+        run: npm install --global npm@11.19.1
+      - name: Regenerate package-lock.json with npm
+        run: |
+          npm install --package-lock-only --ignore-scripts --no-audit
+          git add package-lock.json
+          if ! git diff --cached --quiet; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit -m "chore: regenerate lockfile for patched dependencies"
+            git push origin HEAD:fix/security-audit-deps-20261009
+          else
+            echo "package-lock.json already matches package.json and npm resolution."
+          fi
+      - name: Install from regenerated lockfile
+        run: npm ci --no-audit
+      - name: Security audit
+        run: npm run security:audit
+      - name: ESLint
+        run: npm run lint
+      - name: TypeScript
+        run: npm run typecheck
