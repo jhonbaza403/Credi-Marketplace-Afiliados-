@@ -26,6 +26,7 @@ const runtimeRelevant = changed.filter((path) => {
   return !(
     path.startsWith("supabase/") ||
     path.startsWith(".github/") ||
+    path.startsWith("scripts/") ||
     path.startsWith("tests/") ||
     path.startsWith("docs/") ||
     path.endsWith(".md")

@@ -27,6 +27,7 @@ const preview = readRequired(".github/workflows/preview-gate.yml");
 const security = readRequired(".github/workflows/security.yml");
 const productionE2E = readRequired(".github/workflows/production-e2e.yml");
 const admin = readRequired(".github/workflows/vercel-platform-admin.yml");
+const ignoreBuild = readRequired("scripts/vercel-ignore-build.mjs");
 
 let pkg = {};
 let vercel = {};
@@ -50,6 +51,7 @@ assert(vercel.framework === "nextjs", "Vercel framework must remain nextjs");
 assert(vercel.installCommand === "npm ci", "Vercel install command must use the lockfile via npm ci");
 assert(vercel.buildCommand === "npm run build", "Vercel build command must call the canonical build script");
 assert(vercel.ignoreCommand === "node scripts/vercel-ignore-build.mjs", "Vercel ignoreCommand must reference the tracked ignore script");
+assert(ignoreBuild.includes('path.startsWith("scripts/")'), "Vercel should skip CI/tooling script-only changes instead of rebuilding the application");
 
 for (const script of ["build", "audit:env", "audit:api", "audit:routes", "audit:platform", "security:audit", "test", "test:e2e"]) {
   assert(typeof pkg.scripts?.[script] === "string", `package.json must define npm script: ${script}`);

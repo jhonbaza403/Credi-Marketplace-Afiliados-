@@ -29,7 +29,7 @@ La aplicación no debe depender de Netlify para compilar, desplegar o validar un
 
 `vercel.json` es la configuración versionada canónica: framework `nextjs`, instalación `npm ci`, build `npm run build` e ignore command `node scripts/vercel-ignore-build.mjs`.
 
-El ignore command permite omitir builds si el commit contiene únicamente archivos de documentación, pruebas, migraciones SQL o configuración de GitHub. Si el diff no se puede inspeccionar, adopta el modo seguro y permite el build. Los cambios de código, rutas, dependencias y configuración runtime deben producir un build.
+El ignore command permite omitir builds si el commit contiene únicamente archivos de documentación, pruebas, migraciones SQL, scripts de mantenimiento/CI o configuración de GitHub. Si el diff no se puede inspeccionar, adopta el modo seguro y permite el build. Los cambios de código, rutas, dependencias y configuración runtime deben producir un build.
 
 La integración Git de Vercel es la encargada de crear los despliegues reales. El workflow `deploy.yml` comprueba el estado del mismo commit después del CI; no debe interpretarse como una barrera previa al despliegue. Para bloquear promoción/alias se necesitan Deployment Checks nativos de Vercel; para bloquear el merge se necesita exigir los checks en la regla de rama o ruleset de GitHub. La regla de rama no puede verificarse desde este contrato estático.
 
