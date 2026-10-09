@@ -1,6 +1,50 @@
 import { expect, test } from "@playwright/test";
 
 test.describe("Credi unified portal", () => {
+  test("primary navigation has readable social-portal links", async ({ page }) => {
+    await page.goto("/");
+    const nav = page.getByRole("navigation", { name: "Navegación principal" });
+    const expected = [
+      ["Inicio", "/"],
+      ["Muro", "/social"],
+      ["Marketplace", "/marketplace"],
+      ["Servicios", "/services"],
+      ["Free", "/free"],
+      ["B2B", "/b2b"],
+      ["LIVE", "/live"],
+    ] as const;
+
+    for (const [label, href] of expected) {
+      await expect(nav.getByRole("link", { name: label, exact: true })).toHaveAttribute("href", href);
+    }
+
+    const socialTitle = page.getByRole("heading", { name: /Personas, contenido y oportunidades/i });
+    await expect(socialTitle).toHaveCount(0);
+    await page.goto("/social");
+    const wallTitle = page.getByRole("heading", { name: /Tu comunidad\. Tus ideas\. Nuevas oportunidades\./i });
+    await expect(wallTitle).toBeVisible();
+    await expect.poll(async () => wallTitle.evaluate((element) => getComputedStyle(element).color)).toBe("rgb(255, 255, 255)");
+  });
+
+  test("solutions menu exposes implemented first-party destinations", async ({ page }) => {
+    await page.goto("/");
+    const nav = page.getByRole("navigation", { name: "Navegación principal" });
+    await nav.getByRole("button", { name: /Soluciones/ }).click();
+    const menu = page.locator("#credi-solutions-menu");
+    await expect(menu).toBeVisible();
+
+    const requiredPaths = [
+      "/historias", "/videos", "/chat", "/live", "/marketplace", "/publish",
+      "/services", "/affiliate", "/proveedores-verificados", "/catalogo-video",
+      "/dashboard/b2b", "/marketing", "/analytics", "/inventario", "/pagos",
+      "/wallet", "/intelligence", "/security",
+    ];
+    const actualPaths = await menu.locator("a[href]").evaluateAll((links) =>
+      links.map((link) => new URL((link as HTMLAnchorElement).href).pathname),
+    );
+    for (const href of requiredPaths) expect(actualPaths, `Missing menu destination: ${href}`).toContain(href);
+  });
+
   test("home exposes the canonical portal navigation", async ({ page }) => {
     await page.goto("/");
     const nav = page.getByRole("navigation", { name: "Navegación principal" });
