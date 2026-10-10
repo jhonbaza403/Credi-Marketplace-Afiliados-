@@ -49,8 +49,12 @@ export async function getAccountAccessState(
 }
 
 export function nextRequiredSecurityStep(state: AccountAccessState): "mfa" | "security-key" | "subscription" | "identity" | null {
-  if (!state.has_mfa) return "mfa";
-  if (!state.has_security_key) return "security-key";
+  // Platform administrators authenticate with their normal account credentials.
+  // Do not force passkey/security-key enrollment for admin access.
+  if (!state.is_admin && !state.is_platform_owner) {
+    if (!state.has_mfa) return "mfa";
+    if (!state.has_security_key) return "security-key";
+  }
   if (!state.has_active_subscription && !state.is_platform_owner && !state.is_admin) return "subscription";
   if (!state.is_admin && !state.is_platform_owner && (!state.has_profile_photos || !state.identity_approved)) return "identity";
   return null;
