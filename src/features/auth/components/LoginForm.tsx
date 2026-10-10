@@ -21,7 +21,6 @@ export function LoginForm() {
   const next = searchParams.get('next') || '/dashboard';
   const [form, setForm] = useState<LoginFormState>({ email: '', password: '' });
   const [loading, setLoading] = useState(false);
-  const [passkeyLoading, setPasskeyLoading] = useState(false);
   const [mfaLoading, setMfaLoading] = useState(false);
   const [mfaCode, setMfaCode] = useState('');
   const [mfaFactorId, setMfaFactorId] = useState<string | null>(null);
@@ -120,23 +119,6 @@ export function LoginForm() {
     }
   };
 
-  const signInWithPasskey = async () => {
-    if (passkeyLoading) return;
-    setPasskeyLoading(true);
-    setErrorMsg(null);
-    try {
-      const supabase = createClient();
-      const { error } = await supabase.auth.signInWithPasskey();
-      if (error) throw error;
-      finishLogin();
-    } catch (error: unknown) {
-      console.error('[LoginForm] passkey sign-in failed', error);
-      setErrorMsg(error instanceof Error ? error.message : 'No fue posible iniciar con la llave de acceso.');
-    } finally {
-      setPasskeyLoading(false);
-    }
-  };
-
   if (mfaFactorId && mfaChallengeId) {
     return (
       <section aria-labelledby="mfa-login-title" className="mx-auto w-full max-w-md rounded-3xl border border-border bg-card p-7 shadow-xl sm:p-8">
@@ -169,7 +151,7 @@ export function LoginForm() {
       <form onSubmit={handleSubmit} noValidate className="space-y-5" aria-label="Acceso al portal de Credi Marketplace">
         <div>
           <label htmlFor="login-email" className="block text-sm font-bold text-foreground">Correo electrónico</label>
-          <input id="login-email" name="email" type="email" inputMode="email" autoComplete="email" autoCapitalize="none" spellCheck={false} required aria-required="true" aria-invalid={Boolean(errorMsg)} aria-describedby={errorMsg ? 'login-error' : undefined} disabled={loading || passkeyLoading} value={form.email} onChange={(event) => handleChange('email', event.target.value)} className="mt-2 block w-full rounded-xl border border-border bg-background px-4 py-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:opacity-50" placeholder="tu@correo.com" />
+          <input id="login-email" name="email" type="email" inputMode="email" autoComplete="email" autoCapitalize="none" spellCheck={false} required aria-required="true" aria-invalid={Boolean(errorMsg)} aria-describedby={errorMsg ? 'login-error' : undefined} disabled={loading} value={form.email} onChange={(event) => handleChange('email', event.target.value)} className="mt-2 block w-full rounded-xl border border-border bg-background px-4 py-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:opacity-50" placeholder="tu@correo.com" />
         </div>
 
         <div>
@@ -177,16 +159,11 @@ export function LoginForm() {
             <label htmlFor="login-password" className="block text-sm font-bold text-foreground">Contraseña</label>
             <Link href="/forgot-password" className="text-xs font-bold text-primary hover:underline">¿Olvidaste tu contraseña?</Link>
           </div>
-          <input id="login-password" name="password" type="password" autoComplete="current-password" required aria-required="true" aria-invalid={Boolean(errorMsg)} aria-describedby={errorMsg ? 'login-error' : undefined} disabled={loading || passkeyLoading} value={form.password} onChange={(event) => handleChange('password', event.target.value)} className="mt-2 block w-full rounded-xl border border-border bg-background px-4 py-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:opacity-50" placeholder="Tu contraseña" />
+          <input id="login-password" name="password" type="password" autoComplete="current-password" required aria-required="true" aria-invalid={Boolean(errorMsg)} aria-describedby={errorMsg ? 'login-error' : undefined} disabled={loading} value={form.password} onChange={(event) => handleChange('password', event.target.value)} className="mt-2 block w-full rounded-xl border border-border bg-background px-4 py-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:opacity-50" placeholder="Tu contraseña" />
         </div>
 
-        <button type="submit" disabled={loading || passkeyLoading} aria-busy={loading} className="flex w-full items-center justify-center rounded-xl bg-primary px-4 py-3 font-bold text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50">{loading ? 'Accediendo...' : 'Ingresar al portal'}</button>
+        <button type="submit" disabled={loading} aria-busy={loading} className="flex w-full items-center justify-center rounded-xl bg-primary px-4 py-3 font-bold text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50">{loading ? 'Accediendo...' : 'Ingresar al portal'}</button>
       </form>
-
-      <div className="my-5 flex items-center gap-3" aria-hidden="true"><div className="h-px flex-1 bg-border" /><span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">o</span><div className="h-px flex-1 bg-border" /></div>
-
-      <button type="button" onClick={signInWithPasskey} disabled={loading || passkeyLoading} aria-busy={passkeyLoading} className="flex w-full items-center justify-center rounded-xl border border-border bg-background px-4 py-3 font-bold text-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50">{passkeyLoading ? 'Esperando tu dispositivo...' : 'Entrar con llave de acceso'}</button>
-      <p className="mt-2 text-center text-xs leading-5 text-muted-foreground">Usa la biometría, PIN del dispositivo o llave de seguridad registrada en tu cuenta.</p>
 
       <div className="mt-6 rounded-xl bg-muted p-4 text-center text-sm text-muted-foreground">¿Todavía no tienes una cuenta?{' '}<Link href="/register" className="font-bold text-primary hover:underline">Crear cuenta</Link></div>
     </section>
