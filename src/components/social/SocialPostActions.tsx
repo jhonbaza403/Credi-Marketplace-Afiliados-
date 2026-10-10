@@ -43,7 +43,9 @@ export default function SocialPostActions({ postId, initialLikeCount, initialCom
       } else {
         const { error } = await supabase.from("feed_post_likes").insert({ post_id: postId, user_id: user.id });
         if (error && error.code !== "23505") throw error;
-        if (!error) { setLiked(true); setLikeCount((count) => count + 1); }
+        // A duplicate means the server already has this reaction; reconcile the UI without counting it twice.
+        setLiked(true);
+        if (!error) setLikeCount((count) => count + 1);
       }
     } catch { setMessage("No se pudo guardar tu reacción. Comprueba tu conexión e inténtalo otra vez."); }
     finally { setBusy(false); }
@@ -75,7 +77,7 @@ export default function SocialPostActions({ postId, initialLikeCount, initialCom
           className={"inline-flex min-h-10 items-center gap-2 rounded-xl border px-4 py-2 text-sm font-bold transition disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary)] " + (liked ? "border-rose-300 bg-rose-50 text-rose-700" : "border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] hover:bg-[var(--surface-secondary)]")}>
           <Heart className={"size-4 " + (liked ? "fill-current" : "")} aria-hidden="true" />{liked ? "Te gusta" : "Me gusta"} <span>{likeCount}</span>
         </button>
-        <button type="button" onClick={() => setExpanded((value) => !value)} aria-expanded={expanded}
+        <button type="button" disabled={busy} onClick={() => setExpanded((value) => !value)} aria-expanded={expanded}
           className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-2 text-sm font-bold text-[var(--foreground)] transition hover:bg-[var(--surface-secondary)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary)]">
           <MessageCircle className="size-4" aria-hidden="true" />Comentarios <span>{commentCount}</span>
         </button>
