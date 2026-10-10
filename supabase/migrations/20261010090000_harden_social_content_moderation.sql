@@ -18,7 +18,7 @@ BEGIN
   -- Only the explicit Supabase service_role JWT or an authenticated active admin
   -- may bypass owner moderation. A missing auth.uid() alone is NOT authorization:
   -- anonymous requests and SQL sessions without request claims must not bypass.
-  IF current_setting('request.jwt.claim.role', true) = 'service_role'
+  IF auth.role() = 'service_role'
      OR (auth.uid() IS NOT NULL AND public.is_admin()) THEN
     RETURN NEW;
   END IF;
