@@ -286,7 +286,7 @@ export default function CrediBusinessCallTurn({
     const channel = supabase
       .channel(`credibusiness-calls:${currentUserId}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_calls' }, (payload: RealtimePayload) => {
-        const next = payload.new
+        const next = payload.new as unknown as CallRow
         if (next.initiated_by === currentUserId || next.status !== 'ringing') return
         setIncoming((current) => current ?? next)
       })
@@ -296,7 +296,7 @@ export default function CrediBusinessCallTurn({
         table: 'chat_call_signals',
         filter: `recipient_id=eq.${currentUserId}`,
       }, async (payload: RealtimePayload) => {
-        const signal = payload.new
+        const signal = payload.new as unknown as SignalRow
         if (!activeCallId.current || signal.call_id !== activeCallId.current) return
 
         try {
