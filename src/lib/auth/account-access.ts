@@ -49,9 +49,16 @@ export async function getAccountAccessState(
 }
 
 export function nextRequiredSecurityStep(state: AccountAccessState): "mfa" | "security-key" | "subscription" | "identity" | null {
+  // The platform owner and administrators are exempt from *mandatory enrollment*
+  // gates so they are not redirected into the standard user's MFA/passkey setup.
+  // This does not disable MFA factors already enrolled in Supabase: login still
+  // challenges any verified factor. Authorization must continue to come from the
+  // server-side security-status RPC, never from client-controlled user metadata.
+  if (state.is_platform_owner || state.is_admin) return null;
+
   if (!state.has_mfa) return "mfa";
   if (!state.has_security_key) return "security-key";
-  if (!state.has_active_subscription && !state.is_platform_owner && !state.is_admin) return "subscription";
-  if (!state.is_admin && !state.is_platform_owner && (!state.has_profile_photos || !state.identity_approved)) return "identity";
+  if (!state.has_active_subscription) return "subscription";
+  if (!state.has_profile_photos || !state.identity_approved) return "identity";
   return null;
 }
