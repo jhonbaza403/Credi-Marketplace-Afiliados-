@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Mic, MicOff, Phone, PhoneOff, Video, VideoOff } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
-type RealtimePayload<T> = { eventType: 'INSERT' | 'UPDATE' | 'DELETE'; new: T; old: Partial<T> | null }
+type RealtimePayload = { eventType: string; new: Record<string, unknown>; old: Record<string, unknown> }
 type IceServer = RTCIceServer
 
 type CallRow = {
@@ -13,6 +13,27 @@ type CallRow = {
   initiated_by: string
   call_type: 'audio' | 'video'
   status: 'ringing' | 'connecting' | 'active' | 'ended' | 'declined' | 'missed' | 'failed'
+}
+
+const CALL_STATUSES = ['ringing', 'connecting', 'active', 'ended', 'declined', 'missed', 'failed'] as const
+
+function parseCallRow(value: Record<string, unknown>): CallRow | null {
+  if (
+    typeof value.id !== 'string' ||
+    typeof value.conversation_id !== 'string' ||
+    typeof value.initiated_by !== 'string' ||
+    (value.call_type !== 'audio' && value.call_type !== 'video') ||
+    typeof value.status !== 'string' ||
+    !CALL_STATUSES.includes(value.status as (typeof CALL_STATUSES)[number])
+  ) return null
+
+  return {
+    id: value.id,
+    conversation_id: value.conversation_id,
+    initiated_by: value.initiated_by,
+    call_type: value.call_type,
+    status: value.status as CallRow['status'],
+  }
 }
 
 type SignalRow = {
@@ -285,9 +306,9 @@ export default function CrediBusinessCallTurn({
 
     const channel = supabase
       .channel(`credibusiness-calls:${currentUserId}`)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_calls' }, (payload: RealtimePayload<CallRow>) => {
-        const next = payload.new as CallRow
-        if (next.initiated_by === currentUserId || next.status !== 'ringing') return
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_calls' }, (payload: RealtimePayload) => {
+        const next = parseCallRow(payload.new)
+        if (!next || next.initiated_by === currentUserId || next.status !== 'ringing') return
         setIncoming((current) => current ?? next)
       })
       .on('postgres_changes', {
@@ -295,8 +316,8 @@ export default function CrediBusinessCallTurn({
         schema: 'public',
         table: 'chat_call_signals',
         filter: `recipient_id=eq.${currentUserId}`,
-      }, async (payload: RealtimePayload<SignalRow>) => {
-        const signal = payload.new as SignalRow
+      }, async (payload: RealtimePayload) => {
+        const signal = payload.new as unknown as SignalRow
         if (!activeCallId.current || signal.call_id !== activeCallId.current) return
 
         try {
@@ -335,9 +356,9 @@ export default function CrediBusinessCallTurn({
         schema: 'public',
         table: 'chat_calls',
         filter: `conversation_id=eq.${conversation}`,
-      }, (payload: RealtimePayload<CallRow>) => {
-        const next = payload.new as CallRow
-        if (next.initiated_by !== user && next.status === 'ringing') {
+      }, (payload: RealtimePayload) => {
+        const next = parseCallRow(payload.new)
+        if (next && next.initiated_by !== user && next.status === 'ringing') {
           setIncoming((current) => current ?? next)
         }
       })
