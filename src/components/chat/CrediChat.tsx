@@ -75,7 +75,6 @@ export default function CrediChat() {
     const mapped: ChatConversation[] = (rows ?? []).map((row: ChatRow): ChatConversation => {
       const memberRows = (allMembers ?? []).filter((member: MemberRow) => member.conversation_id === row.id)
       const other = memberRows.find((member: MemberRow) => member.user_id !== user.id)?.user_id ?? user.id
-      const mine = memberRows.find((member: MemberRow) => member.user_id === user.id)
       return {
         ...row,
         member_ids: memberRows.map((member: MemberRow) => member.user_id),
