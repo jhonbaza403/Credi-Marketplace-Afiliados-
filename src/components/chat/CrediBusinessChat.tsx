@@ -9,7 +9,6 @@ import { uploadCrediBusinessChatMedia } from '@/lib/storage/credibusiness-chat-m
 import type { ChatConversation, ChatMessage } from '@/types/chat'
 
 type Profile = { id: string; full_name: string | null; avatar_url: string | null; role: string }
-type RealtimePayload<T> = { eventType: 'INSERT' | 'UPDATE' | 'DELETE'; new: T; old: Partial<T> | null }
 type ConversationRow = { id: string; [key: string]: unknown }
 type ContactRow = { id?: string; user_id?: string; [key: string]: unknown }
 const QUICK = ['Consultar disponibilidad', 'Solicitar precio mayorista', 'Solicitar catálogo', 'Preguntar MOQ', 'Solicitar condiciones de envío', 'Preguntar tiempo de entrega', 'Solicitar factura', 'Negociar pedido', 'Solicitar cotización']
@@ -146,11 +145,16 @@ export default function CrediBusinessChat() {
   useEffect(() => {
     if (!selectedId) return
     void loadMessages(selectedId).catch((e) => setError(fail(e, 'No fue posible cargar los mensajes.')))
-    const channel = supabase.channel(`credibusiness-chat:${selectedId}`).on('postgres_changes', { event: '*', schema: 'public', table: 'messages', filter: `conversation_id=eq.${selectedId}` }, (payload: RealtimePayload<ChatMessage>) => {
-      const next = payload.new as ChatMessage
-      if (payload.eventType === 'INSERT') setMessages((current) => current.some((m) => m.id === next.id) ? current : [...current, next])
-      if (payload.eventType === 'UPDATE') setMessages((current) => current.map((m) => m.id === next.id ? next : m))
-    }).subscribe()
+    const channel = supabase.channel(`credibusiness-chat:${selectedId}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `conversation_id=eq.${selectedId}` }, (payload) => {
+        const next = payload.new as ChatMessage
+        setMessages((current) => current.some((m) => m.id === next.id) ? current : [...current, next])
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages', filter: `conversation_id=eq.${selectedId}` }, (payload) => {
+        const next = payload.new as ChatMessage
+        setMessages((current) => current.map((m) => m.id === next.id ? next : m))
+      })
+      .subscribe()
     return () => { void supabase.removeChannel(channel) }
   }, [loadMessages, selectedId, supabase])
 
