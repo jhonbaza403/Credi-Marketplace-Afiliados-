@@ -146,12 +146,12 @@ export default function CrediBusinessChat() {
     if (!selectedId) return
     void loadMessages(selectedId).catch((e) => setError(fail(e, 'No fue posible cargar los mensajes.')))
     const channel = supabase.channel(`credibusiness-chat:${selectedId}`)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `conversation_id=eq.${selectedId}` }, (payload) => {
-        const next = payload.new as ChatMessage
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `conversation_id=eq.${selectedId}` }, (payload: unknown) => {
+        const next = (payload as { new: ChatMessage }).new
         setMessages((current) => current.some((m) => m.id === next.id) ? current : [...current, next])
       })
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages', filter: `conversation_id=eq.${selectedId}` }, (payload) => {
-        const next = payload.new as ChatMessage
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages', filter: `conversation_id=eq.${selectedId}` }, (payload: unknown) => {
+        const next = (payload as { new: ChatMessage }).new
         setMessages((current) => current.map((m) => m.id === next.id ? next : m))
       })
       .subscribe()
