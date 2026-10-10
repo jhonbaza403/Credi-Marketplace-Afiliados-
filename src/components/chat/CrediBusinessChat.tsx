@@ -55,7 +55,7 @@ export default function CrediBusinessChat() {
     setUserId(auth.user.id)
     const { data: memberships, error: membershipError } = await supabase.from('conversation_members').select('conversation_id,user_id,last_read_at,joined_at').eq('user_id', auth.user.id).order('joined_at', { ascending: false })
     if (membershipError) throw membershipError
-    const ids = [...new Set((memberships ?? []).map((m: ChatMessage) => m.conversation_id))]
+    const ids = [...new Set((memberships ?? []).map((m: { conversation_id: string }) => m.conversation_id))]
     if (!ids.length) { setConversations([]); return auth.user.id }
     const [{ data: rows, error: rowError }, { data: members, error: membersError }] = await Promise.all([
       supabase.from('conversations').select('id,kind,title,created_by,product_id,order_id,store_id,b2b_product_id,created_at,updated_at,metadata').in('id', ids).order('updated_at', { ascending: false }),
