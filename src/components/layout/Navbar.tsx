@@ -279,7 +279,7 @@ export default function Navbar() {
                     const Icon = item.icon;
                     const active = isPathActive(pathname, item.href);
                     return (
-                      <Link key={item.href + item.label} href={item.href} onClick={closeMenus} aria-current={active ? "page" : undefined} className={"flex min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition focus-visible:outline-2 focus-visible:outline-blue-600 " + (active ? "bg-white/10 font-bold text-white" : "text-slate-700 hover:bg-slate-50 hover:text-white")}>
+                      <Link key={item.href + item.label} href={item.href} onClick={closeMenus} aria-current={active ? "page" : undefined} className={"flex min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition focus-visible:outline-2 focus-visible:outline-blue-600 " + (active ? "bg-blue-50 font-bold text-blue-800 ring-1 ring-inset ring-blue-200" : "text-slate-700 hover:bg-blue-50 hover:text-slate-950")}>
                         <Icon className="size-4 text-blue-600" aria-hidden="true" />
                         {item.label}
                       </Link>
