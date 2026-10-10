@@ -336,7 +336,7 @@ export default function CrediBusinessCallTurn({
         table: 'chat_calls',
         filter: `conversation_id=eq.${conversation}`,
       }, (payload: RealtimePayload<CallRow>) => {
-        const next = payload.new as CallRow
+        const next = payload.new
         if (next.initiated_by !== user && next.status === 'ringing') {
           setIncoming((current) => current ?? next)
         }
