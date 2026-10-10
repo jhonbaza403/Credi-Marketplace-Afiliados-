@@ -1,7 +1,7 @@
 BEGIN;
 
 -- Keep content owners from setting their own moderation or publication state.
--- Service-role operations (no auth.uid()) and trusted admins retain their workflow.
+-- Only explicit service-role requests and trusted active admins retain their workflow.
 CREATE OR REPLACE FUNCTION public.enforce_social_content_moderation()
 RETURNS trigger
 LANGUAGE plpgsql
