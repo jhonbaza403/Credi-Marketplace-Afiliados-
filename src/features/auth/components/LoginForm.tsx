@@ -2,7 +2,7 @@
 
 import { FormEvent, useState } from 'react';
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
 import type { Factor } from '@supabase/supabase-js';
 
@@ -15,11 +15,13 @@ interface LoginFormState {
   password: string;
 }
 
-export function LoginForm({ defaultNext = '/dashboard' }: { defaultNext?: string }) {
+export function LoginForm({ defaultNext }: { defaultNext?: string } = {}) {
   const router = useRouter();
+  const pathname = usePathname();
+  const fallbackNext = defaultNext ?? (pathname.startsWith('/admin/login') ? '/admin' : '/dashboard');
   const searchParams = useSearchParams();
   const requestedNext = searchParams.get('next');
-  const next = requestedNext && requestedNext.startsWith('/') && !requestedNext.startsWith('//') ? requestedNext : defaultNext;
+  const next = requestedNext && requestedNext.startsWith('/') && !requestedNext.startsWith('//') ? requestedNext : fallbackNext;
   const [form, setForm] = useState<LoginFormState>({ email: '', password: '' });
   const [loading, setLoading] = useState(false);
   const [passkeyLoading, setPasskeyLoading] = useState(false);
