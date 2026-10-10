@@ -15,10 +15,11 @@ interface LoginFormState {
   password: string;
 }
 
-export function LoginForm() {
+export function LoginForm({ defaultNext = '/dashboard' }: { defaultNext?: string }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const next = searchParams.get('next') || '/dashboard';
+  const requestedNext = searchParams.get('next');
+  const next = requestedNext && requestedNext.startsWith('/') && !requestedNext.startsWith('//') ? requestedNext : defaultNext;
   const [form, setForm] = useState<LoginFormState>({ email: '', password: '' });
   const [loading, setLoading] = useState(false);
   const [passkeyLoading, setPasskeyLoading] = useState(false);
