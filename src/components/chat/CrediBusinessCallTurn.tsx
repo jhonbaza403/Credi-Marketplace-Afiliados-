@@ -15,6 +15,27 @@ type CallRow = {
   status: 'ringing' | 'connecting' | 'active' | 'ended' | 'declined' | 'missed' | 'failed'
 }
 
+const CALL_STATUSES = ['ringing', 'connecting', 'active', 'ended', 'declined', 'missed', 'failed'] as const
+
+function parseCallRow(value: Record<string, unknown>): CallRow | null {
+  if (
+    typeof value.id !== 'string' ||
+    typeof value.conversation_id !== 'string' ||
+    typeof value.initiated_by !== 'string' ||
+    (value.call_type !== 'audio' && value.call_type !== 'video') ||
+    typeof value.status !== 'string' ||
+    !CALL_STATUSES.includes(value.status as (typeof CALL_STATUSES)[number])
+  ) return null
+
+  return {
+    id: value.id,
+    conversation_id: value.conversation_id,
+    initiated_by: value.initiated_by,
+    call_type: value.call_type,
+    status: value.status as CallRow['status'],
+  }
+}
+
 type SignalRow = {
   id: number
   call_id: string
@@ -286,8 +307,8 @@ export default function CrediBusinessCallTurn({
     const channel = supabase
       .channel(`credibusiness-calls:${currentUserId}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_calls' }, (payload: RealtimePayload) => {
-        const next = payload.new as unknown as CallRow
-        if (next.initiated_by === currentUserId || next.status !== 'ringing') return
+        const next = parseCallRow(payload.new)
+        if (!next || next.initiated_by === currentUserId || next.status !== 'ringing') return
         setIncoming((current) => current ?? next)
       })
       .on('postgres_changes', {
@@ -336,8 +357,8 @@ export default function CrediBusinessCallTurn({
         table: 'chat_calls',
         filter: `conversation_id=eq.${conversation}`,
       }, (payload: RealtimePayload) => {
-        const next = payload.new
-        if (next.initiated_by !== user && next.status === 'ringing') {
+        const next = parseCallRow(payload.new)
+        if (next && next.initiated_by !== user && next.status === 'ringing') {
           setIncoming((current) => current ?? next)
         }
       })
