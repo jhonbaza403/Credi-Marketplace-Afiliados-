@@ -47,10 +47,16 @@ export default function RegisterPage() {
 
     startTransition(async () => {
       const supabase = createClient();
+      const emailRedirectTo = new URL("/auth/callback", window.location.origin);
+      emailRedirectTo.searchParams.set("next", "/verify?status=verified");
+
       const { data, error: signUpError } = await supabase.auth.signUp({
         email: normalizedEmail,
         password,
-        options: { data: { full_name: name, requested_role: role, phone_e164: normalizedPhone } }
+        options: {
+          emailRedirectTo: emailRedirectTo.toString(),
+          data: { full_name: name, requested_role: role, phone_e164: normalizedPhone }
+        }
       });
 
       if (signUpError) {
