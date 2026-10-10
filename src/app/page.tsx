@@ -48,11 +48,11 @@ export default async function HomePage() {
             <div className="hero-kicker inline-flex items-center gap-2 rounded-full border border-cyan-300/25 bg-white/[.07] px-4 py-2 text-xs font-bold uppercase tracking-[.16em] text-cyan-100 shadow-[0_0_28px_rgba(34,211,238,.12)]">
               <Sparkles className="size-4" /> La red social del comercio
             </div>
-            <h1 className="mt-7 max-w-3xl text-balance text-4xl font-black tracking-tight sm:text-5xl lg:text-6xl xl:text-7xl">
-              <span className="hero-main-text">Personas, contenido y oportunidades.</span>{" "}
-              <span className="hero-highlight">Todo conecta en Credi.</span>
+            <h1 className="mt-7 max-w-3xl text-balance text-4xl font-black tracking-tight text-white drop-shadow-[0_4px_24px_rgba(0,0,0,.75)] sm:text-5xl lg:text-6xl xl:text-7xl">
+              <span className="hero-main-text text-white">Personas, contenido y oportunidades.</span>{" "}
+              <span className="hero-highlight text-cyan-300">Todo conecta en Credi.</span>
             </h1>
-            <p className="mt-6 max-w-2xl text-base font-medium leading-8 text-slate-100 drop-shadow-[0_2px_12px_rgba(0,0,0,.8)] sm:text-lg">
+            <p className="mt-6 max-w-2xl rounded-2xl border border-white/15 border-l-4 border-l-cyan-300 bg-slate-950/75 px-5 py-4 text-base font-semibold leading-8 text-white shadow-[0_12px_40px_rgba(0,0,0,.28)] backdrop-blur-md sm:text-lg">
               Una comunidad para descubrir, conversar, publicar, vender y crecer. Tu muro social y tu comercio viven en la misma experiencia.
             </p>
             <div className="hero-actions mt-8 flex flex-col gap-3 sm:flex-row">
@@ -69,7 +69,7 @@ export default async function HomePage() {
               <span className="inline-flex items-center gap-2"><Building2 className="size-4 text-cyan-200" /> B2B y afiliados</span>
             </div>
           </div>
-          <div className="relative mx-auto mt-2 aspect-[4/3] w-full max-w-[640px] overflow-hidden rounded-[2rem] border border-white/10 shadow-[0_28px_90px_rgba(2,6,23,.48)] sm:mt-0">
+          <div className="relative mx-auto mt-2 aspect-[4/3] w-full max-w-[640px] overflow-hidden rounded-[2rem] border border-cyan-200/25 bg-[#071426] shadow-[0_28px_90px_rgba(2,6,23,.58)] ring-1 ring-inset ring-white/10 sm:mt-0">
             <Image
               src="/visuals/credi-social-network.svg"
               alt="Ilustración del ecosistema social de Credi: publicaciones, comunidad y comercio conectado."
