@@ -3,8 +3,10 @@ import { createAdminClient } from "@/lib/supabase/admin";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-function validSignature(url: string, params: Record<string,string>, signature: string, token: string) {
-  const canonical = url + Object.keys(params).sort().map((key) => key + params[key]).join("");
+function validSignature(url: string, params: Record<string,string[]>, signature: string, token: string) {
+  const canonical = url + Object.keys(params).sort().map((key) =>
+    params[key].slice().sort().map((value) => key + value).join("")
+  ).join("");
   const expected = createHmac("sha1", token).update(canonical, "utf8").digest("base64");
   const a = Buffer.from(expected), b = Buffer.from(signature);
   return a.length === b.length && timingSafeEqual(a,b);
@@ -20,8 +22,10 @@ export async function POST(request: Request) {
   if (!token || !expectedUrl || !signature) return Response.json({error:"webhook_not_configured"},{status:503,headers:{"Cache-Control":"no-store"}});
   let form: FormData;
   try { form=await request.formData(); } catch { return Response.json({error:"invalid_form_data"},{status:400}); }
-  const params: Record<string,string>={};
-  for (const [key,value] of form.entries()) if (typeof value==="string") params[key]=params[key]===undefined?value:params[key]+value;
+  const params: Record<string,string[]> = {};
+  for (const [key,value] of form.entries()) {
+    if (typeof value === "string") (params[key] ??= []).push(value);
+  }
   if (!validSignature(expectedUrl,params,signature,token)) return Response.json({error:"invalid_webhook_signature"},{status:401,headers:{"Cache-Control":"no-store"}});
   const sid=params.MessageSid ?? params.SmsSid;
   if (!sid || !/^[A-Za-z0-9]{16,64}$/.test(sid)) return Response.json({error:"missing_message_id"},{status:400});
