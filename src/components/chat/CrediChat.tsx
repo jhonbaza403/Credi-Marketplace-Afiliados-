@@ -1,7 +1,7 @@
 'use client'
 
-type ChatRow = { id: string; [key: string]: unknown }
-type MemberRow = { id?: string; user_id?: string; [key: string]: unknown }
+type ChatRow = { id: string; kind: ChatConversation['kind']; title: string | null; created_by: string; product_id: string | null; order_id: string | null; store_id: string | null; b2b_product_id: string | null; created_at: string; updated_at: string }
+type MemberRow = { conversation_id: string; user_id: string; last_read_at: string | null }
 type RealtimePayload<T> = { eventType: 'INSERT' | 'UPDATE' | 'DELETE'; new: T; old: Partial<T> | null }
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -45,7 +45,7 @@ export default function CrediChat() {
       .order('joined_at', { ascending: false })
 
     if (memberError) throw memberError
-    const ids = (memberships ?? []).map((row: ChatRow) => row.conversation_id)
+    const ids = (memberships ?? []).map((row: MemberRow) => row.conversation_id)
     if (!ids.length) {
       setConversations([])
       setLoading(false)
@@ -72,18 +72,16 @@ export default function CrediChat() {
       setProfiles(Object.fromEntries((profileRows ?? []).map((row: Profile) => [row.id, row])))
     }
 
-    const mapped = (rows ?? []).map((row: ChatRow) => {
+    const mapped: ChatConversation[] = (rows ?? []).map((row: ChatRow): ChatConversation => {
       const memberRows = (allMembers ?? []).filter((member: MemberRow) => member.conversation_id === row.id)
       const other = memberRows.find((member: MemberRow) => member.user_id !== user.id)?.user_id ?? user.id
-      const mine = memberRows.find((member: MemberRow) => member.user_id === user.id)
       return {
         ...row,
         member_ids: memberRows.map((member: MemberRow) => member.user_id),
         display_name: row.title || (profiles[other]?.full_name || profiles[other]?.email || 'Conversación comercial'),
         unread: 0,
-        _last_read_at: mine?.last_read_at ?? null,
       }
-    }) as ChatConversation[]
+    })
     setConversations(mapped)
     if (!selectedId && mapped[0]) setSelectedId(mapped[0].id)
     setLoading(false)

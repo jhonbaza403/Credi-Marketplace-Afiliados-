@@ -9,7 +9,6 @@ import { uploadCrediBusinessChatMedia } from '@/lib/storage/credibusiness-chat-m
 import type { ChatConversation, ChatMessage } from '@/types/chat'
 
 type Profile = { id: string; full_name: string | null; avatar_url: string | null; role: string }
-type RealtimePayload<T> = { eventType: 'INSERT' | 'UPDATE' | 'DELETE'; new: T; old: Partial<T> | null }
 type ConversationRow = { id: string; [key: string]: unknown }
 type ContactRow = { id?: string; user_id?: string; [key: string]: unknown }
 const QUICK = ['Consultar disponibilidad', 'Solicitar precio mayorista', 'Solicitar catálogo', 'Preguntar MOQ', 'Solicitar condiciones de envío', 'Preguntar tiempo de entrega', 'Solicitar factura', 'Negociar pedido', 'Solicitar cotización']
@@ -55,7 +54,7 @@ export default function CrediBusinessChat() {
     setUserId(auth.user.id)
     const { data: memberships, error: membershipError } = await supabase.from('conversation_members').select('conversation_id,user_id,last_read_at,joined_at').eq('user_id', auth.user.id).order('joined_at', { ascending: false })
     if (membershipError) throw membershipError
-    const ids = [...new Set((memberships ?? []).map((m: ChatMessage) => m.conversation_id))]
+    const ids = [...new Set((memberships ?? []).map((m: { conversation_id: string }) => m.conversation_id))]
     if (!ids.length) { setConversations([]); return auth.user.id }
     const [{ data: rows, error: rowError }, { data: members, error: membersError }] = await Promise.all([
       supabase.from('conversations').select('id,kind,title,created_by,product_id,order_id,store_id,b2b_product_id,created_at,updated_at,metadata').in('id', ids).order('updated_at', { ascending: false }),
@@ -146,11 +145,16 @@ export default function CrediBusinessChat() {
   useEffect(() => {
     if (!selectedId) return
     void loadMessages(selectedId).catch((e) => setError(fail(e, 'No fue posible cargar los mensajes.')))
-    const channel = supabase.channel(`credibusiness-chat:${selectedId}`).on('postgres_changes', { event: '*', schema: 'public', table: 'messages', filter: `conversation_id=eq.${selectedId}` }, (payload: RealtimePayload<ChatMessage>) => {
-      const next = payload.new as ChatMessage
-      if (payload.eventType === 'INSERT') setMessages((current) => current.some((m) => m.id === next.id) ? current : [...current, next])
-      if (payload.eventType === 'UPDATE') setMessages((current) => current.map((m) => m.id === next.id ? next : m))
-    }).subscribe()
+    const channel = supabase.channel(`credibusiness-chat:${selectedId}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `conversation_id=eq.${selectedId}` }, (payload: unknown) => {
+        const next = (payload as { new: ChatMessage }).new
+        setMessages((current) => current.some((m) => m.id === next.id) ? current : [...current, next])
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages', filter: `conversation_id=eq.${selectedId}` }, (payload: unknown) => {
+        const next = (payload as { new: ChatMessage }).new
+        setMessages((current) => current.map((m) => m.id === next.id ? next : m))
+      })
+      .subscribe()
     return () => { void supabase.removeChannel(channel) }
   }, [loadMessages, selectedId, supabase])
 

@@ -79,7 +79,7 @@ export default function CrediLiveChatPanel() {
       })
       .on('presence', { event: 'sync' }, () => {
         const state = channel.presenceState()
-        setPresenceCount(Object.values(state as Record<string, PresenceEntry[]>).reduce((total, entries) => total + entries.length, 0))
+        setPresenceCount((Object.values(state as Record<string, PresenceEntry[]>) as PresenceEntry[][]).reduce((total: number, entries: PresenceEntry[]) => total + entries.length, 0))
       })
       .subscribe(async (status: 'SUBSCRIBED' | 'CHANNEL_ERROR' | 'TIMED_OUT' | 'CLOSED') => {
         if (status === 'SUBSCRIBED') await channel.track({ user_id: userId, joined_at: new Date().toISOString() })

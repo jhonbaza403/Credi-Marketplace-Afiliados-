@@ -130,12 +130,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     async function initialize() {
       try {
-        const { data, error } = await supabase.auth.getUser();
-
+        // An unauthenticated visitor is a normal state on public routes.
+        // Read the local session first so Supabase's AuthSessionMissingError
+        // does not produce a misleading initialization error on every page.
+        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
         if (!mounted) return;
-        if (error) throw error;
+        if (sessionError) throw sessionError;
 
-        const currentUser = data.user ?? null;
+        let currentUser = sessionData.session?.user ?? null;
+        if (currentUser) {
+          const { data, error } = await supabase.auth.getUser();
+          if (error) throw error;
+          currentUser = data.user ?? null;
+        }
         setUser(currentUser);
 
         if (currentUser) {
