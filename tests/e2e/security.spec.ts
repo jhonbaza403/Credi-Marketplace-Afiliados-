@@ -8,8 +8,16 @@ test.describe('Account security', () => {
     expect(new URL(page.url()).searchParams.get('next')).toBe('/security');
   });
 
-  test('login exposes passkey entry', async ({ page }) => {
-    await page.goto('/login', { waitUntil: 'domcontentloaded' });
-    await expect(page.getByRole('button', { name: 'Entrar con llave de acceso' })).toBeVisible();
+  test('login exposes an accessible passkey entry', async ({ page }) => {
+    const response = await page.goto('/login', { waitUntil: 'domcontentloaded' });
+    expect(response?.ok()).toBeTruthy();
+
+    // Confirm the route rendered the real login form before checking the optional
+    // WebAuthn entry; this makes failures distinguish a broken route from a
+    // missing/inaccessible passkey control.
+    await expect(page.getByLabel('Correo electrónico')).toBeVisible();
+    const passkeyButton = page.getByTestId('passkey-login-button');
+    await expect(passkeyButton).toBeVisible();
+    await expect(passkeyButton).toHaveAccessibleName('Entrar con llave de acceso');
   });
 });
