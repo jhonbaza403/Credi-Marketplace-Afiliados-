@@ -226,7 +226,22 @@ export async function proxy(request: NextRequest) {
     return response;
   } catch (error) {
     console.error("[proxy] Access check failed", error);
-    return copySessionCookies(response, buildSecurityRedirect(request, "mfa"));
+
+    // Do not misreport infrastructure/database failures as a missing MFA step.
+    // Fail closed while making the temporary verification failure explicit.
+    const unavailable = new NextResponse(
+      "No se pudo verificar el acceso en este momento. Inténtalo de nuevo más tarde.",
+      {
+        status: 503,
+        headers: {
+          "Cache-Control": "no-store",
+          "Retry-After": "30",
+          "Content-Type": "text/plain; charset=utf-8",
+          "X-Request-ID": requestId,
+        },
+      },
+    );
+    return copySessionCookies(response, unavailable);
   }
 }
 
