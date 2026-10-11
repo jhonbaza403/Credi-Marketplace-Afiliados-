@@ -21,10 +21,11 @@ const contentSecurityPolicy = [
   "object-src 'none'",
   `script-src 'self' 'unsafe-inline'${isDevelopment ? " 'unsafe-eval'" : ""}`,
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob: https://*.supabase.co https://images.unsplash.com",
+  "img-src 'self' data: blob: https://*.supabase.co https://images.unsplash.com https://images.pexels.com https://i.ytimg.com https://lh3.googleusercontent.com https://res.cloudinary.com https://cdn.shopify.com",
   "font-src 'self' data: https://fonts.gstatic.com",
   "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://generativelanguage.googleapis.com https://api.stripe.com https://*.twilio.com https://business.coinbase.com",
-  "frame-src 'self' https://*.supabase.co",
+  "frame-src 'self' https://*.supabase.co https://www.youtube-nocookie.com https://www.youtube.com https://player.vimeo.com https://iframe.videodelivery.net",
+  "media-src 'self' blob: data: https://*.supabase.co https://*.cloudflarestream.com https://videodelivery.net https://*.videodelivery.net https://res.cloudinary.com",
   "upgrade-insecure-requests",
 ].join("; ");
 
@@ -48,6 +49,31 @@ const nextConfig: NextConfig = {
       {
         protocol: "https",
         hostname: "images.unsplash.com",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "images.pexels.com",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "i.ytimg.com",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "lh3.googleusercontent.com",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "res.cloudinary.com",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "cdn.shopify.com",
         pathname: "/**",
       },
     ],
