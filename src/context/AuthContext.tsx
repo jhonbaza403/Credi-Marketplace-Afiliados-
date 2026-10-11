@@ -144,7 +144,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setProfile(null);
         }
       } catch (error) {
-        console.error("Error inicializando autenticación:", error);
+        // An absent session is expected on public pages and in unauthenticated E2E.
+        // Keep the signed-out state usable while still surfacing real failures.
+        const errorName =
+          error instanceof Error ? error.name : "UnknownAuthError";
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
+        const isMissingSession =
+          errorName === "AuthSessionMissingError" ||
+          errorMessage.includes("Auth session missing");
+
+        if (isMissingSession) {
+          console.debug("No active Supabase session; continuing as signed out.");
+        } else {
+          console.error("Error inicializando autenticación:", error);
+        }
 
         if (mounted) {
           setUser(null);
