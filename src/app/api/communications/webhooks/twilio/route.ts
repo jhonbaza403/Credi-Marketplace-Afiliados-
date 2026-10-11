@@ -9,9 +9,6 @@ function validSignature(url: string, params: Record<string,string>, signature: s
   const a = Buffer.from(expected), b = Buffer.from(signature);
   return a.length === b.length && timingSafeEqual(a,b);
 }
-function escapeXml(value: string) {
-  return value.replace(/[<>&"']/g, (c) => ({ "<":"&lt;", ">":"&gt;", "&":"&amp;", '"':"&quot;", "'":"&apos;" })[c] ?? c);
-}
 function reply() {
   return new Response('<?xml version="1.0" encoding="UTF-8"?><Response><Message>Gracias. Hemos recibido tu mensaje.</Message></Response>', {
     status: 200, headers: { "Content-Type":"text/xml; charset=utf-8", "Cache-Control":"no-store", "X-Content-Type-Options":"nosniff" }
