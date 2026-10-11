@@ -89,16 +89,32 @@ export default async function SocialPage() {
   const content = await loadSocialContent();
   if (!content) {
     return (
-      <main className="min-h-screen bg-[var(--background)] px-4 py-12 text-[var(--foreground)] sm:px-6">
-        <section className="mx-auto max-w-3xl rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-8 shadow-sm">
-          <p className="text-xs font-black uppercase tracking-[.16em] text-primary">Comunidad Credi</p>
-          <h1 className="mt-3 text-3xl font-black tracking-tight">El muro se está reconectando</h1>
-          <p className="mt-3 text-sm leading-7 text-muted-foreground">No pudimos cargar las publicaciones en este momento. Puedes explorar el marketplace o volver a intentarlo en unos instantes.</p>
-          <div className="mt-6 flex flex-wrap gap-3">
-            <Link href="/marketplace" className="rounded-xl bg-primary px-5 py-3 text-sm font-bold text-primary-foreground">Explorar marketplace</Link>
-            <Link href="/social" className="rounded-xl border border-[var(--border)] px-5 py-3 text-sm font-bold">Volver a intentar</Link>
-          </div>
-        </section>
+      <main className="min-h-screen bg-[var(--background)] px-4 py-8 text-[var(--foreground)] sm:px-6">
+        <div className="mx-auto max-w-7xl space-y-6">
+          <nav aria-label="Navegación principal" className="flex flex-wrap gap-2">
+            {[
+              ["Inicio", "/"],
+              ["Muro", "/social"],
+              ["Marketplace", "/marketplace"],
+              ["Servicios", "/services"],
+              ["Free", "/free"],
+              ["LIVE", "/live"],
+            ].map(([label, href]) => (
+              <Link key={href} href={href} className="rounded-full border border-[var(--border)] bg-[var(--surface)] px-4 py-2 text-sm font-bold text-[var(--foreground)] hover:border-[var(--primary)]">
+                {label}
+              </Link>
+            ))}
+          </nav>
+          <section className="rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-sm sm:p-8">
+            <p className="text-xs font-black uppercase tracking-[.16em] text-primary">Comunidad Credi</p>
+            <h1 className="mt-3 text-white text-3xl font-black tracking-tight">Tu comunidad. Tus ideas. Nuevas oportunidades.</h1>
+            <p role="status" className="mt-3 text-sm leading-7 text-muted-foreground">El muro se está reconectando. No pudimos cargar las publicaciones en este momento; puedes seguir navegando y volver a intentarlo.</p>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <Link href="/marketplace" className="rounded-xl bg-primary px-5 py-3 text-sm font-bold text-primary-foreground">Explorar marketplace</Link>
+              <Link href="/social" className="rounded-xl border border-[var(--border)] px-5 py-3 text-sm font-bold">Volver a intentar</Link>
+            </div>
+          </section>
+        </div>
       </main>
     );
   }
