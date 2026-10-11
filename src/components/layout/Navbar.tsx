@@ -40,21 +40,17 @@ const SOLUTION_GROUPS = [
     title: "Comunidad",
     description: "Conecta y comparte",
     items: [
-      { label: "Muro social", href: "/social", icon: Users },
       { label: "Historias", href: "/historias", icon: Camera },
       { label: "Vídeos", href: "/videos", icon: Play },
       { label: "Credi Chat", href: "/chat", icon: MessageCircle },
-      { label: "Credi LIVE", href: "/live", icon: Radio },
     ],
   },
   {
     title: "Comercio",
     description: "Descubre y vende",
     items: [
-      { label: "Marketplace", href: "/marketplace", icon: ShoppingBag },
       { label: "B2B", href: "/b2b", icon: Building2 },
       { label: "Publicar", href: "/publish", icon: Sparkles },
-      { label: "Servicios", href: "/services", icon: Store },
       { label: "Afiliados", href: "/affiliate", icon: TrendingUp },
       { label: "Proveedores verificados", href: "/proveedores-verificados", icon: BadgeCheck },
       { label: "Catálogo en vídeo", href: "/catalogo-video", icon: Play },
@@ -279,7 +275,7 @@ export default function Navbar() {
                     const Icon = item.icon;
                     const active = isPathActive(pathname, item.href);
                     return (
-                      <Link key={item.href + item.label} href={item.href} onClick={closeMenus} aria-current={active ? "page" : undefined} className={"flex min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition focus-visible:outline-2 focus-visible:outline-blue-600 " + (active ? "bg-white/10 font-bold text-white" : "text-slate-700 hover:bg-slate-50 hover:text-white")}>
+                      <Link key={item.href + item.label} href={item.href} onClick={closeMenus} aria-current={active ? "page" : undefined} className={"flex min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition focus-visible:outline-2 focus-visible:outline-blue-600 " + (active ? "bg-blue-50 font-bold text-blue-700" : "text-slate-700 hover:bg-slate-50 hover:text-slate-950")}>
                         <Icon className="size-4 text-blue-600" aria-hidden="true" />
                         {item.label}
                       </Link>
