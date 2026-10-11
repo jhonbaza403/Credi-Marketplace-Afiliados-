@@ -225,6 +225,7 @@ export async function proxy(request: NextRequest) {
     response.headers.set("X-Request-ID", requestId);
     return response;
   } catch (error) {
+    response.headers.set("X-Request-ID", requestId);
     console.error("[proxy] Access check failed", error);
 
     // Do not misreport infrastructure/database failures as a missing MFA step.
