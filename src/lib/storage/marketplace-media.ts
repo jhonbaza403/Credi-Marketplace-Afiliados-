@@ -48,6 +48,9 @@ export async function uploadMarketplaceMedia(file: File, kind?: MarketplaceMedia
   validateMarketplaceMedia(file, resolvedKind)
 
   const supabase = createClient()
+  if (!supabase) {
+    throw new Error('La carga multimedia no está configurada: faltan NEXT_PUBLIC_SUPABASE_URL o NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY en el entorno de este despliegue.')
+  }
   const { data: { user }, error: authError } = await supabase.auth.getUser()
   if (authError || !user) throw new Error('Debes iniciar sesión para cargar archivos.')
 
@@ -56,7 +59,15 @@ export async function uploadMarketplaceMedia(file: File, kind?: MarketplaceMedia
   })
 
   if (signedError || !signed?.path || !signed?.token || !signed?.bucket) {
-    throw new Error('No fue posible preparar la carga del archivo.')
+    let detail = signedError?.message || 'La función de almacenamiento devolvió una respuesta incompleta.'
+    const context = signedError && 'context' in signedError ? signedError.context : null
+    if (context instanceof Response) {
+      const responseBody = await context.clone().json().catch(() => null) as { error?: unknown; message?: unknown } | null
+      if (typeof responseBody?.error === 'string') detail = responseBody.error
+      else if (typeof responseBody?.message === 'string') detail = responseBody.message
+      detail = `HTTP ${context.status}: ${detail}`
+    }
+    throw new Error(`No se pudo preparar la carga multimedia. ${detail} Comprueba que la función Supabase "media-upload" esté desplegada y que las variables de entorno y permisos estén configurados.`)
   }
 
   const { error: uploadError } = await supabase.storage
@@ -67,7 +78,7 @@ export async function uploadMarketplaceMedia(file: File, kind?: MarketplaceMedia
       upsert: false,
     })
 
-  if (uploadError) throw new Error('No fue posible completar la carga del archivo.')
+  if (uploadError) throw new Error(`No se pudo completar la carga multimedia: ${uploadError.message}. Comprueba el bucket marketplace-media, sus límites y las políticas de Storage.`)
 
   const { data } = supabase.storage.from(String(signed.bucket)).getPublicUrl(String(signed.path))
   return {
