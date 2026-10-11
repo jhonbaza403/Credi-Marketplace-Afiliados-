@@ -185,7 +185,17 @@ export function LoginForm() {
 
       <div className="my-5 flex items-center gap-3" aria-hidden="true"><div className="h-px flex-1 bg-border" /><span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">o</span><div className="h-px flex-1 bg-border" /></div>
 
-      <button type="button" onClick={signInWithPasskey} disabled={loading || passkeyLoading} aria-busy={passkeyLoading} className="flex w-full items-center justify-center rounded-xl border border-border bg-background px-4 py-3 font-bold text-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50">{passkeyLoading ? 'Esperando tu dispositivo...' : 'Entrar con llave de acceso'}</button>
+      <button
+        type="button"
+        data-testid="passkey-login-button"
+        aria-label="Entrar con llave de acceso"
+        onClick={signInWithPasskey}
+        disabled={loading || passkeyLoading}
+        aria-busy={passkeyLoading}
+        className="flex w-full items-center justify-center rounded-xl border border-border bg-background px-4 py-3 font-bold text-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        {passkeyLoading ? 'Esperando tu dispositivo...' : 'Entrar con llave de acceso'}
+      </button>
       <p className="mt-2 text-center text-xs leading-5 text-muted-foreground">Usa la biometría, PIN del dispositivo o llave de seguridad registrada en tu cuenta.</p>
 
       <div className="mt-6 rounded-xl bg-muted p-4 text-center text-sm text-muted-foreground">¿Todavía no tienes una cuenta?{' '}<Link href="/register" className="font-bold text-primary hover:underline">Crear cuenta</Link></div>
