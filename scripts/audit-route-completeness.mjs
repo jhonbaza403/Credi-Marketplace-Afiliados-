@@ -21,11 +21,6 @@ const WEBHOOKS = [
   { name: "Affiliate partner", route: "api/affiliate/webhook", required: false },
 ];
 
-function hasPage(route) {
-  // Use the normalized App Router inventory so route groups such as
-  // src/app/(public)/products/page.tsx correctly satisfy /products.
-  return new Set(walkPages(APP)).has("/" + route);
-}
 function hasRoute(route) {
   const directory = path.join(APP, route);
   return ["route.ts", "route.tsx", "route.js", "route.jsx"].some((file) =>
@@ -48,9 +43,10 @@ function walkPages(directory, segments = [], out = []) {
   return out;
 }
 
-const missingPages = REQUIRED_PAGES.filter((route) => !hasPage(route));
+const discoveredPages = new Set(walkPages(APP));
+const missingPages = REQUIRED_PAGES.filter((route) => !discoveredPages.has("/" + route));
 const missingRequiredWebhooks = WEBHOOKS.filter((hook) => hook.required && !hasRoute(hook.route));
-const pageCount = new Set(walkPages(APP)).size;
+const pageCount = discoveredPages.size;
 
 console.log("=== Credi route completeness audit ===");
 console.log("App Router page files:", pageCount);
