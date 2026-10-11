@@ -61,6 +61,16 @@ export default function LivePage(){
   useEffect(()=>{void load().catch(e=>setMessage(e instanceof Error?e.message:'No fue posible cargar Credi LIVE.'))},[])
   useEffect(()=>{if(selected){void loadProducts(selected.id);void loadTransport(selected.id)}},[selected?.id])
 
+  // Keep the room status synchronized while the browser is sending media.
+  useEffect(()=>{
+    if(!selected||!broadcasting)return
+    const interval=window.setInterval(()=>{
+      void loadTransport(selected.id)
+      void load().catch(error=>setMessage(error instanceof Error?error.message:'No fue posible sincronizar el estado de Credi LIVE.'))
+    },5000)
+    return ()=>window.clearInterval(interval)
+  },[selected?.id,broadcasting])
+
   async function preflight(){
     if(cameraOn){
       streamRef.current?.getTracks().forEach(track=>track.stop())
