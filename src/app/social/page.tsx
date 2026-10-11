@@ -95,20 +95,6 @@ export default async function SocialPage() {
     return (
       <main className="min-h-screen bg-[var(--background)] px-4 py-8 text-[var(--foreground)] sm:px-6">
         <div className="mx-auto max-w-7xl space-y-6">
-          <nav aria-label="Navegación principal" className="flex flex-wrap gap-2">
-            {[
-              ["Inicio", "/"],
-              ["Muro", "/social"],
-              ["Marketplace", "/marketplace"],
-              ["Servicios", "/services"],
-              ["Free", "/free"],
-              ["LIVE", "/live"],
-            ].map(([label, href]) => (
-              <Link key={href} href={href} className="rounded-full border border-[var(--border)] bg-[var(--surface)] px-4 py-2 text-sm font-bold text-[var(--foreground)] hover:border-[var(--primary)]">
-                {label}
-              </Link>
-            ))}
-          </nav>
           <section className="rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-sm sm:p-8">
             <p className="text-xs font-black uppercase tracking-[.16em] text-primary">Comunidad Credi</p>
             <h1 className="mt-3 text-[var(--foreground)] text-3xl font-black tracking-tight">Tu comunidad. Tus ideas. Nuevas oportunidades.</h1>
