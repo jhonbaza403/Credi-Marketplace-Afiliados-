@@ -24,6 +24,10 @@ export default function LivePage(){
   const [mediaReady,setMediaReady]=useState(false)
   const previewRef=useRef<HTMLVideoElement>(null)
   const streamRef=useRef<MediaStream|null>(null)
+  const peerRef=useRef<RTCPeerConnection|null>(null)
+  const whipResourceRef=useRef<string|null>(null)
+  const [broadcasting,setBroadcasting]=useState(false)
+  const [broadcastBusy,setBroadcastBusy]=useState(false)
   const [transport,setTransport]=useState<{inputId:string;rtmps:{url:string;streamKey:string}|null;playback:{hls?:string;dash?:string}|null;webRTC:{url:string}|null;status?:string|null;enabled?:boolean}|null>(null)
   const [transportBusy,setTransportBusy]=useState(false)
 
@@ -77,6 +81,68 @@ export default function LivePage(){
     }catch(error){setMessage(error instanceof Error?error.message:'No fue posible activar cámara y micrófono.')}
   }
 
+  async function startBrowserBroadcast(){
+    if(!selected||broadcastBusy||broadcasting)return
+    setBroadcastBusy(true);setMessage('')
+    let localStream:MediaStream|null=null
+    let peer:RTCPeerConnection|null=null
+    try{
+      let activeTransport=transport
+      if(!activeTransport?.webRTC?.url){
+        const response=await fetch('/api/live/stream',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({roomId:selected.id,action:'provision'})})
+        const data=await response.json().catch(()=>({}))
+        if(!response.ok)throw new Error(data.error||'No fue posible preparar la emisión.')
+        activeTransport=data
+        setTransport(data)
+      }
+      if(!activeTransport?.webRTC?.url){
+        throw new Error('Cloudflare no devolvió una entrada WebRTC/WHIP. Usa el servidor RTMPS y la clave en OBS.')
+      }
+      if(!window.isSecureContext||!navigator.mediaDevices?.getUserMedia)throw new Error('La emisión desde el navegador requiere HTTPS y permisos de cámara y micrófono.')
+      localStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:1280},height:{ideal:720}},audio:true})
+      peer=new RTCPeerConnection({iceServers:[{urls:['stun:stun.cloudflare.com:3478']}]})
+      localStream.getTracks().forEach(track=>peer!.addTrack(track,localStream!))
+      if(previewRef.current){previewRef.current.srcObject=localStream;await previewRef.current.play().catch(()=>{})}
+      const offer=await peer.createOffer()
+      await peer.setLocalDescription(offer)
+      await new Promise<void>(resolve=>{
+        if(peer!.iceGatheringState==='complete'){resolve();return}
+        const onGathering=()=>{if(peer!.iceGatheringState==='complete'){peer!.removeEventListener('icegatheringstatechange',onGathering);resolve()}}
+        peer!.addEventListener('icegatheringstatechange',onGathering)
+        window.setTimeout(()=>{peer!.removeEventListener('icegatheringstatechange',onGathering);resolve()},5000)
+      })
+      const response=await fetch(activeTransport.webRTC.url,{method:'POST',headers:{'Content-Type':'application/sdp','Accept':'application/sdp'},body:peer.localDescription?.sdp})
+      if(!response.ok){const detail=await response.text().catch(()=> '');throw new Error('Cloudflare rechazó la señal WebRTC ('+response.status+'). '+detail.slice(0,180))}
+      const answer=await response.text()
+      if(!answer.trim())throw new Error('Cloudflare aceptó la solicitud pero no devolvió la respuesta SDP.')
+      await peer.setRemoteDescription({type:'answer',sdp:answer})
+      const location=response.headers.get('Location')
+      whipResourceRef.current=location?new URL(location,activeTransport.webRTC.url).toString():null
+      peerRef.current=peer
+      streamRef.current=localStream
+      setCameraOn(true);setMediaReady(true);setBroadcasting(true)
+      setMessage('Señal WebRTC enviada. Esperando confirmación de Cloudflare para marcar la sala como LIVE.')
+    }catch(error){
+      peer?.close()
+      localStream?.getTracks().forEach(track=>track.stop())
+      if(previewRef.current)previewRef.current.srcObject=null
+      setMessage(error instanceof Error?error.message:'No fue posible iniciar la emisión desde el navegador. Puedes usar OBS con RTMPS.')
+    }finally{setBroadcastBusy(false)}
+  }
+
+  async function stopBrowserBroadcast(){
+    const resource=whipResourceRef.current
+    const peer=peerRef.current
+    const stream=streamRef.current
+    peerRef.current=null;whipResourceRef.current=null;streamRef.current=null
+    peer?.close()
+    stream?.getTracks().forEach(track=>track.stop())
+    if(previewRef.current)previewRef.current.srcObject=null
+    setBroadcasting(false);setCameraOn(false);setMediaReady(false)
+    if(resource){try{await fetch(resource,{method:'DELETE',keepalive:true})}catch{/* peer closure still stops local capture */}}
+    setMessage('Emisión del navegador detenida.')
+  }
+
   async function createRoom(event:React.FormEvent<HTMLFormElement>){
     event.preventDefault()
     setBusy(true);setMessage('')
@@ -127,7 +193,7 @@ export default function LivePage(){
     await loadProducts(selected.id)
   }
 
-  useEffect(()=>()=>streamRef.current?.getTracks().forEach(track=>track.stop()),[])
+  useEffect(()=>()=>{peerRef.current?.close();streamRef.current?.getTracks().forEach(track=>track.stop())},[])
 
   return <main className="min-h-screen bg-[var(--background)] px-4 py-8 text-[var(--foreground)] sm:px-6 lg:px-8">
     <div className="mx-auto max-w-7xl space-y-7">
@@ -176,6 +242,10 @@ export default function LivePage(){
             <div className="flex items-start justify-between gap-3"><div><p className="text-[10px] font-black uppercase tracking-[.14em] text-cyan-700">Transporte de producción</p><h3 className="mt-1 font-black">Elgato 4K Pro → OBS → Credi LIVE</h3><p className="mt-1 text-xs leading-5 text-[var(--muted)]">La vista previa de cámara de este navegador es local y no se transmite por sí sola. Para emitir ahora, conecta OBS por RTMPS usando las credenciales privadas que aparecen abajo. El estado cambiará a LIVE al recibir la señal real.</p></div><KeyRound className="size-5 text-cyan-700"/></div>
             <div className="mt-4 flex flex-wrap gap-2"><button type="button" disabled={transportBusy} onClick={async()=>{setTransportBusy(true);try{const r=await fetch('/api/live/stream',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({roomId:selected.id,action:'provision'})});const d=await r.json();if(!r.ok)throw new Error(d.error||'No fue posible provisionar el transporte.');setTransport(d);setMessage('Transporte Cloudflare provisionado. Configura OBS con la URL y clave RTMPS mostradas.')}catch(e){setMessage(e instanceof Error?e.message:'No fue posible provisionar el transporte.')}finally{setTransportBusy(false)}}} className="rounded-xl bg-cyan-700 px-3 py-2 text-xs font-black text-white disabled:opacity-50">{transportBusy?'Provisionando…':'Provisionar transporte'}</button>{transport?.rtmps?.url&&<span className="inline-flex items-center gap-1 rounded-xl bg-emerald-500/10 px-3 py-2 text-[10px] font-black text-emerald-700"><Eye className="size-3"/> RTMPS listo</span>}</div>
             {transport?.rtmps&&<div className="mt-4 grid gap-3 sm:grid-cols-2"><label className="text-[10px] font-black uppercase tracking-wide text-[var(--muted)]">Servidor RTMPS<input readOnly value={transport.rtmps.url} className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs font-mono"/></label><label className="text-[10px] font-black uppercase tracking-wide text-[var(--muted)]">Clave privada de emisión<input readOnly value={transport.rtmps.streamKey} className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs font-mono"/></label>{transport.webRTC?.url&&<label className="text-[10px] font-black uppercase tracking-wide text-[var(--muted)] sm:col-span-2">Entrada WebRTC / WHIP<input readOnly value={transport.webRTC.url} className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs font-mono"/></label>}</div>}
+            <div className="mt-4 flex flex-wrap gap-2">
+              {!broadcasting?<button type="button" disabled={broadcastBusy||!selected} onClick={()=>void startBrowserBroadcast()} className="rounded-xl bg-emerald-600 px-3 py-2 text-xs font-black text-white disabled:opacity-50">{broadcastBusy?'Conectando cámara…':'Emitir desde este navegador'}</button>:<button type="button" onClick={()=>void stopBrowserBroadcast()} className="rounded-xl bg-rose-600 px-3 py-2 text-xs font-black text-white">Detener emisión</button>}
+              <span className="self-center text-[10px] text-[var(--muted)]">{broadcasting?'Captura activa; esperando señal LIVE confirmada.':'Permite cámara y micrófono cuando el navegador lo solicite.'}</span>
+            </div>
             <p className="mt-3 text-[10px] text-[var(--muted)]">La clave se obtiene del backend autenticado; no se almacena en Supabase ni se expone al cliente público. Si fue compartida accidentalmente, usa rotación de credenciales.</p>
           </section>}
 
