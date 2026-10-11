@@ -28,6 +28,8 @@ function allowedOrigin(origin: string | null) {
   if (!origin) return null
   if (origin === 'https://credi-marketplace-afiliados.vercel.app' || origin === 'http://localhost:3000' || origin === 'http://127.0.0.1:3000') return origin
   if (/^https:\/\/credi-marketplace-afiliados-[a-z0-9-]+-bazwjhon-2554s-projects\.vercel\.app$/i.test(origin)) return origin
+  // Vercel preview hostname observed for this repository's current PR deployments.
+  if (/^https:\/\/credi-marketplace-afilia-git-[a-z0-9-]+-credi-marketplace-afiliados\.vercel\.app$/i.test(origin)) return origin
   return null
 }
 
