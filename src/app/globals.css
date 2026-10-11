@@ -470,17 +470,6 @@ h6 {
   letter-spacing: -0.025em;
 }
 
-h1,
-h2,
-h3,
-h4,
-h5,
-h6 {
-  color: var(--foreground);
-  font-weight: 700;
-  letter-spacing: -0.025em;
-}
-
 ul,
 ol {
   margin: 0;
@@ -516,6 +505,14 @@ input,
 textarea,
 select {
   min-width: 0;
+  color: var(--foreground);
+  background-color: var(--surface);
+  border-color: var(--border-strong);
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+  accent-color: var(--primary);
 }
 
 textarea {
