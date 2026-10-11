@@ -20,9 +20,13 @@ const MAX_IMAGE_SIZE = 20 * 1024 * 1024
 const MAX_VIDEO_SIZE = 500 * 1024 * 1024
 const MAX_AUDIO_SIZE = 500 * 1024 * 1024
 
+export function resolveMarketplaceMediaKind(file: Pick<File, 'type'>, kind?: MarketplaceMediaKind): 'image' | 'video' | 'audio' {
+  const inferredKind: 'image' | 'video' | 'audio' = file.type.startsWith('video/') ? 'video' : file.type.startsWith('audio/') ? 'audio' : 'image'
+  return kind === 'mixed' ? inferredKind : (kind ?? inferredKind) as 'image' | 'video' | 'audio'
+}
+
 export function validateMarketplaceMedia(file: File, kind?: MarketplaceMediaKind) {
-  const inferredKind = file.type.startsWith('video/') ? 'video' : file.type.startsWith('audio/') ? 'audio' : 'image'
-  const validKind = kind === 'mixed' ? inferredKind : (kind ?? inferredKind)
+  const validKind = resolveMarketplaceMediaKind(file, kind)
   const allowed = validKind === 'video' ? VIDEO_TYPES : validKind === 'audio' ? AUDIO_TYPES : IMAGE_TYPES
   const maxSize = validKind === 'video' ? MAX_VIDEO_SIZE : validKind === 'audio' ? MAX_AUDIO_SIZE : MAX_IMAGE_SIZE
 
@@ -44,8 +48,7 @@ export function validateMarketplaceMedia(file: File, kind?: MarketplaceMediaKind
 }
 
 export async function uploadMarketplaceMedia(file: File, kind?: MarketplaceMediaKind) {
-  const inferredKind: 'image' | 'video' | 'audio' = file.type.startsWith('video/') ? 'video' : file.type.startsWith('audio/') ? 'audio' : 'image'
-  const resolvedKind = kind === 'mixed' ? inferredKind : (kind ?? inferredKind)
+  const resolvedKind = resolveMarketplaceMediaKind(file, kind)
   validateMarketplaceMedia(file, resolvedKind)
 
   const supabase = createClient()
