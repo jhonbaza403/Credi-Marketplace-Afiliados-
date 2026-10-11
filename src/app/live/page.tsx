@@ -158,6 +158,7 @@ export default function LivePage(){
   }
 
   async function updateRoom(roomId:string,action:'start'|'end'|'cancel'){
+    if(action==='end'&&broadcasting)await stopBrowserBroadcast()
     setBusy(true);setMessage('')
     try{
       const response=await fetch('/api/live',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({roomId,action})})
