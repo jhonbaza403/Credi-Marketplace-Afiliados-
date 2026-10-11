@@ -48,7 +48,9 @@ export async function GET() {
     delete safeRoom.metadata
     return {...safeRoom,webRTCPlaybackUrl:typeof metadata.cloudflare_whep_url==='string'?metadata.cloudflare_whep_url:null}
   }
-  return NextResponse.json({ rooms:(rooms??[]).map((room)=>publicRoom(room as Record<string,unknown>)), discovery:(liveRooms??[]).map((room)=>publicRoom(room as Record<string,unknown>)) }, { headers:{'Cache-Control':'private, no-store'} })
+  // One discovery card per creator: duplicate active rooms from the same host must not flood LIVE discovery.
+  const uniqueLiveRooms=(liveRooms??[]).filter((room,index,all)=>all.findIndex((candidate)=>candidate.host_user_id===room.host_user_id)===index)
+  return NextResponse.json({ rooms:(rooms??[]).map((room)=>publicRoom(room as Record<string,unknown>)), discovery:uniqueLiveRooms.map((room)=>publicRoom(room as Record<string,unknown>)) }, { headers:{'Cache-Control':'private, no-store'} })
 }
 
 export async function POST(request:Request) {
