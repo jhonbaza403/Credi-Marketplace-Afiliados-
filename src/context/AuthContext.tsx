@@ -56,6 +56,22 @@ export const AuthContext = createContext<AuthContextType | undefined>(
   undefined,
 );
 
+function isMissingAuthSession(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+
+  const candidate = error as { code?: unknown; name?: unknown; message?: unknown };
+  const code = typeof candidate.code === "string" ? candidate.code.toLowerCase() : "";
+  const name = typeof candidate.name === "string" ? candidate.name.toLowerCase() : "";
+  const message = typeof candidate.message === "string" ? candidate.message.toLowerCase() : "";
+
+  return (
+    name === "authsessionmissingerror" ||
+    code === "session_not_found" ||
+    message.includes("auth session missing") ||
+    message.includes("session missing")
+  );
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -140,9 +156,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         let currentUser = sessionData.session?.user ?? null;
         if (currentUser) {
           const { data, error } = await supabase.auth.getUser();
-          if (error) throw error;
-          currentUser = data.user ?? null;
+
+          // A session can expire between getSession() and getUser(). Treat that
+          // race exactly like a signed-out visitor instead of breaking the public
+          // route or logging an expected authentication state as an error.
+          if (error && isMissingAuthSession(error)) {
+            currentUser = null;
+          } else if (error) {
+            throw error;
+          } else {
+            currentUser = data.user ?? null;
+          }
         }
+
+        if (!mounted) return;
         setUser(currentUser);
 
         if (currentUser) {
@@ -151,6 +178,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setProfile(null);
         }
       } catch (error) {
+        if (isMissingAuthSession(error)) {
+          if (mounted) {
+            setUser(null);
+            setProfile(null);
+          }
+          return;
+        }
+
         console.error("Error inicializando autenticación:", error);
 
         if (mounted) {
