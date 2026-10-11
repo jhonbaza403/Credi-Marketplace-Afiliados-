@@ -23,13 +23,12 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           REPOSITORY: ${{ github.repository }}
           COMMIT_SHA: ${{ github.event.pull_request.head.sha }}
+          SOURCE_BRANCH: ${{ github.head_ref }}
         shell: bash
         run: |
           set -euo pipefail
 
-          BRANCH_FILTER="$(jq -rn --arg branch "${GITHUB_HEAD_REF:-}" '$branch | @uri')"
-          # In pull_request workflows, derive the source branch from the event payload.
-          BRANCH_NAME="$(gh api -H 'Accept: application/vnd.github+json' "/repos/${REPOSITORY}/pulls/${{ github.event.pull_request.number }}" --jq '.head.ref')"
+          BRANCH_NAME="${SOURCE_BRANCH}"
           BRANCH_FILTER="$(jq -rn --arg branch "${BRANCH_NAME}" '$branch | @uri')"
 
           for attempt in $(seq 1 24); do
