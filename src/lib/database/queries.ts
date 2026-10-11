@@ -3,23 +3,32 @@ import "server-only";
 import { getDatabaseServerClient } from "./server";
 
 export async function getProducts(limit = 20) {
-  const supabase = await getDatabaseServerClient();
+  try {
+    const supabase = await getDatabaseServerClient();
+    const { data, error } = await supabase
+      .from("published_products")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(limit);
 
-  const { data, error } = await supabase
-    .from("published_products")
-    .select("*")
-    .order("created_at", { ascending: false })
-    .limit(limit);
+    if (error) {
+      console.warn("[database.getProducts] Catalog query unavailable", {
+        code: error.code,
+        message: error.message,
+      });
+      return [];
+    }
 
-  if (error) {
-    console.error("[database.getProducts] Catalog query failed", {
-      code: error.code,
-      message: error.message,
+    return data ?? [];
+  } catch (error) {
+    // Public catalog routes must remain renderable when Supabase is unavailable
+    // (for example, isolated E2E environments without network credentials).
+    // Do not hide the cause: emit a bounded diagnostic without request data.
+    console.warn("[database.getProducts] Catalog connection unavailable", {
+      message: error instanceof Error ? error.message : "Unknown database error",
     });
     return [];
   }
-
-  return data ?? [];
 }
 
 export async function getProductById(id: string) {
