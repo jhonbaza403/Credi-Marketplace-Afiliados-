@@ -42,6 +42,9 @@ export async function uploadCrediBusinessChatMedia(file: File) {
   const kind = kindFor(file)
   validate(file, kind)
   const supabase = createClient()
+  if (!supabase) {
+    throw new Error('La carga de archivos no está configurada en este despliegue: faltan NEXT_PUBLIC_SUPABASE_URL o NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY.')
+  }
   const { data: { user }, error: authError } = await supabase.auth.getUser()
   if (authError || !user) throw new Error('Debes iniciar sesión para enviar archivos.')
 
