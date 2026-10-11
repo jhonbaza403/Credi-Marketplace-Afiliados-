@@ -95,14 +95,17 @@ jobs:
 
           VERCEL_STATE=""
           VERCEL_TARGET=""
+          BRANCH_FILTER="main"
 
           for attempt in $(seq 1 12); do
-            STATUS_JSON="$(gh api -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2026-03-10' "/repos/${REPOSITORY}/commits/${COMMIT_SHA}/status")"
+            STATUS_JSON="$(gh api -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2022-11-28' "/repos/${REPOSITORY}/commits/${COMMIT_SHA}/status")"
 
-            VERCEL_STATUS="$(printf '%s' "${STATUS_JSON}" | jq -c '[.statuses[] | select((.context == "Vercel") or ((.context // "") == "Vercel – credi-marketplace-afiliados"))] | first // {}')"
+            # Match the observed canonical Vercel status and require this exact main commit.
+            VERCEL_STATUS="$(printf '%s' "${STATUS_JSON}" | jq -c --arg context "Vercel Deployments – credi-marketplace-afiliados" --arg sha "${COMMIT_SHA}" '[.statuses[] | select(.context == $context) | select((.target_url // "") | contains("filterBranch=main")) | select((.target_url // "") | contains($sha))] | first // {}')"
             VERCEL_TARGET="$(printf '%s' "${VERCEL_STATUS}" | jq -r '.target_url // ""')"
             VERCEL_STATE="$(printf '%s' "${VERCEL_STATUS}" | jq -r '.state // ""')"
 
+            echo "Vercel context: Vercel Deployments – credi-marketplace-afiliados"
             echo "Vercel state (attempt ${attempt}/12): ${VERCEL_STATE:-missing}"
             echo "Vercel target: ${VERCEL_TARGET:-missing}"
 
@@ -111,7 +114,7 @@ jobs:
                 break
                 ;;
               failure|error)
-                echo "::error::Deployment Check failed: Vercel status is '${VERCEL_STATE}'."
+                echo "::error::Production deployment status failed: ${VERCEL_STATE}."
                 exit 1
                 ;;
               pending|"")
@@ -124,7 +127,7 @@ jobs:
           done
 
           if [ "${VERCEL_STATE}" != "success" ]; then
-            echo "::error::Deployment Check failed: Vercel status did not reach success within the validation window."
+            echo "::error::The canonical Vercel status for this main commit did not reach success."
             exit 1
           fi
 

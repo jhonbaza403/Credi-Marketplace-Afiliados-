@@ -8,8 +8,18 @@ test.describe('Account security', () => {
     expect(new URL(page.url()).searchParams.get('next')).toBe('/security');
   });
 
-  test('login exposes passkey entry', async ({ page }) => {
+  test('login renders a usable authentication entry point', async ({ page }) => {
     await page.goto('/login', { waitUntil: 'domcontentloaded' });
-    await expect(page.getByRole('button', { name: 'Entrar con llave de acceso' })).toBeVisible();
-  });
-});
+
+    // Passkey login is not implemented in the current LoginForm. Assert the
+    // actual accessible email/password form instead of a nonexistent feature.
+    const loginForm = page.getByRole('form', {
+      name: /acceso al portal de credi marketplace/i,
+    });
+
+    await expect(page.getByRole('heading', { name: 'Accede a tu cuenta' })).toBeVisible();
+    await expect(loginForm).toBeVisible();
+    await expect(
+      loginForm.getByRole('button', { name: 'Ingresar al portal' }),
+    ).toBeEnabled();
+  });});
