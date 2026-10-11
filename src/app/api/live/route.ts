@@ -111,8 +111,27 @@ export async function PATCH(request:Request) {
   const parsed=patchSchema.safeParse(await request.json().catch(()=>null))
   if(!parsed.success) return errorResponse('La operación LIVE no es válida.',400,'INVALID_LIVE_OPERATION')
   const p=parsed.data
-  const {data:existing}=await supabase.from('chat_live_rooms').select('id,status').eq('id',p.roomId).eq('host_user_id',user.id).maybeSingle()
+  const {data:existing}=await supabase.from('chat_live_rooms').select('id,status,title,host_user_id,metadata,playback_url').eq('id',p.roomId).eq('host_user_id',user.id).maybeSingle()
   if(!existing) return errorResponse('Sesión LIVE no encontrada.',404,'LIVE_ROOM_NOT_FOUND')
+
+  if(p.action==='start'){
+    if(!isCloudflareConfigured()) return errorResponse('La emisión requiere CLOUDFLARE_ACCOUNT_ID y CLOUDFLARE_API_TOKEN en Vercel.',503,'CLOUDFLARE_STREAM_NOT_CONFIGURED')
+    try {
+      const metadata=(existing.metadata&&typeof existing.metadata==='object'?existing.metadata:{}) as Record<string,unknown>
+      const existingInputId=typeof metadata.cloudflare_live_input_id==='string'?metadata.cloudflare_live_input_id:null
+      const input=existingInputId?await getLiveInput(existingInputId):await createLiveInput(existing.id,existing.title)
+      if(!existingInputId){
+        const nextMetadata={...metadata,cloudflare_live_input_id:input.uid,cloudflare_hls_url:input.playback?.hls||null,cloudflare_dash_url:input.playback?.dash||null,cloudflare_whip_url:input.webRTC?.url||null,cloudflare_whep_url:input.webRTCPlayback?.url||null,transport:'cloudflare-stream-rtmps',transport_version:'2026-10'}
+        const {error:linkError}=await supabase.from('chat_live_rooms').update({metadata:nextMetadata,playback_url:input.playback?.hls||null,stream_provider:'cloudflare_stream'}).eq('id',existing.id).eq('host_user_id',user.id)
+        if(linkError) return errorResponse('El transporte está listo, pero no se pudo vincular a la sala.',500,'LIVE_TRANSPORT_LINK_FAILED')
+      }
+      const {data:room}=await supabase.from('chat_live_rooms').select('id,host_user_id,title,status,viewer_count,started_at,ended_at,description,cover_media,scheduled_at,replay_url,playback_url,stream_provider,viewer_peak,likes_count,shares_count,settings,created_at').eq('id',existing.id).single()
+      return NextResponse.json({success:true,room,transport:{inputId:input.uid,rtmps:input.rtmps||null,playback:input.playback||null,webRTC:input.webRTC||null,webRTCPlayback:input.webRTCPlayback||null,status:input.status||null,enabled:input.enabled},message:'Transporte preparado. La sala pasará a LIVE cuando Cloudflare detecte una emisión conectada desde OBS u otra fuente compatible.'},{headers:{'Cache-Control':'no-store'}})
+    } catch(error) {
+      console.error('[live:'+p.roomId+'] prepare transport failed',error)
+      return errorResponse('No fue posible preparar la emisión. Comprueba la configuración de Cloudflare Stream y vuelve a intentarlo.',503,'LIVE_TRANSPORT_PREPARE_FAILED')
+    }
+  }
 
   const updates:Record<string,unknown>={}
   if(p.title!==undefined) updates.title=p.title
@@ -122,7 +141,6 @@ export async function PATCH(request:Request) {
   if(p.action==='schedule'){
     if(!p.scheduledAt||new Date(p.scheduledAt).getTime()<=Date.now()) return errorResponse('Programa el LIVE para una fecha futura.',400,'INVALID_SCHEDULE')
     updates.status='scheduled';updates.started_at=null;updates.ended_at=null
-  } else if(p.action==='start'){updates.status='live';updates.started_at=new Date().toISOString();updates.ended_at=null
   } else if(p.action==='end'){updates.status='ended';updates.ended_at=new Date().toISOString()
   } else if(p.action==='cancel'){updates.status='cancelled';updates.ended_at=new Date().toISOString()}
 
