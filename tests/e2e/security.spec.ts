@@ -11,28 +11,15 @@ test.describe('Account security', () => {
   test('login renders a usable authentication entry point', async ({ page }) => {
     await page.goto('/login', { waitUntil: 'domcontentloaded' });
 
-    // The login UI may label the passkey action differently across locales.
-    // Still require a real, visible control; never pass when the page is empty.
-    const passkeyButton = page.getByRole('button', {
-      name: /entrar con llave de acceso|passkey|llave de acceso/i,
+    // Passkey login is not implemented in the current LoginForm. Assert the
+    // actual accessible email/password form instead of a nonexistent feature.
+    const loginForm = page.getByRole('form', {
+      name: /acceso al portal de credi marketplace/i,
     });
-    const loginForm = page.locator(
-      '[data-testid="login-form"], form[aria-label*="login" i], form[aria-label*="inicio" i]',
-    );
 
-    await expect
-      .poll(async () => {
-        return (
-          (await passkeyButton.isVisible().catch(() => false)) ||
-          (await loginForm.isVisible().catch(() => false))
-        );
-      }, { timeout: 10_000 })
-      .toBe(true);
-
-    if (await passkeyButton.isVisible().catch(() => false)) {
-      await expect(passkeyButton).toBeEnabled();
-    } else {
-      await expect(loginForm).toBeVisible();
-    }
-  });
-});
+    await expect(page.getByRole('heading', { name: 'Accede a tu cuenta' })).toBeVisible();
+    await expect(loginForm).toBeVisible();
+    await expect(
+      loginForm.getByRole('button', { name: 'Ingresar al portal' }),
+    ).toBeEnabled();
+  });});
