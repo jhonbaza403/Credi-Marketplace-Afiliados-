@@ -114,7 +114,15 @@ CREATE POLICY support_cases_select_own_or_admin ON public.support_cases
 DROP POLICY IF EXISTS support_cases_insert_own ON public.support_cases;
 CREATE POLICY support_cases_insert_own ON public.support_cases
   FOR INSERT TO authenticated
-  WITH CHECK (user_id = (SELECT auth.uid()));
+  WITH CHECK (
+    user_id = (SELECT auth.uid())
+    AND assigned_to IS NULL
+    AND status = 'received'
+    AND priority = 'normal'
+    AND linked_case_id IS NULL
+    AND resolution_summary IS NULL
+    AND resolved_at IS NULL
+  );
 
 DROP POLICY IF EXISTS support_cases_admin_update ON public.support_cases;
 CREATE POLICY support_cases_admin_update ON public.support_cases
@@ -188,7 +196,11 @@ CREATE POLICY product_feedback_select_own_or_admin ON public.product_feedback
 DROP POLICY IF EXISTS product_feedback_insert_own ON public.product_feedback;
 CREATE POLICY product_feedback_insert_own ON public.product_feedback
   FOR INSERT TO authenticated
-  WITH CHECK (user_id = (SELECT auth.uid()));
+  WITH CHECK (
+    user_id = (SELECT auth.uid())
+    AND status = 'received'
+    AND vote_count = 0
+  );
 
 DROP POLICY IF EXISTS product_feedback_admin_update ON public.product_feedback;
 CREATE POLICY product_feedback_admin_update ON public.product_feedback
