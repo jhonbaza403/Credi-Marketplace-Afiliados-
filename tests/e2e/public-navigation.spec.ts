@@ -79,7 +79,7 @@ test.describe("Public navigation", () => {
     const aliases = [
       ["/dashboard/orders", "/login"],
       ["/dashboard/profile", "/login"],
-      ["/jobs", "/services"],
+      ["/jobs", "/marketplace"],
       ["/seller/b2b", "/b2b"],
       ["/products/create", "/login"],
       ["/publish", "/login"],
