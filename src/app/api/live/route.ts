@@ -38,11 +38,16 @@ export async function GET() {
   if (!access.ok) return errorResponse('La cuenta no cumple los requisitos de seguridad.',access.status,access.code)
 
   const [{data:rooms,error:roomError},{data:liveRooms}] = await Promise.all([
-    supabase.from('chat_live_rooms').select('id,host_user_id,conversation_id,title,status,viewer_count,started_at,ended_at,description,cover_media,scheduled_at,replay_url,playback_url,stream_provider,viewer_peak,likes_count,shares_count,settings,created_at').eq('host_user_id',user.id).order('created_at',{ascending:false}).limit(50),
-    supabase.from('chat_live_rooms').select('id,host_user_id,title,status,viewer_count,started_at,description,cover_media,scheduled_at,replay_url,playback_url,stream_provider,viewer_peak,likes_count,shares_count,settings,created_at').eq('status','live').order('started_at',{ascending:false}).limit(30),
+    supabase.from('chat_live_rooms').select('id,host_user_id,conversation_id,title,status,viewer_count,started_at,ended_at,description,cover_media,scheduled_at,replay_url,playback_url,stream_provider,viewer_peak,likes_count,shares_count,settings,created_at,metadata').eq('host_user_id',user.id).order('created_at',{ascending:false}).limit(50),
+    supabase.from('chat_live_rooms').select('id,host_user_id,title,status,viewer_count,started_at,description,cover_media,scheduled_at,replay_url,playback_url,stream_provider,viewer_peak,likes_count,shares_count,settings,created_at,metadata').eq('status','live').order('started_at',{ascending:false}).limit(30),
   ])
   if(roomError) return errorResponse('No fue posible cargar las sesiones LIVE.',500,'LIVE_ROOMS_UNAVAILABLE')
-  return NextResponse.json({ rooms:rooms??[], discovery:liveRooms??[] }, { headers:{'Cache-Control':'private, no-store'} })
+  const publicRoom = (room:Record<string,unknown>) => {
+    const metadata=room.metadata&&typeof room.metadata==='object'?room.metadata as Record<string,unknown>:{}
+    const {metadata:_privateMetadata,...safeRoom}=room
+    return {...safeRoom,webRTCPlaybackUrl:typeof metadata.cloudflare_whep_url==='string'?metadata.cloudflare_whep_url:null}
+  }
+  return NextResponse.json({ rooms:(rooms??[]).map((room)=>publicRoom(room as Record<string,unknown>)), discovery:(liveRooms??[]).map((room)=>publicRoom(room as Record<string,unknown>)) }, { headers:{'Cache-Control':'private, no-store'} })
 }
 
 export async function POST(request:Request) {
