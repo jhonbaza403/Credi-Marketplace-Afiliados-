@@ -100,18 +100,12 @@ export default function LivePage(){
       }
       if(!window.isSecureContext||!navigator.mediaDevices?.getUserMedia)throw new Error('La emisión desde el navegador requiere HTTPS y permisos de cámara y micrófono.')
       localStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:1280},height:{ideal:720}},audio:true})
-      peer=new RTCPeerConnection({iceServers:[{urls:['stun:stun.cloudflare.com:3478']}]})
-      localStream.getTracks().forEach(track=>peer!.addTrack(track,localStream!))
+      peer=new RTCPeerConnection()
+      localStream.getTracks().forEach(track=>peer!.addTransceiver(track,{direction:'sendonly'}))
       if(previewRef.current){previewRef.current.srcObject=localStream;await previewRef.current.play().catch(()=>{})}
       const offer=await peer.createOffer()
       await peer.setLocalDescription(offer)
-      await new Promise<void>(resolve=>{
-        if(peer!.iceGatheringState==='complete'){resolve();return}
-        const onGathering=()=>{if(peer!.iceGatheringState==='complete'){peer!.removeEventListener('icegatheringstatechange',onGathering);resolve()}}
-        peer!.addEventListener('icegatheringstatechange',onGathering)
-        window.setTimeout(()=>{peer!.removeEventListener('icegatheringstatechange',onGathering);resolve()},5000)
-      })
-      const response=await fetch(activeTransport.webRTC.url,{method:'POST',headers:{'Content-Type':'application/sdp','Accept':'application/sdp'},body:peer.localDescription?.sdp})
+      const response=await fetch(activeTransport.webRTC.url,{method:'POST',headers:{'Content-Type':'application/sdp','Accept':'application/sdp'},body:offer.sdp})
       if(!response.ok){const detail=await response.text().catch(()=> '');throw new Error('Cloudflare rechazó la señal WebRTC ('+response.status+'). '+detail.slice(0,180))}
       const answer=await response.text()
       if(!answer.trim())throw new Error('Cloudflare aceptó la solicitud pero no devolvió la respuesta SDP.')
