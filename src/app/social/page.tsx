@@ -63,17 +63,46 @@ export const metadata = {
 
 export const dynamic = "force-dynamic";
 
+async function loadSocialContent() {
+  try {
+    const supabase = await getDatabaseServerClient();
+    const now = new Date().toISOString();
+    const results = await Promise.all([
+      supabase.from("feed_posts").select("id,title,body,media,published_at,created_at,operation_context").eq("status", "published").eq("visibility", "public").order("created_at", { ascending: false }).limit(20),
+      supabase.from("stories").select("id,body,media,expires_at,created_at,operation_context").eq("visibility", "public").gt("expires_at", now).order("created_at", { ascending: false }).limit(20),
+      supabase.from("reels").select("id,title,body,media,published_at,created_at,operation_context").eq("status", "published").eq("visibility", "public").order("created_at", { ascending: false }).limit(20),
+      supabase.from("advertisements").select("id,title,body,media,destination_url,starts_at,ends_at,created_at,operation_context").eq("status", "active").or(`starts_at.is.null,starts_at.lte.${now}`).or(`ends_at.is.null,ends_at.gt.${now}`).order("created_at", { ascending: false }).limit(10),
+    ]);
+    if (results.some((result) => result.error)) {
+      console.warn("[social] Feed data unavailable; rendering a recoverable empty state.");
+      return null;
+    }
+    return results;
+  } catch {
+    // Missing configuration or transient database/network errors must not crash this public page.
+    console.warn("[social] Feed initialization failed; rendering a recoverable empty state.");
+    return null;
+  }
+}
+
 export default async function SocialPage() {
-  const supabase = await getDatabaseServerClient();
-  const now = new Date().toISOString();
-
-  const [postsResult, storiesResult, reelsResult, adsResult] = await Promise.all([
-    supabase.from("feed_posts").select("id,title,body,media,published_at,created_at,operation_context").eq("status", "published").eq("visibility", "public").order("created_at", { ascending: false }).limit(20),
-    supabase.from("stories").select("id,body,media,expires_at,created_at,operation_context").eq("visibility", "public").gt("expires_at", now).order("created_at", { ascending: false }).limit(20),
-    supabase.from("reels").select("id,title,body,media,published_at,created_at,operation_context").eq("status", "published").eq("visibility", "public").order("created_at", { ascending: false }).limit(20),
-    supabase.from("advertisements").select("id,title,body,media,destination_url,starts_at,ends_at,created_at,operation_context").eq("status", "active").or(`starts_at.is.null,starts_at.lte.${now}`).or(`ends_at.is.null,ends_at.gt.${now}`).order("created_at", { ascending: false }).limit(10),
-  ]);
-
+  const content = await loadSocialContent();
+  if (!content) {
+    return (
+      <main className="min-h-screen bg-[var(--background)] px-4 py-12 text-[var(--foreground)] sm:px-6">
+        <section className="mx-auto max-w-3xl rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-8 shadow-sm">
+          <p className="text-xs font-black uppercase tracking-[.16em] text-primary">Comunidad Credi</p>
+          <h1 className="mt-3 text-3xl font-black tracking-tight">El muro se está reconectando</h1>
+          <p className="mt-3 text-sm leading-7 text-muted-foreground">No pudimos cargar las publicaciones en este momento. Puedes explorar el marketplace o volver a intentarlo en unos instantes.</p>
+          <div className="mt-6 flex flex-wrap gap-3">
+            <Link href="/marketplace" className="rounded-xl bg-primary px-5 py-3 text-sm font-bold text-primary-foreground">Explorar marketplace</Link>
+            <Link href="/social" className="rounded-xl border border-[var(--border)] px-5 py-3 text-sm font-bold">Volver a intentar</Link>
+          </div>
+        </section>
+      </main>
+    );
+  }
+  const [postsResult, storiesResult, reelsResult, adsResult] = content;
   const stories = storiesResult.data ?? [];
   const reels = reelsResult.data ?? [];
   const posts = postsResult.data ?? [];

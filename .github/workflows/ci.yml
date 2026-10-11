@@ -6,8 +6,6 @@ on:
       - main
       - develop
   pull_request:
-    branches:
-      - main
 
 concurrency:
   group: credi-marketplace-ci-${{ github.workflow }}-${{ github.ref }}
