@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { distributedRateLimit } from '@/lib/security/rate-limit'
 import { getRequestIp } from '@/lib/security/auth'
 import { isSameOrigin } from '@/lib/security/csrf'
-import { createLiveInput, isCloudflareConfigured } from '@/lib/cloudflare/stream'
+import { createLiveInput, isCloudflareConfigured, getLiveInput } from '@/lib/cloudflare/stream'
 import { requireApiAccountAccess } from '@/lib/auth/api-account-access'
 
 export const runtime = 'nodejs'
@@ -62,13 +62,15 @@ export async function POST(request:Request) {
     if(!parsed.success) return errorResponse('La configuración LIVE no es válida.',400,'INVALID_LIVE_DATA')
 
     const p=parsed.data
+    if(!isCloudflareConfigured()) return errorResponse('Credi LIVE necesita CLOUDFLARE_ACCOUNT_ID y CLOUDFLARE_API_TOKEN en las variables de entorno de producción antes de crear una sala de emisión.',503,'CLOUDFLARE_STREAM_NOT_CONFIGURED')
     const scheduledAt=p.scheduledAt ? new Date(p.scheduledAt) : null
     if(scheduledAt && Number.isNaN(scheduledAt.getTime())) return errorResponse('La fecha LIVE no es válida.',400,'INVALID_SCHEDULE')
-    const status=scheduledAt && scheduledAt.getTime()>Date.now() ? 'scheduled' : 'live'
+    // A room is not LIVE until Cloudflare confirms that the broadcaster connected.
+    const status='scheduled'
 
     const {data:room,error}=await supabase.from('chat_live_rooms').insert({
       host_user_id:user.id,title:p.title,description:p.description,status,
-      scheduled_at:scheduledAt?.toISOString()??null,started_at:status==='live'?new Date().toISOString():null,
+      scheduled_at:scheduledAt?.toISOString()??null,started_at:null,
       cover_media:p.coverMedia,stream_provider:'external',
       settings:{q_and_a:true,comments:true,record_replay:true,product_pinning:true,moderation:true,reactions:true,guest_stage:true},
       metadata:{module:'CREDI-LIVE',version:'2.1',request_id:requestId}
@@ -86,7 +88,8 @@ export async function POST(request:Request) {
         return NextResponse.json({success:true,room:linked,transport},{status:201,headers:{'Cache-Control':'no-store'}})
       }catch(error){
         console.error('[live:'+requestId+'] cloudflare provisioning failed',error)
-        return errorResponse('La sala LIVE fue creada, pero no se pudo provisionar el transporte de producción. Revisa la configuración de Cloudflare Stream en Vercel.',503,'LIVE_TRANSPORT_PROVISION_FAILED')
+        await supabase.from('chat_live_rooms').delete().eq('id',room.id).eq('host_user_id',user.id)
+        return errorResponse('No se pudo preparar el transporte LIVE. No se dejó una sala falsa como activa; revisa las credenciales y permisos de Cloudflare Stream en Vercel.',503,'LIVE_TRANSPORT_PROVISION_FAILED')
       }
     }
     return NextResponse.json({success:true,room,transport},{status:201,headers:{'Cache-Control':'no-store'}})
