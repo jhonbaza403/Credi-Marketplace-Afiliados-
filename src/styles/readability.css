@@ -39,10 +39,18 @@
  */
 .app-readable-surface :where(h1,h2,h3,h4,h5,h6) {
   position: relative;
-  z-index: 30;
+  z-index: 40;
   isolation: isolate;
+  background: transparent !important;
+  background-image: none !important;
   -webkit-font-smoothing: antialiased;
   text-rendering: geometricPrecision;
+}
+
+/* Keep subtitles and supporting copy above decorative portal backdrops too. */
+.app-readable-surface :where(p, .subtitle, .form-subtitle) {
+  position: relative;
+  z-index: 25;
 }
 
 /* Social wall hero is intentionally dark; keep its title above inherited page-level colors. */
