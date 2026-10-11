@@ -40,15 +40,22 @@ const SOLUTION_GROUPS = [
     title: "Comunidad",
     description: "Conecta y comparte",
     items: [
+      { label: "Muro social", href: "/social", icon: Users },
       { label: "Historias", href: "/historias", icon: Camera },
       { label: "Vídeos", href: "/videos", icon: Play },
+      { label: "Credi Chat", href: "/chat", icon: MessageCircle },
+      { label: "Credi LIVE", href: "/live", icon: Radio },
     ],
   },
   {
     title: "Comercio",
     description: "Descubre y vende",
     items: [
+      { label: "Marketplace", href: "/marketplace", icon: ShoppingBag },
       { label: "B2B", href: "/b2b", icon: Building2 },
+      { label: "Publicar", href: "/publish", icon: Sparkles },
+      { label: "Servicios", href: "/services", icon: Store },
+      { label: "CrediBusiness", href: "/business-os", icon: Building2 },
       { label: "Afiliados", href: "/affiliate", icon: TrendingUp },
       { label: "Proveedores verificados", href: "/proveedores-verificados", icon: BadgeCheck },
       { label: "Catálogo en vídeo", href: "/catalogo-video", icon: Play },
