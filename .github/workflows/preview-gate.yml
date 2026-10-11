@@ -27,14 +27,24 @@ jobs:
         run: |
           set -euo pipefail
 
+          BRANCH_FILTER="$(jq -rn --arg branch "${GITHUB_HEAD_REF:-}" '$branch | @uri')"
+          # In pull_request workflows, derive the source branch from the event payload.
+          BRANCH_NAME="$(gh api -H 'Accept: application/vnd.github+json' "/repos/${REPOSITORY}/pulls/${{ github.event.pull_request.number }}" --jq '.head.ref')"
+          BRANCH_FILTER="$(jq -rn --arg branch "${BRANCH_NAME}" '$branch | @uri')"
+
           for attempt in $(seq 1 24); do
-            STATUS_JSON="$(gh api -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2026-03-10' "/repos/${REPOSITORY}/commits/${COMMIT_SHA}/status")"
-            VERCEL_STATUS="$(printf '%s' "${STATUS_JSON}" | jq -c '[.statuses[] | select(.context == "Vercel" or (((.context // "") | startswith("Vercel – credi-marketplace-afiliados")) and (((.context // "") | contains("uwhm")) | not)))] | first // {}')"
+            STATUS_JSON="$(gh api -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2022-11-28' "/repos/${REPOSITORY}/commits/${COMMIT_SHA}/status")"
+
+            # Match the canonical Vercel project status for this exact PR branch and commit.
+            VERCEL_STATUS="$(printf '%s' "${STATUS_JSON}" | jq -c --arg context "Vercel Deployments – credi-marketplace-afiliados" --arg branch "${BRANCH_FILTER}" --arg sha "${COMMIT_SHA}" '[.statuses[] | select(.context == $context) | select((.target_url // "") | contains("filterBranch=" + $branch)) | select((.target_url // "") | contains($sha))] | first // {}')"
             STATE="$(printf '%s' "${VERCEL_STATUS}" | jq -r '.state // ""')"
             TARGET="$(printf '%s' "${VERCEL_STATUS}" | jq -r '.target_url // ""')"
 
-            echo "Vercel Preview: ${STATE:-pending}"
-            echo "Target: ${TARGET:-pending}"
+            echo "Vercel Preview context: Vercel Deployments – credi-marketplace-afiliados"
+            echo "Source branch: ${BRANCH_NAME}"
+            echo "Commit: ${COMMIT_SHA}"
+            echo "State (attempt ${attempt}/24): ${STATE:-pending}"
+            echo "Target: ${TARGET:-missing}"
 
             case "${STATE}" in
               success)
@@ -42,7 +52,7 @@ jobs:
                 exit 0
                 ;;
               failure|error)
-                echo "::error::Vercel Preview failed."
+                echo "::error::Vercel Preview failed for this branch and commit."
                 exit 1
                 ;;
             esac
