@@ -4,7 +4,7 @@ import { ArrowRight, BadgeCheck, Building2, Camera, Megaphone, MessageCircle, Pl
 import { getDatabaseServerClient } from "@/lib/database/server";
 import { withOperationContext } from "@/lib/portal/operation-context";
 
-type MediaItem = { type?: string; url?: string };
+type MediaItem = { type?: string; kind?: string; contentType?: string; url?: string; public_url?: string };
 type OperationContextRecord = Record<string, unknown>;
 
 function commerceActions(context: unknown) {
@@ -23,12 +23,16 @@ function commerceActions(context: unknown) {
 
 function firstMedia(media: unknown): MediaItem | null {
   if (!Array.isArray(media)) return null;
-  const first = media[0] as MediaItem | undefined;
-  if (!first?.url || typeof first.url !== "string") return null;
-  return {
-    url: first.url,
-    type: typeof first.type === "string" ? first.type : undefined,
-  };
+  for (const candidate of media) {
+    if (!candidate || typeof candidate !== "object") continue;
+    const item = candidate as MediaItem;
+    const url = typeof item.url === "string" ? item.url : item.public_url;
+    if (typeof url !== "string" || !url.trim()) continue;
+    const contentType = typeof item.contentType === "string" ? item.contentType : "";
+    const type = item.type ?? item.kind ?? (contentType.startsWith("video/") ? "video" : undefined);
+    return { url: url.trim(), type: typeof type === "string" ? type : undefined, kind: item.kind, contentType };
+  }
+  return null;
 }
 
 function MediaPreview({ media, alt = "" }: { media: unknown; alt?: string }) {
@@ -89,16 +93,18 @@ export default async function SocialPage() {
   const content = await loadSocialContent();
   if (!content) {
     return (
-      <main className="min-h-screen bg-[var(--background)] px-4 py-12 text-[var(--foreground)] sm:px-6">
-        <section className="mx-auto max-w-3xl rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-8 shadow-sm">
-          <p className="text-xs font-black uppercase tracking-[.16em] text-primary">Comunidad Credi</p>
-          <h1 className="mt-3 text-3xl font-black tracking-tight">El muro se está reconectando</h1>
-          <p className="mt-3 text-sm leading-7 text-muted-foreground">No pudimos cargar las publicaciones en este momento. Puedes explorar el marketplace o volver a intentarlo en unos instantes.</p>
-          <div className="mt-6 flex flex-wrap gap-3">
-            <Link href="/marketplace" className="rounded-xl bg-primary px-5 py-3 text-sm font-bold text-primary-foreground">Explorar marketplace</Link>
-            <Link href="/social" className="rounded-xl border border-[var(--border)] px-5 py-3 text-sm font-bold">Volver a intentar</Link>
-          </div>
-        </section>
+      <main className="min-h-screen bg-[var(--background)] px-4 py-8 text-[var(--foreground)] sm:px-6">
+        <div className="mx-auto max-w-7xl space-y-6">
+          <section className="rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-sm sm:p-8">
+            <p className="text-xs font-black uppercase tracking-[.16em] text-primary">Comunidad Credi</p>
+            <h1 className="mt-3 text-[var(--foreground)] text-3xl font-black tracking-tight">Tu comunidad. Tus ideas. Nuevas oportunidades.</h1>
+            <p role="status" className="mt-3 text-sm leading-7 text-muted-foreground">El muro se está reconectando. No pudimos cargar las publicaciones en este momento; puedes seguir navegando y volver a intentarlo.</p>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <Link href="/marketplace" className="rounded-xl bg-primary px-5 py-3 text-sm font-bold text-primary-foreground">Explorar marketplace</Link>
+              <Link href="/social" className="rounded-xl border border-[var(--border)] px-5 py-3 text-sm font-bold">Volver a intentar</Link>
+            </div>
+          </section>
+        </div>
       </main>
     );
   }

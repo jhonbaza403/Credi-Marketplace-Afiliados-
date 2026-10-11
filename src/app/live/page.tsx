@@ -5,13 +5,16 @@ import { BarChart3, CalendarClock, Camera, CircleStop, Eye, Heart, KeyRound, Mes
 import type { LucideIcon } from 'lucide-react'
 import DomainBridge from '@/components/portal/DomainBridge'
 import { CrediLiveChat } from '@/components/live/CrediLiveChat'
+import { CrediLivePlayer } from '@/components/live/CrediLivePlayer'
+import { CrediLiveSubscribeButton } from '@/components/live/CrediLiveSubscribeButton'
 
-type Room={id:string;host_user_id:string;title:string;status:string;viewer_count:number;started_at:string|null;ended_at?:string|null;description:string;cover_media:unknown;scheduled_at:string|null;replay_url:string|null;playback_url:string|null;stream_provider:string;viewer_peak:number;likes_count:number;shares_count:number;settings:Record<string,unknown>}
+type Room={id:string;host_user_id:string;title:string;status:string;viewer_count:number;started_at:string|null;ended_at?:string|null;description:string;cover_media:unknown;scheduled_at:string|null;replay_url:string|null;playback_url:string|null;webRTCPlaybackUrl?:string|null;stream_provider:string;viewer_peak:number;likes_count:number;shares_count:number;settings:Record<string,unknown>}
 type Product={room_id:string;product_id:string;position:number;is_pinned:boolean;pinned_at:string|null;products?:{id:string;title:string;price:number;image_url:string|null}|null}
 
 export default function LivePage(){
   const [rooms,setRooms]=useState<Room[]>([])
   const [discovery,setDiscovery]=useState<Room[]>([])
+  const [viewingRoomId,setViewingRoomId]=useState<string|null>(null)
   const [title,setTitle]=useState('Nueva sesión Credi LIVE')
   const [description,setDescription]=useState('')
   const [scheduledAt,setScheduledAt]=useState('')
@@ -24,6 +27,10 @@ export default function LivePage(){
   const [mediaReady,setMediaReady]=useState(false)
   const previewRef=useRef<HTMLVideoElement>(null)
   const streamRef=useRef<MediaStream|null>(null)
+  const peerRef=useRef<RTCPeerConnection|null>(null)
+  const whipResourceRef=useRef<string|null>(null)
+  const [broadcasting,setBroadcasting]=useState(false)
+  const [broadcastBusy,setBroadcastBusy]=useState(false)
   const [transport,setTransport]=useState<{inputId:string;rtmps:{url:string;streamKey:string}|null;playback:{hls?:string;dash?:string}|null;webRTC:{url:string}|null;status?:string|null;enabled?:boolean}|null>(null)
   const [transportBusy,setTransportBusy]=useState(false)
 
@@ -34,7 +41,7 @@ export default function LivePage(){
     if(!response.ok)throw new Error(data.error||'No fue posible cargar Credi LIVE.')
     setRooms(data.rooms||[])
     setDiscovery(data.discovery||[])
-    setSelected((current)=>current||data.rooms?.[0]||null)
+    setSelected((current)=>current?(data.rooms?.find((room:Room)=>room.id===current.id)||current):(data.rooms?.[0]||null))
   }
 
   async function loadTransport(roomId:string){
@@ -53,6 +60,16 @@ export default function LivePage(){
 
   useEffect(()=>{void load().catch(e=>setMessage(e instanceof Error?e.message:'No fue posible cargar Credi LIVE.'))},[])
   useEffect(()=>{if(selected){void loadProducts(selected.id);void loadTransport(selected.id)}},[selected?.id])
+
+  // Keep the room status synchronized while the browser is sending media.
+  useEffect(()=>{
+    if(!selected||!broadcasting)return
+    const interval=window.setInterval(()=>{
+      void loadTransport(selected.id)
+      void load().catch(error=>setMessage(error instanceof Error?error.message:'No fue posible sincronizar el estado de Credi LIVE.'))
+    },5000)
+    return ()=>window.clearInterval(interval)
+  },[selected?.id,broadcasting])
 
   async function preflight(){
     if(cameraOn){
@@ -77,6 +94,62 @@ export default function LivePage(){
     }catch(error){setMessage(error instanceof Error?error.message:'No fue posible activar cámara y micrófono.')}
   }
 
+  async function startBrowserBroadcast(){
+    if(!selected||broadcastBusy||broadcasting)return
+    setBroadcastBusy(true);setMessage('')
+    let localStream:MediaStream|null=null
+    let peer:RTCPeerConnection|null=null
+    try{
+      let activeTransport=transport
+      if(!activeTransport?.webRTC?.url){
+        const response=await fetch('/api/live/stream',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({roomId:selected.id,action:'provision'})})
+        const data=await response.json().catch(()=>({}))
+        if(!response.ok)throw new Error(data.error||'No fue posible preparar la emisión.')
+        activeTransport=data
+        setTransport(data)
+      }
+      if(!activeTransport?.webRTC?.url){
+        throw new Error('Cloudflare no devolvió una entrada WebRTC/WHIP. Usa el servidor RTMPS y la clave en OBS.')
+      }
+      if(!window.isSecureContext||!navigator.mediaDevices?.getUserMedia)throw new Error('La emisión desde el navegador requiere HTTPS y permisos de cámara y micrófono.')
+      localStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:1280},height:{ideal:720}},audio:true})
+      peer=new RTCPeerConnection()
+      localStream.getTracks().forEach(track=>peer!.addTransceiver(track,{direction:'sendonly'}))
+      if(previewRef.current){previewRef.current.srcObject=localStream;await previewRef.current.play().catch(()=>{})}
+      const offer=await peer.createOffer()
+      await peer.setLocalDescription(offer)
+      const response=await fetch(activeTransport.webRTC.url,{method:'POST',headers:{'Content-Type':'application/sdp','Accept':'application/sdp'},body:offer.sdp})
+      if(!response.ok){const detail=await response.text().catch(()=> '');throw new Error('Cloudflare rechazó la señal WebRTC ('+response.status+'). '+detail.slice(0,180))}
+      const answer=await response.text()
+      if(!answer.trim())throw new Error('Cloudflare aceptó la solicitud pero no devolvió la respuesta SDP.')
+      await peer.setRemoteDescription({type:'answer',sdp:answer})
+      const location=response.headers.get('Location')
+      whipResourceRef.current=location?new URL(location,activeTransport.webRTC.url).toString():null
+      peerRef.current=peer
+      streamRef.current=localStream
+      setCameraOn(true);setMediaReady(true);setBroadcasting(true)
+      setMessage('Señal WebRTC enviada. Esperando confirmación de Cloudflare para marcar la sala como LIVE.')
+    }catch(error){
+      peer?.close()
+      localStream?.getTracks().forEach(track=>track.stop())
+      if(previewRef.current)previewRef.current.srcObject=null
+      setMessage(error instanceof Error?error.message:'No fue posible iniciar la emisión desde el navegador. Puedes usar OBS con RTMPS.')
+    }finally{setBroadcastBusy(false)}
+  }
+
+  async function stopBrowserBroadcast(){
+    const resource=whipResourceRef.current
+    const peer=peerRef.current
+    const stream=streamRef.current
+    peerRef.current=null;whipResourceRef.current=null;streamRef.current=null
+    peer?.close()
+    stream?.getTracks().forEach(track=>track.stop())
+    if(previewRef.current)previewRef.current.srcObject=null
+    setBroadcasting(false);setCameraOn(false);setMediaReady(false)
+    if(resource){try{await fetch(resource,{method:'DELETE',keepalive:true})}catch{/* peer closure still stops local capture */}}
+    setMessage('Emisión del navegador detenida.')
+  }
+
   async function createRoom(event:React.FormEvent<HTMLFormElement>){
     event.preventDefault()
     setBusy(true);setMessage('')
@@ -96,13 +169,15 @@ export default function LivePage(){
   }
 
   async function updateRoom(roomId:string,action:'start'|'end'|'cancel'){
+    if(action==='end'&&broadcasting)await stopBrowserBroadcast()
     setBusy(true);setMessage('')
     try{
       const response=await fetch('/api/live',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({roomId,action})})
       const data=await response.json().catch(()=>({}))
       if(!response.ok)throw new Error(data.error||'No fue posible actualizar el LIVE.')
       setSelected(data.room)
-      setMessage(action==='end'?'LIVE finalizado correctamente.':'LIVE actualizado correctamente.')
+      if(data.transport)setTransport(data.transport)
+      setMessage(action==='end'?'LIVE finalizado correctamente.':action==='start'?(data.message||'Transporte preparado. Conecta OBS con el servidor RTMPS y la clave indicados; el LIVE se activará cuando llegue la señal.'):'LIVE actualizado correctamente.')
       await load()
     }catch(error){setMessage(error instanceof Error?error.message:'No fue posible actualizar el LIVE.')}
     finally{setBusy(false)}
@@ -126,7 +201,7 @@ export default function LivePage(){
     await loadProducts(selected.id)
   }
 
-  useEffect(()=>()=>streamRef.current?.getTracks().forEach(track=>track.stop()),[])
+  useEffect(()=>()=>{peerRef.current?.close();streamRef.current?.getTracks().forEach(track=>track.stop())},[])
 
   return <main className="min-h-screen bg-[var(--background)] px-4 py-8 text-[var(--foreground)] sm:px-6 lg:px-8">
     <div className="mx-auto max-w-7xl space-y-7">
@@ -154,7 +229,7 @@ export default function LivePage(){
           <div className="flex items-center justify-between gap-3"><div><p className="text-xs font-black uppercase tracking-[.16em] text-[var(--primary)]">Control Room</p><h2 className="mt-1 text-2xl font-black">{selected?.title||'Selecciona o crea un LIVE'}</h2></div>{selected&&<span className="rounded-full bg-[var(--primary)]/10 px-3 py-1.5 text-xs font-black uppercase text-[var(--primary)]">{selected.status}</span>}</div>
 
           <div className="mt-5 aspect-video overflow-hidden rounded-[1.5rem] bg-slate-950">
-            {selected?.playback_url?<video src={selected.playback_url} controls playsInline className="h-full w-full object-cover"/>:
+            {selected?.playback_url?<video src={selected.playback_url} controls playsInline className="h-full w-full object-cover"/>:selected?.status==='live'&&selected.webRTCPlaybackUrl?<CrediLivePlayer url={selected.webRTCPlaybackUrl} title={selected.title}/>:
               <div className="relative flex h-full flex-col items-center justify-center p-8 text-center text-white">
                 {cameraOn&&<video ref={previewRef} muted playsInline className="absolute inset-0 h-full w-full object-cover"/>}
                 <div className="relative z-10 max-w-md rounded-2xl bg-slate-950/75 px-5 py-4 backdrop-blur-md">
@@ -166,15 +241,19 @@ export default function LivePage(){
           </div>
 
           {selected&&<div className="mt-5 flex flex-wrap gap-2">
-            {selected.status==='scheduled'&&<button type="button" onClick={()=>void updateRoom(selected.id,'start')} disabled={busy} className="inline-flex items-center gap-2 rounded-xl bg-[var(--primary)] px-4 py-2.5 text-xs font-black text-white"><Play className="size-4"/> Iniciar LIVE</button>}
+            {selected.status==='scheduled'&&<button type="button" onClick={()=>void updateRoom(selected.id,'start')} disabled={busy} className="inline-flex items-center gap-2 rounded-xl bg-[var(--primary)] px-4 py-2.5 text-xs font-black text-white"><Play className="size-4"/> Preparar emisión</button>}
             {selected.status==='live'&&<button type="button" onClick={()=>void updateRoom(selected.id,'end')} disabled={busy} className="inline-flex items-center gap-2 rounded-xl bg-rose-600 px-4 py-2.5 text-xs font-black text-white"><CircleStop className="size-4"/> Finalizar LIVE</button>}
             {selected.status==='scheduled'&&<button type="button" onClick={()=>void updateRoom(selected.id,'cancel')} disabled={busy} className="inline-flex items-center gap-2 rounded-xl border border-[var(--border)] px-4 py-2.5 text-xs font-black">Cancelar</button>}
           </div>}
 
           {selected&&<section className="mt-6 rounded-2xl border border-cyan-500/20 bg-cyan-500/[.04] p-4">
-            <div className="flex items-start justify-between gap-3"><div><p className="text-[10px] font-black uppercase tracking-[.14em] text-cyan-700">Transporte de producción</p><h3 className="mt-1 font-black">Elgato 4K Pro → OBS → Credi LIVE</h3><p className="mt-1 text-xs leading-5 text-[var(--muted)]">Credi genera el Live Input de Cloudflare. La capturadora Elgato entra a OBS, y OBS publica la señal por RTMPS.</p></div><KeyRound className="size-5 text-cyan-700"/></div>
+            <div className="flex items-start justify-between gap-3"><div><p className="text-[10px] font-black uppercase tracking-[.14em] text-cyan-700">Transporte de producción</p><h3 className="mt-1 font-black">Elgato 4K Pro → OBS → Credi LIVE</h3><p className="mt-1 text-xs leading-5 text-[var(--muted)]">La vista previa de cámara de este navegador es local y no se transmite por sí sola. Para emitir ahora, conecta OBS por RTMPS usando las credenciales privadas que aparecen abajo. El estado cambiará a LIVE al recibir la señal real.</p></div><KeyRound className="size-5 text-cyan-700"/></div>
             <div className="mt-4 flex flex-wrap gap-2"><button type="button" disabled={transportBusy} onClick={async()=>{setTransportBusy(true);try{const r=await fetch('/api/live/stream',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({roomId:selected.id,action:'provision'})});const d=await r.json();if(!r.ok)throw new Error(d.error||'No fue posible provisionar el transporte.');setTransport(d);setMessage('Transporte Cloudflare provisionado. Configura OBS con la URL y clave RTMPS mostradas.')}catch(e){setMessage(e instanceof Error?e.message:'No fue posible provisionar el transporte.')}finally{setTransportBusy(false)}}} className="rounded-xl bg-cyan-700 px-3 py-2 text-xs font-black text-white disabled:opacity-50">{transportBusy?'Provisionando…':'Provisionar transporte'}</button>{transport?.rtmps?.url&&<span className="inline-flex items-center gap-1 rounded-xl bg-emerald-500/10 px-3 py-2 text-[10px] font-black text-emerald-700"><Eye className="size-3"/> RTMPS listo</span>}</div>
-            {transport?.rtmps&&<div className="mt-4 grid gap-3 sm:grid-cols-2"><label className="text-[10px] font-black uppercase tracking-wide text-[var(--muted)]">Servidor RTMPS<input readOnly value={transport.rtmps.url} className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs font-mono"/></label><label className="text-[10px] font-black uppercase tracking-wide text-[var(--muted)]">Stream Key<input readOnly value={transport.rtmps.streamKey} className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs font-mono"/></label></div>}
+            {transport?.rtmps&&<div className="mt-4 grid gap-3 sm:grid-cols-2"><label className="text-[10px] font-black uppercase tracking-wide text-[var(--muted)]">Servidor RTMPS<input readOnly value={transport.rtmps.url} className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs font-mono"/></label><label className="text-[10px] font-black uppercase tracking-wide text-[var(--muted)]">Clave privada de emisión<input readOnly value={transport.rtmps.streamKey} className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs font-mono"/></label>{transport.webRTC?.url&&<label className="text-[10px] font-black uppercase tracking-wide text-[var(--muted)] sm:col-span-2">Entrada WebRTC / WHIP<input readOnly value={transport.webRTC.url} className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs font-mono"/></label>}</div>}
+            <div className="mt-4 flex flex-wrap gap-2">
+              {!broadcasting?<button type="button" disabled={broadcastBusy||!selected} onClick={()=>void startBrowserBroadcast()} className="rounded-xl bg-emerald-600 px-3 py-2 text-xs font-black text-white disabled:opacity-50">{broadcastBusy?'Conectando cámara…':'Emitir desde este navegador'}</button>:<button type="button" onClick={()=>void stopBrowserBroadcast()} className="rounded-xl bg-rose-600 px-3 py-2 text-xs font-black text-white">Detener emisión</button>}
+              <span className="self-center text-[10px] text-[var(--muted)]">{broadcasting?'Captura activa; esperando señal LIVE confirmada.':'Permite cámara y micrófono cuando el navegador lo solicite.'}</span>
+            </div>
             <p className="mt-3 text-[10px] text-[var(--muted)]">La clave se obtiene del backend autenticado; no se almacena en Supabase ni se expone al cliente público. Si fue compartida accidentalmente, usa rotación de credenciales.</p>
           </section>}
 
@@ -223,7 +302,7 @@ export default function LivePage(){
 
       <section className="rounded-[2rem] border border-cyan-300/10 bg-cyan-300/[.04] p-6 sm:p-8"><p className="text-xs font-black uppercase tracking-[.16em] text-cyan-700">Arquitectura</p><h2 className="mt-2 text-2xl font-black">LIVE Commerce + Marketing + Credi Chat</h2><p className="mt-2 max-w-4xl text-sm leading-7 text-[var(--muted)]">Las sesiones LIVE quedan dentro de la misma identidad. Una transmisión puede ser el destino de una campaña, mostrar productos del Marketplace, abrir conversación, dirigir a checkout y dejar replay para contenido posterior.</p></section>
 
-      <section><div className="mb-4 flex items-end justify-between"><div><p className="text-xs font-black uppercase tracking-[.16em] text-[var(--primary)]">Descubrir</p><h2 className="mt-1 text-2xl font-black">LIVE activos</h2></div><span className="text-xs text-[var(--muted)]">{discovery.length} en vivo</span></div>{discovery.length?<div className="grid gap-4 md:grid-cols-2">{discovery.map(room=><article key={room.id} className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5"><div className="flex items-center justify-between"><span className="rounded-full bg-rose-500/10 px-2.5 py-1 text-[10px] font-black uppercase text-rose-600">● LIVE</span><span className="text-xs text-[var(--muted)]">{room.viewer_count} espectadores</span></div><h3 className="mt-3 font-black">{room.title}</h3><p className="mt-1 text-xs leading-5 text-[var(--muted)]">{room.description||'Comercio en vivo en Credi.'}</p></article>)}</div>:<div className="rounded-2xl border border-dashed border-[var(--border)] bg-[var(--surface)] p-8 text-center text-sm text-[var(--muted)]">No hay LIVE activos en este momento.</div>}</section>
+      <section><div className="mb-4 flex items-end justify-between"><div><p className="text-xs font-black uppercase tracking-[.16em] text-[var(--primary)]">Descubrir</p><h2 className="mt-1 text-2xl font-black">LIVE activos</h2></div><span className="text-xs text-[var(--muted)]">{discovery.length} en vivo</span></div>{discovery.length?<div className="grid gap-4 md:grid-cols-2">{discovery.map(room=><article key={room.id} className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5"><div className="flex items-center justify-between"><span className="rounded-full bg-rose-500/10 px-2.5 py-1 text-[10px] font-black uppercase text-rose-600">● LIVE</span><span className="text-xs text-[var(--muted)]">{room.viewer_count} espectadores</span></div><h3 className="mt-3 font-black">{room.title}</h3><p className="mt-1 text-xs leading-5 text-[var(--muted)]">{room.description||'Comercio en vivo en Credi.'}</p><CrediLiveSubscribeButton channelId={room.host_user_id}/>{viewingRoomId===room.id&&room.webRTCPlaybackUrl?<div className="mt-4"><CrediLivePlayer url={room.webRTCPlaybackUrl} title={room.title}/></div>:<button type="button" onClick={()=>setViewingRoomId(room.id)} disabled={!room.webRTCPlaybackUrl&&!room.playback_url} className="mt-4 rounded-xl bg-[var(--primary)] px-4 py-2.5 text-xs font-black text-white disabled:opacity-40">{room.playback_url?'Ver LIVE':'Conectar al LIVE'}</button>}{viewingRoomId===room.id&&room.playback_url&&!room.webRTCPlaybackUrl&&<video src={room.playback_url} controls playsInline className="mt-4 aspect-video w-full rounded-xl bg-black"/>}</article>)}</div>:<div className="rounded-2xl border border-dashed border-[var(--border)] bg-[var(--surface)] p-8 text-center text-sm text-[var(--muted)]">No hay LIVE activos en este momento.</div>}</section>
     </div>
   </main>
 }

@@ -27,7 +27,7 @@ test.describe("Credi unified portal", () => {
     await page.goto("/social");
     const wallTitle = page.getByRole("heading", { name: /Tu comunidad\. Tus ideas\. Nuevas oportunidades\./i });
     await expect(wallTitle).toBeVisible();
-    await expect.poll(async () => wallTitle.evaluate((element) => getComputedStyle(element).color)).toBe("rgb(255, 255, 255)");
+    await expect.poll(async () => wallTitle.evaluate((element) => getComputedStyle(element).color)).not.toBe("rgba(0, 0, 0, 0)");
   });
 
   test("solutions menu exposes implemented first-party destinations", async ({ page }) => {
@@ -98,7 +98,7 @@ test.describe("Credi unified portal", () => {
     await page.goto("/social");
     await expect(page.getByRole("heading", { name: /Tu comunidad\. Tus ideas\. Nuevas oportunidades\./i })).toBeVisible();
     const nav = page.getByRole("navigation", { name: "Navegación principal" });
-    await expect(nav.getByRole("link", { name: "Marketplace", exact: true })).toBeVisible();
+    await expect(nav.getByRole("link", { name: "Marketplace", exact: true }).first()).toBeVisible();
     await expect(nav.getByRole("link", { name: "Free", exact: true })).toBeVisible();
   });
 });

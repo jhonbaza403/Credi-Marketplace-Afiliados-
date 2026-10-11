@@ -39,13 +39,28 @@ export async function POST(request:Request){
       return NextResponse.json({success:true,...credentials(input)},{status:201,headers:{'Cache-Control':'no-store'}})
     }
     if(!inputId)return errorResponse('La sala todavía no tiene transporte Cloudflare provisionado.',409,'LIVE_TRANSPORT_NOT_PROVISIONED')
-    if(action==='credentials')return NextResponse.json({success:true,...credentials(await getLiveInput(inputId))},{headers:{'Cache-Control':'no-store'}})
+    if(action==='credentials'){
+      const input=await getLiveInput(inputId)
+      const connected=input.status==='connected'||input.status==='reconnected'
+      const disconnected=['client_disconnect','failed_to_connect','failed_to_reconnect','ttl_exceeded'].includes(input.status||'')
+      if(connected&&room.status!=='live'){
+        const {error}=await supabase.from('chat_live_rooms').update({status:'live',started_at:new Date().toISOString(),ended_at:null}).eq('id',room.id).eq('host_user_id',user.id)
+        if(error)return errorResponse('Cloudflare detectó la emisión, pero no se pudo actualizar el estado de la sala.',500,'LIVE_STATUS_SYNC_FAILED')
+      }else if(disconnected&&room.status==='live'){
+        const {error}=await supabase.from('chat_live_rooms').update({status:'ended',ended_at:new Date().toISOString()}).eq('id',room.id).eq('host_user_id',user.id)
+        if(error)return errorResponse('La emisión terminó, pero no se pudo actualizar el estado de la sala.',500,'LIVE_STATUS_SYNC_FAILED')
+      }
+      return NextResponse.json({success:true,...credentials(input)},{headers:{'Cache-Control':'no-store'}})
+    }
     if(action==='rotate')return NextResponse.json({success:true,...credentials(await rotateLiveInputKeys(inputId))},{headers:{'Cache-Control':'no-store'}})
     const input=await setLiveInputEnabled(inputId,action==='enable')
     return NextResponse.json({success:true,...credentials(input)},{headers:{'Cache-Control':'no-store'}})
   }catch(error){
     const message=error instanceof Error?error.message:'UNKNOWN'
     if(message==='CLOUDFLARE_STREAM_NOT_CONFIGURED')return errorResponse('El transporte de producción aún requiere las credenciales de Cloudflare Stream en Vercel.',503,'CLOUDFLARE_STREAM_NOT_CONFIGURED')
-    return errorResponse('No fue posible operar el transporte LIVE.',502,'CLOUDFLARE_TRANSPORT_ERROR')
+    if(message.startsWith('CLOUDFLARE_API_ERROR:')){
+      return errorResponse('Cloudflare rechazó la operación: '+message.slice('CLOUDFLARE_API_ERROR:'.length).slice(0,220),502,'CLOUDFLARE_TRANSPORT_ERROR')
+    }
+    return errorResponse('No fue posible operar el transporte LIVE. Código técnico: '+message.slice(0,120),502,'CLOUDFLARE_TRANSPORT_ERROR')
   }
 }

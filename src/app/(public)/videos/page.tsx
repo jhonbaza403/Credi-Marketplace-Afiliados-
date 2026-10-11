@@ -6,7 +6,7 @@ import { Heart, Loader2, MessageCircle, Play, Share2, Volume2, VolumeX } from 'l
 import { createClient } from '@/lib/supabase/client'
 
 type Reel = { id:string; title:string; body:string; media:unknown; owner_id:string }
-type Media = { url?:unknown; public_url?:unknown; kind?:unknown; contentType?:unknown }
+type Media = { url?:unknown; public_url?:unknown; type?:unknown; kind?:unknown; contentType?:unknown }
 type ProfileName = { id:string; full_name:string | null }
 
 function videoUrl(media: unknown) {
@@ -14,7 +14,7 @@ function videoUrl(media: unknown) {
   const item = media.find((entry) => {
     if (!entry || typeof entry !== 'object') return false
     const m = entry as Media
-    return m.kind === 'video' || String(m.contentType ?? '').startsWith('video/')
+    return m.type === 'video' || m.kind === 'video' || String(m.contentType ?? '').startsWith('video/') || String(m.url ?? m.public_url ?? '').match(/\\.(mp4|webm|mov)(?:\\?|$)/i) !== null
   }) as Media | undefined
   const url = item?.url ?? item?.public_url
   return typeof url === 'string' && url ? url : null

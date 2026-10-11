@@ -42,6 +42,9 @@ export async function uploadCrediBusinessChatMedia(file: File) {
   const kind = kindFor(file)
   validate(file, kind)
   const supabase = createClient()
+  if (!supabase) {
+    throw new Error('La carga de archivos no está configurada en este despliegue: faltan NEXT_PUBLIC_SUPABASE_URL o NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY.')
+  }
   const { data: { user }, error: authError } = await supabase.auth.getUser()
   if (authError || !user) throw new Error('Debes iniciar sesión para enviar archivos.')
 
@@ -49,10 +52,21 @@ export async function uploadCrediBusinessChatMedia(file: File) {
     body: { fileName: file.name, contentType: file.type, context: 'credibusiness-chat', fileSize: file.size },
   })
   if (signedError || !signed?.path || !signed?.token || !signed?.bucket) {
-    const message = signed?.error === 'PLAN_STORAGE_LIMIT_REACHED'
-      ? 'El archivo supera la capacidad disponible de tu plan. Amplía tu plan para continuar.'
-      : signedError?.message || 'No fue posible preparar la carga del archivo.'
-    throw new Error(message)
+    let detail = signed?.error || signedError?.message || 'La función media-upload no devolvió la ruta, el token y el bucket de carga.'
+    const context = signedError && 'context' in signedError ? signedError.context : null
+    if (context instanceof Response) {
+      const responseBody = await context.clone().json().catch(() => null) as { error?: unknown; message?: unknown; storageMb?: unknown } | null
+      if (responseBody?.error === 'PLAN_STORAGE_LIMIT_REACHED') {
+        throw new Error('El archivo supera la capacidad disponible de tu plan. Amplía tu plan para continuar.')
+      }
+      if (typeof responseBody?.error === 'string') detail = responseBody.error
+      else if (typeof responseBody?.message === 'string') detail = responseBody.message
+      detail = `HTTP ${context.status}: ${detail}`
+    }
+    if (signed?.error === 'PLAN_STORAGE_LIMIT_REACHED') {
+      throw new Error('El archivo supera la capacidad disponible de tu plan. Amplía tu plan para continuar.')
+    }
+    throw new Error(`No se pudo preparar la carga del archivo. ${detail}. Verifica que la función Supabase "media-upload" esté desplegada en el proyecto correcto y que su configuración de CORS y Storage sea válida.`)
   }
 
   const bucket = String(signed.bucket)

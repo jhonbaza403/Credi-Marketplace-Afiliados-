@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { distributedRateLimit } from '@/lib/security/rate-limit'
 import { getRequestIp } from '@/lib/security/auth'
 import { isSameOrigin } from '@/lib/security/csrf'
-import { createLiveInput, isCloudflareConfigured } from '@/lib/cloudflare/stream'
+import { createLiveInput, isCloudflareConfigured, getLiveInput } from '@/lib/cloudflare/stream'
 import { requireApiAccountAccess } from '@/lib/auth/api-account-access'
 
 export const runtime = 'nodejs'
@@ -38,11 +38,19 @@ export async function GET() {
   if (!access.ok) return errorResponse('La cuenta no cumple los requisitos de seguridad.',access.status,access.code)
 
   const [{data:rooms,error:roomError},{data:liveRooms}] = await Promise.all([
-    supabase.from('chat_live_rooms').select('id,host_user_id,conversation_id,title,status,viewer_count,started_at,ended_at,description,cover_media,scheduled_at,replay_url,playback_url,stream_provider,viewer_peak,likes_count,shares_count,settings,created_at').eq('host_user_id',user.id).order('created_at',{ascending:false}).limit(50),
-    supabase.from('chat_live_rooms').select('id,host_user_id,title,status,viewer_count,started_at,description,cover_media,scheduled_at,replay_url,playback_url,stream_provider,viewer_peak,likes_count,shares_count,settings,created_at').eq('status','live').order('started_at',{ascending:false}).limit(30),
+    supabase.from('chat_live_rooms').select('id,host_user_id,conversation_id,title,status,viewer_count,started_at,ended_at,description,cover_media,scheduled_at,replay_url,playback_url,stream_provider,viewer_peak,likes_count,shares_count,settings,created_at,metadata').eq('host_user_id',user.id).order('created_at',{ascending:false}).limit(50),
+    supabase.from('chat_live_rooms').select('id,host_user_id,title,status,viewer_count,started_at,description,cover_media,scheduled_at,replay_url,playback_url,stream_provider,viewer_peak,likes_count,shares_count,settings,created_at,metadata').eq('status','live').order('started_at',{ascending:false}).limit(30),
   ])
   if(roomError) return errorResponse('No fue posible cargar las sesiones LIVE.',500,'LIVE_ROOMS_UNAVAILABLE')
-  return NextResponse.json({ rooms:rooms??[], discovery:liveRooms??[] }, { headers:{'Cache-Control':'private, no-store'} })
+  const publicRoom = (room:Record<string,unknown>) => {
+    const metadata=room.metadata&&typeof room.metadata==='object'?room.metadata as Record<string,unknown>:{}
+    const safeRoom={...room}
+    delete safeRoom.metadata
+    return {...safeRoom,webRTCPlaybackUrl:typeof metadata.cloudflare_whep_url==='string'?metadata.cloudflare_whep_url:null}
+  }
+  // One discovery card per creator: duplicate active rooms from the same host must not flood LIVE discovery.
+  const uniqueLiveRooms=(liveRooms??[]).filter((room,index,all)=>all.findIndex((candidate)=>candidate.host_user_id===room.host_user_id)===index)
+  return NextResponse.json({ rooms:(rooms??[]).map((room)=>publicRoom(room as Record<string,unknown>)), discovery:uniqueLiveRooms.map((room)=>publicRoom(room as Record<string,unknown>)) }, { headers:{'Cache-Control':'private, no-store'} })
 }
 
 export async function POST(request:Request) {
@@ -62,13 +70,15 @@ export async function POST(request:Request) {
     if(!parsed.success) return errorResponse('La configuración LIVE no es válida.',400,'INVALID_LIVE_DATA')
 
     const p=parsed.data
+    if(!isCloudflareConfigured()) return errorResponse('Credi LIVE necesita CLOUDFLARE_ACCOUNT_ID y CLOUDFLARE_API_TOKEN en las variables de entorno de producción antes de crear una sala de emisión.',503,'CLOUDFLARE_STREAM_NOT_CONFIGURED')
     const scheduledAt=p.scheduledAt ? new Date(p.scheduledAt) : null
     if(scheduledAt && Number.isNaN(scheduledAt.getTime())) return errorResponse('La fecha LIVE no es válida.',400,'INVALID_SCHEDULE')
-    const status=scheduledAt && scheduledAt.getTime()>Date.now() ? 'scheduled' : 'live'
+    // A room is not LIVE until Cloudflare confirms that the broadcaster connected.
+    const status='scheduled'
 
     const {data:room,error}=await supabase.from('chat_live_rooms').insert({
       host_user_id:user.id,title:p.title,description:p.description,status,
-      scheduled_at:scheduledAt?.toISOString()??null,started_at:status==='live'?new Date().toISOString():null,
+      scheduled_at:scheduledAt?.toISOString()??null,started_at:null,
       cover_media:p.coverMedia,stream_provider:'external',
       settings:{q_and_a:true,comments:true,record_replay:true,product_pinning:true,moderation:true,reactions:true,guest_stage:true},
       metadata:{module:'CREDI-LIVE',version:'2.1',request_id:requestId}
@@ -86,7 +96,8 @@ export async function POST(request:Request) {
         return NextResponse.json({success:true,room:linked,transport},{status:201,headers:{'Cache-Control':'no-store'}})
       }catch(error){
         console.error('[live:'+requestId+'] cloudflare provisioning failed',error)
-        return errorResponse('La sala LIVE fue creada, pero no se pudo provisionar el transporte de producción. Revisa la configuración de Cloudflare Stream en Vercel.',503,'LIVE_TRANSPORT_PROVISION_FAILED')
+        await supabase.from('chat_live_rooms').delete().eq('id',room.id).eq('host_user_id',user.id)
+        return errorResponse('No se pudo preparar el transporte LIVE. No se dejó una sala falsa como activa; revisa las credenciales y permisos de Cloudflare Stream en Vercel.',503,'LIVE_TRANSPORT_PROVISION_FAILED')
       }
     }
     return NextResponse.json({success:true,room,transport},{status:201,headers:{'Cache-Control':'no-store'}})
@@ -108,8 +119,27 @@ export async function PATCH(request:Request) {
   const parsed=patchSchema.safeParse(await request.json().catch(()=>null))
   if(!parsed.success) return errorResponse('La operación LIVE no es válida.',400,'INVALID_LIVE_OPERATION')
   const p=parsed.data
-  const {data:existing}=await supabase.from('chat_live_rooms').select('id,status').eq('id',p.roomId).eq('host_user_id',user.id).maybeSingle()
+  const {data:existing}=await supabase.from('chat_live_rooms').select('id,status,title,host_user_id,metadata,playback_url').eq('id',p.roomId).eq('host_user_id',user.id).maybeSingle()
   if(!existing) return errorResponse('Sesión LIVE no encontrada.',404,'LIVE_ROOM_NOT_FOUND')
+
+  if(p.action==='start'){
+    if(!isCloudflareConfigured()) return errorResponse('La emisión requiere CLOUDFLARE_ACCOUNT_ID y CLOUDFLARE_API_TOKEN en Vercel.',503,'CLOUDFLARE_STREAM_NOT_CONFIGURED')
+    try {
+      const metadata=(existing.metadata&&typeof existing.metadata==='object'?existing.metadata:{}) as Record<string,unknown>
+      const existingInputId=typeof metadata.cloudflare_live_input_id==='string'?metadata.cloudflare_live_input_id:null
+      const input=existingInputId?await getLiveInput(existingInputId):await createLiveInput(existing.id,existing.title)
+      if(!existingInputId){
+        const nextMetadata={...metadata,cloudflare_live_input_id:input.uid,cloudflare_hls_url:input.playback?.hls||null,cloudflare_dash_url:input.playback?.dash||null,cloudflare_whip_url:input.webRTC?.url||null,cloudflare_whep_url:input.webRTCPlayback?.url||null,transport:'cloudflare-stream-rtmps',transport_version:'2026-10'}
+        const {error:linkError}=await supabase.from('chat_live_rooms').update({metadata:nextMetadata,playback_url:input.playback?.hls||null,stream_provider:'cloudflare_stream'}).eq('id',existing.id).eq('host_user_id',user.id)
+        if(linkError) return errorResponse('El transporte está listo, pero no se pudo vincular a la sala.',500,'LIVE_TRANSPORT_LINK_FAILED')
+      }
+      const {data:room}=await supabase.from('chat_live_rooms').select('id,host_user_id,title,status,viewer_count,started_at,ended_at,description,cover_media,scheduled_at,replay_url,playback_url,stream_provider,viewer_peak,likes_count,shares_count,settings,created_at').eq('id',existing.id).single()
+      return NextResponse.json({success:true,room,transport:{inputId:input.uid,rtmps:input.rtmps||null,playback:input.playback||null,webRTC:input.webRTC||null,webRTCPlayback:input.webRTCPlayback||null,status:input.status||null,enabled:input.enabled},message:'Transporte preparado. La sala pasará a LIVE cuando Cloudflare detecte una emisión conectada desde OBS u otra fuente compatible.'},{headers:{'Cache-Control':'no-store'}})
+    } catch(error) {
+      console.error('[live:'+p.roomId+'] prepare transport failed',error)
+      return errorResponse('No fue posible preparar la emisión. Comprueba la configuración de Cloudflare Stream y vuelve a intentarlo.',503,'LIVE_TRANSPORT_PREPARE_FAILED')
+    }
+  }
 
   const updates:Record<string,unknown>={}
   if(p.title!==undefined) updates.title=p.title
@@ -119,7 +149,6 @@ export async function PATCH(request:Request) {
   if(p.action==='schedule'){
     if(!p.scheduledAt||new Date(p.scheduledAt).getTime()<=Date.now()) return errorResponse('Programa el LIVE para una fecha futura.',400,'INVALID_SCHEDULE')
     updates.status='scheduled';updates.started_at=null;updates.ended_at=null
-  } else if(p.action==='start'){updates.status='live';updates.started_at=new Date().toISOString();updates.ended_at=null
   } else if(p.action==='end'){updates.status='ended';updates.ended_at=new Date().toISOString()
   } else if(p.action==='cancel'){updates.status='cancelled';updates.ended_at=new Date().toISOString()}
 

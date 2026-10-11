@@ -5,11 +5,14 @@ import path from "node:path";
 const ROOT = process.cwd();
 const APP = path.join(ROOT, "src", "app");
 const REQUIRED_PAGES = [
-  "apps", "business-os", "automation", "abastecimiento", "compras-mayoristas",
-  "ecosistema-avanzado", "gestion-empresarial", "mercados-conectados",
-  "negociaciones", "proveedores-verificados", "red-comercial", "historias",
-  "commerce-studio", "product-graph", "inventario", "jobs", "privacy",
-  "terms", "legal", "cookies", "consumer-rights", "contacto",
+  "account", "abastecimiento", "analytics", "automation", "chat", "comercio",
+  "commerce-studio", "compras-mayoristas", "consumer-rights", "contacto", "cookies",
+  "credi-flex", "developer", "disputas", "ecosistema-avanzado", "escrow", "free",
+  "gestion-empresarial", "historias", "intelligence", "internacional", "inventario",
+  "jobs", "legal", "locker", "marketing", "mercados-conectados", "negociaciones",
+  "pagos", "pricing", "privacy", "product-graph", "products", "proveedores-verificados",
+  "publish", "red-comercial", "security", "seller", "terms", "catalogo-video",
+  "apps", "business-os", "dashboard", "live", "marketplace", "services", "wallet",
 ];
 const WEBHOOKS = [
   { name: "Stripe billing", route: "api/billing/webhook", required: true },
@@ -18,12 +21,6 @@ const WEBHOOKS = [
   { name: "Affiliate partner", route: "api/affiliate/webhook", required: false },
 ];
 
-function hasPage(route) {
-  const directory = path.join(APP, route);
-  return ["page.tsx", "page.ts", "page.jsx", "page.js"].some((file) =>
-    fs.existsSync(path.join(directory, file)),
-  );
-}
 function hasRoute(route) {
   const directory = path.join(APP, route);
   return ["route.ts", "route.tsx", "route.js", "route.jsx"].some((file) =>
@@ -46,9 +43,10 @@ function walkPages(directory, segments = [], out = []) {
   return out;
 }
 
-const missingPages = REQUIRED_PAGES.filter((route) => !hasPage(route));
+const discoveredPages = new Set(walkPages(APP));
+const missingPages = REQUIRED_PAGES.filter((route) => !discoveredPages.has("/" + route));
 const missingRequiredWebhooks = WEBHOOKS.filter((hook) => hook.required && !hasRoute(hook.route));
-const pageCount = new Set(walkPages(APP)).size;
+const pageCount = discoveredPages.size;
 
 console.log("=== Credi route completeness audit ===");
 console.log("App Router page files:", pageCount);
