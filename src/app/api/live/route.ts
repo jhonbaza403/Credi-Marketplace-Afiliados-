@@ -44,7 +44,8 @@ export async function GET() {
   if(roomError) return errorResponse('No fue posible cargar las sesiones LIVE.',500,'LIVE_ROOMS_UNAVAILABLE')
   const publicRoom = (room:Record<string,unknown>) => {
     const metadata=room.metadata&&typeof room.metadata==='object'?room.metadata as Record<string,unknown>:{}
-    const {metadata:_privateMetadata,...safeRoom}=room
+    const safeRoom={...room}
+    delete safeRoom.metadata
     return {...safeRoom,webRTCPlaybackUrl:typeof metadata.cloudflare_whep_url==='string'?metadata.cloudflare_whep_url:null}
   }
   return NextResponse.json({ rooms:(rooms??[]).map((room)=>publicRoom(room as Record<string,unknown>)), discovery:(liveRooms??[]).map((room)=>publicRoom(room as Record<string,unknown>)) }, { headers:{'Cache-Control':'private, no-store'} })
