@@ -476,9 +476,35 @@ h3,
 h4,
 h5,
 h6 {
-  color: var(--foreground);
+  /* Inherit from the owning surface so explicit Tailwind contrast utilities
+     (for example text-white on dark hero panels) remain effective. */
+  color: inherit;
   font-weight: 700;
   letter-spacing: -0.025em;
+}
+
+/* Shared legibility baseline for every portal route. */
+:where(p, li, label, small, dt, dd, figcaption) {
+  text-wrap: pretty;
+}
+
+:where(button, a, input, textarea, select):focus-visible {
+  outline: 3px solid var(--primary);
+  outline-offset: 3px;
+}
+
+:where(input, textarea, select) {
+  color: var(--foreground);
+  background-color: var(--surface);
+}
+
+:where(input, textarea, select):disabled {
+  color: var(--muted);
+}
+
+::selection {
+  color: #ffffff;
+  background: #075ce5;
 }
 
 ul,
