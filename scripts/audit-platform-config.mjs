@@ -62,8 +62,8 @@ assert(!ci.includes("npm install --package-lock-only"), "CI must not regenerate 
 assert(ci.includes("npm run test:e2e") && ci.includes("npm run build"), "CI must keep browser E2E and production build as hard gates");
 
 assert(deploy.includes('workflows:\n      - "Credi Marketplace CI"'), "Deployment validation must follow the canonical Credi Marketplace CI workflow");
-assert(deploy.includes("Vercel – credi-marketplace-afiliados"), "Production deployment validation must recognize the canonical Vercel status context");
-assert(preview.includes("Vercel – credi-marketplace-afiliados"), "Pull-request preview validation must use the canonical Vercel project status");
+assert(/test\("\\^vercel";\s*"i"\)/.test(deploy), "Production deployment validation must recognize Vercel status contexts case-insensitively");
+assert(/test\("\\^vercel";\s*"i"\)/.test(preview), "Pull-request preview validation must recognize Vercel status contexts case-insensitively");
 assert(productionE2E.includes("workflow_dispatch:"), "Production E2E must remain manually triggered");
 for (const secret of ["E2E_BASE_URL", "E2E_OPERATION_ID", "E2E_LIVE_ROOM_ID", "E2E_STORAGE_STATE_JSON"]) {
   assert(productionE2E.includes(`secrets.${secret}`), `Production E2E must validate its required secret: ${secret}`);
