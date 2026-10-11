@@ -5,13 +5,15 @@ import { BarChart3, CalendarClock, Camera, CircleStop, Eye, Heart, KeyRound, Mes
 import type { LucideIcon } from 'lucide-react'
 import DomainBridge from '@/components/portal/DomainBridge'
 import { CrediLiveChat } from '@/components/live/CrediLiveChat'
+import { CrediLivePlayer } from '@/components/live/CrediLivePlayer'
 
-type Room={id:string;host_user_id:string;title:string;status:string;viewer_count:number;started_at:string|null;ended_at?:string|null;description:string;cover_media:unknown;scheduled_at:string|null;replay_url:string|null;playback_url:string|null;stream_provider:string;viewer_peak:number;likes_count:number;shares_count:number;settings:Record<string,unknown>}
+type Room={id:string;host_user_id:string;title:string;status:string;viewer_count:number;started_at:string|null;ended_at?:string|null;description:string;cover_media:unknown;scheduled_at:string|null;replay_url:string|null;playback_url:string|null;webRTCPlaybackUrl?:string|null;stream_provider:string;viewer_peak:number;likes_count:number;shares_count:number;settings:Record<string,unknown>}
 type Product={room_id:string;product_id:string;position:number;is_pinned:boolean;pinned_at:string|null;products?:{id:string;title:string;price:number;image_url:string|null}|null}
 
 export default function LivePage(){
   const [rooms,setRooms]=useState<Room[]>([])
   const [discovery,setDiscovery]=useState<Room[]>([])
+  const [viewingRoomId,setViewingRoomId]=useState<string|null>(null)
   const [title,setTitle]=useState('Nueva sesión Credi LIVE')
   const [description,setDescription]=useState('')
   const [scheduledAt,setScheduledAt]=useState('')
@@ -38,7 +40,7 @@ export default function LivePage(){
     if(!response.ok)throw new Error(data.error||'No fue posible cargar Credi LIVE.')
     setRooms(data.rooms||[])
     setDiscovery(data.discovery||[])
-    setSelected((current)=>current||data.rooms?.[0]||null)
+    setSelected((current)=>current?(data.rooms?.find((room:Room)=>room.id===current.id)||current):(data.rooms?.[0]||null))
   }
 
   async function loadTransport(roomId:string){
@@ -215,7 +217,7 @@ export default function LivePage(){
           <div className="flex items-center justify-between gap-3"><div><p className="text-xs font-black uppercase tracking-[.16em] text-[var(--primary)]">Control Room</p><h2 className="mt-1 text-2xl font-black">{selected?.title||'Selecciona o crea un LIVE'}</h2></div>{selected&&<span className="rounded-full bg-[var(--primary)]/10 px-3 py-1.5 text-xs font-black uppercase text-[var(--primary)]">{selected.status}</span>}</div>
 
           <div className="mt-5 aspect-video overflow-hidden rounded-[1.5rem] bg-slate-950">
-            {selected?.playback_url?<video src={selected.playback_url} controls playsInline className="h-full w-full object-cover"/>:
+            {selected?.playback_url?<video src={selected.playback_url} controls playsInline className="h-full w-full object-cover"/>:selected?.status==='live'&&selected.webRTCPlaybackUrl?<CrediLivePlayer url={selected.webRTCPlaybackUrl} title={selected.title}/>:
               <div className="relative flex h-full flex-col items-center justify-center p-8 text-center text-white">
                 {cameraOn&&<video ref={previewRef} muted playsInline className="absolute inset-0 h-full w-full object-cover"/>}
                 <div className="relative z-10 max-w-md rounded-2xl bg-slate-950/75 px-5 py-4 backdrop-blur-md">
@@ -288,7 +290,7 @@ export default function LivePage(){
 
       <section className="rounded-[2rem] border border-cyan-300/10 bg-cyan-300/[.04] p-6 sm:p-8"><p className="text-xs font-black uppercase tracking-[.16em] text-cyan-700">Arquitectura</p><h2 className="mt-2 text-2xl font-black">LIVE Commerce + Marketing + Credi Chat</h2><p className="mt-2 max-w-4xl text-sm leading-7 text-[var(--muted)]">Las sesiones LIVE quedan dentro de la misma identidad. Una transmisión puede ser el destino de una campaña, mostrar productos del Marketplace, abrir conversación, dirigir a checkout y dejar replay para contenido posterior.</p></section>
 
-      <section><div className="mb-4 flex items-end justify-between"><div><p className="text-xs font-black uppercase tracking-[.16em] text-[var(--primary)]">Descubrir</p><h2 className="mt-1 text-2xl font-black">LIVE activos</h2></div><span className="text-xs text-[var(--muted)]">{discovery.length} en vivo</span></div>{discovery.length?<div className="grid gap-4 md:grid-cols-2">{discovery.map(room=><article key={room.id} className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5"><div className="flex items-center justify-between"><span className="rounded-full bg-rose-500/10 px-2.5 py-1 text-[10px] font-black uppercase text-rose-600">● LIVE</span><span className="text-xs text-[var(--muted)]">{room.viewer_count} espectadores</span></div><h3 className="mt-3 font-black">{room.title}</h3><p className="mt-1 text-xs leading-5 text-[var(--muted)]">{room.description||'Comercio en vivo en Credi.'}</p></article>)}</div>:<div className="rounded-2xl border border-dashed border-[var(--border)] bg-[var(--surface)] p-8 text-center text-sm text-[var(--muted)]">No hay LIVE activos en este momento.</div>}</section>
+      <section><div className="mb-4 flex items-end justify-between"><div><p className="text-xs font-black uppercase tracking-[.16em] text-[var(--primary)]">Descubrir</p><h2 className="mt-1 text-2xl font-black">LIVE activos</h2></div><span className="text-xs text-[var(--muted)]">{discovery.length} en vivo</span></div>{discovery.length?<div className="grid gap-4 md:grid-cols-2">{discovery.map(room=><article key={room.id} className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5"><div className="flex items-center justify-between"><span className="rounded-full bg-rose-500/10 px-2.5 py-1 text-[10px] font-black uppercase text-rose-600">● LIVE</span><span className="text-xs text-[var(--muted)]">{room.viewer_count} espectadores</span></div><h3 className="mt-3 font-black">{room.title}</h3><p className="mt-1 text-xs leading-5 text-[var(--muted)]">{room.description||'Comercio en vivo en Credi.'}</p>{viewingRoomId===room.id&&room.webRTCPlaybackUrl?<div className="mt-4"><CrediLivePlayer url={room.webRTCPlaybackUrl} title={room.title}/></div>:<button type="button" onClick={()=>setViewingRoomId(room.id)} disabled={!room.webRTCPlaybackUrl&&!room.playback_url} className="mt-4 rounded-xl bg-[var(--primary)] px-4 py-2.5 text-xs font-black text-white disabled:opacity-40">{room.playback_url?'Ver LIVE':'Conectar al LIVE'}</button>}{viewingRoomId===room.id&&room.playback_url&&!room.webRTCPlaybackUrl&&<video src={room.playback_url} controls playsInline className="mt-4 aspect-video w-full rounded-xl bg-black"/>}</article>)}</div>:<div className="rounded-2xl border border-dashed border-[var(--border)] bg-[var(--surface)] p-8 text-center text-sm text-[var(--muted)]">No hay LIVE activos en este momento.</div>}</section>
     </div>
   </main>
 }
