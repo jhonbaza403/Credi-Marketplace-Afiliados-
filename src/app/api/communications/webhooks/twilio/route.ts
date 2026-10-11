@@ -27,13 +27,13 @@ export async function POST(request: Request) {
     if (typeof value === "string") (params[key] ??= []).push(value);
   }
   if (!validSignature(expectedUrl,params,signature,token)) return Response.json({error:"invalid_webhook_signature"},{status:401,headers:{"Cache-Control":"no-store"}});
-  const sid=params.MessageSid ?? params.SmsSid;
+  const sid=(params.MessageSid ?? params.SmsSid)?.[0];
   if (!sid || !/^[A-Za-z0-9]{16,64}$/.test(sid)) return Response.json({error:"missing_message_id"},{status:400});
   try {
     const admin=createAdminClient();
     const {error}=await admin.from("communication_webhook_events").upsert({
       provider:"twilio",provider_event_id:sid,event_type:"message.inbound",status:"received",
-      payload:{messageSid:sid,messageStatus:params.MessageStatus ?? null,numMedia:params.NumMedia ?? "0"},
+      payload:{messageSid:sid,messageStatus:params.MessageStatus?.[0] ?? null,numMedia:params.NumMedia?.[0] ?? "0"},
       received_at:new Date().toISOString()
     },{onConflict:"provider,provider_event_id",ignoreDuplicates:true});
     if(error) throw error;
