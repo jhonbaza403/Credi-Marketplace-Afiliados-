@@ -34,3 +34,20 @@ Cada partner debe adaptar sus callbacks nativos a este contrato; no se asume com
 5. Añadir rate limiting en el borde, alertas y consumidor idempotente.
 6. No modificar wallet ni acreditar comisiones desde el webhook. Las conversiones deben pasar por el flujo financiero existente, con reconciliación y auditoría.
 7. Mensajería saliente requiere flujo separado con consentimiento, opt-out, autorización, rate limit y límites de coste. Esta implementación no envía mensajes ni genera cargos.
+
+
+## Matriz de pruebas automatizadas
+
+El archivo `tests/unit/external-webhooks.test.ts` cubre estos contratos sin usar credenciales reales:
+
+| Caso | Resultado esperado |
+|---|---|
+| Twilio sin secreto o URL pública configurada | `503`, sin acceso a la base de datos |
+| Firma Twilio inválida | `401`, sin persistencia |
+| Firma Twilio válida con parámetros repetidos | `200` y recepción idempotente en la bandeja |
+| Afiliado con timestamp vencido | `401` |
+| Afiliado con firma incorrecta | `401`, sin persistencia |
+| Evento afiliado correctamente firmado | `202` y evento almacenado |
+| Reintento del mismo evento con el mismo payload | `200`, marcado como duplicado |
+
+Estas pruebas unitarias no sustituyen una prueba de extremo a extremo contra una cuenta de Twilio, el partner afiliado ni una base de datos de staging. Antes de activar producción deben probarse también el conflicto de IDs, fallos de base de datos, repetición concurrente y política de retención de eventos.
