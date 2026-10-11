@@ -45,6 +45,26 @@ test.describe("Public navigation", () => {
     await expect(nav.getByRole("link", { name: "Servicios", exact: true })).toHaveAttribute("href", "/services");
   });
 
+  test("solutions menu restores CrediBusiness and community/commercial shortcuts", async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+
+    const nav = page.getByRole("navigation", { name: "Navegación principal" });
+    await nav.getByRole("button", { name: /Soluciones/ }).click();
+
+    for (const [label, href] of [
+      ["Muro social", "/social"],
+      ["Credi Chat", "/chat"],
+      ["Credi LIVE", "/live"],
+      ["Marketplace", "/marketplace"],
+      ["Publicar", "/publish"],
+      ["Servicios", "/services"],
+      ["CrediBusiness", "/business-os"],
+    ] as const) {
+      await expect(nav.getByRole("link", { name: label, exact: true })).toHaveAttribute("href", href);
+    }
+  });
+
   test("services page exposes only valid first-party destinations", async ({ page }) => {
     await page.goto("/services", { waitUntil: "domcontentloaded" });
 
