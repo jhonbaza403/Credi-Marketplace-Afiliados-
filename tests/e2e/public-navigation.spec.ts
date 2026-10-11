@@ -61,7 +61,7 @@ test.describe("Public navigation", () => {
       ["Servicios", "/services"],
       ["CrediBusiness", "/business-os"],
     ] as const) {
-      await expect(nav.getByRole("link", { name: label, exact: true })).toHaveAttribute("href", href);
+      await expect(nav.locator("#credi-solutions-menu").getByRole("link", { name: label, exact: true })).toHaveAttribute("href", href);
     }
   });
 
