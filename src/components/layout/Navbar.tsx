@@ -42,7 +42,6 @@ const SOLUTION_GROUPS = [
     items: [
       { label: "Historias", href: "/historias", icon: Camera },
       { label: "Vídeos", href: "/videos", icon: Play },
-      { label: "Credi Chat", href: "/chat", icon: MessageCircle },
     ],
   },
   {
@@ -50,7 +49,6 @@ const SOLUTION_GROUPS = [
     description: "Descubre y vende",
     items: [
       { label: "B2B", href: "/b2b", icon: Building2 },
-      { label: "Publicar", href: "/publish", icon: Sparkles },
       { label: "Afiliados", href: "/affiliate", icon: TrendingUp },
       { label: "Proveedores verificados", href: "/proveedores-verificados", icon: BadgeCheck },
       { label: "Catálogo en vídeo", href: "/catalogo-video", icon: Play },
@@ -295,9 +293,6 @@ export default function Navbar() {
             </Link>
             <Link href="/login" onClick={closeMenus} className="inline-flex min-h-11 items-center justify-center rounded-xl px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-blue-600">
               Iniciar sesión
-            </Link>
-            <Link href="/free" onClick={closeMenus} className="inline-flex min-h-11 items-center justify-center rounded-xl px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-blue-600">
-              Explorar Credi Free
             </Link>
           </div>
         </div>
