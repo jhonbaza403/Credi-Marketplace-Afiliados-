@@ -68,7 +68,7 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           success: false,
-          error: 'Los datos de publicación no son válidos.',
+          error: `Los datos de publicación no son válidos: ${parsed.error.issues.map((issue) => `${issue.path.join('.') || 'datos'}: ${issue.message}`).join(' · ')}`,
           code: 'INVALID_SOCIAL_DATA',
           details: parsed.error.flatten(),
         },
