@@ -55,11 +55,13 @@ export async function POST(request: Request) {
     }, { onConflict: "event_key", ignoreDuplicates: true });
     if (eventError) throw eventError;
 
+    // Status callbacks can be delayed or delivered out of order. Once a
+    // terminal state is stored, a later stale callback must not regress it.
     const { error: requestError } = await admin.from("twilio_sms_requests").update({
       status,
       error_code: errorCode,
       updated_at: new Date().toISOString(),
-    }).eq("message_sid", sid);
+    }).eq("message_sid", sid).not("status", "in", "(delivered,undelivered,failed,canceled)");
     if (requestError) throw requestError;
 
     return new Response("ok", { status: 200, headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" } });
