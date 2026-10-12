@@ -64,7 +64,17 @@ export async function POST(request: Request) {
     }
 
     const parsed = baseSchema.safeParse(rawBody)
-    if (!parsed.success) return jsonError('Los datos de publicación no son válidos.', 400, 'INVALID_SOCIAL_DATA')
+    if (!parsed.success) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Los datos de publicación no son válidos.',
+          code: 'INVALID_SOCIAL_DATA',
+          details: parsed.error.flatten(),
+        },
+        { status: 400, headers: { 'Cache-Control': 'no-store' } },
+      )
+    }
 
     const payload = parsed.data
     const operationContext = {
