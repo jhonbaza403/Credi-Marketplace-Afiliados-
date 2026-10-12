@@ -173,8 +173,10 @@ export async function POST(request: Request) {
         moderationStatus: 'pending',
         createdAt: now,
         message: payload.type === 'ad'
-          ? 'Campaña enviada a revisión.'
-          : 'Contenido enviado a revisión antes de publicarse.',
+          ? 'Campaña recibida para revisión; todavía no está activa.'
+          : payload.type === 'story'
+            ? 'Historia recibida y pendiente de revisión. Su caducidad está configurada a 24 horas.'
+            : 'Contenido recibido y pendiente de revisión antes de hacerse público.',
       },
       { status: 201, headers: { 'Cache-Control': 'no-store' } },
     )
