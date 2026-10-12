@@ -32,7 +32,7 @@ export async function POST(request: Request) {
     if (!accountSid || !apiKeySid || !apiKeySecret || !from || !callback) {
       return Response.json({ error: "sms_service_not_configured" }, { status: 503 });
     }
-    if (!/^AC[a-f0-9]{32}$/i.test(accountSid) || !/^\+[1-9]\d{7,14}$/.test(from) || !callback.startsWith("https://")) {
+    if (!/^AC[a-f0-9]{32}$/i.test(accountSid) || !/^SK[a-f0-9]{32}$/i.test(apiKeySid) || !/^\+[1-9]\d{7,14}$/.test(from) || !callback.startsWith("https://")) {
       return Response.json({ error: "sms_service_configuration_invalid" }, { status: 503 });
     }
 
