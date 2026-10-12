@@ -63,7 +63,7 @@ assert(ci.includes("npm run test:e2e") && ci.includes("npm run build"), "CI must
 
 assert(deploy.includes('workflows:\n      - "Credi Marketplace CI"'), "Deployment validation must follow the canonical Credi Marketplace CI workflow");
 assert(deploy.includes("Vercel – credi-marketplace-afiliados"), "Production deployment validation must recognize the canonical Vercel status context");
-assert(preview.includes('select(.context == "Vercel")'), "Pull-request preview validation must inspect the canonical Vercel deployment status and ignore informational project statuses");
+assert(preview.includes("ascii_downcase | startswith(\"vercel\")"), "Pull-request preview validation must recognize Vercel deployment status contexts while ignoring unrelated statuses");
 assert(preview.includes("build-rate-limit") && preview.includes("deployment build limit"), "Preview gate must explain provider-side Vercel build rate limits without reporting a false pass");
 assert(productionE2E.includes("workflow_dispatch:"), "Production E2E must remain manually triggered");
 for (const secret of ["E2E_BASE_URL", "E2E_OPERATION_ID", "E2E_LIVE_ROOM_ID", "E2E_STORAGE_STATE_JSON"]) {
