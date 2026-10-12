@@ -97,14 +97,14 @@ export default function PublishCenter() {
     }
   }
 
-  const uploaderKind = type === "reel" ? "video" : "mixed";
+  const uploaderKind = "mixed" as const;
 
   return (
     <section className="overflow-hidden rounded-[2rem] border border-[var(--border)] bg-[var(--surface)]/95 p-6 text-[var(--foreground)] shadow-2xl backdrop-blur-xl sm:p-8">
       <div className="mb-6 rounded-3xl border border-cyan-300/15 bg-[linear-gradient(135deg,rgba(8,15,40,.94),rgba(7,21,36,.9))] p-6 text-white shadow-xl">
         <p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-200">Centro de publicaciones</p>
         <h1 className="mt-2 text-3xl font-black tracking-tight">Publica desde tu propia cuenta</h1>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-300">Carga imagen o vídeo desde tu dispositivo. El servidor registra el contenido y lo deja en revisión antes de publicarlo.</p>
+        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-300">Carga hasta 10 imágenes y vídeos en una misma publicación. El contenido se guarda como borrador pendiente de moderación; solo se mostrará públicamente después de la aprobación.</p>
       </div>
 
       {productId && <div className="mb-6 rounded-2xl border border-cyan-300/20 bg-cyan-300/5 p-4 text-sm"><p className="font-black text-cyan-700">Contexto comercial adjunto</p><p className="mt-1 text-[var(--muted)]">Esta publicación conserva el producto seleccionado y, cuando exista, la referencia de afiliado para conectar Muro → producto → Chat → Checkout.</p><code className="mt-2 inline-block rounded-lg bg-[var(--surface)] px-2 py-1 text-xs">{productId}</code>{affiliateRef && <code className="ml-2 inline-block rounded-lg bg-[var(--surface)] px-2 py-1 text-xs">ref={affiliateRef}</code>}</div>}
@@ -124,7 +124,7 @@ export default function PublishCenter() {
 
         <div>
           <div className="mb-3"><p className="text-sm font-black">Multimedia</p><p className="text-xs text-[var(--muted)]">{type === "reel" ? "El reel requiere vídeo. Puedes añadirlo desde computadora, Android o iPhone." : "Puedes combinar imágenes y vídeos en una misma pieza de contenido."}</p></div>
-          <MarketplaceMediaUploader kind={uploaderKind} multiple={type === "post"} maxFiles={type === "post" ? 8 : 1} value={media} onChange={setMedia} />
+          <MarketplaceMediaUploader kind={uploaderKind} multiple maxFiles={10} value={media} onChange={setMedia} />
         </div>
 
         {type !== "ad" && <label className="block text-sm font-semibold">Privacidad<select value={visibility} onChange={(event) => setVisibility(event.target.value as "public" | "private")} className="mt-2 w-full rounded-2xl border border-[var(--border-strong)] bg-[var(--surface)] px-4 py-3 outline-none focus:border-[var(--primary)] focus:ring-4 focus:ring-[var(--focus-ring)]"><option value="public">Público</option><option value="private">Solo yo</option></select></label>}
