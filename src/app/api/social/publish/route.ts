@@ -8,7 +8,7 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 const mediaSchema = z.object({
-  type: z.enum(['image', 'video']),
+  type: z.enum(['image', 'video', 'audio']),
   url: z.string().url().max(2048),
 })
 
@@ -16,7 +16,7 @@ const baseSchema = z.object({
   type: z.enum(['post', 'story', 'reel', 'ad']),
   title: z.string().trim().max(180).default(''),
   body: z.string().trim().max(5000).default(''),
-  media: z.array(mediaSchema).min(1).max(8),
+  media: z.array(mediaSchema).max(8),
   visibility: z.enum(['public', 'private']).default('public'),
   destinationUrl: z.string().trim().max(2048).optional().nullable(),
   budget: z.number().finite().min(0).max(100_000_000).optional().nullable(),
@@ -96,6 +96,8 @@ export async function POST(request: Request) {
 
     if (payload.type !== 'story' && title.length < 1) return jsonError('Añade un título antes de publicar.', 400, 'TITLE_REQUIRED')
     if (payload.type !== 'ad' && body.length < 1) return jsonError('Escribe el contenido antes de publicar.', 400, 'BODY_REQUIRED')
+    if (payload.type !== 'story' && payload.media.length < 1) return jsonError('Añade al menos una imagen, vídeo o audio.', 400, 'MEDIA_REQUIRED')
+    if (payload.type === 'story' && !body.length && payload.media.length < 1) return jsonError('Añade texto o multimedia para crear la historia.', 400, 'STORY_CONTENT_REQUIRED')
     if (payload.type === 'reel' && !payload.media.some((item) => item.type === 'video')) {
       return jsonError('Un reel necesita al menos un vídeo.', 400, 'REEL_VIDEO_REQUIRED')
     }
