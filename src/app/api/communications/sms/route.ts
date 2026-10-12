@@ -37,6 +37,17 @@ export async function POST(request: Request) {
     }
 
     const admin = createAdminClient();
+
+    // Check this user's idempotency key before applying the hourly quota so a
+    // retry consistently returns a duplicate response rather than a misleading 429.
+    const { data: existingRequest, error: existingRequestError } = await admin.from("twilio_sms_requests")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("idempotency_key", idempotencyKey)
+      .maybeSingle();
+    if (existingRequestError) throw existingRequestError;
+    if (existingRequest) return Response.json({ error: "duplicate_request" }, { status: 409 });
+
     const since = new Date(Date.now() - 60 * 60 * 1000).toISOString();
     const { count, error: countError } = await admin.from("twilio_sms_requests")
       .select("id", { count: "exact", head: true })
