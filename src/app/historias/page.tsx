@@ -17,8 +17,9 @@ export default function HistoriaVideoPublisher() {
 
   useEffect(() => {
     let active = true
-    void supabase.auth.getUser().then(({ data, error }) => {
-      if (active) setUserId(error ? null : data.user?.id ?? null)
+    void supabase.auth.getUser().then((result: Awaited<ReturnType<typeof supabase.auth.getUser>>) => {
+      const userResult = result as { data: { user: { id: string } | null }; error: unknown }
+      if (active) setUserId(userResult.error ? null : userResult.data.user?.id ?? null)
     }).catch(() => { if (active) setUserId(null) })
     return () => { active = false }
   }, [supabase])
