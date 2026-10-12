@@ -3,10 +3,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { Mic, MicOff, PhoneOff, Video, VideoOff } from 'lucide-react'
 
-type TwilioTrack = { attach: (element?: HTMLMediaElement) => HTMLMediaElement; detach: () => HTMLMediaElement[]; kind: string }
+type TwilioTrack = { attach: (element?: HTMLMediaElement) => HTMLMediaElement; detach: () => HTMLMediaElement[]; kind: string; mediaStreamTrack?: MediaStreamTrack; enable?: () => unknown; disable?: () => unknown; stop?: () => unknown }
 type TwilioParticipant = { identity: string; tracks: Map<string, { track?: TwilioTrack }>; on: (event: string, callback: (publication: { track?: TwilioTrack }) => void) => void }
-type TwilioRoom = { localParticipant: { identity: string; tracks: Map<string, { track?: TwilioTrack }>; publishTrack: (track: MediaStreamTrack) => Promise<unknown>; unpublishTrack: (track: MediaStreamTrack) => Promise<unknown> }; participants: Map<string, TwilioParticipant>; on: (event: string, callback: (participant: TwilioParticipant, publication?: { track?: TwilioTrack }) => void) => void; disconnect: () => void }
-type TwilioVideoSdk = { connect: (token: string, options: { name: string; audio: boolean; video: { width: number; height: number } | boolean }) => Promise<TwilioRoom> }
+type TwilioRoom = { localParticipant: { identity: string; tracks: Map<string, { track?: TwilioTrack }> }; participants: Map<string, TwilioParticipant>; on: (event: string, callback: (participant: TwilioParticipant, publication?: { track?: TwilioTrack }) => void) => void; disconnect: () => void }
+type TwilioVideoSdk = { connect: (token: string, options: { name: string; tracks: TwilioTrack[] }) => Promise<TwilioRoom>; createLocalTracks: (options: { audio: boolean; video: { width: number; height: number } }) => Promise<TwilioTrack[]> }
 
 declare global {
   interface Window { Twilio?: { Video?: TwilioVideoSdk } }
@@ -42,7 +42,7 @@ export function CrediLiveTwilioStage({ roomId, active }: { roomId: string; activ
   const roomRef = useRef<TwilioRoom | null>(null)
   const localRef = useRef<HTMLDivElement>(null)
   const remoteRef = useRef<HTMLDivElement>(null)
-  const tracksRef = useRef<MediaStreamTrack[]>([])
+  const tracksRef = useRef<TwilioTrack[]>([])
   const [connected, setConnected] = useState(false)
   const [busy, setBusy] = useState(false)
   const [muted, setMuted] = useState(false)
@@ -52,7 +52,7 @@ export function CrediLiveTwilioStage({ roomId, active }: { roomId: string; activ
   useEffect(() => () => {
     roomRef.current?.disconnect()
     roomRef.current = null
-    tracksRef.current.forEach((track) => track.stop())
+    tracksRef.current.forEach((track) => track.stop?.())
   }, [roomId])
 
   async function connect() {
@@ -70,9 +70,9 @@ export function CrediLiveTwilioStage({ roomId, active }: { roomId: string; activ
       const data = await response.json().catch(() => ({})) as { token?: string; roomName?: string; error?: string }
       if (!response.ok || !data.token || !data.roomName) throw new Error(data.error || 'No fue posible preparar el escenario Twilio.')
       const sdk = await loadSdk()
-      const media = await navigator.mediaDevices.getUserMedia({ audio: true, video: { width: 1280, height: 720 } })
-      tracksRef.current = media.getTracks()
-      const room = await sdk.connect(data.token, { name: data.roomName, audio: true, video: { width: 1280, height: 720 } })
+      const localTracks = await sdk.createLocalTracks({ audio: true, video: { width: 1280, height: 720 } })
+      tracksRef.current = localTracks
+      const room = await sdk.connect(data.token, { name: data.roomName, tracks: localTracks })
       roomRef.current = room
       room.participants.forEach((participant) => {
         participant.tracks.forEach((publication) => { if (publication.track) attachTrack(publication.track, remoteRef.current) })
@@ -83,8 +83,6 @@ export function CrediLiveTwilioStage({ roomId, active }: { roomId: string; activ
         participant.on('trackSubscribed', (publication) => { if (publication.track) attachTrack(publication.track, remoteRef.current) })
       })
       room.on('participantDisconnected', () => setMessage('Un invitado salió del escenario.'))
-      const localTracks = Array.from(media.getTracks())
-      for (const track of localTracks) await room.localParticipant.publishTrack(track)
       setConnected(true)
       setMessage('Conectado a Twilio Video. El vídeo interactivo funciona aparte de la emisión pública Cloudflare.')
       const localVideo = document.createElement('video')
@@ -92,10 +90,11 @@ export function CrediLiveTwilioStage({ roomId, active }: { roomId: string; activ
       localVideo.muted = true
       localVideo.playsInline = true
       localVideo.className = 'h-full w-full rounded-xl object-cover'
-      localVideo.srcObject = media
+      const localVideoTrack = localTracks.find((track) => track.kind === 'video')
+      if (localVideoTrack) localVideoTrack.attach(localVideo)
       localRef.current?.replaceChildren(localVideo)
     } catch (error) {
-      tracksRef.current.forEach((track) => track.stop())
+      tracksRef.current.forEach((track) => track.stop?.())
       tracksRef.current = []
       roomRef.current?.disconnect()
       roomRef.current = null
@@ -121,14 +120,14 @@ export function CrediLiveTwilioStage({ roomId, active }: { roomId: string; activ
   async function toggleMute() {
     const audio = tracksRef.current.filter((track) => track.kind === 'audio')
     const next = !muted
-    audio.forEach((track) => { track.enabled = !next })
+    audio.forEach((track) => { if (next) track.disable?.(); else track.enable?.() })
     setMuted(next)
   }
 
   function toggleCamera() {
     const video = tracksRef.current.filter((track) => track.kind === 'video')
     const next = !cameraOff
-    video.forEach((track) => { track.enabled = !next })
+    video.forEach((track) => { if (next) track.disable?.(); else track.enable?.() })
     setCameraOff(next)
   }
 
