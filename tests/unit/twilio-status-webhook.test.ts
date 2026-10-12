@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   upsert: vi.fn(),
   update: vi.fn(),
   eq: vi.fn(),
+  not: vi.fn(),
 }));
 
 vi.mock("server-only", () => ({}));
@@ -42,7 +43,8 @@ beforeEach(() => {
   vi.stubEnv("TWILIO_STATUS_WEBHOOK_URL", callbackUrl);
   mocks.upsert.mockResolvedValue({ error: null });
   mocks.update.mockReturnValue({ eq: mocks.eq });
-  mocks.eq.mockResolvedValue({ error: null });
+  mocks.eq.mockReturnValue({ not: mocks.not });
+  mocks.not.mockResolvedValue({ error: null });
   mocks.from.mockImplementation((table: string) => table === "twilio_message_status_events"
     ? { upsert: mocks.upsert }
     : { update: mocks.update });
@@ -70,6 +72,7 @@ describe("Twilio status callback signature", () => {
       message_status: "delivered",
     }), { onConflict: "event_key", ignoreDuplicates: true });
     expect(mocks.from).toHaveBeenCalledWith("twilio_sms_requests");
+    expect(mocks.not).toHaveBeenCalledWith("status", "in", "(delivered,undelivered,failed,canceled)");
   });
 
   it("rejects a signature that does not match before writing", async () => {
