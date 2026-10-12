@@ -4,6 +4,8 @@ export type PortalDomain = {
   href: string
   description: string
   group: "primary" | "capability"
+  requiresAuth?: boolean
+  roles?: readonly string[]
 }
 
 export const PORTAL_DOMAINS: readonly PortalDomain[] = [
@@ -26,7 +28,7 @@ export const PORTAL_DOMAINS: readonly PortalDomain[] = [
   { key: "stories", label: "Historias", href: "/historias", description: "Contenido efímero y descubrimiento.", group: "capability" },
   { key: "videos", label: "Vídeos", href: "/videos", description: "Vídeos y contenido audiovisual.", group: "capability" },
   { key: "verified_suppliers", label: "Proveedores verificados", href: "/proveedores-verificados", description: "Descubre proveedores verificados.", group: "capability" },
-  { key: "b2b_operations", label: "B2B Operaciones", href: "/dashboard/b2b", description: "Gestión empresarial, catálogos y publicación B2B.", group: "capability", requiresAuth: true },
+  { key: "b2b_ops", label: "B2B Operaciones", href: "/dashboard/b2b", description: "Gestión empresarial, catálogos y publicación B2B.", group: "capability", requiresAuth: true },
   { key: "affiliate", label: "Afiliados", href: "/affiliate", description: "Afiliación, enlaces y comisiones.", group: "capability" },
   { key: "wallet", label: "Wallet", href: "/wallet", description: "Operaciones y saldos financieros.", group: "capability", requiresAuth: true },
   { key: "business", label: "Business", href: "/business-os", description: "Herramientas de gestión empresarial.", group: "capability", requiresAuth: true },
