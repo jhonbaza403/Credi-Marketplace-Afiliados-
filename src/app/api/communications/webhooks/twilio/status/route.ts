@@ -7,7 +7,8 @@ export const dynamic = "force-dynamic";
 function validSignature(url: string, params: Record<string, string[]>, signature: string, token: string) {
   let canonical = url;
   for (const key of Object.keys(params).sort()) {
-    canonical += key + params[key].slice().sort().join("");
+    // Twilio signs each value as a separate key/value pair, including repeated form fields.
+    canonical += params[key].slice().sort().map((value) => key + value).join("");
   }
   const expected = createHmac("sha1", token).update(canonical, "utf8").digest("base64");
   const a = Buffer.from(expected);
