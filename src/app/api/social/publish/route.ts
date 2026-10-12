@@ -91,7 +91,9 @@ export async function POST(request: Request) {
     const body = payload.body.trim()
 
     if (payload.type !== 'story' && title.length < 1) return jsonError('Añade un título antes de publicar.', 400, 'TITLE_REQUIRED')
-    if (payload.type !== 'ad' && body.length < 1) return jsonError('Escribe el contenido antes de publicar.', 400, 'BODY_REQUIRED')
+    if (payload.type !== 'story' && payload.media.length === 0) return jsonError('Añade al menos una imagen o un vídeo antes de publicar.', 400, 'MEDIA_REQUIRED')
+    if (payload.type === 'story' && body.length === 0 && payload.media.length === 0) return jsonError('Añade texto, una imagen o un vídeo para crear la historia.', 400, 'STORY_CONTENT_REQUIRED')
+    if (payload.type !== 'ad' && payload.type !== 'story' && body.length < 1) return jsonError('Escribe el contenido antes de publicar.', 400, 'BODY_REQUIRED')
     if (payload.type === 'reel' && !payload.media.some((item) => item.type === 'video')) {
       return jsonError('Un reel necesita al menos un vídeo.', 400, 'REEL_VIDEO_REQUIRED')
     }
