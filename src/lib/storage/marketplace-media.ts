@@ -56,7 +56,17 @@ export async function uploadMarketplaceMedia(file: File, kind?: MarketplaceMedia
   })
 
   if (signedError || !signed?.path || !signed?.token || !signed?.bucket) {
-    throw new Error('No fue posible preparar la carga del archivo.')
+    const code = typeof signed?.error === 'string' ? signed.error : ''
+    const messageByCode: Record<string, string> = {
+      UNAUTHORIZED: 'Tu sesión caducó. Inicia sesión de nuevo y vuelve a cargar el archivo.',
+      UNSUPPORTED_MEDIA_TYPE: 'El formato del archivo no está permitido.',
+      INVALID_FILE_SIZE: 'El tamaño del archivo no es válido.',
+      FILE_TOO_LARGE: 'El archivo supera el límite permitido por el servicio de carga.',
+      BUCKET_ERROR: 'El almacenamiento de medios no está disponible. Revisa la configuración del bucket marketplace-media.',
+      BUCKET_CONFIG_ERROR: 'No se pudo validar la configuración del almacenamiento de medios.',
+      UPLOAD_URL_ERROR: 'No se pudo generar el enlace seguro de carga. Revisa la función media-upload en Supabase.',
+    }
+    throw new Error(messageByCode[code] || 'No fue posible preparar la carga. Comprueba la sesión y que la función media-upload esté desplegada en el proyecto Supabase conectado.')
   }
 
   const { error: uploadError } = await supabase.storage
@@ -67,7 +77,19 @@ export async function uploadMarketplaceMedia(file: File, kind?: MarketplaceMedia
       upsert: false,
     })
 
-  if (uploadError) throw new Error('No fue posible completar la carga del archivo.')
+  if (uploadError) {
+    const message = uploadError.message.toLowerCase()
+    if (message.includes('payload too large') || message.includes('file size') || message.includes('too large')) {
+      throw new Error('El archivo supera el límite de almacenamiento. Prueba con un archivo más pequeño.')
+    }
+    if (message.includes('mime') || message.includes('content type')) {
+      throw new Error('Supabase rechazó el formato del archivo. Usa un formato admitido: JPG, PNG, WebP, GIF, MP4, WebM o MOV.')
+    }
+    if (message.includes('expired') || message.includes('invalid token')) {
+      throw new Error('El enlace seguro de carga caducó. Selecciona el archivo de nuevo.')
+    }
+    throw new Error('Supabase no pudo guardar el archivo. Revisa el bucket marketplace-media, sus políticas y los límites del proyecto.')
+  }
 
   const { data } = supabase.storage.from(String(signed.bucket)).getPublicUrl(String(signed.path))
   return {
