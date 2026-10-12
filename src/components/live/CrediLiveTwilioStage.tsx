@@ -38,11 +38,17 @@ function attachTrack(track: TwilioTrack, container: HTMLElement | null) {
   container.appendChild(element)
 }
 
-export function CrediLiveTwilioStage({ roomId, active }: { roomId: string; active: boolean }) {
+export function CrediLiveTwilioStage({ roomId, active, broadcastUrl }: { roomId: string; active: boolean; broadcastUrl?: string | null }) {
   const roomRef = useRef<TwilioRoom | null>(null)
   const localRef = useRef<HTMLDivElement>(null)
   const remoteRef = useRef<HTMLDivElement>(null)
   const tracksRef = useRef<TwilioTrack[]>([])
+  const remoteTracksRef = useRef<TwilioTrack[]>([])
+  const broadcastPcRef = useRef<RTCPeerConnection | null>(null)
+  const broadcastAudioRef = useRef<AudioContext | null>(null)
+  const broadcastStreamRef = useRef<MediaStream | null>(null)
+  const animationFrameRef = useRef<number | null>(null)
+  const [broadcasting, setBroadcasting] = useState(false)
   const [connected, setConnected] = useState(false)
   const [busy, setBusy] = useState(false)
   const [muted, setMuted] = useState(false)
@@ -52,8 +58,97 @@ export function CrediLiveTwilioStage({ roomId, active }: { roomId: string; activ
   useEffect(() => () => {
     roomRef.current?.disconnect()
     roomRef.current = null
+    stopBroadcast()
     tracksRef.current.forEach((track) => track.stop?.())
   }, [roomId])
+
+  function attachRemoteTrack(track: TwilioTrack) {
+    attachTrack(track, remoteRef.current)
+    if (track.kind === 'audio' && track.mediaStreamTrack && !remoteTracksRef.current.some((item) => item.mediaStreamTrack?.id === track.mediaStreamTrack?.id)) {
+      remoteTracksRef.current.push(track)
+    }
+  }
+
+  function stopBroadcast() {
+    if (animationFrameRef.current !== null) cancelAnimationFrame(animationFrameRef.current)
+    animationFrameRef.current = null
+    broadcastPcRef.current?.close()
+    broadcastPcRef.current = null
+    broadcastStreamRef.current?.getTracks().forEach((track) => track.stop())
+    broadcastStreamRef.current = null
+    void broadcastAudioRef.current?.close().catch(() => undefined)
+    broadcastAudioRef.current = null
+    setBroadcasting(false)
+  }
+
+  async function startBroadcast() {
+    if (!broadcastUrl || broadcasting) return
+    setMessage('Preparando la mezcla de vídeo y audio para Cloudflare Stream…')
+    try {
+      const canvas = document.createElement('canvas')
+      canvas.width = 1280
+      canvas.height = 720
+      const context = canvas.getContext('2d')
+      if (!context || typeof canvas.captureStream !== 'function') throw new Error('Este navegador no permite componer la emisión LIVE.')
+      const draw = () => {
+        context.fillStyle = '#020617'
+        context.fillRect(0, 0, canvas.width, canvas.height)
+        const videos = [localRef.current?.querySelector('video') ?? null, ...Array.from(remoteRef.current?.querySelectorAll('video') ?? [])]
+          .filter((video): video is HTMLVideoElement => Boolean(video && video.readyState >= 2 && video.videoWidth > 0))
+        const columns = Math.max(1, Math.ceil(Math.sqrt(videos.length)))
+        const rows = Math.max(1, Math.ceil(videos.length / columns))
+        videos.forEach((video, index) => {
+          const width = canvas.width / columns
+          const height = canvas.height / rows
+          const x = (index % columns) * width
+          const y = Math.floor(index / columns) * height
+          try { context.drawImage(video, x, y, width, height) } catch { /* wait for next frame */ }
+        })
+        animationFrameRef.current = requestAnimationFrame(draw)
+      }
+      draw()
+      const canvasStream = canvas.captureStream(30)
+      const audioContext = new AudioContext()
+      broadcastAudioRef.current = audioContext
+      const mixedAudio = audioContext.createMediaStreamDestination()
+      const allAudioTracks = [...tracksRef.current, ...remoteTracksRef.current]
+        .filter((track) => track.kind === 'audio' && track.mediaStreamTrack)
+      const seen = new Set<string>()
+      allAudioTracks.forEach((track) => {
+        const mediaTrack = track.mediaStreamTrack
+        if (!mediaTrack || seen.has(mediaTrack.id)) return
+        seen.add(mediaTrack.id)
+        audioContext.createMediaStreamSource(new MediaStream([mediaTrack])).connect(mixedAudio)
+      })
+      const outgoing = new MediaStream([...canvasStream.getVideoTracks(), ...mixedAudio.stream.getAudioTracks()])
+      broadcastStreamRef.current = outgoing
+      const pc = new RTCPeerConnection()
+      broadcastPcRef.current = pc
+      outgoing.getTracks().forEach((track) => pc.addTrack(track, outgoing))
+      const offer = await pc.createOffer()
+      await pc.setLocalDescription(offer)
+      if (pc.iceGatheringState !== 'complete') {
+        await new Promise<void>((resolve, reject) => {
+          const timeout = window.setTimeout(() => reject(new Error('La preparación ICE de la emisión agotó el tiempo de espera.')), 12000)
+          pc.addEventListener('icegatheringstatechange', () => {
+            if (pc.iceGatheringState === 'complete') { window.clearTimeout(timeout); resolve() }
+          })
+        })
+      }
+      const response = await fetch(broadcastUrl, { method: 'POST', headers: { 'Content-Type': 'application/sdp' }, body: pc.localDescription?.sdp ?? '' })
+      const answer = await response.text()
+      if (!response.ok || !answer.trim()) throw new Error('Cloudflare Stream rechazó la negociación WebRTC. Comprueba que el transporte esté provisionado y habilitado.')
+      await pc.setRemoteDescription({ type: 'answer', sdp: answer })
+      pc.onconnectionstatechange = () => {
+        if (pc.connectionState === 'connected') { setBroadcasting(true); setMessage('Emisión conectada: el escenario Twilio se está enviando a Cloudflare Stream.') }
+        if (['failed', 'disconnected', 'closed'].includes(pc.connectionState) && broadcasting) setMessage('La conexión de emisión se interrumpió. Puedes detenerla e intentarlo de nuevo.')
+      }
+      setMessage('Negociación de emisión enviada a Cloudflare Stream; esperando confirmar conexión…')
+    } catch (error) {
+      stopBroadcast()
+      setMessage(error instanceof Error ? error.message : 'No fue posible emitir el escenario a Cloudflare Stream.')
+    }
+  }
 
   async function connect() {
     if (busy || connected) return
@@ -75,8 +170,8 @@ export function CrediLiveTwilioStage({ roomId, active }: { roomId: string; activ
       const room = await sdk.connect(data.token, { name: data.roomName, tracks: localTracks })
       roomRef.current = room
       room.participants.forEach((participant) => {
-        participant.tracks.forEach((publication) => { if (publication.track) attachTrack(publication.track, remoteRef.current) })
-        participant.on('trackSubscribed', (publication) => { if (publication.track) attachTrack(publication.track, remoteRef.current) })
+        participant.tracks.forEach((publication) => { if (publication.track) attachRemoteTrack(publication.track) })
+        participant.on('trackSubscribed', (publication) => { if (publication.track) attachRemoteTrack(publication.track) })
       })
       room.on('participantConnected', (participant) => {
         participant.tracks.forEach((publication) => { if (publication.track) attachTrack(publication.track, remoteRef.current) })
@@ -105,10 +200,12 @@ export function CrediLiveTwilioStage({ roomId, active }: { roomId: string; activ
   }
 
   function disconnect() {
+    stopBroadcast()
     roomRef.current?.disconnect()
     roomRef.current = null
     tracksRef.current.forEach((track) => track.stop?.())
     tracksRef.current = []
+    remoteTracksRef.current = []
     localRef.current?.replaceChildren()
     remoteRef.current?.replaceChildren()
     setConnected(false)
@@ -145,6 +242,7 @@ export function CrediLiveTwilioStage({ roomId, active }: { roomId: string; activ
       {!connected ? <button type="button" disabled={busy || !active} onClick={() => void connect()} className="rounded-xl bg-[var(--primary)] px-4 py-2 text-xs font-black text-white disabled:opacity-50">{busy ? 'Conectando…' : 'Entrar al escenario'}</button> : <>
         <button type="button" onClick={() => void toggleMute()} className="inline-flex items-center gap-2 rounded-xl border border-[var(--border)] px-3 py-2 text-xs font-bold">{muted ? <MicOff className="size-4" /> : <Mic className="size-4" />}{muted ? 'Activar micrófono' : 'Silenciar'}</button>
         <button type="button" onClick={toggleCamera} className="inline-flex items-center gap-2 rounded-xl border border-[var(--border)] px-3 py-2 text-xs font-bold">{cameraOff ? <VideoOff className="size-4" /> : <Video className="size-4" />}{cameraOff ? 'Activar cámara' : 'Apagar cámara'}</button>
+        {broadcasting ? <button type="button" onClick={stopBroadcast} className="rounded-xl bg-rose-600 px-3 py-2 text-xs font-bold text-white">Detener emisión pública</button> : <button type="button" disabled={!broadcastUrl} onClick={() => void startBroadcast()} className="rounded-xl bg-cyan-700 px-3 py-2 text-xs font-bold text-white disabled:opacity-50">{broadcastUrl ? 'Emitir escenario a Credi LIVE' : 'Provisiona Cloudflare para emitir'}</button>}
         <button type="button" onClick={disconnect} className="inline-flex items-center gap-2 rounded-xl bg-rose-600 px-3 py-2 text-xs font-bold text-white"><PhoneOff className="size-4" />Salir del escenario</button>
       </>}
     </div>
