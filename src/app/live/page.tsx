@@ -165,8 +165,8 @@ export default function LivePage(){
                 {cameraOn&&<video ref={previewRef} muted playsInline className="absolute inset-0 h-full w-full object-cover"/>}
                 <div className="relative z-10 max-w-md rounded-2xl bg-slate-950/75 px-5 py-4 backdrop-blur-md">
                   <Video className="mx-auto size-9 text-cyan-300"/>
-                  <p className="mt-2 font-black">{mediaReady?'Preflight listo':'Transporte LIVE de producción'}</p>
-                  <p className="mt-1 text-xs leading-5 text-slate-300">{mediaReady?'Cámara y micrófono verificados.':'La entrega multipunto requiere conectar el adaptador de streaming de producción; Credi ya conserva la sala, eventos, productos, chat y replay.'}</p>
+                  <p className="mt-2 font-black">{mediaReady?'Preflight listo':transport?.rtmps?.url?'Transporte Cloudflare listo':'Configurar transporte LIVE'}</p>
+                  <p className="mt-1 text-xs leading-5 text-slate-300">{mediaReady?'Cámara y micrófono verificados; esta es solo una vista previa local.':transport?.rtmps?.url?'Cloudflare Stream está provisionado. Conecta OBS al servidor RTMPS y comienza a emitir para que el público reciba la señal.':'Provisiona el Live Input de Cloudflare y conecta OBS mediante RTMPS. La vista previa local no se distribuye a espectadores.'}</p>
                 </div>
               </div>}
           </div>
