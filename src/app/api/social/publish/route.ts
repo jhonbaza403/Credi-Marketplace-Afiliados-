@@ -8,7 +8,7 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 const mediaSchema = z.object({
-  type: z.enum(['image', 'video']),
+  type: z.enum(['image', 'video', 'audio']),
   url: z.string().url().max(2048),
 })
 
@@ -16,7 +16,7 @@ const baseSchema = z.object({
   type: z.enum(['post', 'story', 'reel', 'ad']),
   title: z.string().trim().max(180).default(''),
   body: z.string().trim().max(5000).default(''),
-  media: z.array(mediaSchema).min(1).max(8),
+  media: z.array(mediaSchema).max(8).default([]),
   visibility: z.enum(['public', 'private']).default('public'),
   destinationUrl: z.string().trim().max(2048).optional().nullable(),
   budget: z.number().finite().min(0).max(100_000_000).optional().nullable(),
@@ -64,7 +64,7 @@ export async function POST(request: Request) {
     }
 
     const parsed = baseSchema.safeParse(rawBody)
-    if (!parsed.success) return jsonError('Los datos de publicación no son válidos.', 400, 'INVALID_SOCIAL_DATA')
+    if (!parsed.success) {\n      const issues = parsed.error.issues.map((issue) => ({ field: issue.path.join('.') || 'body', message: issue.message }))\n      return NextResponse.json(\n        { success: false, error: 'Los datos de publicación no son válidos.', code: 'INVALID_SOCIAL_DATA', details: issues },\n        { status: 400, headers: { 'Cache-Control': 'no-store' } },\n      )\n    }
 
     const payload = parsed.data
     const operationContext = {
