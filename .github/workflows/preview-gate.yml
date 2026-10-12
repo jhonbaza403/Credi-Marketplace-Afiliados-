@@ -29,11 +29,13 @@ jobs:
 
           for attempt in $(seq 1 24); do
             STATUS_JSON="$(gh api -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2026-03-10' "/repos/${REPOSITORY}/commits/${COMMIT_SHA}/status")"
-            VERCEL_STATUS="$(printf '%s' "${STATUS_JSON}" | jq -c '[.statuses[] | select(.context == "Vercel" or (((.context // "") | startswith("Vercel – credi-marketplace-afiliados")) and (((.context // "") | contains("uwhm")) | not)))] | first // {}')"
+            VERCEL_STATUS="$(printf '%s' "${STATUS_JSON}" | jq -c '[.statuses[] | select(.context == "Vercel")] | first // {}')"
             STATE="$(printf '%s' "${VERCEL_STATUS}" | jq -r '.state // ""')"
             TARGET="$(printf '%s' "${VERCEL_STATUS}" | jq -r '.target_url // ""')"
+            DESCRIPTION="$(printf '%s' "${VERCEL_STATUS}" | jq -r '.description // ""')"
 
             echo "Vercel Preview: ${STATE:-pending}"
+            echo "Details: ${DESCRIPTION:-pending}"
             echo "Target: ${TARGET:-pending}"
 
             case "${STATE}" in
@@ -42,7 +44,12 @@ jobs:
                 exit 0
                 ;;
               failure|error)
-                echo "::error::Vercel Preview failed."
+                if printf '%s %s' "${DESCRIPTION}" "${TARGET}" | grep -Eqi 'rate.?limit|retry in 24 hours|build-rate-limit'; then
+                  echo "::error::Vercel blocked the Preview because the deployment build limit was reached. GitHub Actions cannot clear this provider-side limit. Retry after the window expires or resolve the limit in Vercel; do not treat this as a successful Preview."
+                  echo "Vercel deployment limits: https://vercel.com/credi-marketplace-afiliados?upgradeToPro=build-rate-limit"
+                else
+                  echo "::error::Vercel Preview failed: ${DESCRIPTION:-no provider details returned}."
+                fi
                 exit 1
                 ;;
             esac
