@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { ImagePlus, Loader2, Radio, Video } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
 import MarketplaceMediaUploader from '@/components/media/MarketplaceMediaUploader'
 import type { UploadedMarketplaceMedia } from '@/lib/storage/marketplace-media'
 
@@ -9,6 +10,7 @@ type AuthUser = { id: string }
 type AuthResult = { data: { user: AuthUser | null }; error: Error | null }
 
 export default function HistoriaVideoPublisher() {
+  const [supabase] = useState(() => createClient())
   const [userId, setUserId] = useState<string | null>(null)
   const [body, setBody] = useState('')
   const [media, setMedia] = useState<UploadedMarketplaceMedia[]>([])
