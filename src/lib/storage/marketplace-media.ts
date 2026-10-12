@@ -5,7 +5,7 @@ export const MARKETPLACE_MEDIA_BUCKET = 'marketplace-media'
 export type MarketplaceMediaKind = 'image' | 'video' | 'audio' | 'mixed'
 
 export interface UploadedMarketplaceMedia {
-  kind: MarketplaceMediaKind
+  kind: 'image' | 'video' | 'audio'
   name: string
   path: string
   url: string
@@ -20,9 +20,13 @@ const MAX_IMAGE_SIZE = 20 * 1024 * 1024
 const MAX_VIDEO_SIZE = 500 * 1024 * 1024
 const MAX_AUDIO_SIZE = 500 * 1024 * 1024
 
+export function resolveMarketplaceMediaKind(file: Pick<File, 'type'>, kind?: MarketplaceMediaKind): 'image' | 'video' | 'audio' {
+  const inferredKind: 'image' | 'video' | 'audio' = file.type.startsWith('video/') ? 'video' : file.type.startsWith('audio/') ? 'audio' : 'image'
+  return kind === 'mixed' ? inferredKind : (kind ?? inferredKind) as 'image' | 'video' | 'audio'
+}
+
 export function validateMarketplaceMedia(file: File, kind?: MarketplaceMediaKind) {
-  const inferredKind = file.type.startsWith('video/') ? 'video' : file.type.startsWith('audio/') ? 'audio' : 'image'
-  const validKind = kind === 'mixed' ? inferredKind : (kind ?? inferredKind)
+  const validKind = resolveMarketplaceMediaKind(file, kind)
   const allowed = validKind === 'video' ? VIDEO_TYPES : validKind === 'audio' ? AUDIO_TYPES : IMAGE_TYPES
   const maxSize = validKind === 'video' ? MAX_VIDEO_SIZE : validKind === 'audio' ? MAX_AUDIO_SIZE : MAX_IMAGE_SIZE
 
@@ -44,10 +48,11 @@ export function validateMarketplaceMedia(file: File, kind?: MarketplaceMediaKind
 }
 
 export async function uploadMarketplaceMedia(file: File, kind?: MarketplaceMediaKind) {
-  const resolvedKind = kind ?? (file.type.startsWith('video/') ? 'video' : file.type.startsWith('audio/') ? 'audio' : 'image')
+  const resolvedKind = resolveMarketplaceMediaKind(file, kind)
   validateMarketplaceMedia(file, resolvedKind)
 
   const supabase = createClient()
+  if (!supabase) throw new Error('La carga multimedia no está configurada: faltan las variables públicas de Supabase en este despliegue.')
   const { data: { user }, error: authError } = await supabase.auth.getUser()
   if (authError || !user) throw new Error('Debes iniciar sesión para cargar archivos.')
 
@@ -56,6 +61,8 @@ export async function uploadMarketplaceMedia(file: File, kind?: MarketplaceMedia
   })
 
   if (signedError || !signed?.path || !signed?.token || !signed?.bucket) {
+    const context = signedError && 'context' in signedError ? signedError.context : null
+    const responseBody = context instanceof Response ? await context.clone().json().catch(() => null) as { error?: string; message?: string } | null : null
     const code = typeof signed?.error === 'string' ? signed.error : ''
     const messageByCode: Record<string, string> = {
       UNAUTHORIZED: 'Tu sesión caducó. Inicia sesión de nuevo y vuelve a cargar el archivo.',
@@ -66,7 +73,8 @@ export async function uploadMarketplaceMedia(file: File, kind?: MarketplaceMedia
       BUCKET_CONFIG_ERROR: 'No se pudo validar la configuración del almacenamiento de medios.',
       UPLOAD_URL_ERROR: 'No se pudo generar el enlace seguro de carga. Revisa la función media-upload en Supabase.',
     }
-    throw new Error(messageByCode[code] || 'No fue posible preparar la carga. Comprueba la sesión y que la función media-upload esté desplegada en el proyecto Supabase conectado.')
+    const detail = responseBody?.error || responseBody?.message || signedError?.message
+    throw new Error(messageByCode[code] || `No fue posible preparar la carga multimedia${detail ? ` (${detail})` : ''}. Comprueba que la función media-upload esté desplegada en el proyecto Supabase conectado.`)
   }
 
   const { error: uploadError } = await supabase.storage
