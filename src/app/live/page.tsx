@@ -207,7 +207,7 @@ export default function LivePage(){
           </section>}
 
           {selected&&<div className="mt-5 space-y-4">
-            <CrediLiveTwilioStage roomId={selected.id} active={selected.status!=='ended'&&selected.status!=='cancelled'}/>
+            <CrediLiveTwilioStage roomId={selected.id} active={selected.status!=='ended'&&selected.status!=='cancelled'} broadcastUrl={transport?.webRTC?.url??null}/>
             <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
               <h3 className="font-black">Gestionar invitados del escenario</h3>
               <p className="mt-1 text-xs leading-5 text-[var(--muted)]">Introduce el UUID de la cuenta Credi a la que quieres autorizar cámara y audio. Solo el anfitrión puede invitar o revocar acceso.</p>
