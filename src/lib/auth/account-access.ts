@@ -37,7 +37,10 @@ export async function getAccountAccessState(
   }
 
   const row = Array.isArray(data) ? data[0] : data;
-  if (!row || typeof row !== "object") return emptyState;
+  if (!row || typeof row !== "object") {
+    // Missing/malformed status is not a valid authorization decision either.
+    throw new Error("ACCOUNT_ACCESS_STATUS_INVALID");
+  }
 
   const value = row as Record<string, unknown>;
   return {
