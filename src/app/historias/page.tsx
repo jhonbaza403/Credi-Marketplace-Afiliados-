@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { ImagePlus, Loader2, Radio, Video } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
 import MarketplaceMediaUploader from '@/components/media/MarketplaceMediaUploader'
 import type { UploadedMarketplaceMedia } from '@/lib/storage/marketplace-media'
 
@@ -10,7 +9,6 @@ type AuthUser = { id: string }
 type AuthResult = { data: { user: AuthUser | null }; error: Error | null }
 
 export default function HistoriaVideoPublisher() {
-  const supabase = createClient()
   const [userId, setUserId] = useState<string | null>(null)
   const [body, setBody] = useState('')
   const [media, setMedia] = useState<UploadedMarketplaceMedia[]>([])
@@ -30,20 +28,25 @@ export default function HistoriaVideoPublisher() {
     setSaving(true); setNotice(null); setError(null)
     try {
       if (!media.length && !body.trim()) throw new Error('Añade un vídeo, imagen o texto para crear la historia.')
-      const payload = {
-        owner_id: userId,
-        body: body.trim() || null,
-        media: media.map((item) => ({ kind: item.kind, name: item.name, path: item.path, url: item.url, size: item.size, contentType: item.contentType })),
-        visibility: 'public',
-        expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-        moderation_status: 'pending',
-      }
-      const { error: insertError } = await supabase.from('stories').insert(payload)
-      if (insertError) throw insertError
-      setBody(''); setMedia([]); setNotice('Historia enviada a moderación y programada para 24 horas.')
+      const response = await fetch('/api/social/publish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'story',
+          title: '',
+          body: body.trim(),
+          media: media.map((item) => ({ type: item.kind, url: item.url })),
+          visibility: 'public',
+          disclosure: true,
+          operationContext: { source: 'historias' },
+        }),
+      })
+      const result = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(result.error || 'No fue posible publicar la historia.')
+      setBody(''); setMedia([]); setNotice('Historia enviada al instante; su duración visible es de 24 horas y puede requerir aprobación de moderación.')
     } catch (e: unknown) { setError(e instanceof Error ? e.message : 'No fue posible publicar la historia.') }
     finally { setSaving(false) }
-  }, [body, media, saving, supabase, userId])
+  }, [body, media, saving, userId])
 
   if (!userId) {
     return <section className="mx-auto max-w-4xl rounded-[2rem] border border-white/10 bg-slate-950 p-8 text-center text-white"><Radio className="mx-auto size-10 text-cyan-200"/><h1 className="mt-4 text-2xl font-black">Carga de historias</h1><p className="mt-2 text-sm text-slate-400">Inicia sesión para subir historias, vídeos y productos.</p></section>
