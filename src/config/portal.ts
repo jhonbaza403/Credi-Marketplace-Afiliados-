@@ -21,6 +21,7 @@ export const PORTAL_DOMAINS: readonly PortalDomain[] = [
   { key: "analytics", label: "Analytics", href: "/analytics", description: "Métricas y rendimiento de Credi.", group: "capability" },
   { key: "video_catalog", label: "Catálogo Video", href: "/catalogo-video", description: "Catálogo comercial enriquecido con vídeo.", group: "capability" },
   { key: "stories", label: "Historias", href: "/historias", description: "Contenido efímero y descubrimiento.", group: "capability" },
+  { key: "videos", label: "Vídeos", href: "/videos", description: "Vídeos y contenido audiovisual.", group: "capability" },
   { key: "b2b_operations", label: "B2B Operaciones", href: "/dashboard/b2b", description: "Gestión empresarial, catálogos y publicación B2B.", group: "capability" },
   { key: "affiliate", label: "Afiliados", href: "/affiliate", description: "Afiliación, enlaces y comisiones.", group: "capability" },
   { key: "wallet", label: "Wallet", href: "/wallet", description: "Operaciones y saldos financieros.", group: "capability" },
