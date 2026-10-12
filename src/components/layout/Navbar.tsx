@@ -30,7 +30,7 @@ import { CAPABILITY_DOMAINS, PORTAL_DOMAINS, PRIMARY_DOMAINS } from "@/config/po
 const DOMAIN_ICONS = {
   home: Store, wall: Users, marketplace: ShoppingBag, sell: Sparkles, b2b: Building2,
   services: BadgeCheck, free: Sparkles, chat: MessageCircle, live: Radio, marketing: TrendingUp,
-  content: Sparkles, analytics: BarChart3, video_catalog: Play, stories: Camera,
+  content: Sparkles, analytics: BarChart3, video_catalog: Play, stories: Camera, verified_suppliers: BadgeCheck,
   b2b_ops: Building2, affiliate: TrendingUp, wallet: Wallet, business: Building2,
   intelligence: Sparkles, commerce_studio: Store, inventory: Store, negotiations: Building2,
   payments: Wallet, escrow: ShieldCheck, security: ShieldCheck, videos: Play,
@@ -42,7 +42,7 @@ const PRIMARY_LINKS = PRIMARY_DOMAINS.map((domain) => ({
 }));
 
 const COMMUNITY_KEYS = new Set(["chat", "live", "stories", "videos"]);
-const COMMERCE_KEYS = new Set(["marketplace", "b2b", "content", "affiliate", "video_catalog"]);
+const COMMERCE_KEYS = new Set(["marketplace", "b2b", "content", "affiliate", "video_catalog", "verified_suppliers"]);
 const SECTION_DETAILS = {
   community: { title: "Comunidad", description: "Conecta y comparte" },
   commerce: { title: "Comercio", description: "Descubre y vende" },
@@ -52,7 +52,7 @@ const SECTION_DETAILS = {
 const SOLUTION_GROUPS = [
   { ...SECTION_DETAILS.community, items: CAPABILITY_DOMAINS.filter((item) => COMMUNITY_KEYS.has(item.key)) },
   { ...SECTION_DETAILS.commerce, items: CAPABILITY_DOMAINS.filter((item) => COMMERCE_KEYS.has(item.key)) },
-  { ...SECTION_DETAILS.business, items: CAPABILITY_DOMAINS.filter((item) => !COMMUNITY_KEYS.has(item.key) && !COMMERCE_KEYS.has(item.key) && !["search", "login", "register"].includes(item.key)) },
+  { ...SECTION_DETAILS.business, items: CAPABILITY_DOMAINS.filter((item) => !item.href.startsWith("/dashboard") && !item.roles && !["search", "login", "register", "orders", "admin", "admin_compliance", "create_product", "publish_b2b"].includes(item.key) && !COMMUNITY_KEYS.has(item.key) && !COMMERCE_KEYS.has(item.key)) },
 ].map((group) => ({
   ...group,
   items: group.items.map((item) => ({ ...item, icon: DOMAIN_ICONS[item.key as keyof typeof DOMAIN_ICONS] ?? Store })),
