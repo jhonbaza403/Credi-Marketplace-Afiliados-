@@ -8,7 +8,7 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 const mediaSchema = z.object({
-  type: z.enum(['image', 'video']),
+  type: z.enum(['image', 'video', 'audio']),
   url: z.string().url().max(2048),
 })
 
@@ -16,13 +16,14 @@ const baseSchema = z.object({
   type: z.enum(['post', 'story', 'reel', 'ad']),
   title: z.string().trim().max(180).default(''),
   body: z.string().trim().max(5000).default(''),
-  media: z.array(mediaSchema).min(1).max(8),
+  media: z.array(mediaSchema).max(8).default([]),
   visibility: z.enum(['public', 'private']).default('public'),
   destinationUrl: z.string().trim().max(2048).optional().nullable(),
   budget: z.number().finite().min(0).max(100_000_000).optional().nullable(),
   disclosure: z.literal(true),
   operationContext: z.object({
     productId: z.string().uuid().optional().nullable(),
+    catalogId: z.string().uuid().optional().nullable(),
     affiliateRef: z.string().trim().max(128).optional().nullable(),
     conversationId: z.string().uuid().optional().nullable(),
     orderId: z.string().uuid().optional().nullable(),
@@ -64,11 +65,27 @@ export async function POST(request: Request) {
     }
 
     const parsed = baseSchema.safeParse(rawBody)
-    if (!parsed.success) return jsonError('Los datos de publicación no son válidos.', 400, 'INVALID_SOCIAL_DATA')
+    if (!parsed.success) {
+      const issues = parsed.error.issues.map((issue) => ({
+        field: issue.path.join('.') || 'body',
+        message: issue.message,
+      }))
+
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Los datos de publicación no son válidos.',
+          code: 'INVALID_SOCIAL_DATA',
+          details: issues,
+        },
+        { status: 400, headers: { 'Cache-Control': 'no-store' } },
+      )
+    }
 
     const payload = parsed.data
     const operationContext = {
       product_id: payload.operationContext.productId || null,
+      catalog_id: payload.operationContext.catalogId || null,
       affiliate_ref: payload.operationContext.affiliateRef?.trim() || null,
       conversation_id: payload.operationContext.conversationId || null,
       order_id: payload.operationContext.orderId || null,
@@ -81,11 +98,24 @@ export async function POST(request: Request) {
       if (!product?.is_active) return jsonError('El producto asociado ya no está disponible.', 409, 'PRODUCT_CONTEXT_NOT_AVAILABLE')
     }
 
+    if (operationContext.catalog_id) {
+      const { data: catalog, error: catalogError } = await supabase
+        .from('business_catalogs')
+        .select('id')
+        .eq('id', operationContext.catalog_id)
+        .eq('owner_id', user.id)
+        .maybeSingle()
+      if (catalogError) throw catalogError
+      if (!catalog) return jsonError('El catálogo asociado no existe o no pertenece a tu cuenta.', 403, 'CATALOG_CONTEXT_FORBIDDEN')
+    }
+
     const title = payload.title.trim()
     const body = payload.body.trim()
 
     if (payload.type !== 'story' && title.length < 1) return jsonError('Añade un título antes de publicar.', 400, 'TITLE_REQUIRED')
-    if (payload.type !== 'ad' && body.length < 1) return jsonError('Escribe el contenido antes de publicar.', 400, 'BODY_REQUIRED')
+    if (payload.type !== 'story' && payload.media.length === 0) return jsonError('Añade al menos una imagen o un vídeo antes de publicar.', 400, 'MEDIA_REQUIRED')
+    if (payload.type === 'story' && body.length === 0 && payload.media.length === 0) return jsonError('Añade texto, una imagen o un vídeo para crear la historia.', 400, 'STORY_CONTENT_REQUIRED')
+    if (payload.type !== 'ad' && payload.type !== 'story' && body.length < 1) return jsonError('Escribe el contenido antes de publicar.', 400, 'BODY_REQUIRED')
     if (payload.type === 'reel' && !payload.media.some((item) => item.type === 'video')) {
       return jsonError('Un reel necesita al menos un vídeo.', 400, 'REEL_VIDEO_REQUIRED')
     }
@@ -125,6 +155,9 @@ export async function POST(request: Request) {
         owner_id: user.id,
         body,
         media: payload.media,
+        product_id: operationContext.product_id,
+        catalog_id: operationContext.catalog_id,
+        operation_context: operationContext,
         visibility: payload.visibility,
         expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
         is_sponsored: false,
@@ -173,8 +206,10 @@ export async function POST(request: Request) {
         moderationStatus: 'pending',
         createdAt: now,
         message: payload.type === 'ad'
-          ? 'Campaña enviada a revisión.'
-          : 'Contenido enviado a revisión antes de publicarse.',
+          ? 'Campaña recibida para revisión; todavía no está activa.'
+          : payload.type === 'story'
+            ? 'Historia recibida y pendiente de revisión. Si se aprueba, estará visible durante 24 horas desde la aprobación.'
+            : 'Contenido recibido y pendiente de revisión antes de hacerse público.',
       },
       { status: 201, headers: { 'Cache-Control': 'no-store' } },
     )

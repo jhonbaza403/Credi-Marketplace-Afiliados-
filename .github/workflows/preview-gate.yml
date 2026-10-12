@@ -7,6 +7,7 @@ on:
 permissions:
   contents: read
   statuses: read
+  checks: read
 
 concurrency:
   group: preview-gate-${{ github.event.pull_request.number }}
@@ -29,10 +30,32 @@ jobs:
 
           for attempt in $(seq 1 24); do
             STATUS_JSON="$(gh api -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2026-03-10' "/repos/${REPOSITORY}/commits/${COMMIT_SHA}/status")"
-            VERCEL_STATUS="$(printf '%s' "${STATUS_JSON}" | jq -c '[.statuses[] | select(.context == "Vercel")] | first // {}')"
+            VERCEL_STATUS="$(printf '%s' "${STATUS_JSON}" | jq -c '[.statuses[] | select((.context // "") | ascii_downcase | startswith("vercel"))] | first // {}')"
             STATE="$(printf '%s' "${VERCEL_STATUS}" | jq -r '.state // ""')"
             TARGET="$(printf '%s' "${VERCEL_STATUS}" | jq -r '.target_url // ""')"
             DESCRIPTION="$(printf '%s' "${VERCEL_STATUS}" | jq -r '.description // ""')"
+
+            # Some Vercel/GitHub integrations publish a Check Run instead of a legacy commit status.
+            if [ -z "${STATE}" ] || [ "${STATE}" = "pending" ]; then
+              CHECK_RUNS="$(gh api -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2026-03-10' "/repos/${REPOSITORY}/commits/${COMMIT_SHA}/check-runs")"
+              # Only trust checks produced by the Vercel GitHub App. Do not match
+            # this workflow's own "Validate Vercel Preview" check (GitHub Actions).
+            VERCEL_CHECK="$(printf '%s' "${CHECK_RUNS}" | jq -c '[.check_runs[] | select((((.app.slug // "") | ascii_downcase) | contains("vercel")) and (((.app.slug // "") | ascii_downcase) != "github-actions"))] | sort_by(.completed_at // .started_at // "") | last // {}')"
+              CHECK_STATUS="$(printf '%s' "${VERCEL_CHECK}" | jq -r '.status // ""')"
+              CHECK_CONCLUSION="$(printf '%s' "${VERCEL_CHECK}" | jq -r '.conclusion // ""')"
+              CHECK_URL="$(printf '%s' "${VERCEL_CHECK}" | jq -r '.html_url // ""')"
+              CHECK_NAME="$(printf '%s' "${VERCEL_CHECK}" | jq -r '.name // ""')"
+
+              if [ "${CHECK_STATUS}" = "completed" ] && [ -n "${CHECK_CONCLUSION}" ]; then
+                STATE="${CHECK_CONCLUSION}"
+                TARGET="${CHECK_URL}"
+                DESCRIPTION="${CHECK_NAME}: ${CHECK_CONCLUSION}"
+              elif [ -n "${CHECK_STATUS}" ]; then
+                STATE="pending"
+                TARGET="${CHECK_URL}"
+                DESCRIPTION="${CHECK_NAME}: ${CHECK_STATUS}"
+              fi
+            fi
 
             echo "Vercel Preview: ${STATE:-pending}"
             echo "Details: ${DESCRIPTION:-pending}"
