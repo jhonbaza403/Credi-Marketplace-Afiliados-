@@ -24,8 +24,12 @@ export default function LivePage(){
   const [mediaReady,setMediaReady]=useState(false)
   const previewRef=useRef<HTMLVideoElement>(null)
   const streamRef=useRef<MediaStream|null>(null)
-  const [transport,setTransport]=useState<{inputId:string;rtmps:{url:string;streamKey:string}|null;playback:{hls?:string;dash?:string}|null;webRTC:{url:string}|null;status?:string|null;enabled?:boolean}|null>(null)
+  const [transport,setTransport]=useState<{inputId:string;rtmps:{url:string;streamKey:string}|null;playback:{hls?:string;dash?:string}|null;webRTC:{url:string}|null;webRTCPlayback?:{url:string}|null;status?:string|null;enabled?:boolean}|null>(null)
   const [transportBusy,setTransportBusy]=useState(false)
+  const [broadcasting,setBroadcasting]=useState(false)
+  const [broadcastBusy,setBroadcastBusy]=useState(false)
+  const publisherRef=useRef<RTCPeerConnection|null>(null)
+  const whipSessionRef=useRef<string|null>(null)
 
   async function load(){
     const response=await fetch('/api/live',{cache:'no-store'})
@@ -76,6 +80,59 @@ export default function LivePage(){
       setMediaReady(true)
       setMessage('Fuente de captura y audio listos. Para producción, OBS puede tomar la señal de Elgato 4K Pro y enviarla por RTMPS a Credi LIVE.')
     }catch(error){setMessage(error instanceof Error?error.message:'No fue posible activar cámara y micrófono.')}
+  }
+
+  async function startBrowserBroadcast(){
+    const endpoint=transport?.webRTC?.url
+    const media=streamRef.current
+    if(!selected){setMessage('Selecciona una sala LIVE antes de transmitir.');return}
+    if(!endpoint){setMessage('Primero provisiona el transporte Cloudflare Stream de esta sala.');return}
+    if(!media||media.getTracks().every(track=>track.readyState!=='live')){
+      setMessage('Activa primero la cámara y el micrófono con «Probar cámara y micrófono».')
+      return
+    }
+    setBroadcastBusy(true);setMessage('')
+    let peer:RTCPeerConnection|null=null
+    try{
+      peer=new RTCPeerConnection()
+      publisherRef.current=peer
+      media.getTracks().filter(track=>track.readyState==='live').forEach(track=>peer!.addTransceiver(track,{direction:'sendonly'}))
+      const offer=await peer.createOffer()
+      await peer.setLocalDescription(offer)
+      if(!offer.sdp)throw new Error('El navegador no generó la oferta de transmisión.')
+      const response=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/sdp'},body:offer.sdp})
+      if(!response.ok)throw new Error('Cloudflare rechazó la conexión WebRTC (HTTP '+response.status+'). Revisa el transporte de la sala.')
+      const answer=await response.text()
+      await peer.setRemoteDescription({type:'answer',sdp:answer})
+      const location=response.headers.get('Location')
+      whipSessionRef.current=location?new URL(location,endpoint).toString():null
+      setBroadcasting(true)
+      setMessage('Señal WebRTC enviada a Cloudflare Stream. Credi marcará la sala LIVE cuando llegue la confirmación del proveedor.')
+      await load().catch(()=>{})
+    }catch(error){
+      peer?.close()
+      if(publisherRef.current===peer)publisherRef.current=null
+      setBroadcasting(false)
+      setMessage(error instanceof Error?error.message:'No fue posible iniciar la transmisión WebRTC.')
+    }finally{setBroadcastBusy(false)}
+  }
+
+  async function stopBrowserBroadcast(){
+    setBroadcastBusy(true)
+    const session=whipSessionRef.current
+    try{
+      if(session)await fetch(session,{method:'DELETE'}).catch(()=>{})
+    }finally{
+      publisherRef.current?.close()
+      publisherRef.current=null
+      whipSessionRef.current=null
+      streamRef.current?.getTracks().forEach(track=>track.stop())
+      streamRef.current=null
+      if(previewRef.current)previewRef.current.srcObject=null
+      setBroadcasting(false);setCameraOn(false);setMediaReady(false);setBroadcastBusy(false)
+      setMessage('Transmisión detenida y conexión del navegador cerrada.')
+      await load().catch(()=>{})
+    }
   }
 
   async function createRoom(event:React.FormEvent<HTMLFormElement>){
@@ -133,7 +190,7 @@ export default function LivePage(){
     await loadProducts(selected.id)
   }
 
-  useEffect(()=>()=>streamRef.current?.getTracks().forEach(track=>track.stop()),[])
+  useEffect(()=>()=>{publisherRef.current?.close();streamRef.current?.getTracks().forEach(track=>track.stop())},[])
 
   return <main className="min-h-screen bg-[var(--background)] px-4 py-8 text-[var(--foreground)] sm:px-6 lg:px-8">
     <div className="mx-auto max-w-7xl space-y-7">
@@ -167,12 +224,13 @@ export default function LivePage(){
                 <div className="relative z-10 max-w-md rounded-2xl bg-slate-950/75 px-5 py-4 backdrop-blur-md">
                   <Video className="mx-auto size-9 text-cyan-300"/>
                   <p className="mt-2 font-black">{mediaReady?'Preflight listo':'Transporte LIVE de producción'}</p>
-                  <p className="mt-1 text-xs leading-5 text-slate-300">{mediaReady?'Cámara y micrófono verificados.':'La entrega multipunto requiere conectar el adaptador de streaming de producción; Credi ya conserva la sala, eventos, productos, chat y replay.'}</p>
+                  <p className="mt-1 text-xs leading-5 text-slate-300">{broadcasting?'Transmisión WebRTC conectada desde este navegador.':mediaReady?'Cámara y micrófono verificados.':transport?.webRTC?.url?'Transporte listo: activa cámara y micrófono y pulsa «Transmitir desde navegador».':'Provisiona el transporte Cloudflare Stream para habilitar la transmisión de producción.'}</p>
                 </div>
               </div>}
           </div>
 
           {selected&&<div className="mt-5 flex flex-wrap gap-2">
+            {transport?.webRTC?.url&&<button type="button" onClick={()=>void (broadcasting?stopBrowserBroadcast():startBrowserBroadcast())} disabled={broadcastBusy||(!broadcasting&&!cameraOn)} className={broadcasting?"inline-flex items-center gap-2 rounded-xl bg-rose-600 px-4 py-2.5 text-xs font-black text-white disabled:opacity-50":"inline-flex items-center gap-2 rounded-xl bg-cyan-700 px-4 py-2.5 text-xs font-black text-white disabled:opacity-50"}>{broadcasting?<CircleStop className="size-4"/>:<Radio className="size-4"/>}{broadcastBusy?'Conectando…':broadcasting?'Detener transmisión':'Transmitir desde navegador'}</button>}
             {selected.status==='scheduled'&&<button type="button" onClick={()=>void updateRoom(selected.id,'start')} disabled={busy} className="inline-flex items-center gap-2 rounded-xl bg-[var(--primary)] px-4 py-2.5 text-xs font-black text-white"><Play className="size-4"/> Iniciar LIVE</button>}
             {selected.status==='live'&&<button type="button" onClick={()=>void updateRoom(selected.id,'end')} disabled={busy} className="inline-flex items-center gap-2 rounded-xl bg-rose-600 px-4 py-2.5 text-xs font-black text-white"><CircleStop className="size-4"/> Finalizar LIVE</button>}
             {selected.status==='scheduled'&&<button type="button" onClick={()=>void updateRoom(selected.id,'cancel')} disabled={busy} className="inline-flex items-center gap-2 rounded-xl border border-[var(--border)] px-4 py-2.5 text-xs font-black">Cancelar</button>}
