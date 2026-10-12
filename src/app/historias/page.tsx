@@ -45,7 +45,7 @@ export default function HistoriaVideoPublisher() {
       })
       const result = await response.json().catch(() => ({}))
       if (!response.ok) throw new Error(result.error || 'No fue posible publicar la historia.')
-      setBody(''); setMedia([]); setNotice('Historia enviada al instante; su duración visible es de 24 horas y puede requerir aprobación de moderación.')
+      setBody(''); setMedia([]); setNotice('Historia registrada ahora. Las 24 horas indican cuánto dura la historia; la visibilidad pública depende de la aprobación de moderación.')
     } catch (e: unknown) { setError(e instanceof Error ? e.message : 'No fue posible publicar la historia.') }
     finally { setSaving(false) }
   }, [body, media, saving, userId])
