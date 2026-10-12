@@ -23,6 +23,7 @@ const baseSchema = z.object({
   disclosure: z.literal(true),
   operationContext: z.object({
     productId: z.string().uuid().optional().nullable(),
+    catalogId: z.string().uuid().optional().nullable(),
     affiliateRef: z.string().trim().max(128).optional().nullable(),
     conversationId: z.string().uuid().optional().nullable(),
     orderId: z.string().uuid().optional().nullable(),
@@ -84,6 +85,7 @@ export async function POST(request: Request) {
     const payload = parsed.data
     const operationContext = {
       product_id: payload.operationContext.productId || null,
+      catalog_id: payload.operationContext.catalogId || null,
       affiliate_ref: payload.operationContext.affiliateRef?.trim() || null,
       conversation_id: payload.operationContext.conversationId || null,
       order_id: payload.operationContext.orderId || null,
@@ -94,6 +96,17 @@ export async function POST(request: Request) {
       const { data: product, error: productError } = await supabase.from('products').select('id,is_active').eq('id', operationContext.product_id).maybeSingle()
       if (productError) throw productError
       if (!product?.is_active) return jsonError('El producto asociado ya no está disponible.', 409, 'PRODUCT_CONTEXT_NOT_AVAILABLE')
+    }
+
+    if (operationContext.catalog_id) {
+      const { data: catalog, error: catalogError } = await supabase
+        .from('business_catalogs')
+        .select('id')
+        .eq('id', operationContext.catalog_id)
+        .eq('owner_id', user.id)
+        .maybeSingle()
+      if (catalogError) throw catalogError
+      if (!catalog) return jsonError('El catálogo asociado no existe o no pertenece a tu cuenta.', 403, 'CATALOG_CONTEXT_FORBIDDEN')
     }
 
     const title = payload.title.trim()
@@ -142,6 +155,9 @@ export async function POST(request: Request) {
         owner_id: user.id,
         body,
         media: payload.media,
+        product_id: operationContext.product_id,
+        catalog_id: operationContext.catalog_id,
+        operation_context: operationContext,
         visibility: payload.visibility,
         expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
         is_sponsored: false,
