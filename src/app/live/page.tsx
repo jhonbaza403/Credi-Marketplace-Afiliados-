@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { createClient } from '@/lib/supabase/client'
 import { BarChart3, CalendarClock, Camera, CircleStop, Eye, Heart, KeyRound, MessageCircle, Package, Play, Radio, ShieldCheck, Sparkles, Users, Video } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import DomainBridge from '@/components/portal/DomainBridge'
@@ -26,6 +27,7 @@ export default function LivePage(){
   const streamRef=useRef<MediaStream|null>(null)
   const [transport,setTransport]=useState<{inputId:string;rtmps:{url:string;streamKey:string}|null;playback:{hls?:string;dash?:string}|null;webRTC:{url:string}|null;status?:string|null;enabled?:boolean}|null>(null)
   const [transportBusy,setTransportBusy]=useState(false)
+  const supabase=useMemo(()=>createClient(),[])
 
   async function load(){
     const response=await fetch('/api/live',{cache:'no-store'})
@@ -52,6 +54,20 @@ export default function LivePage(){
   }
 
   useEffect(()=>{void load().catch(e=>setMessage(e instanceof Error?e.message:'No fue posible cargar Credi LIVE.'))},[])
+  useEffect(()=>{
+    let active=true
+    const channel=supabase.channel('credi-live-room-updates')
+      .on('postgres_changes',{event:'*',schema:'public',table:'chat_live_rooms'},()=>{
+        if(!active)return
+        void load().catch(e=>setMessage(e instanceof Error?e.message:'No fue posible actualizar Credi LIVE.'))
+        if(selected?.id)void loadProducts(selected.id)
+      })
+      .on('postgres_changes',{event:'*',schema:'public',table:'chat_live_products'},()=>{
+        if(active&&selected?.id)void loadProducts(selected.id)
+      })
+      .subscribe()
+    return()=>{active=false;void supabase.removeChannel(channel)}
+  },[supabase,selected?.id])
   useEffect(()=>{if(selected){void loadProducts(selected.id);void loadTransport(selected.id)}},[selected?.id])
 
   async function preflight(){
