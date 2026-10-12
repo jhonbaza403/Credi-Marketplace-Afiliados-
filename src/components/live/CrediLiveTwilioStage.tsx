@@ -58,8 +58,12 @@ export function CrediLiveTwilioStage({ roomId, active, broadcastUrl }: { roomId:
   useEffect(() => () => {
     roomRef.current?.disconnect()
     roomRef.current = null
-    stopBroadcast()
+    if (animationFrameRef.current !== null) cancelAnimationFrame(animationFrameRef.current)
+    broadcastPcRef.current?.close()
+    broadcastStreamRef.current?.getTracks().forEach((track) => track.stop())
+    void broadcastAudioRef.current?.close().catch(() => undefined)
     tracksRef.current.forEach((track) => track.stop?.())
+    remoteTracksRef.current = []
   }, [roomId])
 
   function attachRemoteTrack(track: TwilioTrack) {
@@ -176,7 +180,7 @@ export function CrediLiveTwilioStage({ roomId, active, broadcastUrl }: { roomId:
       })
       room.on('participantConnected', (participant) => {
         participant.tracks.forEach((publication) => { if (publication.track) attachRemoteTrack(publication.track) })
-        participant.on('trackSubscribed', (publication) => { if (publication.track) attachTrack(publication.track, remoteRef.current) })
+        participant.on('trackSubscribed', (publication) => { if (publication.track) attachRemoteTrack(publication.track) })
       })
       room.on('participantDisconnected', () => setMessage('Un invitado salió del escenario.'))
       setConnected(true)
