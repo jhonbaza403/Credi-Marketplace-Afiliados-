@@ -29,7 +29,7 @@ jobs:
 
           for attempt in $(seq 1 24); do
             STATUS_JSON="$(gh api -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2026-03-10' "/repos/${REPOSITORY}/commits/${COMMIT_SHA}/status")"
-            VERCEL_STATUS="$(printf '%s' "${STATUS_JSON}" | jq -c '[.statuses[] | select(.context == "Vercel")] | first // {}')"
+            VERCEL_STATUS="$(printf '%s' "${STATUS_JSON}" | jq -c '[.statuses[] | select((.context // "") | ascii_downcase | startswith("vercel"))] | first // {}')"
             STATE="$(printf '%s' "${VERCEL_STATUS}" | jq -r '.state // ""')"
             TARGET="$(printf '%s' "${VERCEL_STATUS}" | jq -r '.target_url // ""')"
             DESCRIPTION="$(printf '%s' "${VERCEL_STATUS}" | jq -r '.description // ""')"
