@@ -138,12 +138,13 @@ export function CrediLiveTwilioStage({ roomId, active, broadcastUrl }: { roomId:
       const response = await fetch(broadcastUrl, { method: 'POST', headers: { 'Content-Type': 'application/sdp' }, body: pc.localDescription?.sdp ?? '' })
       const answer = await response.text()
       if (!response.ok || !answer.trim()) throw new Error('Cloudflare Stream rechazó la negociación WebRTC. Comprueba que el transporte esté provisionado y habilitado.')
-      await pc.setRemoteDescription({ type: 'answer', sdp: answer })
       pc.onconnectionstatechange = () => {
         if (pc.connectionState === 'connected') { setBroadcasting(true); setMessage('Emisión conectada: el escenario Twilio se está enviando a Cloudflare Stream.') }
-        if (['failed', 'disconnected', 'closed'].includes(pc.connectionState) && broadcasting) setMessage('La conexión de emisión se interrumpió. Puedes detenerla e intentarlo de nuevo.')
+        if (['failed', 'disconnected', 'closed'].includes(pc.connectionState)) setMessage('La conexión de emisión se interrumpió. Puedes detenerla e intentarlo de nuevo.')
       }
-      setMessage('Negociación de emisión enviada a Cloudflare Stream; esperando confirmar conexión…')
+      await pc.setRemoteDescription({ type: 'answer', sdp: answer })
+      if (pc.connectionState === 'connected') { setBroadcasting(true); setMessage('Emisión conectada: el escenario Twilio se está enviando a Cloudflare Stream.') }
+      else setMessage('Negociación de emisión enviada a Cloudflare Stream; esperando confirmar conexión…')
     } catch (error) {
       stopBroadcast()
       setMessage(error instanceof Error ? error.message : 'No fue posible emitir el escenario a Cloudflare Stream.')
@@ -174,7 +175,7 @@ export function CrediLiveTwilioStage({ roomId, active, broadcastUrl }: { roomId:
         participant.on('trackSubscribed', (publication) => { if (publication.track) attachRemoteTrack(publication.track) })
       })
       room.on('participantConnected', (participant) => {
-        participant.tracks.forEach((publication) => { if (publication.track) attachTrack(publication.track, remoteRef.current) })
+        participant.tracks.forEach((publication) => { if (publication.track) attachRemoteTrack(publication.track) })
         participant.on('trackSubscribed', (publication) => { if (publication.track) attachTrack(publication.track, remoteRef.current) })
       })
       room.on('participantDisconnected', () => setMessage('Un invitado salió del escenario.'))
