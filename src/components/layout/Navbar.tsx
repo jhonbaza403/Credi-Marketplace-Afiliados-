@@ -25,56 +25,38 @@ import {
   Menu,
   Play,
 } from "lucide-react";
+import { CAPABILITY_DOMAINS, PRIMARY_DOMAINS } from "@/config/portal";
 
-const PRIMARY_LINKS = [
-  { label: "Inicio", href: "/", icon: Store, description: "Tu portal Credi" },
-  { label: "Muro", href: "/social", icon: Users, description: "Comunidad y publicaciones" },
-  { label: "Marketplace", href: "/marketplace", icon: ShoppingBag, description: "Productos y tiendas" },
-  { label: "Servicios", href: "/services", icon: BadgeCheck, description: "Servicios del ecosistema" },
-  { label: "Free", href: "/free", icon: Sparkles, description: "Explora Credi gratis" },
-  { label: "LIVE", href: "/live", icon: Radio, description: "Comercio en vivo" },
-] as const;
+const DOMAIN_ICONS = {
+  home: Store, wall: Users, marketplace: ShoppingBag, sell: Sparkles, b2b: Building2,
+  services: BadgeCheck, free: Sparkles, chat: MessageCircle, live: Radio, marketing: TrendingUp,
+  content: Sparkles, analytics: BarChart3, video_catalog: Play, stories: Camera,
+  b2b_operations: Building2, affiliate: TrendingUp, wallet: Wallet, business: Building2,
+  intelligence: Sparkles, commerce_studio: Store, inventory: Store, negotiations: Building2,
+  payments: Wallet, escrow: ShieldCheck, security: ShieldCheck, videos: Play,
+} as const;
+
+const PRIMARY_LINKS = PRIMARY_DOMAINS.map((domain) => ({
+  ...domain,
+  icon: DOMAIN_ICONS[domain.key as keyof typeof DOMAIN_ICONS] ?? Store,
+}));
+
+const COMMUNITY_KEYS = new Set(["chat", "live", "stories", "videos"]);
+const COMMERCE_KEYS = new Set(["marketplace", "b2b", "content", "affiliate", "video_catalog"]);
+const SECTION_DETAILS = {
+  community: { title: "Comunidad", description: "Conecta y comparte" },
+  commerce: { title: "Comercio", description: "Descubre y vende" },
+  business: { title: "Tu negocio", description: "Administra y crece" },
+} as const;
 
 const SOLUTION_GROUPS = [
-  {
-    title: "Comunidad",
-    description: "Conecta y comparte",
-    items: [
-      { label: "Muro social", href: "/social", icon: Users },
-      { label: "Historias", href: "/historias", icon: Camera },
-      { label: "Vídeos", href: "/videos", icon: Play },
-      { label: "Credi Chat", href: "/chat", icon: MessageCircle },
-      { label: "Credi LIVE", href: "/live", icon: Radio },
-    ],
-  },
-  {
-    title: "Comercio",
-    description: "Descubre y vende",
-    items: [
-      { label: "Marketplace", href: "/marketplace", icon: ShoppingBag },
-      { label: "B2B", href: "/b2b", icon: Building2 },
-      { label: "Publicar", href: "/publish", icon: Sparkles },
-      { label: "Servicios", href: "/services", icon: Store },
-      { label: "Afiliados", href: "/affiliate", icon: TrendingUp },
-      { label: "Proveedores verificados", href: "/proveedores-verificados", icon: BadgeCheck },
-      { label: "Catálogo en vídeo", href: "/catalogo-video", icon: Play },
-    ],
-  },
-  {
-    title: "Tu negocio",
-    description: "Administra y crece",
-    items: [
-      { label: "Centro B2B", href: "/dashboard/b2b", icon: Building2 },
-      { label: "Marketing", href: "/marketing", icon: TrendingUp },
-      { label: "Analytics", href: "/analytics", icon: BarChart3 },
-      { label: "Inventario", href: "/inventario", icon: Store },
-      { label: "Pagos y cobros", href: "/pagos", icon: Wallet },
-      { label: "Wallet", href: "/wallet", icon: Wallet },
-      { label: "Credi Intelligence", href: "/intelligence", icon: Sparkles },
-      { label: "Seguridad", href: "/security", icon: ShieldCheck },
-    ],
-  },
-] as const;
+  { ...SECTION_DETAILS.community, items: CAPABILITY_DOMAINS.filter((item) => COMMUNITY_KEYS.has(item.key)) },
+  { ...SECTION_DETAILS.commerce, items: CAPABILITY_DOMAINS.filter((item) => COMMERCE_KEYS.has(item.key)) },
+  { ...SECTION_DETAILS.business, items: CAPABILITY_DOMAINS.filter((item) => !COMMUNITY_KEYS.has(item.key) && !COMMERCE_KEYS.has(item.key) && !["search", "login", "register"].includes(item.key)) },
+].map((group) => ({
+  ...group,
+  items: group.items.map((item) => ({ ...item, icon: DOMAIN_ICONS[item.key as keyof typeof DOMAIN_ICONS] ?? Store })),
+}));
 
 function isPathActive(pathname: string, href: string) {
   return href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(href + "/");
