@@ -35,7 +35,7 @@ export default function MobileMenu() {
             <div>
               <p className="px-1 pb-2 text-[10px] font-black uppercase tracking-[.18em] text-white/50">Capacidades</p>
               <div className="grid grid-cols-2 gap-2">
-                {CAPABILITY_DOMAINS.map(({ label, href }) => (
+                {CAPABILITY_DOMAINS.filter((domain) => !["search", "login", "register"].includes(domain.key)).map(({ label, href }) => (
                   <Link key={href} href={href} onClick={close} className="rounded-xl bg-white/5 px-3 py-3 text-sm font-semibold text-white/80">
                     {label}
                   </Link>
