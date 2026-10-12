@@ -37,6 +37,17 @@ export const PORTAL_DOMAINS: readonly PortalDomain[] = [
   { key: "payments", label: "Pagos", href: "/pagos", description: "Pagos, cobros y conciliación operativa.", group: "capability", requiresAuth: true },
   { key: "escrow", label: "Escrow", href: "/escrow", description: "Custodia, liberación y protección de operaciones.", group: "capability" },
   { key: "security", label: "Seguridad", href: "/security", description: "Seguridad, sesiones y controles.", group: "capability", requiresAuth: true },
+  { key: "dashboard", label: "Dashboard", href: "/dashboard", description: "Panel personal.", group: "capability", requiresAuth: true },
+  { key: "orders", label: "Pedidos", href: "/orders", description: "Consulta tus pedidos.", group: "capability", requiresAuth: true },
+  { key: "profile", label: "Perfil", href: "/dashboard/profile", description: "Tu perfil.", group: "capability", requiresAuth: true },
+  { key: "settings", label: "Configuración", href: "/dashboard/settings", description: "Preferencias de cuenta.", group: "capability", requiresAuth: true },
+  { key: "affiliate_dashboard", label: "Centro de afiliados", href: "/dashboard/affiliate", description: "Administra tu afiliación.", group: "capability", requiresAuth: true },
+  { key: "affiliate_links", label: "Enlaces por producto", href: "/dashboard/affiliate/links", description: "Gestiona enlaces de afiliación.", group: "capability", requiresAuth: true },
+  { key: "seller_dashboard", label: "Panel de vendedor", href: "/dashboard/seller", description: "Gestiona tu tienda.", group: "capability", requiresAuth: true, roles: ["seller"] },
+  { key: "create_product", label: "Publicar producto", href: "/products/create", description: "Crea un producto.", group: "capability", requiresAuth: true, roles: ["seller"] },
+  { key: "publish_b2b", label: "Publicar B2B", href: "/b2b/publish", description: "Publica una oferta B2B.", group: "capability", requiresAuth: true, roles: ["seller"] },
+  { key: "admin", label: "Administración", href: "/admin", description: "Administra la plataforma.", group: "capability", requiresAuth: true, roles: ["admin"] },
+  { key: "admin_compliance", label: "Cumplimiento", href: "/admin/compliance", description: "Controles de cumplimiento.", group: "capability", requiresAuth: true, roles: ["admin"] },
 ] as const
 
 export const PRIMARY_DOMAINS = PORTAL_DOMAINS.filter((domain) => domain.group === "primary")
