@@ -82,14 +82,36 @@ export async function POST(request: Request) {
       return Response.json({ error: "twilio_send_failed", providerCode: result.code ?? null }, { status: 502 });
     }
 
-    await admin.from("twilio_sms_requests").update({
+    const initialStatus = ["queued", "accepted", "sending", "sent", "delivered", "undelivered", "failed", "canceled"].includes(result.status ?? "")
+      ? result.status! : "accepted";
+    const { error: requestUpdateError } = await admin.from("twilio_sms_requests").update({
       message_sid: result.sid,
-      status: ["queued", "accepted", "sending", "sent", "delivered", "undelivered", "failed"].includes(result.status ?? "")
-        ? result.status : "accepted",
+      status: initialStatus,
       updated_at: new Date().toISOString(),
     }).eq("id", record.id);
+    if (requestUpdateError) throw requestUpdateError;
 
-    return Response.json({ accepted: true, messageSid: result.sid, status: result.status ?? "accepted" }, {
+    // A delivery callback can arrive before the request row is linked to this SID.
+    // Reconcile persisted callback state so the initial API response cannot overwrite it.
+    const { data: callbackEvent, error: callbackReadError } = await admin
+      .from("twilio_message_status_events")
+      .select("message_status, received_at")
+      .eq("message_sid", result.sid)
+      .order("received_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (callbackReadError) throw callbackReadError;
+
+    const finalStatus = callbackEvent?.message_status ?? initialStatus;
+    if (callbackEvent && callbackEvent.message_status !== initialStatus) {
+      const { error: reconcileError } = await admin.from("twilio_sms_requests").update({
+        status: callbackEvent.message_status,
+        updated_at: new Date().toISOString(),
+      }).eq("id", record.id);
+      if (reconcileError) throw reconcileError;
+    }
+
+    return Response.json({ accepted: true, messageSid: result.sid, status: finalStatus }, {
       status: 202, headers: { "Cache-Control": "no-store" },
     });
   } catch {
