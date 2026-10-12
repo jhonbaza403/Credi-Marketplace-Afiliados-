@@ -47,6 +47,13 @@ export default function LivePage(){
     else setTransport(null)
   }
 
+  async function loadGuests(roomId:string){
+    const response=await fetch('/api/live/guests?roomId='+encodeURIComponent(roomId),{cache:'no-store'})
+    if(!response.ok){setGuestUserIds([]);return}
+    const data=await response.json().catch(()=>({guestUserIds:[]}))
+    setGuestUserIds(Array.isArray(data.guestUserIds)?data.guestUserIds:[])
+  }
+
   async function loadProducts(roomId:string){
     const response=await fetch('/api/live/products?roomId='+encodeURIComponent(roomId),{cache:'no-store'})
     if(!response.ok){setProducts([]);return}
@@ -55,7 +62,7 @@ export default function LivePage(){
   }
 
   useEffect(()=>{void load().catch(e=>setMessage(e instanceof Error?e.message:'No fue posible cargar Credi LIVE.'))},[])
-  useEffect(()=>{if(selected){void loadProducts(selected.id);void loadTransport(selected.id)}},[selected?.id])
+  useEffect(()=>{if(selected){void loadProducts(selected.id);void loadTransport(selected.id);void loadGuests(selected.id)}},[selected?.id])
 
   async function preflight(){
     if(cameraOn){
