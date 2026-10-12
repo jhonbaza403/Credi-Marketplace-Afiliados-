@@ -16,7 +16,7 @@ const baseSchema = z.object({
   type: z.enum(['post', 'story', 'reel', 'ad']),
   title: z.string().trim().max(180).default(''),
   body: z.string().trim().max(5000).default(''),
-  media: z.array(mediaSchema).min(1).max(8),
+  media: z.array(mediaSchema).min(1).max(10),
   visibility: z.enum(['public', 'private']).default('public'),
   destinationUrl: z.string().trim().max(2048).optional().nullable(),
   budget: z.number().finite().min(0).max(100_000_000).optional().nullable(),
@@ -64,7 +64,16 @@ export async function POST(request: Request) {
     }
 
     const parsed = baseSchema.safeParse(rawBody)
-    if (!parsed.success) return jsonError('Los datos de publicación no son válidos.', 400, 'INVALID_SOCIAL_DATA')
+    if (!parsed.success) {
+      const issue = parsed.error.issues[0]
+      const field = issue?.path.join('.') || 'contenido'
+      const message = issue?.code === 'too_big' && field === 'media'
+        ? 'Puedes adjuntar como máximo 10 imágenes o vídeos.'
+        : issue?.code === 'too_small' && field === 'media'
+          ? 'Añade al menos una imagen o vídeo.'
+          : `Revisa el campo ${field}: ${issue?.message || 'dato no válido'}.`
+      return jsonError(message, 400, 'INVALID_SOCIAL_DATA')
+    }
 
     const payload = parsed.data
     const operationContext = {
@@ -179,7 +188,10 @@ export async function POST(request: Request) {
       { status: 201, headers: { 'Cache-Control': 'no-store' } },
     )
   } catch (error: unknown) {
-    console.error(`[social:${requestId}] publish error`, error)
-    return jsonError('No fue posible registrar el contenido.', 500, 'SOCIAL_PUBLISH_FAILED')
+    const dbError = error && typeof error === 'object' ? error as { code?: string; message?: string; details?: string; hint?: string } : null
+    console.error(`[social:${requestId}] publish error`, { code: dbError?.code, message: dbError?.message, details: dbError?.details, hint: dbError?.hint })
+    if (dbError?.code === '42501') return jsonError('Supabase rechazó el guardado por permisos o política RLS. La sesión debe ser propietaria del contenido.', 403, 'SOCIAL_PUBLISH_FORBIDDEN')
+    if (dbError?.code === '42703' || dbError?.code === '42P01' || dbError?.code === '23502') return jsonError(`La base de datos no coincide con el esquema esperado para publicar. Referencia: ${requestId}`, 503, 'SOCIAL_SCHEMA_MISMATCH')
+    return jsonError(`No fue posible guardar la publicación en la base de datos. Inténtalo de nuevo; referencia: ${requestId}`, 500, 'SOCIAL_PUBLISH_FAILED')
   }
 }
