@@ -184,7 +184,7 @@ export function CrediLiveTwilioStage({ roomId, active, broadcastUrl }: { roomId:
       })
       room.on('participantDisconnected', () => setMessage('Un invitado salió del escenario.'))
       setConnected(true)
-      setMessage('Conectado a Twilio Video. El vídeo interactivo funciona aparte de la emisión pública Cloudflare.')
+      setMessage('Conectado a Twilio Video. Puedes enviar el escenario compuesto a Cloudflare Stream para la emisión pública.')
       const localVideo = document.createElement('video')
       localVideo.autoplay = true
       localVideo.muted = true
