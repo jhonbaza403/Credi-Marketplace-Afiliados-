@@ -88,7 +88,13 @@ export default function LivePage(){
       if(data.transport)setTransport(data.transport)
       if(response.status===401){window.location.assign('/login?next=%2Flive');return}
       if(!response.ok)throw new Error(data.error||'No fue posible crear el LIVE.')
-      setMessage(data.room.status==='scheduled'?'LIVE programado correctamente.':'Sala LIVE creada y lista para el estudio.')
+      setMessage(
+        scheduledAt
+          ? 'LIVE programado. Antes de la hora de inicio, confirma que Cloudflare Stream esté configurado en Vercel y prepara OBS o un codificador RTMPS.'
+          : data.transport
+            ? 'Sala preparada. Todavía no está transmitiendo: inicia OBS u otro codificador con los datos RTMPS; Credi marcará LIVE al confirmar la señal.'
+            : 'No hay transporte de transmisión disponible. Configura Cloudflare Stream en Vercel antes de intentar transmitir.'
+      )
       setTitle('Nueva sesión Credi LIVE');setDescription('');setScheduledAt('')
       setSelected(data.room);await load()
     }catch(error){setMessage(error instanceof Error?error.message:'No fue posible crear el LIVE.')}

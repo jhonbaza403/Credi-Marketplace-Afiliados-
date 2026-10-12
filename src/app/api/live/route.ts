@@ -39,10 +39,13 @@ export async function GET() {
 
   const [{data:rooms,error:roomError},{data:liveRooms}] = await Promise.all([
     supabase.from('chat_live_rooms').select('id,host_user_id,conversation_id,title,status,viewer_count,started_at,ended_at,description,cover_media,scheduled_at,replay_url,playback_url,stream_provider,viewer_peak,likes_count,shares_count,settings,created_at').eq('host_user_id',user.id).order('created_at',{ascending:false}).limit(50),
-    supabase.from('chat_live_rooms').select('id,host_user_id,title,status,viewer_count,started_at,description,cover_media,scheduled_at,replay_url,playback_url,stream_provider,viewer_peak,likes_count,shares_count,settings,created_at').eq('status','live').order('started_at',{ascending:false}).limit(30),
+    supabase.from('chat_live_rooms').select('id,host_user_id,title,status,viewer_count,started_at,description,cover_media,scheduled_at,replay_url,playback_url,stream_provider,viewer_peak,likes_count,shares_count,settings,created_at').eq('status','live').eq('stream_provider','cloudflare_stream').not('playback_url','is',null).order('started_at',{ascending:false}).limit(30),
   ])
   if(roomError) return errorResponse('No fue posible cargar las sesiones LIVE.',500,'LIVE_ROOMS_UNAVAILABLE')
-  return NextResponse.json({ rooms:rooms??[], discovery:liveRooms??[] }, { headers:{'Cache-Control':'private, no-store'} })
+  const safeRooms=(rooms??[]).map(room => room.status==='live' && room.stream_provider!=='cloudflare_stream'
+    ? {...room,status:'scheduled',started_at:null}
+    : room)
+  return NextResponse.json({ rooms:safeRooms, discovery:liveRooms??[] }, { headers:{'Cache-Control':'private, no-store'} })
 }
 
 export async function POST(request:Request) {
@@ -64,14 +67,25 @@ export async function POST(request:Request) {
     const p=parsed.data
     const scheduledAt=p.scheduledAt ? new Date(p.scheduledAt) : null
     if(scheduledAt && Number.isNaN(scheduledAt.getTime())) return errorResponse('La fecha LIVE no es válida.',400,'INVALID_SCHEDULE')
-    const status=scheduledAt && scheduledAt.getTime()>Date.now() ? 'scheduled' : 'live'
+    const isScheduled = Boolean(scheduledAt && scheduledAt.getTime()>Date.now())
+
+    // A camera preview is not a broadcast. Immediate LIVE sessions require a real
+    // server-side transport; never publish a room as live without one.
+    if(!isScheduled && !isCloudflareConfigured()) {
+      return errorResponse(
+        'La transmisión LIVE no está habilitada todavía: configura CLOUDFLARE_ACCOUNT_ID y CLOUDFLARE_API_TOKEN en Vercel. No se creó una sala falsa.',
+        503,
+        'CLOUDFLARE_STREAM_NOT_CONFIGURED'
+      )
+    }
+    const status='scheduled'
 
     const {data:room,error}=await supabase.from('chat_live_rooms').insert({
       host_user_id:user.id,title:p.title,description:p.description,status,
-      scheduled_at:scheduledAt?.toISOString()??null,started_at:status==='live'?new Date().toISOString():null,
-      cover_media:p.coverMedia,stream_provider:'external',
+      scheduled_at:scheduledAt?.toISOString()??null,started_at:null,
+      cover_media:p.coverMedia,stream_provider:isCloudflareConfigured()?'cloudflare_stream':'external',
       settings:{q_and_a:true,comments:true,record_replay:true,product_pinning:true,moderation:true,reactions:true,guest_stage:true},
-      metadata:{module:'CREDI-LIVE',version:'2.1',request_id:requestId}
+      metadata:{module:'CREDI-LIVE',version:'2.3',request_id:requestId,transport_state:isCloudflareConfigured()?'provisioning':'not_configured'}
     }).select('id,host_user_id,title,status,viewer_count,started_at,description,cover_media,scheduled_at,replay_url,playback_url,stream_provider,viewer_peak,likes_count,shares_count,settings,created_at').single()
 
     if(error||!room){console.error('[live:'+requestId+'] create failed',error);return errorResponse('No fue posible crear la sesión LIVE.',500,'LIVE_ROOM_CREATE_FAILED')}
@@ -119,7 +133,13 @@ export async function PATCH(request:Request) {
   if(p.action==='schedule'){
     if(!p.scheduledAt||new Date(p.scheduledAt).getTime()<=Date.now()) return errorResponse('Programa el LIVE para una fecha futura.',400,'INVALID_SCHEDULE')
     updates.status='scheduled';updates.started_at=null;updates.ended_at=null
-  } else if(p.action==='start'){updates.status='live';updates.started_at=new Date().toISOString();updates.ended_at=null
+  } else if(p.action==='start'){
+    const {data:transportRoom}=await supabase.from('chat_live_rooms').select('stream_provider,metadata').eq('id',p.roomId).eq('host_user_id',user.id).maybeSingle()
+    const metadata=(transportRoom?.metadata&&typeof transportRoom.metadata==='object'?transportRoom.metadata:{}) as Record<string,unknown>
+    if(!isCloudflareConfigured() || transportRoom?.stream_provider!=='cloudflare_stream' || typeof metadata.cloudflare_live_input_id!=='string') {
+      return errorResponse('No se puede iniciar LIVE todavía: falta provisionar el transporte de transmisión. Configura Cloudflare Stream en Vercel y vuelve a preparar la sala.',503,'LIVE_TRANSPORT_NOT_READY')
+    }
+    return errorResponse('La sala está preparada. Inicia la señal desde OBS u otro codificador RTMPS; Credi marcará LIVE cuando Cloudflare confirme la conexión.',409,'LIVE_WAITING_FOR_ENCODER')
   } else if(p.action==='end'){updates.status='ended';updates.ended_at=new Date().toISOString()
   } else if(p.action==='cancel'){updates.status='cancelled';updates.ended_at=new Date().toISOString()}
 
