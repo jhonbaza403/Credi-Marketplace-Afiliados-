@@ -31,7 +31,7 @@ const DOMAIN_ICONS = {
   home: Store, wall: Users, marketplace: ShoppingBag, sell: Sparkles, b2b: Building2,
   services: BadgeCheck, free: Sparkles, chat: MessageCircle, live: Radio, marketing: TrendingUp,
   content: Sparkles, analytics: BarChart3, video_catalog: Play, stories: Camera,
-  b2b_operations: Building2, affiliate: TrendingUp, wallet: Wallet, business: Building2,
+  b2b_ops: Building2, affiliate: TrendingUp, wallet: Wallet, business: Building2,
   intelligence: Sparkles, commerce_studio: Store, inventory: Store, negotiations: Building2,
   payments: Wallet, escrow: ShieldCheck, security: ShieldCheck, videos: Play,
 } as const;
