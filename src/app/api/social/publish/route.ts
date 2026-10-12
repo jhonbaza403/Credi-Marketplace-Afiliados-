@@ -183,7 +183,7 @@ export async function POST(request: Request) {
         message: payload.type === 'ad'
           ? 'Campaña recibida para revisión; todavía no está activa.'
           : payload.type === 'story'
-            ? 'Historia recibida y pendiente de revisión. Su caducidad está configurada a 24 horas.'
+            ? 'Historia recibida y pendiente de revisión. Si se aprueba, estará visible durante 24 horas desde la aprobación.'
             : 'Contenido recibido y pendiente de revisión antes de hacerse público.',
       },
       { status: 201, headers: { 'Cache-Control': 'no-store' } },
