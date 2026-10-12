@@ -30,7 +30,10 @@ export async function getAccountAccessState(
 
   if (error) {
     console.error("[account-access] status lookup failed", error);
-    return emptyState;
+    // A failed lookup is not proof that the account lacks MFA or other controls.
+    // Throw so callers fail closed with an infrastructure error instead of
+    // redirecting the user to an incorrect security-setup step.
+    throw new Error("ACCOUNT_ACCESS_STATUS_UNAVAILABLE", { cause: error });
   }
 
   const row = Array.isArray(data) ? data[0] : data;
