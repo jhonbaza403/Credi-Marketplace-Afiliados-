@@ -56,6 +56,7 @@ export default function LivePage(){
 
   async function preflight(){
     if(cameraOn){
+      if(broadcasting){await stopBrowserBroadcast();return}
       streamRef.current?.getTracks().forEach(track=>track.stop())
       streamRef.current=null
       setCameraOn(false)
