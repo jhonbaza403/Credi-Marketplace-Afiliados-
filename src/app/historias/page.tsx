@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import { createClient } from '@/lib/supabase/client'
 import { ImagePlus, Loader2, Radio, Video } from 'lucide-react'
 import MarketplaceMediaUploader from '@/components/media/MarketplaceMediaUploader'
 import type { UploadedMarketplaceMedia } from '@/lib/storage/marketplace-media'
@@ -9,6 +10,7 @@ type AuthUser = { id: string }
 type AuthResult = { data: { user: AuthUser | null }; error: Error | null }
 
 export default function HistoriaVideoPublisher() {
+  const supabase = createClient()
   const [userId, setUserId] = useState<string | null>(null)
   const [body, setBody] = useState('')
   const [media, setMedia] = useState<UploadedMarketplaceMedia[]>([])
@@ -18,14 +20,11 @@ export default function HistoriaVideoPublisher() {
 
   useEffect(() => {
     let active = true
-    fetch('/api/auth/session', { cache: 'no-store' }).then(async (response) => {
-      if (!response.ok) return null
-      return response.json().catch(() => null)
-    }).then((result) => {
-      if (active) setUserId(typeof result?.user?.id === 'string' ? result.user.id : null)
+    void supabase.auth.getUser().then(({ data, error }) => {
+      if (active) setUserId(error ? null : data.user?.id ?? null)
     }).catch(() => { if (active) setUserId(null) })
     return () => { active = false }
-  }, [])
+  }, [supabase])
 
   const publish = useCallback(async () => {
     if (!userId || saving) return
