@@ -126,7 +126,12 @@ export function CrediLiveTwilioStage({ roomId, active, broadcastUrl }: { roomId:
       })
       const outgoing = new MediaStream([...canvasStream.getVideoTracks(), ...mixedAudio.stream.getAudioTracks()])
       broadcastStreamRef.current = outgoing
-      const pc = new RTCPeerConnection()
+      const turnResponse = await fetch('/api/chat/turn', { method: 'POST', headers: { Accept: 'application/json' }, cache: 'no-store' })
+      const turnData = await turnResponse.json().catch(() => ({})) as { iceServers?: RTCIceServer[]; error?: string }
+      if (!turnResponse.ok || !Array.isArray(turnData.iceServers) || turnData.iceServers.length === 0) {
+        throw new Error(turnData.error || 'Twilio TURN no está disponible para conectar la emisión. Comprueba la configuración de Credi Chat.')
+      }
+      const pc = new RTCPeerConnection({ iceServers: turnData.iceServers })
       broadcastPcRef.current = pc
       outgoing.getTracks().forEach((track) => pc.addTrack(track, outgoing))
       const offer = await pc.createOffer()
