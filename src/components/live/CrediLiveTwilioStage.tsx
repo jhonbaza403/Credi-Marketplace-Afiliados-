@@ -107,7 +107,7 @@ export function CrediLiveTwilioStage({ roomId, active }: { roomId: string; activ
   function disconnect() {
     roomRef.current?.disconnect()
     roomRef.current = null
-    tracksRef.current.forEach((track) => track.stop())
+    tracksRef.current.forEach((track) => track.stop?.())
     tracksRef.current = []
     localRef.current?.replaceChildren()
     remoteRef.current?.replaceChildren()
