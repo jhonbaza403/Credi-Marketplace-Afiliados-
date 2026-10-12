@@ -25,10 +25,11 @@ export async function POST(request: Request) {
     }
 
     const accountSid = process.env.TWILIO_ACCOUNT_SID?.trim();
-    const authToken = process.env.TWILIO_AUTH_TOKEN?.trim();
+    const apiKeySid = process.env.TWILIO_API_KEY_SID?.trim();
+    const apiKeySecret = process.env.TWILIO_API_KEY_SECRET?.trim();
     const from = process.env.TWILIO_FROM_NUMBER?.trim();
     const callback = process.env.TWILIO_STATUS_WEBHOOK_URL?.trim();
-    if (!accountSid || !authToken || !from || !callback) {
+    if (!accountSid || !apiKeySid || !apiKeySecret || !from || !callback) {
       return Response.json({ error: "sms_service_not_configured" }, { status: 503 });
     }
     if (!/^AC[a-f0-9]{32}$/i.test(accountSid) || !/^\+[1-9]\d{7,14}$/.test(from) || !callback.startsWith("https://")) {
@@ -56,7 +57,7 @@ export async function POST(request: Request) {
       {
         method: "POST",
         headers: {
-          Authorization: `Basic ${Buffer.from(`${accountSid}:${authToken}`).toString("base64")}`,
+          Authorization: `Basic ${Buffer.from(`${apiKeySid}:${apiKeySecret}`).toString("base64")}`,
           "Content-Type": "application/x-www-form-urlencoded",
           Accept: "application/json",
         },
