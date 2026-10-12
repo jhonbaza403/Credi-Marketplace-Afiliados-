@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { ImagePlus, Loader2, Radio, Video } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
 import MarketplaceMediaUploader from '@/components/media/MarketplaceMediaUploader'
 import type { UploadedMarketplaceMedia } from '@/lib/storage/marketplace-media'
 
@@ -10,7 +9,6 @@ type AuthUser = { id: string }
 type AuthResult = { data: { user: AuthUser | null }; error: Error | null }
 
 export default function HistoriaVideoPublisher() {
-  const supabase = createClient()
   const [userId, setUserId] = useState<string | null>(null)
   const [body, setBody] = useState('')
   const [media, setMedia] = useState<UploadedMarketplaceMedia[]>([])
@@ -19,31 +17,38 @@ export default function HistoriaVideoPublisher() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    void supabase.auth.getUser().then((result: AuthResult) => {
-      const { data } = result
-      setUserId(data.user?.id ?? null)
-    })
-  }, [supabase])
+    let active = true
+    fetch('/api/auth/session', { cache: 'no-store' }).then(async (response) => {
+      if (!response.ok) return null
+      return response.json().catch(() => null)
+    }).then((result) => {
+      if (active) setUserId(typeof result?.user?.id === 'string' ? result.user.id : null)
+    }).catch(() => { if (active) setUserId(null) })
+    return () => { active = false }
+  }, [])
 
   const publish = useCallback(async () => {
     if (!userId || saving) return
     setSaving(true); setNotice(null); setError(null)
     try {
       if (!media.length && !body.trim()) throw new Error('Añade un vídeo, imagen o texto para crear la historia.')
-      const payload = {
-        owner_id: userId,
-        body: body.trim() || null,
-        media: media.map((item) => ({ kind: item.kind, name: item.name, path: item.path, url: item.url, size: item.size, contentType: item.contentType })),
-        visibility: 'public',
-        expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-        moderation_status: 'pending',
-      }
-      const { error: insertError } = await supabase.from('stories').insert(payload)
-      if (insertError) throw insertError
-      setBody(''); setMedia([]); setNotice('Historia enviada a moderación y programada para 24 horas.')
+      if (!media.length) throw new Error('Añade al menos una imagen o vídeo para crear la historia.')
+      const response = await fetch('/api/social/publish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'story', title: '', body: body.trim(),
+          media: media.map((item) => ({ type: item.kind, url: item.url })),
+          visibility: 'public', disclosure: true,
+          operationContext: { source: 'historias' },
+        }),
+      })
+      const result = await response.json().catch(() => ({})) as { error?: string; message?: string }
+      if (!response.ok) throw new Error(result.error || 'No fue posible registrar la historia.')
+      setBody(''); setMedia([]); setNotice(result.message || 'Historia enviada a moderación.')
     } catch (e: unknown) { setError(e instanceof Error ? e.message : 'No fue posible publicar la historia.') }
     finally { setSaving(false) }
-  }, [body, media, saving, supabase, userId])
+  }, [body, media, saving, userId])
 
   if (!userId) {
     return <section className="mx-auto max-w-4xl rounded-[2rem] border border-white/10 bg-slate-950 p-8 text-center text-white"><Radio className="mx-auto size-10 text-cyan-200"/><h1 className="mt-4 text-2xl font-black">Carga de historias</h1><p className="mt-2 text-sm text-slate-400">Inicia sesión para subir historias, vídeos y productos.</p></section>
@@ -57,8 +62,8 @@ export default function HistoriaVideoPublisher() {
         </header>
         <section className="mt-6 rounded-[2rem] border border-white/10 bg-white/[.035] p-6 sm:p-8">
           <label className="block text-sm font-bold text-slate-100">Texto de la historia<textarea value={body} onChange={(event)=>setBody(event.target.value)} rows={4} maxLength={2000} placeholder="Describe el producto, promoción o novedad…" className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm text-white outline-none"/></label>
-          <div className="mt-7 border-t border-white/10 pt-7"><p className="mb-3 text-sm font-black">Multimedia</p><MarketplaceMediaUploader kind="video" multiple={false} maxFiles={1} value={media.filter((item)=>item.kind==='video')} onChange={setMedia}/></div>
-          <div className="mt-5"><p className="mb-2 text-xs text-slate-500">También puedes abrir el selector desde el bloque de multimedia y reemplazar el vídeo antes de publicar.</p><button type="button" onClick={()=>void publish()} disabled={saving} className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-cyan-300 px-5 py-4 text-sm font-black text-slate-950 disabled:opacity-50">{saving?<><Loader2 className="size-4 animate-spin"/> Publicando…</>:<><Radio className="size-4"/> Publicar historia</>}</button></div>
+          <div className="mt-7 border-t border-white/10 pt-7"><p className="mb-3 text-sm font-black">Multimedia</p><MarketplaceMediaUploader kind="mixed" multiple maxFiles={10} value={media} onChange={setMedia}/></div>
+          <div className="mt-5"><p className="mb-2 text-xs text-slate-500">Puedes seleccionar hasta 10 fotos y vídeos. La historia caduca en 24 horas después de su creación.</p><button type="button" onClick={()=>void publish()} disabled={saving} className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-cyan-300 px-5 py-4 text-sm font-black text-slate-950 disabled:opacity-50">{saving?<><Loader2 className="size-4 animate-spin"/> Publicando…</>:<><Radio className="size-4"/> Publicar historia</>}</button></div>
           {notice&&<p role="status" className="mt-4 rounded-xl border border-emerald-300/15 bg-emerald-300/5 p-4 text-sm text-emerald-100">{notice}</p>}
           {error&&<p role="alert" className="mt-4 rounded-xl border border-rose-400/20 bg-rose-400/10 p-4 text-sm text-rose-100">{error}</p>}
         </section>
