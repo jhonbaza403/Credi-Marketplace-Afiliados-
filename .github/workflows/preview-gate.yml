@@ -29,20 +29,29 @@ jobs:
 
           for attempt in $(seq 1 24); do
             STATUS_JSON="$(gh api -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2026-03-10' "/repos/${REPOSITORY}/commits/${COMMIT_SHA}/status")"
-            VERCEL_STATUS="$(printf '%s' "${STATUS_JSON}" | jq -c '[.statuses[] | select(((.context // "") | test("^vercel"; "i")))] | last // {}')"
+            # Only inspect the deployment status named exactly "Vercel".
+            # "Vercel Deployments – ..." may say "No required projects to validate";
+            # that is not proof that a Preview deployment was built successfully.
+            VERCEL_STATUS="$(printf '%s' "${STATUS_JSON}" | jq -c '[.statuses[] | select((.context // "") == "Vercel")] | last // {}')"
             STATE="$(printf '%s' "${VERCEL_STATUS}" | jq -r '.state // ""')"
             TARGET="$(printf '%s' "${VERCEL_STATUS}" | jq -r '.target_url // ""')"
+            DESCRIPTION="$(printf '%s' "${VERCEL_STATUS}" | jq -r '.description // ""')"
 
-            echo "Vercel Preview: ${STATE:-pending}"
+            echo "Vercel deployment status: ${STATE:-pending}"
+            echo "Description: ${DESCRIPTION:-pending}"
             echo "Target: ${TARGET:-pending}"
 
             case "${STATE}" in
               success)
-                echo "Vercel Preview validation: PASSED"
+                echo "Vercel Preview status check: PASSED"
                 exit 0
                 ;;
               failure|error)
-                echo "::error::Vercel Preview failed."
+                if printf '%s' "${TARGET} ${DESCRIPTION}" | grep -Eqi 'build-rate-limit|rate.?limit|retry in 24 hours'; then
+                  echo "::error::Vercel Preview is blocked by the provider deployment rate limit. This is not a successful Preview; retry when Vercel permits another build."
+                else
+                  echo "::error::Vercel reported a failed deployment. Inspect the target URL for the deployment failure."
+                fi
                 exit 1
                 ;;
             esac
