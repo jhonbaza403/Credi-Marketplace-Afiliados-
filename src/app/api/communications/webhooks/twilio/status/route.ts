@@ -38,7 +38,7 @@ export async function POST(request: Request) {
   const sid = (params.MessageSid ?? params.SmsSid)?.[0];
   const status = params.MessageStatus?.[0]?.toLowerCase();
   const errorCode = params.ErrorCode?.[0] || null;
-  const allowed = new Set(["accepted", "queued", "sending", "sent", "delivered", "undelivered", "failed", "canceled", "read"]);
+  const allowed = new Set(["accepted", "queued", "sending", "sent", "delivered", "undelivered", "failed", "canceled"]);
   if (!sid || !/^[A-Za-z0-9]{16,64}$/.test(sid) || !status || !allowed.has(status)) {
     return Response.json({ error: "invalid_status_payload" }, { status: 400 });
   }
