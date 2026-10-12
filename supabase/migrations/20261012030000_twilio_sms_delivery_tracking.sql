@@ -6,7 +6,7 @@ create table if not exists public.twilio_sms_requests (
   idempotency_key uuid not null,
   message_sid text unique,
   status text not null default 'requested'
-    check (status in ('requested','queued','accepted','sending','sent','delivered','undelivered','failed')),
+    check (status in ('requested','queued','accepted','sending','sent','delivered','undelivered','failed','canceled')),
   error_code text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
