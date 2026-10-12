@@ -6,11 +6,8 @@ import { ImagePlus, Loader2, Radio, Video } from 'lucide-react'
 import MarketplaceMediaUploader from '@/components/media/MarketplaceMediaUploader'
 import type { UploadedMarketplaceMedia } from '@/lib/storage/marketplace-media'
 
-type AuthUser = { id: string }
-type AuthResult = { data: { user: AuthUser | null }; error: Error | null }
-
 export default function HistoriaVideoPublisher() {
-  const supabase = createClient()
+  const [supabase] = useState(() => createClient())
   const [userId, setUserId] = useState<string | null>(null)
   const [body, setBody] = useState('')
   const [media, setMedia] = useState<UploadedMarketplaceMedia[]>([])
