@@ -7,7 +7,7 @@ export interface NavigationItem {
   roles?: readonly string[];
 }
 
-/** Compatibility exports are derived from the canonical portal registry. */
+/** Compatibility exports derive their destinations from the canonical portal registry. */
 export const PUBLIC_NAVIGATION = PORTAL_DOMAINS.filter((item) => !item.requiresAuth);
 export const USER_NAVIGATION = PORTAL_DOMAINS.filter((item) => item.href.startsWith("/dashboard") && !item.roles);
 export const AFFILIATE_NAVIGATION = PORTAL_DOMAINS.filter((item) => item.key === "affiliate" || item.href.startsWith("/dashboard/affiliate"));
