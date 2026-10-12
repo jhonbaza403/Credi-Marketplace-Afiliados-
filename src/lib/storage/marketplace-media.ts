@@ -44,7 +44,12 @@ export function validateMarketplaceMedia(file: File, kind?: MarketplaceMediaKind
 }
 
 export async function uploadMarketplaceMedia(file: File, kind?: MarketplaceMediaKind) {
-  const resolvedKind = kind ?? (file.type.startsWith('video/') ? 'video' : file.type.startsWith('audio/') ? 'audio' : 'image')
+  const inferredKind: Exclude<MarketplaceMediaKind, 'mixed'> = file.type.startsWith('video/')
+    ? 'video'
+    : file.type.startsWith('audio/')
+      ? 'audio'
+      : 'image'
+  const resolvedKind = !kind || kind === 'mixed' ? inferredKind : kind
   validateMarketplaceMedia(file, resolvedKind)
 
   const supabase = createClient()
