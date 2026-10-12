@@ -39,10 +39,13 @@ export async function GET() {
 
   const [{data:rooms,error:roomError},{data:liveRooms}] = await Promise.all([
     supabase.from('chat_live_rooms').select('id,host_user_id,conversation_id,title,status,viewer_count,started_at,ended_at,description,cover_media,scheduled_at,replay_url,playback_url,stream_provider,viewer_peak,likes_count,shares_count,settings,created_at').eq('host_user_id',user.id).order('created_at',{ascending:false}).limit(50),
-    supabase.from('chat_live_rooms').select('id,host_user_id,title,status,viewer_count,started_at,description,cover_media,scheduled_at,replay_url,playback_url,stream_provider,viewer_peak,likes_count,shares_count,settings,created_at').eq('status','live').order('started_at',{ascending:false}).limit(30),
+    supabase.from('chat_live_rooms').select('id,host_user_id,title,status,viewer_count,started_at,description,cover_media,scheduled_at,replay_url,playback_url,stream_provider,viewer_peak,likes_count,shares_count,settings,created_at').eq('status','live').eq('stream_provider','cloudflare_stream').not('playback_url','is',null).order('started_at',{ascending:false}).limit(30),
   ])
   if(roomError) return errorResponse('No fue posible cargar las sesiones LIVE.',500,'LIVE_ROOMS_UNAVAILABLE')
-  return NextResponse.json({ rooms:rooms??[], discovery:liveRooms??[] }, { headers:{'Cache-Control':'private, no-store'} })
+  const safeRooms=(rooms??[]).map(room => room.status==='live' && room.stream_provider!=='cloudflare_stream'
+    ? {...room,status:'scheduled',started_at:null}
+    : room)
+  return NextResponse.json({ rooms:safeRooms, discovery:liveRooms??[] }, { headers:{'Cache-Control':'private, no-store'} })
 }
 
 export async function POST(request:Request) {
