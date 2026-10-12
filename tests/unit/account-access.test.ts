@@ -83,6 +83,16 @@ describe("account access status lookup", () => {
     });
   });
 
+  it("throws when the security status RPC returns no usable row", async () => {
+    const supabase = {
+      rpc: async () => ({ data: null, error: null }),
+    } as unknown as SupabaseClient;
+
+    await expect(getAccountAccessState(supabase, "user-123")).rejects.toThrow(
+      "ACCOUNT_ACCESS_STATUS_INVALID",
+    );
+  });
+
   it("maps a successful security status response to explicit boolean flags", async () => {
     const supabase = {
       rpc: async () => ({
