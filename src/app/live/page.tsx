@@ -5,6 +5,7 @@ import { BarChart3, CalendarClock, Camera, CircleStop, Eye, Heart, KeyRound, Mes
 import type { LucideIcon } from 'lucide-react'
 import DomainBridge from '@/components/portal/DomainBridge'
 import { CrediLiveChat } from '@/components/live/CrediLiveChat'
+import { CrediLiveTwilioStage } from '@/components/live/CrediLiveTwilioStage'
 
 type Room={id:string;host_user_id:string;title:string;status:string;viewer_count:number;started_at:string|null;ended_at?:string|null;description:string;cover_media:unknown;scheduled_at:string|null;replay_url:string|null;playback_url:string|null;stream_provider:string;viewer_peak:number;likes_count:number;shares_count:number;settings:Record<string,unknown>}
 type Product={room_id:string;product_id:string;position:number;is_pinned:boolean;pinned_at:string|null;products?:{id:string;title:string;price:number;image_url:string|null}|null}
@@ -26,6 +27,8 @@ export default function LivePage(){
   const streamRef=useRef<MediaStream|null>(null)
   const [transport,setTransport]=useState<{inputId:string;rtmps:{url:string;streamKey:string}|null;playback:{hls?:string;dash?:string}|null;webRTC:{url:string}|null;status?:string|null;enabled?:boolean}|null>(null)
   const [transportBusy,setTransportBusy]=useState(false)
+  const [guestUserId,setGuestUserId]=useState('')
+  const [guestUserIds,setGuestUserIds]=useState<string[]>([])
 
   async function load(){
     const response=await fetch('/api/live',{cache:'no-store'})
@@ -114,6 +117,18 @@ export default function LivePage(){
     finally{setBusy(false)}
   }
 
+  async function manageGuest(action:'invite'|'remove', id=guestUserId){
+    if(!selected||!id.trim())return
+    try{
+      const response=await fetch('/api/live/guests',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({roomId:selected.id,guestUserId:id.trim(),action})})
+      const data=await response.json().catch(()=>({}))
+      if(!response.ok)throw new Error(data.error||'No fue posible gestionar el invitado.')
+      setGuestUserIds(data.guestUserIds||[])
+      setGuestUserId('')
+      setMessage(data.message||'Invitados actualizados.')
+    }catch(error){setMessage(error instanceof Error?error.message:'No fue posible gestionar el invitado.')}
+  }
+
   async function addProduct(pinned:boolean){
     if(!selected||!productId)return
     const response=await fetch('/api/live/products',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({roomId:selected.id,productId,position:products.length,pinned})})
@@ -183,6 +198,19 @@ export default function LivePage(){
             {transport?.rtmps&&<div className="mt-4 grid gap-3 sm:grid-cols-2"><label className="text-[10px] font-black uppercase tracking-wide text-[var(--muted)]">Servidor RTMPS<input readOnly value={transport.rtmps.url} className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs font-mono"/></label><label className="text-[10px] font-black uppercase tracking-wide text-[var(--muted)]">Stream Key<input readOnly value={transport.rtmps.streamKey} className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs font-mono"/></label></div>}
             <p className="mt-3 text-[10px] text-[var(--muted)]">La clave se obtiene del backend autenticado; no se almacena en Supabase ni se expone al cliente público. Si fue compartida accidentalmente, usa rotación de credenciales.</p>
           </section>}
+
+          {selected&&<div className="mt-5 space-y-4">
+            <CrediLiveTwilioStage roomId={selected.id} active={selected.status!=='ended'&&selected.status!=='cancelled'}/>
+            <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
+              <h3 className="font-black">Gestionar invitados del escenario</h3>
+              <p className="mt-1 text-xs leading-5 text-[var(--muted)]">Introduce el UUID de la cuenta Credi a la que quieres autorizar cámara y audio. Solo el anfitrión puede invitar o revocar acceso.</p>
+              <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                <input value={guestUserId} onChange={e=>setGuestUserId(e.target.value)} placeholder="UUID del usuario invitado" className="min-w-0 flex-1 rounded-xl border border-[var(--border-strong)] bg-[var(--surface)] px-3 py-2 text-sm"/>
+                <button type="button" onClick={()=>void manageGuest('invite')} disabled={!guestUserId.trim()} className="rounded-xl bg-[var(--primary)] px-4 py-2 text-xs font-black text-white disabled:opacity-50">Autorizar invitado</button>
+              </div>
+              {guestUserIds.length>0&&<div className="mt-3 space-y-2">{guestUserIds.map(id=><div key={id} className="flex items-center justify-between gap-3 rounded-lg bg-[var(--surface-secondary)] p-2"><span className="truncate font-mono text-xs">{id}</span><button type="button" onClick={()=>void manageGuest('remove',id)} className="text-xs font-bold text-rose-600">Revocar</button></div>)}</div>}
+            </section>
+          </div>}
 
           {selected&&<div className="mt-6 grid gap-3 sm:grid-cols-4">{([
             [Users,selected.viewer_count,'Espectadores'],
