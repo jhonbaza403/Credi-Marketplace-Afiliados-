@@ -26,7 +26,10 @@ export default function PublishCenter() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const searchParams = useSearchParams();
-  const productId = searchParams.get("product_id") || searchParams.get("product");
+  const productIdCandidate = searchParams.get("product_id") || searchParams.get("product");
+  const productId = productIdCandidate && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(productIdCandidate)
+    ? productIdCandidate
+    : null;
   const affiliateRef = searchParams.get("ref");
   const operationSource = searchParams.get("source") || "publish";
 
@@ -104,7 +107,7 @@ export default function PublishCenter() {
       <div className="mb-6 rounded-3xl border border-cyan-300/15 bg-[linear-gradient(135deg,rgba(8,15,40,.94),rgba(7,21,36,.9))] p-6 text-white shadow-xl">
         <p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-200">Centro de publicaciones</p>
         <h1 className="mt-2 text-3xl font-black tracking-tight">Publica desde tu propia cuenta</h1>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-300">Carga imagen o vídeo desde tu dispositivo. El servidor registra el contenido y lo deja en revisión antes de publicarlo.</p>
+        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-300">Carga imagen o vídeo desde tu dispositivo. Las publicaciones orgánicas se registran al instante; las campañas publicitarias pasan por revisión antes de activar su entrega.</p>
       </div>
 
       {productId && <div className="mb-6 rounded-2xl border border-cyan-300/20 bg-cyan-300/5 p-4 text-sm"><p className="font-black text-cyan-700">Contexto comercial adjunto</p><p className="mt-1 text-[var(--muted)]">Esta publicación conserva el producto seleccionado y, cuando exista, la referencia de afiliado para conectar Muro → producto → Chat → Checkout.</p><code className="mt-2 inline-block rounded-lg bg-[var(--surface)] px-2 py-1 text-xs">{productId}</code>{affiliateRef && <code className="ml-2 inline-block rounded-lg bg-[var(--surface)] px-2 py-1 text-xs">ref={affiliateRef}</code>}</div>}
