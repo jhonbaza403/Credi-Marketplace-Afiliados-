@@ -17,7 +17,7 @@ interface MarketplaceMediaUploaderProps {
 export default function MarketplaceMediaUploader({
   kind,
   multiple = true,
-  maxFiles = kind === 'video' ? 1 : 8,
+  maxFiles = 10,
   value = [],
   onChange,
 }: MarketplaceMediaUploaderProps) {
@@ -50,6 +50,7 @@ export default function MarketplaceMediaUploader({
       }
       setProgress(100)
       onChange([...value, ...uploaded].slice(0, maxFiles))
+      if (fileList.length > remaining) setMessage(`Se cargaron ${incoming.length} archivo(s). El límite de esta publicación es ${maxFiles}.`)
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'No fue posible cargar el archivo.')
     } finally {
@@ -119,7 +120,7 @@ export default function MarketplaceMediaUploader({
             className="mt-5 inline-flex w-full max-w-sm items-center justify-center gap-2 rounded-2xl bg-cyan-300 px-5 py-3.5 text-sm font-black text-slate-950 shadow-[0_14px_35px_rgba(34,211,238,.16)] transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <FileUp className="size-5" aria-hidden="true" />
-            {kind === 'video' ? 'Seleccionar vídeo desde mi dispositivo' : 'Seleccionar imágenes desde mi dispositivo'}
+            {kind === 'video' ? 'Seleccionar vídeos (máximo 10)' : 'Seleccionar imágenes y vídeos (máximo 10)'}
           </button>
 
           <div className="mt-4 flex flex-wrap items-center justify-center gap-3 text-[11px] text-slate-400">
@@ -129,7 +130,7 @@ export default function MarketplaceMediaUploader({
           </div>
 
           <p className="mt-3 text-[11px] text-slate-500">
-            También puedes arrastrar y soltar {kind === 'video' ? 'el vídeo' : 'las imágenes'} desde una computadora.
+            También puedes arrastrar y soltar {kind === 'video' ? 'los vídeos' : kind === 'mixed' ? 'las imágenes o vídeos' : 'las imágenes'} desde una computadora.
           </p>
 
           {busy && (
