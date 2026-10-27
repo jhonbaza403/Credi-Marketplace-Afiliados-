@@ -20,8 +20,8 @@ env:
   CI: "true"
   NEXT_TELEMETRY_DISABLED: "1"
   NODE_ENV: test
-  NEXT_PUBLIC_APP_URL: https://credi-marketplace.bazajhon.workers.dev
-  NEXT_PUBLIC_SITE_URL: https://credi-marketplace.bazajhon.workers.dev
+  NEXT_PUBLIC_APP_URL: https://credi-marketplace-afiliados.bazajhon.workers.dev
+  NEXT_PUBLIC_SITE_URL: https://credi-marketplace-afiliados.bazajhon.workers.dev
   NEXT_PUBLIC_APP_NAME: Credi Marketplace
   NEXT_PUBLIC_DEFAULT_LOCALE: es
   NEXT_PUBLIC_DEFAULT_CURRENCY: USD
