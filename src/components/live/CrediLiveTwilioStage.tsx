@@ -23,10 +23,9 @@ function loadSdk() {
   sdkPromise = new Promise<TwilioVideoSdk>((resolve, reject) => {
     const existing = document.querySelector<HTMLScriptElement>(`script[src="${SDK_URL}"]`)
     const script = existing ?? document.createElement('script')
-    let timeout: number | undefined
 
     const cleanup = () => {
-      if (timeout !== undefined) window.clearTimeout(timeout)
+      window.clearTimeout(timeout)
       script.removeEventListener('error', failed)
       script.removeEventListener('load', loaded)
     }
@@ -41,9 +40,9 @@ function loadSdk() {
       else reject(new Error('El SDK de Twilio cargó sin exponer Video. Recarga la página e inténtalo de nuevo.'))
     }
 
+    const timeout = window.setTimeout(failed, 15_000)
     script.addEventListener('error', failed)
     script.addEventListener('load', loaded)
-    timeout = window.setTimeout(failed, 15_000)
     if (!existing) {
       script.src = SDK_URL
       script.async = true
