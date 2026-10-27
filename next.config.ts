@@ -23,9 +23,9 @@ const contentSecurityPolicy = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https://*.supabase.co https://images.unsplash.com",
   "font-src 'self' data: https://fonts.gstatic.com",
-  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://generativelanguage.googleapis.com https://api.stripe.com https://*.twilio.com https://business.coinbase.com https://videodelivery.net https://*.videodelivery.net https://*.cloudflarestream.com",
+  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://generativelanguage.googleapis.com https://api.stripe.com https://*.twilio.com wss://global.vss.twilio.com wss://sdkgw.us1.twilio.com https://business.coinbase.com https://videodelivery.net https://*.videodelivery.net https://*.cloudflarestream.com",
   "frame-src 'self' https://*.supabase.co https://iframe.videodelivery.net https://*.cloudflarestream.com",
-  "media-src 'self' blob: https://videodelivery.net https://*.videodelivery.net https://*.cloudflarestream.com",
+  "media-src 'self' blob: mediastream: https://videodelivery.net https://*.videodelivery.net https://*.cloudflarestream.com",
   "upgrade-insecure-requests",
 ].join("; ");
 
