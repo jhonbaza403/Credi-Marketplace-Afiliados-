@@ -33,11 +33,11 @@ let worker = {};
 try { pkg = JSON.parse(packageText); } catch { failures.push("package.json is not valid JSON"); }
 try { worker = JSON.parse(workerText); } catch { failures.push("wrangler.jsonc must remain JSON-valid JSONC"); }
 
-assert(worker.name === "credi-marketplace", "Cloudflare Worker name must remain unique to Credi Marketplace");
+assert(worker.name === "credi-marketplace-afiliados", "Cloudflare Worker name must remain unique to Credi Marketplace");
 assert(worker.main === ".open-next/worker.js", "Cloudflare Worker entrypoint must use the OpenNext build output");
 assert(worker.workers_dev === true, "The isolated Credi Worker must use its own workers.dev hostname");
 assert((worker.compatibility_flags ?? []).includes("nodejs_compat"), "Cloudflare must enable nodejs_compat for Next.js runtime compatibility");
-assert(worker.vars?.NEXT_PUBLIC_APP_URL === "https://credi-marketplace.bazajhon.workers.dev", "Canonical application URL must point to the dedicated Credi Workers hostname");
+assert(worker.vars?.NEXT_PUBLIC_APP_URL === "https://credi-marketplace-afiliados.bazajhon.workers.dev", "Canonical application URL must point to the dedicated Credi Workers hostname");
 assert(worker.vars?.NEXT_PUBLIC_SUPABASE_URL === "https://fusnmvmveqdzmzohhlzm.supabase.co", "Cloudflare must target Credi's confirmed Supabase project");
 assert(openNextText.includes("defineCloudflareConfig"), "OpenNext Cloudflare adapter configuration must be present");
 
