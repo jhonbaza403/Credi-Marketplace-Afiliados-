@@ -22,12 +22,15 @@ const source: SupplySource = {
   attributionPolicy: { disclosureRequired: true, policyVersion: "v1" },
 };
 
-const adapter: SupplyAdapter<{ id: string }> = {
+const adapter: SupplyAdapter = {
   key: "example.supplier",
   async fetchPage() {
     return { records: [{ id: "p-1" }], nextCursor: null };
   },
   normalize(record, selectedSource) {
+    if (!record || typeof record !== "object" || !("id" in record) || typeof record.id !== "string") {
+      throw new Error("Supplier record does not contain a string ID.");
+    }
     return normalizeSupplyProduct({
       externalProductId: record.id,
       sku: null,
