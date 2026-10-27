@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { listInputVideos } from '@/lib/cloudflare/stream'
 import { verifyStreamLiveWebhookAuth } from '@/lib/cloudflare/stream-live-webhook'
 
@@ -16,6 +16,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: false, error: 'Autenticación de webhook inválida.' }, { status: 403 })
   }
 
+  const rawBody = await request.text()
+  if (rawBody.length > 256_000) {
+    return NextResponse.json({ success: false, error: 'Payload demasiado grande.' }, { status: 413 })
+  }
+
   let payload: {
     data?: {
       input_id?: string
@@ -25,23 +30,29 @@ export async function POST(request: Request) {
     }
   }
   try {
-    payload = await request.json()
+    payload = JSON.parse(rawBody) as typeof payload
   } catch {
     return NextResponse.json({ success: false, error: 'Payload JSON inválido.' }, { status: 400 })
   }
 
   const inputId = payload.data?.input_id
   const eventType = payload.data?.event_type
-  if (!inputId || !eventType) {
+  if (!inputId || !eventType || !['live_input.connected', 'live_input.disconnected', 'live_input.errored'].includes(eventType)) {
     return NextResponse.json({ success: true, ignored: true })
   }
 
-  const supabase = await createClient()
-  const { data: rooms } = await supabase
+  // This endpoint has already authenticated Cloudflare's webhook signature.
+  // Use the server-only admin client so RLS for interactive users doesn't
+  // prevent a verified provider event from updating the live room.
+  const supabase = createAdminClient()
+  const { data: rooms, error: lookupError } = await supabase
     .from('chat_live_rooms')
     .select('id,metadata,status')
     .contains('metadata', { cloudflare_live_input_id: inputId })
     .limit(1)
+  if (lookupError) {
+    return NextResponse.json({ success: false, error: 'No fue posible consultar la sala LIVE.' }, { status: 500 })
+  }
   const room = rooms?.[0]
   if (!room) return NextResponse.json({ success: true, ignored: true })
 
