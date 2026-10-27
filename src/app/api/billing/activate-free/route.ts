@@ -7,7 +7,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 function appUrl() {
-  return (process.env.NEXT_PUBLIC_APP_URL ?? "https://credi-marketplace-afiliados.vercel.app").replace(/\/$/, "");
+  return (process.env.NEXT_PUBLIC_APP_URL ?? "https://credi-marketplace.bazajhon.workers.dev").replace(/\/$/, "");
 }
 
 export async function POST(request: Request) {
