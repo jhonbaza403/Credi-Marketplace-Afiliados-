@@ -25,6 +25,18 @@ El Worker de Credi se mantiene separado de los Workers existentes `omnis-game` y
 - `.github/workflows/preview-gate.yml`: build de Workers y dry-run en cada PR.
 - `.github/workflows/deploy.yml`: publicación del Worker después de CI y verificación de salud.
 
+## 2.1. Cloudflare Workers Builds (build y preview)
+
+Si se utiliza **Workers Builds** desde el Dashboard, el directorio raíz del proyecto debe ser la raíz del repositorio (donde están `package.json`, `package-lock.json` y `wrangler.jsonc`). Configura:
+
+- **Build command:** `npm run build:cloudflare`
+- **Preview command:** `npm run preview:cloudflare`
+- **Production deploy command (si el Dashboard publica directamente):** `npm run deploy:cloudflare`
+
+Los scripts `preview:cloudflare` y `deploy:cloudflare` ejecutan OpenNext build antes de iniciar preview o publicar. No uses `npx wrangler preview` directamente como comando de preview: Wrangler busca `.open-next/worker.js`, que no existe hasta que OpenNext haya generado el artefacto. Si el build y la vista previa se ejecutan en entornos separados, Workers Builds debe conservar o reconstruir los artefactos necesarios; no supongas que el directorio `.open-next/` se comparte automáticamente.
+
+El flujo canónico de CI/CD de este repositorio es **GitHub Actions → Cloudflare Workers**. No configures dos publicadores de producción en paralelo. Si GitHub Actions gestiona producción, deja Workers Builds como preview/validación o desactiva su publicación automática a producción.
+
 ## 3. Secuencia de validación local
 
 En un entorno Node.js 24 y npm 11.19.1, con las variables públicas de build y dependencias disponibles:
