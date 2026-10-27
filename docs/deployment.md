@@ -1,178 +1,126 @@
-# Credi Marketplace — Guía de Despliegue
+# Credi Marketplace — Runbook de despliegue Cloudflare
 
-> Runbook oficial de despliegue. La plataforma objetivo es **Vercel** y el backend es **Supabase**.
+## 1. Plataforma canónica
 
-## 1. Stack de producción
+Credi Marketplace se despliega como aplicación Next.js App Router en **Cloudflare Workers**, utilizando OpenNext y Wrangler. Supabase continúa siendo la fuente de verdad de datos, autenticación, RLS, almacenamiento y funciones de base de datos. Stripe y Twilio son integraciones opcionales sujetas a sus credenciales y configuración verificadas.
 
-| Componente | Estándar |
+| Componente | Configuración |
 |---|---|
-| Framework | Next.js 16.3.x + App Router |
-| UI | React 19.x |
-| Runtime | Node.js 24.x LTS |
-| npm | 11.x |
-| CSS | Tailwind CSS 4 |
-| Backend | Supabase |
-| Database | PostgreSQL |
-| Auth | Supabase Auth / SSR |
-| Deploy | Vercel |
+| Aplicación | Next.js App Router, React 19, TypeScript y Tailwind CSS 4 |
+| Runtime de build | Node.js 24.x, npm 11.19.1 |
+| Adaptador Workers | `@opennextjs/cloudflare` |
+| Worker | `credi-marketplace` |
+| Host inicial | `https://credi-marketplace.bazajhon.workers.dev` |
+| Backend | Supabase `fusnmvmveqdzmzohhlzm` |
+| CI | GitHub Actions: seguridad, lint, typecheck, Vitest, Playwright, Next build y OpenNext build |
 
-El proyecto declara Node.js 24.x y npm 11.x en `package.json`, y `.nvmrc` contiene `24`.
+El Worker de Credi se mantiene separado de los Workers existentes `omnis-game` y `omnis-game-portal`. No se reutilizan sus nombres, bindings, secretos, rutas ni dominios.
 
-## 2. Pipeline obligatorio
+## 2. Archivos de despliegue
 
-Ningún despliegue de producción debe saltarse la línea de validación:
+- `open-next.config.ts`: configuración del adaptador OpenNext.
+- `wrangler.jsonc`: identidad del Worker, entrypoint, compatibilidad, variables públicas y observabilidad.
+- `package.json`: versiones fijadas del adaptador y Wrangler y comandos de build/deploy.
+- `.github/workflows/ci.yml`: validaciones obligatorias.
+- `.github/workflows/preview-gate.yml`: build de Workers y dry-run en cada PR.
+- `.github/workflows/deploy.yml`: smoke test de la versión desplegada después de CI.
 
-```text
-Git push / Pull Request
-        ↓
-Credi Marketplace CI
-        ↓
-Security Audit
-        ↓
-Deployment Gate
-        ↓
-Vercel
-```
+## 3. Secuencia de validación local
 
-El CI valida estructura, dependencias, ESLint, TypeScript, pruebas unitarias, E2E y build. Security valida vulnerabilidades de dependencias. El Deployment Gate solo autoriza un CI exitoso de `main`.
-
-## 3. Instalación reproducible
-
-Usar el lockfile como fuente de resolución:
+En un entorno Node.js 24 y npm 11.19.1, con las variables públicas de build y dependencias disponibles:
 
 ```bash
 npm ci
-```
-
-No reemplazar `npm ci` por `npm install` en CI.
-
-## 4. Validación local previa
-
-Antes de publicar:
-
-```bash
+npm run verify:structure
+npm run audit:migrations
+npm run audit:routes
+npm run audit:menu
+npm run audit:env
+npm run audit:api
+npm run audit:platform
 npm run lint
 npm run typecheck
 npm run test
 npm run test:e2e
 npm run build
-npm audit --audit-level=high
+npm run build:cloudflare
+npx wrangler deploy --dry-run
 ```
 
-El comando oficial de validación completa definido por el proyecto es `npm run check:all` cuando las variables y servicios requeridos están disponibles.
+No se debe publicar si falla el build OpenNext, el análisis de tipos, las pruebas de seguridad o las pruebas del contrato de migraciones.
 
-## 5. Vercel
+## 4. Vincular GitHub a Cloudflare Workers Builds
 
-Conectar el repositorio de GitHub con el proyecto de Vercel y mantener producción vinculada a `main`.
+La API de Cloudflare indica que la cuenta todavía no está conectada a GitHub para Builds. Completa esta autorización en el Dashboard de Cloudflare antes de habilitar CI/CD:
 
-La configuración de Vercel debe respetar:
+1. Abre [Cloudflare Workers & Pages](https://dash.cloudflare.com/1e37243772e113673f6ac017f0cb7eb8/workers-and-pages).
+2. Crea o selecciona únicamente el Worker `credi-marketplace`; no selecciones los Workers de Omnis.
+3. En la opción de conectar Git, autoriza GitHub y selecciona `jhonbaza403/Credi-Marketplace-Afiliados-`.
+4. Configura la rama de producción como `main`, raíz del repositorio `/`, comando de build `npm run build:cloudflare` y comando de deploy `npx wrangler deploy`.
+5. Habilita previews solo después de decidir cómo se separarán las variables y la base de datos de preview. La vista de preview no debe apuntar a operaciones financieras reales.
 
-```text
-Node.js 24.x LTS
-npm 11.x
-Next.js App Router
-```
+## 5. Variables de entorno y secretos
 
-No utilizar OpenNext para un despliegue Vercel de este proyecto.
+Las variables `NEXT_PUBLIC_*` no son secretos y deben estar presentes durante el build para que Next.js pueda incrustarlas en el cliente. La configuración del Worker contiene los valores públicos conocidos del host y del proyecto Supabase de Credi.
 
-## 6. Variables de entorno
+Los secretos de build y los secretos de runtime son dos ámbitos diferentes. Configura los valores privados en **Worker Settings → Variables & Secrets**, y solamente los necesarios para el build en **Workers Builds → Build variables and secrets**.
 
-Separar estrictamente variables públicas de secretos.
+Secretos de runtime que deben verificarse cuando se use cada función:
 
-Las variables públicas de Supabase son `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. Las credenciales privilegiadas permanecen server-only y nunca se colocan en el cliente.
+- Supabase: `SUPABASE_SECRET_KEY` o `SUPABASE_SERVICE_ROLE_KEY` y `DATABASE_URL` solo cuando la ruta realmente las necesite.
+- Pagos: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` y cualquier secreto específico de proveedor activado.
+- LIVE: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_STREAM_WEBHOOK_SECRET`, `TWILIO_ACCOUNT_SID`, `TWILIO_API_KEY_SID` y `TWILIO_API_KEY_SECRET`.
+- Inteligencia: `GEMINI_API_KEY` y/o `OPENAI_API_KEY`, si se usan las rutas correspondientes.
+- Agentes gobernados: `AGENT_APPROVAL_SECRET`, según el contrato de la aplicación.
 
-## 7. Supabase
+No guardes credenciales reales en GitHub, en `wrangler.jsonc`, en el README ni en los logs. No utilices las credenciales de Omnis para Credi.
 
-Supabase permanece como backend/base de datos. Antes de una liberación revisar:
+## 6. Supabase: migraciones y la advertencia de ramas
 
-```text
-migrations
-RLS
-RPC
-índices
-triggers
-constraints
-webhooks
-```
+El proyecto Supabase de Credi es `fusnmvmveqdzmzohhlzm` y el endpoint verificado es `https://fusnmvmveqdzmzohhlzm.supabase.co`.
 
-Las migraciones deben estar versionadas en Git. Los cambios de esquema hechos manualmente en producción deben evitarse.
+La inspección registró 211 migraciones remotas y 211 archivos versionados, con nombres/versiones coincidentes. Por eso no se debe marcar migraciones manualmente como aplicadas ni recrear el historial sin un error SQL exacto.
 
-## 8. Preview vs Production
+El aviso “This git branch is not associated with any Supabase Branch” indica que falta asociar la rama Git de preview a la integración de branching de Supabase; no lo resuelve Cloudflare. Para corregirlo:
 
-Mantener separados los entornos y sus secretos.
+1. En Supabase Dashboard, abre **Project Settings → Integrations → GitHub Integration**.
+2. Autoriza la aplicación de Supabase en GitHub, selecciona el repositorio de Credi y usa `.` como working directory (la carpeta `supabase/` está en la raíz).
+3. Habilita la sincronización automática únicamente después de revisar el coste y el comportamiento del plan actual. No crees una rama persistente de pago.
+4. Revisa los logs del flujo que muestra `MIGRATIONS_FAILED` y el error SQL exacto antes de cambiar el historial de migraciones.
+5. Antes de pruebas con datos transaccionales, usa un entorno de prueba aislado; no copies datos de producción a previews.
 
-## 9. Build de producción
+La configuración versionada `supabase/config.toml` documenta el host Cloudflare previsto, pero los valores de Site URL, redirect URLs y passkeys del **proyecto remoto de producción** deben confirmarse en el Dashboard de Auth. Cambiar el RP ID de WebAuthn puede requerir que los usuarios vuelvan a registrar sus passkeys.
 
-El build oficial es:
+## 7. Stripe y Twilio
+
+No se debe declarar pagos o videoconferencia operativos solo porque las rutas existan en el código. Tras configurar los secretos:
+
+- Stripe: comprueba la firma del webhook y el procesamiento idempotente con eventos de prueba.
+- Twilio Video: comprueba la emisión de tokens desde servidor y el acceso del anfitrión/invitado.
+- Cloudflare Stream: confirma el webhook autenticado, el estado de señal recibido, reproducción y replay.
+- LIVE Chat: verifica lectura pública permitida para una sala en directo, escritura autenticada, moderación y límites de frecuencia.
+
+Usa sesiones y operaciones de prueba; no realices cobros reales durante la validación técnica.
+
+## 8. Smoke test tras el despliegue
 
 ```bash
-npm run build
+curl -i https://credi-marketplace.bazajhon.workers.dev/api/health
 ```
 
-Un build exitoso no reemplaza las pruebas ni la auditoría de seguridad.
+El release se considera saludable solo si el endpoint devuelve HTTP 200 y `status: "ok"`. Comprueba además la página inicial, login, catálogo público, subida de medios, creación de LIVE, chat, rutas de pago en modo de prueba y webhooks. El despliegue queda pendiente si el Worker está publicado pero los secretos de runtime, GitHub Builds o Auth de Supabase no están configurados.
 
-## 10. Caché y datos privados
+## 9. Rollback y aislamiento
 
-Las rutas transaccionales y privadas deben evitar caché público accidental:
+Los cambios de aplicación se revierten desde el historial de versiones/despliegues del Worker `credi-marketplace`. No borres ni edites `omnis-game` ni `omnis-game-portal`. Nunca apuntes Credi a los secrets o bindings de otro Worker.
 
-```text
-/api/auth/*
-/api/orders/*
-/api/checkout/*
-/api/payments/*
-/api/ai/*
-```
+## 10. Criterio de salida
 
-## 11. Dominio y HTTPS
-
-Producción debe usar HTTPS y un dominio canónico definido.
-
-## 12. Webhooks
-
-Los webhooks de proveedores externos deben apuntar al endpoint público correcto de producción y validar autenticidad antes de modificar órdenes o pagos.
-
-## 13. Rollback
-
-Ante una regresión, identificar el commit/deployment, ejecutar rollback en Vercel, verificar salud y registrar el incidente.
-
-## 14. Checklist de liberación
-
-```text
-[ ] CI verde
-[ ] Security verde
-[ ] Deployment Gate aprobado
-[ ] Variables correctas
-[ ] Supabase/migraciones verificadas
-[ ] RLS verificado
-[ ] Webhooks verificados
-[ ] Build exitoso
-[ ] Smoke test posterior al deploy
-```
-
-## 15. Smoke test posterior
-
-Comprobar al menos inicio, autenticación, catálogo, producto, carrito, checkout, orden, API principal y webhooks cuando apliquen.
-
-## 16. No hacer
-
-No introducir en el pipeline de despliegue:
-
-```text
-Cloudflare como plataforma principal
-OpenNext
-Pages Router
-Node.js 22.x
-npm 10.x
-credenciales en el repositorio
-secretos NEXT_PUBLIC_*
-```
-
-La plataforma oficial documentada es **Vercel + Supabase + Node.js 24.x LTS + npm 11.x**.
-
-## 17. Diagrama
-
-![Flujo de despliegue](deployment.svg)
-
-## 18. Principio final
-
-**Solo se despliega el código que haya superado CI, Security y el Deployment Gate sobre el commit validado.**
+- [ ] GitHub conectado a Workers Builds.
+- [ ] Build estándar Next.js y build OpenNext aprobados.
+- [ ] Wrangler dry-run aprobado.
+- [ ] Secretos de runtime configurados sin exponer valores.
+- [ ] Supabase Auth actualizado al host de producción y migraciones diagnosticadas.
+- [ ] Stripe y Twilio verificados con recursos de prueba.
+- [ ] `/api/health` responde 200 en el host de Credi.
+- [ ] No se depende de Vercel ni Netlify para publicar Credi.
