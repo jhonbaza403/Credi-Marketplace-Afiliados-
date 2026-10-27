@@ -23,7 +23,7 @@ El Worker de Credi se mantiene separado de los Workers existentes `omnis-game` y
 - `package.json`: versiones fijadas del adaptador y Wrangler y comandos de build/deploy.
 - `.github/workflows/ci.yml`: validaciones obligatorias.
 - `.github/workflows/preview-gate.yml`: build de Workers y dry-run en cada PR.
-- `.github/workflows/deploy.yml`: smoke test de la versión desplegada después de CI.
+- `.github/workflows/deploy.yml`: publicación del Worker después de CI y verificación de salud.
 
 ## 3. Secuencia de validación local
 
@@ -51,13 +51,22 @@ No se debe publicar si falla el build OpenNext, el análisis de tipos, las prueb
 
 ## 4. Despliegue GitHub Actions → Cloudflare
 
-El flujo canónico de CI/CD se ejecuta desde GitHub Actions usando `CLOUDFLARE_API_TOKEN`; no requiere crear una conexión de Workers Builds. El workflow solo despliega el commit exacto de `main` después de que la CI haya terminado correctamente. Antes de fusionar la PR, configura en GitHub → Settings → Secrets and variables → Actions el secreto `CLOUDFLARE_API_TOKEN`. La clave pública de Supabase ya se declara como variable pública en el workflow y no debe confundirse con una clave `service_role`.
+El flujo canónico de producción es GitHub Actions → Cloudflare Workers. No requiere conectar Workers Builds: el workflow de despliegue compila y publica el commit exacto de `main` únicamente después de que `Credi Marketplace CI` termine correctamente, y luego verifica `/api/health`.
 
-1. Abre [Cloudflare Workers & Pages](https://dash.cloudflare.com/1e37243772e113673f6ac017f0cb7eb8/workers-and-pages).
-2. Crea o selecciona únicamente el Worker `credi-marketplace-afiliados`; no selecciones los Workers de Omnis.
-3. En la opción de conectar Git, autoriza GitHub y selecciona `jhonbaza403/Credi-Marketplace-Afiliados-`.
-4. Configura la rama de producción como `main`, raíz del repositorio `/`, comando de build `npm run build:cloudflare` y comando de deploy `npx wrangler deploy`.
-5. Habilita previews solo después de decidir cómo se separarán las variables y la base de datos de preview. La vista de preview no debe apuntar a operaciones financieras reales.
+Antes de fusionar la PR, configura en GitHub → Settings → Secrets and variables → Actions:
+
+- **Secret** `CLOUDFLARE_API_TOKEN`: token de Cloudflare con permisos de edición/despliegue de Workers para la cuenta Credi.
+- La clave pública de Supabase se declara como valor público de compilación en el workflow; no es una clave de servidor ni debe sustituirse por una `service_role`.
+
+Secuencia:
+
+1. Revisar que los checks de la PR estén verdes y que el diff solo afecte Credi.
+2. Fusionar la PR aprobada en `main`.
+3. Confirmar que la CI de `main` pase.
+4. Confirmar que el workflow de despliegue publique `credi-marketplace-afiliados` y obtenga HTTP 200 en `https://credi-marketplace-afiliados.bazajhon.workers.dev/api/health`.
+5. Si falta el token o una integración privada, el workflow debe fallar explícitamente; no considerar el despliegue operativo hasta resolverlo.
+
+No se deben crear despliegues de preview contra datos reales de pagos ni cambiar los Workers `omnis-game` o `omnis-game-portal`.
 
 ## 5. Variables de entorno y secretos
 
