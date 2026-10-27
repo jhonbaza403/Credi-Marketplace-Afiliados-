@@ -6,6 +6,7 @@ import type { LucideIcon } from 'lucide-react'
 import DomainBridge from '@/components/portal/DomainBridge'
 import { CrediLiveChat } from '@/components/live/CrediLiveChat'
 import { CrediLiveTwilioStage } from '@/components/live/CrediLiveTwilioStage'
+import { cloudflareStreamPlayerUrl } from '@/lib/cloudflare/stream-player-url'
 
 type Room={id:string;host_user_id:string;title:string;status:string;viewer_count:number;started_at:string|null;ended_at?:string|null;description:string;cover_media:unknown;scheduled_at:string|null;replay_url:string|null;playback_url:string|null;stream_provider:string;viewer_peak:number;likes_count:number;shares_count:number;settings:Record<string,unknown>}
 type Product={room_id:string;product_id:string;position:number;is_pinned:boolean;pinned_at:string|null;products?:{id:string;title:string;price:number;image_url:string|null}|null}
@@ -27,6 +28,7 @@ export default function LivePage(){
   const streamRef=useRef<MediaStream|null>(null)
   const [transport,setTransport]=useState<{inputId:string;rtmps:{url:string;streamKey:string}|null;playback:{hls?:string;dash?:string}|null;webRTC:{url:string}|null;status?:string|null;enabled?:boolean}|null>(null)
   const [transportBusy,setTransportBusy]=useState(false)
+  const selectedPlayerUrl = cloudflareStreamPlayerUrl(selected?.playback_url)
   const [guestUserId,setGuestUserId]=useState('')
   const [guestUserIds,setGuestUserIds]=useState<string[]>([])
 
@@ -182,7 +184,22 @@ export default function LivePage(){
           <div className="flex items-center justify-between gap-3"><div><p className="text-xs font-black uppercase tracking-[.16em] text-[var(--primary)]">Control Room</p><h2 className="mt-1 text-2xl font-black">{selected?.title||'Selecciona o crea un LIVE'}</h2></div>{selected&&<span className="rounded-full bg-[var(--primary)]/10 px-3 py-1.5 text-xs font-black uppercase text-[var(--primary)]">{selected.status}</span>}</div>
 
           <div className="mt-5 aspect-video overflow-hidden rounded-[1.5rem] bg-slate-950">
-            {selected?.playback_url?<video src={selected.playback_url} controls playsInline className="h-full w-full object-cover"/>:
+            {selected?.playback_url ? (
+              selectedPlayerUrl ? (
+                <iframe
+                  src={selectedPlayerUrl}
+                  title={`${selected.title} — reproductor Credi LIVE`}
+                  allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture; fullscreen"
+                  referrerPolicy="strict-origin-when-cross-origin"
+                  allowFullScreen
+                  className="h-full w-full border-0"
+                />
+              ) : (
+                <div role="status" className="flex h-full items-center justify-center p-6 text-center text-sm text-white">
+                  No se pudo validar la URL de reproducción de Cloudflare Stream.
+                </div>
+              )
+            ) : (
               <div className="relative flex h-full flex-col items-center justify-center p-8 text-center text-white">
                 {cameraOn&&<video ref={previewRef} muted playsInline className="absolute inset-0 h-full w-full object-cover"/>}
                 <div className="relative z-10 max-w-md rounded-2xl bg-slate-950/75 px-5 py-4 backdrop-blur-md">
@@ -190,7 +207,8 @@ export default function LivePage(){
                   <p className="mt-2 font-black">{mediaReady?'Preflight listo':'Cloudflare Stream · emisión LIVE'}</p>
                   <p className="mt-1 text-xs leading-5 text-slate-300">{mediaReady?'Cámara y micrófono verificados.':'El escenario interactivo Twilio Video puede componerse y enviarse a Cloudflare Stream por WebRTC; OBS/RTMPS sigue disponible para fuentes externas. La emisión solo se considera activa cuando el proveedor confirma la conexión.'}</p>
                 </div>
-              </div>}
+              </div>
+            )}
           </div>
 
           {selected&&<div className="mt-5 flex flex-wrap gap-2">
