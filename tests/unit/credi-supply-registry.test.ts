@@ -19,6 +19,7 @@ const source: SupplySource = {
   allowedCountries: ["US", "VE"],
   termsUrl: "https://supplier.example/terms",
   credentialEnvVar: "CREDI_SUPPLIER_API_KEY",
+  adapterConfig: { endpoint: "https://supplier.example/feed", allowed_hosts: ["supplier.example"] },
   attributionPolicy: { disclosureRequired: true, policyVersion: "v1" },
 };
 
@@ -67,7 +68,7 @@ describe("Credi Supply adapter governance", () => {
   it("registers adapters once and returns normalized Credi-owned product data", async () => {
     const registry = createSupplyAdapterRegistry([adapter]);
     const selected = registry.resolve(source, "US");
-    const page = await selected.fetchPage({ countryCode: "US", pageSize: 25 });
+    const page = await selected.fetchPage({ countryCode: "US", pageSize: 25 }, source);
     const product = selected.normalize(page.records[0], source);
 
     expect(product.sourceCode).toBe("AUTHORIZED_SOURCE");

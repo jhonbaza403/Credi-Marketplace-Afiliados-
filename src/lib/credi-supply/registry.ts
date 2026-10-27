@@ -21,6 +21,7 @@ export type SupplySource = {
   allowedCountries: readonly string[];
   termsUrl: string | null;
   credentialEnvVar: string | null;
+  adapterConfig: Readonly<Record<string, unknown>>;
   attributionPolicy: Readonly<Record<string, unknown>>;
 };
 
@@ -56,7 +57,7 @@ export type SupplyPage<TRecord> = {
 
 export interface SupplyAdapter {
   readonly key: string;
-  fetchPage(request: SupplyPageRequest): Promise<SupplyPage<unknown>>;
+  fetchPage(request: SupplyPageRequest, source: SupplySource): Promise<SupplyPage<unknown>>;
   normalize(record: unknown, source: SupplySource): NormalizedSupplyProduct;
 }
 
@@ -100,9 +101,15 @@ export function assertSourceAuthorized(source: SupplySource, countryCode: string
   if (!source.allowedCountries.some((allowed) => allowed === "*" || allowed.toUpperCase() === country)) {
     throw new Error("Supply source is not authorized for the destination country.");
   }
+  if (source.credentialEnvVar !== null && !/^[A-Z][A-Z0-9_]{2,127}$/.test(source.credentialEnvVar)) {
+    throw new Error("Supply credential must reference a server-only environment variable name.");
+  }
+  assertSafeAdapterConfig(source.adapterConfig);
   if (source.termsUrl !== null) {
     const terms = new URL(source.termsUrl);
-    if (terms.protocol !== "https:") throw new Error("Supply source terms must use HTTPS.");
+    if (terms.protocol !== "https:" || terms.username || terms.password) {
+      throw new Error("Supply source terms must use HTTPS without embedded credentials.");
+    }
   }
 }
 

@@ -2,6 +2,7 @@ import "server-only";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
+  assertSafeAdapterConfig,
   assertSourceAuthorized,
   type SupplyComplianceStatus,
   type SupplyMode,
@@ -37,6 +38,7 @@ type SupplySourceRow = {
   allowed_countries: string[];
   terms_url: string | null;
   credential_env_var: string | null;
+  adapter_config: Record<string, unknown>;
   attribution_policy: Record<string, unknown>;
 };
 
@@ -69,6 +71,7 @@ function mapSource(row: SupplySourceRow): SupplySource {
     allowedCountries: row.allowed_countries,
     termsUrl: row.terms_url,
     credentialEnvVar: row.credential_env_var,
+    adapterConfig: row.adapter_config ?? {},
     attributionPolicy: row.attribution_policy ?? {},
   };
 }
@@ -89,7 +92,7 @@ export async function loadAuthorizedSupplySource(
   const { data, error } = await supabase
     .from("credi_supply_sources")
     .select(
-      "source_code,provider_name,adapter_key,source_kind,status,compliance_status,supported_modes,allowed_countries,terms_url,credential_env_var,attribution_policy",
+      "source_code,provider_name,adapter_key,source_kind,status,compliance_status,supported_modes,allowed_countries,terms_url,credential_env_var,adapter_config,attribution_policy",
     )
     .eq("source_code", code)
     .maybeSingle();
