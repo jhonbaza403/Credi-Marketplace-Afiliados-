@@ -11,7 +11,6 @@ import { CartProvider } from "@/context/CartContext";
 import { LanguageProvider } from "@/context/LanguageContext";
 import { RegionProvider } from "@/context/RegionContext";
 import { CANONICAL_APP_URL } from "@/lib/app-url";
-import VercelTelemetry from "@/components/observability/VercelTelemetry";
 
 export const metadata: Metadata = {
   metadataBase: new URL(CANONICAL_APP_URL),
@@ -55,7 +54,6 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
                   </main>
                   <Footer />
                 </div>
-                <VercelTelemetry />
                 <CrediCallManager />
               </CartProvider>
             </AuthProvider>
