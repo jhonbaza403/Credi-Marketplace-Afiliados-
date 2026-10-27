@@ -60,13 +60,25 @@ El producto, catálogo, relación comercial, oferta, afiliación, reputación y 
 - **Tailwind CSS 4**
 - **Node.js 24.x LTS / npm 11.x**
 - **Supabase**: PostgreSQL, Auth, RLS, Storage y funciones
-- **Vercel**
+- **Cloudflare Workers** (OpenNext adapter + Wrangler)
 - **Stripe** para pagos cuando corresponda, sujeto a configuración de entorno y webhooks verificados
 - **Vitest + Playwright**
 
 Node.js 24 es el runtime objetivo del proyecto. Next.js 16 usa Turbopack de forma predeterminada para desarrollo y build, por lo que no se mantiene un script duplicado para activar Turbopack manualmente.
 
-No se utiliza Pages Router ni un backend .NET como parte de la aplicación principal. OpenNext no forma parte del despliegue de Vercel.
+No se utiliza Pages Router ni un backend .NET como parte de la aplicación principal. OpenNext adapta el App Router existente para Cloudflare Workers; la compatibilidad se verifica en CI antes de desplegar.
+
+## Despliegue y entornos
+
+- **Worker dedicado:** `credi-marketplace`.
+- **Host inicial:** `https://credi-marketplace.bazajhon.workers.dev`.
+- **Fuente de código:** GitHub, rama `main` para producción.
+- **Build:** Node.js 24.x + npm 11.19.1, `npm run build:cloudflare`.
+- **Deploy:** `npx wrangler deploy`, únicamente después de la validación CI.
+- **Backend:** Supabase `fusnmvmveqdzmzohhlzm`, independiente del Worker de Omnis.
+- **Secretos runtime:** se gestionan en Cloudflare Worker Settings → Variables & Secrets; no se guardan en el repositorio.
+
+El contrato de despliegue y las operaciones pendientes están documentados en `docs/deployment.md`. El adaptador se valida con `npm run build:cloudflare` y `npx wrangler deploy --dry-run`; la publicación solo se considera operativa cuando `/api/health` responde `200`.
 
 ## Arquitectura
 
