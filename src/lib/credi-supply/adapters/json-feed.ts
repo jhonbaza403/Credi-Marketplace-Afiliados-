@@ -139,6 +139,7 @@ function normalizeRecord(value: unknown, source: SupplySource): NormalizedSupply
   }
 
   return normalizeSupplyProduct({
+    sourceCode: source.sourceCode,
     externalProductId: id,
     sku: sku || null,
     title,
