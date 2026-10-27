@@ -9,8 +9,8 @@ Credi Marketplace se despliega como aplicación Next.js App Router en **Cloudfla
 | Aplicación | Next.js App Router, React 19, TypeScript y Tailwind CSS 4 |
 | Runtime de build | Node.js 24.x, npm 11.19.1 |
 | Adaptador Workers | `@opennextjs/cloudflare` |
-| Worker | `credi-marketplace` |
-| Host inicial | `https://credi-marketplace.bazajhon.workers.dev` |
+| Worker | `credi-marketplace-afiliados` |
+| Host inicial | `https://credi-marketplace-afiliados.bazajhon.workers.dev` |
 | Backend | Supabase `fusnmvmveqdzmzohhlzm` |
 | CI | GitHub Actions: seguridad, lint, typecheck, Vitest, Playwright, Next build y OpenNext build |
 
@@ -49,12 +49,12 @@ npx wrangler deploy --dry-run
 
 No se debe publicar si falla el build OpenNext, el análisis de tipos, las pruebas de seguridad o las pruebas del contrato de migraciones.
 
-## 4. Vincular GitHub a Cloudflare Workers Builds
+## 4. Despliegue GitHub Actions → Cloudflare
 
-La API de Cloudflare indica que la cuenta todavía no está conectada a GitHub para Builds. Completa esta autorización en el Dashboard de Cloudflare antes de habilitar CI/CD:
+El flujo canónico de CI/CD se ejecuta desde GitHub Actions usando `CLOUDFLARE_API_TOKEN`; no requiere crear una conexión de Workers Builds. El workflow solo despliega el commit exacto de `main` después de que la CI haya terminado correctamente. Antes de fusionar la PR, configura en GitHub → Settings → Secrets and variables → Actions el secreto `CLOUDFLARE_API_TOKEN`. La clave pública de Supabase ya se declara como variable pública en el workflow y no debe confundirse con una clave `service_role`.
 
 1. Abre [Cloudflare Workers & Pages](https://dash.cloudflare.com/1e37243772e113673f6ac017f0cb7eb8/workers-and-pages).
-2. Crea o selecciona únicamente el Worker `credi-marketplace`; no selecciones los Workers de Omnis.
+2. Crea o selecciona únicamente el Worker `credi-marketplace-afiliados`; no selecciones los Workers de Omnis.
 3. En la opción de conectar Git, autoriza GitHub y selecciona `jhonbaza403/Credi-Marketplace-Afiliados-`.
 4. Configura la rama de producción como `main`, raíz del repositorio `/`, comando de build `npm run build:cloudflare` y comando de deploy `npx wrangler deploy`.
 5. Habilita previews solo después de decidir cómo se separarán las variables y la base de datos de preview. La vista de preview no debe apuntar a operaciones financieras reales.
@@ -105,14 +105,14 @@ Usa sesiones y operaciones de prueba; no realices cobros reales durante la valid
 ## 8. Smoke test tras el despliegue
 
 ```bash
-curl -i https://credi-marketplace.bazajhon.workers.dev/api/health
+curl -i https://credi-marketplace-afiliados.bazajhon.workers.dev/api/health
 ```
 
 El release se considera saludable solo si el endpoint devuelve HTTP 200 y `status: "ok"`. Comprueba además la página inicial, login, catálogo público, subida de medios, creación de LIVE, chat, rutas de pago en modo de prueba y webhooks. El despliegue queda pendiente si el Worker está publicado pero los secretos de runtime, GitHub Builds o Auth de Supabase no están configurados.
 
 ## 9. Rollback y aislamiento
 
-Los cambios de aplicación se revierten desde el historial de versiones/despliegues del Worker `credi-marketplace`. No borres ni edites `omnis-game` ni `omnis-game-portal`. Nunca apuntes Credi a los secrets o bindings de otro Worker.
+Los cambios de aplicación se revierten desde el historial de versiones/despliegues del Worker `credi-marketplace-afiliados`. No borres ni edites `omnis-game` ni `omnis-game-portal`. Nunca apuntes Credi a los secrets o bindings de otro Worker.
 
 ## 10. Criterio de salida
 
