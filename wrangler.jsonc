@@ -35,7 +35,9 @@
     "NEXT_PUBLIC_ENV": "production",
     "NEXT_PUBLIC_SUPABASE_URL": "https://fusnmvmveqdzmzohhlzm.supabase.co",
     "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_68VV9wzImMYuu7cnrfLpzg_zYCL_OLV",
-    "CLOUDFLARE_ACCOUNT_ID": "1e37243772e113673f6ac017f0cb7eb8"
+    "CLOUDFLARE_ACCOUNT_ID": "1e37243772e113673f6ac017f0cb7eb8",
+    "B2B_CRYPTO_ENABLED": "false",
+    "B2B_CRYPTO_MERCHANT_COUNTRY": "US"
   },
   "previews": {
     "vars": {
@@ -48,7 +50,9 @@
       "NEXT_PUBLIC_ENV": "production",
       "NEXT_PUBLIC_SUPABASE_URL": "https://fusnmvmveqdzmzohhlzm.supabase.co",
       "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_68VV9wzImMYuu7cnrfLpzg_zYCL_OLV",
-      "CLOUDFLARE_ACCOUNT_ID": "1e37243772e113673f6ac017f0cb7eb8"
+      "CLOUDFLARE_ACCOUNT_ID": "1e37243772e113673f6ac017f0cb7eb8",
+      "B2B_CRYPTO_ENABLED": "false",
+      "B2B_CRYPTO_MERCHANT_COUNTRY": "US"
     }
   }
 }
