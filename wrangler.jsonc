@@ -1,6 +1,6 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
-  "name": "credi-marketplace",
+  "name": "credi-marketplace-afiliados",
   "main": ".open-next/worker.js",
   "compatibility_date": "2026-10-27",
   "compatibility_flags": ["nodejs_compat"],
@@ -22,8 +22,8 @@
     "issues": { "enabled": true }
   },
   "vars": {
-    "NEXT_PUBLIC_APP_URL": "https://credi-marketplace.bazajhon.workers.dev",
-    "NEXT_PUBLIC_SITE_URL": "https://credi-marketplace.bazajhon.workers.dev",
+    "NEXT_PUBLIC_APP_URL": "https://credi-marketplace-afiliados.bazajhon.workers.dev",
+    "NEXT_PUBLIC_SITE_URL": "https://credi-marketplace-afiliados.bazajhon.workers.dev",
     "NEXT_PUBLIC_APP_NAME": "Credi Marketplace",
     "NEXT_PUBLIC_DEFAULT_LOCALE": "es",
     "NEXT_PUBLIC_DEFAULT_CURRENCY": "USD",
