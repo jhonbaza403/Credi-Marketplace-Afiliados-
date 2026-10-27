@@ -19,7 +19,7 @@ const contentSecurityPolicy = [
   "form-action 'self'",
   "frame-ancestors 'self'",
   "object-src 'none'",
-  `script-src 'self' 'unsafe-inline'${isDevelopment ? " 'unsafe-eval'" : ""}`,
+  `script-src 'self' 'unsafe-inline' https://sdk.twilio.com${isDevelopment ? " 'unsafe-eval'" : ""}`,
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https://*.supabase.co https://images.unsplash.com",
   "font-src 'self' data: https://fonts.gstatic.com",
