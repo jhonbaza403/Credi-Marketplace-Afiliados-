@@ -1,4 +1,4 @@
-name: Credi Marketplace Cloudflare Deployment Gate
+name: Credi Marketplace Cloudflare Deployment
 
 on:
   workflow_run:
@@ -13,20 +13,73 @@ permissions:
   contents: read
 
 concurrency:
-  group: credi-marketplace-cloudflare-gate-main
-  cancel-in-progress: true
+  group: credi-marketplace-cloudflare-deploy-main
+  cancel-in-progress: false
 
 jobs:
-  smoke-test-cloudflare:
-    name: Verify deployed Cloudflare Worker health
+  deploy-and-smoke-test:
+    name: Build, deploy, and verify Credi on Cloudflare
     if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 30
     env:
-      HEALTH_URL: https://credi-marketplace.bazajhon.workers.dev/api/health
+      CLOUDFLARE_ACCOUNT_ID: 1e37243772e113673f6ac017f0cb7eb8
+      NEXT_PUBLIC_APP_URL: https://credi-marketplace-afiliados.bazajhon.workers.dev
+      NEXT_PUBLIC_SITE_URL: https://credi-marketplace-afiliados.bazajhon.workers.dev
+      NEXT_PUBLIC_APP_NAME: Credi Marketplace
+      NEXT_PUBLIC_DEFAULT_LOCALE: es
+      NEXT_PUBLIC_DEFAULT_CURRENCY: USD
+      NEXT_PUBLIC_DEFAULT_COUNTRY: VE
+      NEXT_PUBLIC_ENV: production
+      NEXT_PUBLIC_SUPABASE_URL: https://fusnmvmveqdzmzohhlzm.supabase.co
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
+      HEALTH_URL: https://credi-marketplace-afiliados.bazajhon.workers.dev/api/health
       CI_SHA: ${{ github.event.workflow_run.head_sha }}
     steps:
-      - name: Wait for Cloudflare deployment and verify application health
+      - name: Checkout the exact commit that passed CI
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 1
+
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          check-latest: true
+          package-manager-cache: false
+
+      - name: Install pinned npm
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --global npm@11.19.1
+          test "$(npm --version)" = "11.19.1"
+
+      - name: Validate deployment credentials are configured
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN" || {
+            echo "::error::Missing GitHub Actions secret CLOUDFLARE_API_TOKEN. Add it in repository Settings > Secrets and variables > Actions."
+            exit 1
+          }
+          test -n "$NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY" || {
+            echo "::error::Missing GitHub Actions variable NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY."
+            exit 1
+          }
+
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Build and publish the OpenNext Worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: npm run deploy:cloudflare
+
+      - name: Wait for Cloudflare and verify the live health endpoint
         shell: bash
         run: |
           set -euo pipefail
@@ -42,15 +95,17 @@ jobs:
             fi
             sleep 15
           done
-          echo "::error::Cloudflare Worker did not report healthy status. Verify Workers Builds linkage and runtime secrets for Supabase, then rerun the health check."
+          echo "::error::Cloudflare Worker did not report healthy status. Inspect Worker logs, Supabase connectivity, and runtime bindings."
           exit 1
+
       - name: Record deployment verification
         if: success()
         run: |
           {
-            echo "## Credi Marketplace Cloudflare Deployment Gate"
+            echo "## Credi Marketplace Cloudflare Deployment"
             echo ""
             echo "- CI commit: `$CI_SHA`"
+            echo "- Worker: `credi-marketplace-afiliados`"
             echo "- Health endpoint: `$HEALTH_URL`"
-            echo "- Result: healthy"
+            echo "- Result: deployed and healthy"
           } >> "$GITHUB_STEP_SUMMARY"
