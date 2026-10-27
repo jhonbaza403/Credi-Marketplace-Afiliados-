@@ -14,16 +14,49 @@ declare global {
 
 const SDK_URL = 'https://sdk.twilio.com/js/video/releases/2.34.0/twilio-video.min.js'
 
+let sdkPromise: Promise<TwilioVideoSdk> | null = null
+
 function loadSdk() {
   if (window.Twilio?.Video) return Promise.resolve(window.Twilio.Video)
-  return new Promise<TwilioVideoSdk>((resolve, reject) => {
+  if (sdkPromise) return sdkPromise
+
+  sdkPromise = new Promise<TwilioVideoSdk>((resolve, reject) => {
     const existing = document.querySelector<HTMLScriptElement>(`script[src="${SDK_URL}"]`)
     const script = existing ?? document.createElement('script')
-    const failed = () => reject(new Error('No fue posible cargar el SDK de Twilio Video. Comprueba la política CSP y la conexión.'))
-    script.addEventListener('error', failed, { once: true })
-    script.addEventListener('load', () => window.Twilio?.Video ? resolve(window.Twilio.Video) : failed(), { once: true })
-    if (!existing) { script.src = SDK_URL; script.async = true; document.head.appendChild(script) }
+    let timeout: number | undefined
+
+    const cleanup = () => {
+      if (timeout !== undefined) window.clearTimeout(timeout)
+      script.removeEventListener('error', failed)
+      script.removeEventListener('load', loaded)
+    }
+    const failed = () => {
+      cleanup()
+      reject(new Error('No fue posible cargar el SDK de Twilio Video. Comprueba la política CSP y la conexión.'))
+    }
+    const loaded = () => {
+      script.dataset.crediTwilioLoaded = 'true'
+      cleanup()
+      if (window.Twilio?.Video) resolve(window.Twilio.Video)
+      else reject(new Error('El SDK de Twilio cargó sin exponer Video. Recarga la página e inténtalo de nuevo.'))
+    }
+
+    script.addEventListener('error', failed)
+    script.addEventListener('load', loaded)
+    timeout = window.setTimeout(failed, 15_000)
+    if (!existing) {
+      script.src = SDK_URL
+      script.async = true
+      document.head.appendChild(script)
+    } else if (existing.dataset.crediTwilioLoaded === 'true') {
+      loaded()
+    }
+  }).catch((error: unknown) => {
+    sdkPromise = null
+    throw error
   })
+
+  return sdkPromise
 }
 
 function attachTrack(track: TwilioTrack, container: HTMLElement | null) {
