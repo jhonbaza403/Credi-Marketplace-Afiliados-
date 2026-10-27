@@ -93,7 +93,7 @@ async function evaluateTrigger(
   return { shouldRun: false, details: {}, reason: 'unsupported_trigger' }
 }
 
-function notificationForRule(rule: Rule, userId: string, details: Record<string, unknown>) {
+function notificationForRule(rule: Rule, details: Record<string, unknown>) {
   const config = rule.action_config ?? {}
   const lowStock = rule.trigger_type === 'low_stock'
   const rfqCreated = rule.trigger_type === 'rfq_created'
@@ -242,7 +242,7 @@ export async function POST(request: Request) {
     }
 
     try {
-      const notification = notificationForRule(rule, user.id, trigger.details)
+      const notification = notificationForRule(rule, trigger.details)
       const { data: inserted, error: notificationError } = await admin
         .from('notifications')
         .upsert(notification, { onConflict: 'user_id,dedupe_key', ignoreDuplicates: true })
