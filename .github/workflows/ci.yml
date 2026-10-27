@@ -20,6 +20,15 @@ env:
   CI: "true"
   NEXT_TELEMETRY_DISABLED: "1"
   NODE_ENV: test
+  NEXT_PUBLIC_APP_URL: https://credi-marketplace.bazajhon.workers.dev
+  NEXT_PUBLIC_SITE_URL: https://credi-marketplace.bazajhon.workers.dev
+  NEXT_PUBLIC_APP_NAME: Credi Marketplace
+  NEXT_PUBLIC_DEFAULT_LOCALE: es
+  NEXT_PUBLIC_DEFAULT_CURRENCY: USD
+  NEXT_PUBLIC_DEFAULT_COUNTRY: VE
+  NEXT_PUBLIC_ENV: production
+  NEXT_PUBLIC_SUPABASE_URL: https://fusnmvmveqdzmzohhlzm.supabase.co
+  NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_68VV9wzImMYuu7cnrfLpzg_zYCL_OLV
 
 jobs:
   quality:
@@ -187,7 +196,7 @@ jobs:
       - name: Audit navigation destination contracts
         run: npm run audit:menu
 
-      - name: Audit GitHub and Vercel platform contract
+      - name: Audit GitHub and Cloudflare platform contract
         run: npm run audit:platform
 
       - name: Audit environment contract
@@ -215,8 +224,14 @@ jobs:
         # Browser E2E is a hard gate; the build only starts after this passes.
         run: npm run test:e2e
 
-      - name: Build project
+      - name: Build standard Next.js output
         run: npm run build
+
+      - name: Build Cloudflare Workers output
+        run: npm run build:cloudflare
+
+      - name: Validate Wrangler configuration
+        run: npm run cf-typegen
 
       - name: CI success summary
         if: success()
