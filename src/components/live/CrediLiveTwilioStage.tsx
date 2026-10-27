@@ -12,7 +12,7 @@ declare global {
   interface Window { Twilio?: { Video?: TwilioVideoSdk } }
 }
 
-const SDK_URL = 'https://sdk.twilio.com/js/video/releases/2.31.1/twilio-video.min.js'
+const SDK_URL = 'https://sdk.twilio.com/js/video/releases/2.34.0/twilio-video.min.js'
 
 function loadSdk() {
   if (window.Twilio?.Video) return Promise.resolve(window.Twilio.Video)
@@ -126,14 +126,11 @@ export function CrediLiveTwilioStage({ roomId, active, broadcastUrl }: { roomId:
       })
       const outgoing = new MediaStream([...canvasStream.getVideoTracks(), ...mixedAudio.stream.getAudioTracks()])
       broadcastStreamRef.current = outgoing
-      const turnResponse = await fetch('/api/chat/turn', { method: 'POST', headers: { Accept: 'application/json' }, cache: 'no-store' })
-      const turnData = await turnResponse.json().catch(() => ({})) as { iceServers?: RTCIceServer[]; error?: string }
-      if (!turnResponse.ok || !Array.isArray(turnData.iceServers) || turnData.iceServers.length === 0) {
-        throw new Error(turnData.error || 'Twilio TURN no está disponible para conectar la emisión. Comprueba la configuración de Credi Chat.')
-      }
-      const pc = new RTCPeerConnection({ iceServers: turnData.iceServers })
+      // Cloudflare Stream's WHIP ingest endpoint provides the signaling target;
+      // don't make public broadcast depend on the separate Credi Chat TURN route.
+      const pc = new RTCPeerConnection()
       broadcastPcRef.current = pc
-      outgoing.getTracks().forEach((track) => pc.addTrack(track, outgoing))
+      outgoing.getTracks().forEach((track) => pc.addTransceiver(track, { direction: 'sendonly' }))
       const offer = await pc.createOffer()
       await pc.setLocalDescription(offer)
       if (pc.iceGatheringState !== 'complete') {
