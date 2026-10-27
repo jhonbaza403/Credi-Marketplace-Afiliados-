@@ -88,7 +88,7 @@ No guardes credenciales reales en GitHub, en `wrangler.jsonc`, en el README ni e
 
 El proyecto Supabase de Credi es `fusnmvmveqdzmzohhlzm` y el endpoint verificado es `https://fusnmvmveqdzmzohhlzm.supabase.co`.
 
-La inspección registró 211 migraciones remotas y 211 archivos versionados, con nombres/versiones coincidentes. Por eso no se debe marcar migraciones manualmente como aplicadas ni recrear el historial sin un error SQL exacto.
+La inspección inicial encontró 211 migraciones remotas y 213 archivos SQL en la rama. Se aplicaron de forma aditiva las dos migraciones pendientes (`credi_supply_sources_registry` y `support_fk_indexes`); el historial remoto ahora registra 213 migraciones. Los archivos locales se renombraron para coincidir con las versiones que Supabase asignó: `20261027165845` y `20261027165904`. La igualdad final de versiones debe confirmarse con CI antes de fusionar.
 
 El aviso “This git branch is not associated with any Supabase Branch” indica que falta asociar la rama Git de preview a la integración de branching de Supabase; no lo resuelve Cloudflare. Para corregirlo:
 
@@ -117,7 +117,7 @@ Usa sesiones y operaciones de prueba; no realices cobros reales durante la valid
 curl -i https://credi-marketplace-afiliados.bazajhon.workers.dev/api/health
 ```
 
-El release se considera saludable solo si el endpoint devuelve HTTP 200 y `status: "ok"`. Comprueba además la página inicial, login, catálogo público, subida de medios, creación de LIVE, chat, rutas de pago en modo de prueba y webhooks. El despliegue queda pendiente si el Worker está publicado pero los secretos de runtime, GitHub Builds o Auth de Supabase no están configurados.
+El release se considera saludable solo si el endpoint devuelve HTTP 200 y `status: "ok"`. Comprueba además la página inicial, login, catálogo público, subida de medios, creación de LIVE, chat, rutas de pago en modo de prueba y webhooks. El despliegue queda pendiente si el Worker está publicado pero los secretos de runtime, el secreto de despliegue de GitHub Actions o Auth de Supabase no están configurados.
 
 ## 9. Rollback y aislamiento
 
@@ -125,7 +125,7 @@ Los cambios de aplicación se revierten desde el historial de versiones/desplieg
 
 ## 10. Criterio de salida
 
-- [ ] GitHub conectado a Workers Builds.
+- [ ] GitHub Actions puede publicar en Cloudflare con `CLOUDFLARE_API_TOKEN`.
 - [ ] Build estándar Next.js y build OpenNext aprobados.
 - [ ] Wrangler dry-run aprobado.
 - [ ] Secretos de runtime configurados sin exponer valores.
