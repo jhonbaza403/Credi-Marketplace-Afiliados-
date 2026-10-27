@@ -2,7 +2,6 @@ import "server-only";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
-  assertSafeAdapterConfig,
   assertSourceAuthorized,
   type SupplyComplianceStatus,
   type SupplyMode,
