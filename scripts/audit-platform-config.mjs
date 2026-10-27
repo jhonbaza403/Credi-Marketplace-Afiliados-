@@ -51,9 +51,9 @@ assert(ci.includes("npm run build:cloudflare"), "CI must validate the Cloudflare
 assert(ci.includes("npm ci --dry-run --ignore-scripts --no-audit --no-fund"), "CI must validate the committed npm lockfile");
 assert(!ci.includes("npm install --package-lock-only"), "CI must not silently regenerate the lockfile");
 assert(ci.includes("npm run test:e2e") && ci.includes("npm run build"), "CI must keep browser E2E and Next.js build as hard gates");
-assert(preview.includes("npm run build:cloudflare"), "Pull-request preview gate must build the Cloudflare-targeted application");
+assert(preview.includes("opennextjs-cloudflare build"), "Pull-request preview gate must build the Cloudflare-targeted application");
 assert(preview.includes("wrangler"), "Pull-request preview gate must validate Wrangler configuration");
-assert(deploy.includes("credi-marketplace.bazajhon.workers.dev") && deploy.includes("/api/health"), "Post-CI deployment gate must smoke-test the dedicated Cloudflare deployment");
+assert(deploy.includes("credi-marketplace-afiliados.bazajhon.workers.dev") && deploy.includes("/api/health") && deploy.includes("npm run deploy:cloudflare"), "Post-CI deployment gate must publish and smoke-test the dedicated Cloudflare Worker");
 assert(!deploy.toLowerCase().includes("vercel"), "Deployment gate must not depend on Vercel");
 assert(productionE2E.includes("workflow_dispatch:"), "Production E2E must remain manually triggered");
 for (const secret of ["E2E_BASE_URL", "E2E_OPERATION_ID", "E2E_LIVE_ROOM_ID", "E2E_STORAGE_STATE_JSON"]) {
