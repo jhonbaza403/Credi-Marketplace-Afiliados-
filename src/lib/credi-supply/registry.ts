@@ -1,5 +1,3 @@
-import "server-only";
-
 export type SupplySourceKind =
   | "supplier_api"
   | "product_feed"
@@ -56,10 +54,10 @@ export type SupplyPage<TRecord> = {
   nextCursor: string | null;
 };
 
-export interface SupplyAdapter<TRecord = unknown> {
+export interface SupplyAdapter {
   readonly key: string;
-  fetchPage(request: SupplyPageRequest): Promise<SupplyPage<TRecord>>;
-  normalize(record: TRecord, source: SupplySource): NormalizedSupplyProduct;
+  fetchPage(request: SupplyPageRequest): Promise<SupplyPage<unknown>>;
+  normalize(record: unknown, source: SupplySource): NormalizedSupplyProduct;
 }
 
 const SECRET_KEY_PATTERN = /(secret|token|password|credential|api[_-]?key|private[_-]?key|authorization)/i;
