@@ -45,6 +45,15 @@ jobs:
           test "$(npm --version)" = "11.19.1"
       - name: Install locked dependencies
         run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Block secret material in tracked Worker configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -nE '(^|[[:space:]])(DATABASE_URL|OPENAI_API_KEY|GEMINI_API_KEY|STRIPE_SECRET_KEY|STRIPE_WEBHOOK_SECRET|SUPABASE_SECRET_KEY|SUPABASE_SERVICE_ROLE_KEY|TWILIO_AUTH_TOKEN|TWILIO_API_KEY_SECRET|CLOUDFLARE_API_TOKEN)[[:space:]]*:' wrangler.jsonc; then
+            echo "::error::Sensitive credentials must not be stored in wrangler.jsonc. Configure them as Cloudflare Worker secrets."
+            exit 1
+          fi
+          echo "No known secret-bearing variable names found in wrangler.jsonc."
       - name: Validate Cloudflare adapter compatibility
         run: npx opennextjs-cloudflare build
       - name: Validate Worker bundle without publishing it
