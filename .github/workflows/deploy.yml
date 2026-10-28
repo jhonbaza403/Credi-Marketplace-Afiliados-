@@ -1,4 +1,4 @@
-name: Credi Marketplace Deployment Gate
+name: Credi Marketplace Cloudflare Deployment
 
 on:
   workflow_run:
@@ -11,172 +11,101 @@ on:
 
 permissions:
   contents: read
-  deployments: write
 
 concurrency:
-  group: credi-marketplace-deployment-gate-main
-  cancel-in-progress: true
-
-env:
-  CI_WORKFLOW_NAME: "Credi Marketplace CI"
-  TARGET_BRANCH: "main"
+  group: credi-marketplace-cloudflare-deploy-main
+  cancel-in-progress: false
 
 jobs:
-  deployment-gate:
-    name: Validate CI & Authorize Deployment
-    if: >-
-      ${{
-        github.event.workflow_run.conclusion == 'success' &&
-        github.event.workflow_run.head_branch == 'main'
-      }}
+  deploy-and-smoke-test:
+    name: Build, deploy, and verify Credi on Cloudflare
+    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 10
-
+    timeout-minutes: 30
+    env:
+      CLOUDFLARE_ACCOUNT_ID: 1e37243772e113673f6ac017f0cb7eb8
+      NEXT_PUBLIC_APP_URL: https://credi-marketplace-afiliados.bazajhon.workers.dev
+      NEXT_PUBLIC_SITE_URL: https://credi-marketplace-afiliados.bazajhon.workers.dev
+      NEXT_PUBLIC_APP_NAME: Credi Marketplace
+      NEXT_PUBLIC_DEFAULT_LOCALE: es
+      NEXT_PUBLIC_DEFAULT_CURRENCY: USD
+      NEXT_PUBLIC_DEFAULT_COUNTRY: VE
+      NEXT_PUBLIC_ENV: production
+      NEXT_PUBLIC_SUPABASE_URL: https://fusnmvmveqdzmzohhlzm.supabase.co
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_68VV9wzImMYuu7cnrfLpzg_zYCL_OLV
+      HEALTH_URL: https://credi-marketplace-afiliados.bazajhon.workers.dev/api/health
+      CI_SHA: ${{ github.event.workflow_run.head_sha }}
     steps:
-      # ==========================================================
-      # 1. Validate triggering workflow
-      # ==========================================================
-      - name: Validate CI run
+      - name: Checkout the exact commit that passed CI
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 1
+
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          check-latest: true
+          package-manager-cache: false
+
+      - name: Install pinned npm
         shell: bash
         run: |
           set -euo pipefail
+          npm install --global npm@11.19.1
+          test "$(npm --version)" = "11.19.1"
 
-          CI_NAME="${{ github.event.workflow_run.name }}"
-          CI_BRANCH="${{ github.event.workflow_run.head_branch }}"
-          CI_SHA="${{ github.event.workflow_run.head_sha }}"
-          CI_CONCLUSION="${{ github.event.workflow_run.conclusion }}"
-          CI_RUN_ID="${{ github.event.workflow_run.id }}"
-
-          echo "=========================================="
-          echo "Credi Marketplace Deployment Gate"
-          echo "=========================================="
-          echo "CI Workflow : ${CI_NAME}"
-          echo "Branch      : ${CI_BRANCH}"
-          echo "Commit SHA  : ${CI_SHA}"
-          echo "Conclusion  : ${CI_CONCLUSION}"
-          echo "Run ID      : ${CI_RUN_ID}"
-          echo "=========================================="
-
-          if [ "${CI_NAME}" != "${CI_WORKFLOW_NAME}" ]; then
-            echo "::error::Unexpected CI workflow: ${CI_NAME}"
-            exit 1
-          fi
-
-          if [ "${CI_BRANCH}" != "${TARGET_BRANCH}" ]; then
-            echo "::error::Deployment gate only accepts main."
-            exit 1
-          fi
-
-          if [ "${CI_CONCLUSION}" != "success" ]; then
-            echo "::error::CI did not complete successfully."
-            exit 1
-          fi
-
-          if [ -z "${CI_SHA}" ]; then
-            echo "::error::Missing CI commit SHA."
-            exit 1
-          fi
-
-          echo "CI validation: PASSED"
-
-      # ==========================================================
-      # 2. Deployment Checks: Vercel must be successful
-      # ==========================================================
-      - name: Verify Vercel Deployment Check
+      - name: Validate deployment credentials are configured
+        shell: bash
         env:
-          GH_TOKEN: ${{ github.token }}
-          REPOSITORY: ${{ github.repository }}
-          COMMIT_SHA: ${{ github.event.workflow_run.head_sha }}
-        shell: bash
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: |
           set -euo pipefail
-
-          echo "Checking Vercel status for ${COMMIT_SHA}..."
-
-          VERCEL_STATE=""
-          VERCEL_TARGET=""
-
-          for attempt in $(seq 1 12); do
-            STATUS_JSON="$(gh api -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2026-03-10' "/repos/${REPOSITORY}/commits/${COMMIT_SHA}/status")"
-
-            VERCEL_STATUS="$(printf '%s' "${STATUS_JSON}" | jq -c '[.statuses[] | select((.context == "Vercel") or ((.context // "") == "Vercel – credi-marketplace-afiliados"))] | first // {}')"
-            VERCEL_TARGET="$(printf '%s' "${VERCEL_STATUS}" | jq -r '.target_url // ""')"
-            VERCEL_STATE="$(printf '%s' "${VERCEL_STATUS}" | jq -r '.state // ""')"
-
-            echo "Vercel state (attempt ${attempt}/12): ${VERCEL_STATE:-missing}"
-            echo "Vercel target: ${VERCEL_TARGET:-missing}"
-
-            case "${VERCEL_STATE}" in
-              success)
-                break
-                ;;
-              failure|error)
-                echo "::error::Deployment Check failed: Vercel status is '${VERCEL_STATE}'."
-                exit 1
-                ;;
-              pending|"")
-                if [ "${attempt}" -lt 12 ]; then
-                  sleep 10
-                  continue
-                fi
-                ;;
-            esac
-          done
-
-          if [ "${VERCEL_STATE}" != "success" ]; then
-            echo "::error::Deployment Check failed: Vercel status did not reach success within the validation window."
+          test -n "$CLOUDFLARE_API_TOKEN" || {
+            echo "::error::Missing GitHub Actions secret CLOUDFLARE_API_TOKEN. Add it in repository Settings > Secrets and variables > Actions."
             exit 1
-          fi
+          }
+          test -n "$NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY" || {
+            echo "::error::Missing GitHub Actions variable NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY."
+            exit 1
+          }
 
-          echo "Deployment Check: Vercel PASSED"
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
 
-      # ==========================================================
-      # 3. Expose immutable deployment metadata
-      # ==========================================================
-      - name: Record deployment metadata
+      - name: Build and publish the OpenNext Worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: npm run deploy:cloudflare
+
+      - name: Wait for Cloudflare and verify the live health endpoint
         shell: bash
         run: |
           set -euo pipefail
+          for attempt in $(seq 1 24); do
+            response="$(curl --silent --show-error --max-time 15 --output /tmp/credi-health.json --write-out '%{http_code}' "$HEALTH_URL" || true)"
+            echo "Health attempt ${attempt}/24 returned HTTP ${response:-none}"
+            if [ "$response" = "200" ] && jq -e '.status == "ok" and .service == "credi-marketplace"' /tmp/credi-health.json >/dev/null; then
+              echo "Cloudflare deployment health passed."
+              exit 0
+            fi
+            if [ -s /tmp/credi-health.json ]; then
+              jq '{status,service,checks,databaseError}' /tmp/credi-health.json || true
+            fi
+            sleep 15
+          done
+          echo "::error::Cloudflare Worker did not report healthy status. Inspect Worker logs, Supabase connectivity, and runtime bindings."
+          exit 1
 
-          {
-            echo "## Credi Marketplace Deployment Gate"
-            echo ""
-            echo "| Property | Value |"
-            echo "|---|---|"
-            echo "| Workflow | ${{ github.event.workflow_run.name }} |"
-            echo "| Branch | ${{ github.event.workflow_run.head_branch }} |"
-            echo "| Commit | \`${{ github.event.workflow_run.head_sha }}\` |"
-            echo "| CI Run | ${{ github.event.workflow_run.id }} |"
-            echo "| CI Conclusion | ${{ github.event.workflow_run.conclusion }} |"
-            echo "| Gate | APPROVED |"
-          } >> "${GITHUB_STEP_SUMMARY}"
-
-      # ==========================================================
-      # 4. Authorize deployment
-      # ==========================================================
-      - name: Approve deployment gate
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          echo "CI completed successfully on main."
-          echo "Target branch: main"
-          echo "Validated commit: ${{ github.event.workflow_run.head_sha }}"
-          echo "Vercel status: success"
-          echo "This workflow records post-CI deployment validation; Vercel deployment protection and GitHub rulesets enforce blocking."
-
-      # ==========================================================
-      # 5. Final gate summary
-      # ==========================================================
-      - name: Deployment gate passed
+      - name: Record deployment verification
         if: success()
-        shell: bash
         run: |
-          echo "=========================================="
-          echo "DEPLOYMENT GATE: PASSED"
-          echo "=========================================="
-          echo "The validated CI run on main completed successfully."
-          echo "The canonical Vercel status for this commit is successful."
-          echo "This workflow observes and validates deployment state; it does not itself start or cancel a Vercel deployment."
-          echo "Commit: ${{ github.event.workflow_run.head_sha }}"
-          echo "=========================================="
+          {
+            echo "## Credi Marketplace Cloudflare Deployment"
+            echo ""
+            echo "- CI commit: `$CI_SHA`"
+            echo "- Worker: `credi-marketplace-afiliados`"
+            echo "- Health endpoint: `$HEALTH_URL`"
+            echo "- Result: deployed and healthy"
+          } >> "$GITHUB_STEP_SUMMARY"

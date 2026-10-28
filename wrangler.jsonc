@@ -1,0 +1,74 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "credi-marketplace-afiliados",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-10-27",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "workers_dev": true,
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1,
+    "redact_query_string": true,
+    "logs": {
+      "enabled": true,
+      "head_sampling_rate": 1,
+      "persist": true,
+      "invocation_logs": true
+    },
+    "issues": {
+      "enabled": true
+    }
+  },
+  "vars": {
+    "NEXT_PUBLIC_APP_URL": "https://credi-marketplace-afiliados.bazajhon.workers.dev",
+    "NEXT_PUBLIC_SITE_URL": "https://credi-marketplace-afiliados.bazajhon.workers.dev",
+    "NEXT_PUBLIC_APP_NAME": "Credi Marketplace",
+    "NEXT_PUBLIC_DEFAULT_LOCALE": "es",
+    "NEXT_PUBLIC_DEFAULT_CURRENCY": "USD",
+    "NEXT_PUBLIC_DEFAULT_COUNTRY": "VE",
+    "NEXT_PUBLIC_ENV": "production",
+    "NEXT_PUBLIC_SUPABASE_URL": "https://fusnmvmveqdzmzohhlzm.supabase.co",
+    "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_68VV9wzImMYuu7cnrfLpzg_zYCL_OLV",
+    "CLOUDFLARE_ACCOUNT_ID": "1e37243772e113673f6ac017f0cb7eb8",
+    "B2B_CRYPTO_ENABLED": "false",
+    "B2B_CRYPTO_MERCHANT_COUNTRY": "US"
+  },
+  "previews": {
+    "vars": {
+      "NEXT_PUBLIC_APP_URL": "https://credi-marketplace-afiliados.bazajhon.workers.dev",
+      "NEXT_PUBLIC_SITE_URL": "https://credi-marketplace-afiliados.bazajhon.workers.dev",
+      "NEXT_PUBLIC_APP_NAME": "Credi Marketplace",
+      "NEXT_PUBLIC_DEFAULT_LOCALE": "es",
+      "NEXT_PUBLIC_DEFAULT_CURRENCY": "USD",
+      "NEXT_PUBLIC_DEFAULT_COUNTRY": "VE",
+      "NEXT_PUBLIC_ENV": "preview",
+      "NEXT_PUBLIC_SUPABASE_URL": "https://fusnmvmveqdzmzohhlzm.supabase.co",
+      "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_68VV9wzImMYuu7cnrfLpzg_zYCL_OLV",
+      "CLOUDFLARE_ACCOUNT_ID": "1e37243772e113673f6ac017f0cb7eb8",
+      "B2B_CRYPTO_ENABLED": "false",
+      "B2B_CRYPTO_MERCHANT_COUNTRY": "US"
+    },
+    "queues": {
+      "producers": [
+        {
+          "binding": "CREDI_WEBHOOK_QUEUE",
+          "queue": "credi-webhook-events-preview"
+        }
+      ]
+    }
+  },
+  "queues": {
+    "producers": [
+      {
+        "binding": "CREDI_WEBHOOK_QUEUE",
+        "queue": "credi-webhook-events"
+      }
+    ]
+  }
+}

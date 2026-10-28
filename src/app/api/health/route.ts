@@ -73,8 +73,8 @@ export async function GET(request: Request) {
       status,
       service: "credi-marketplace",
       timestamp,
-      deployment: process.env.VERCEL_DEPLOYMENT_ID ?? null,
-      environment: process.env.VERCEL_ENV ?? process.env.NODE_ENV ?? null,
+      deployment: process.env.CF_VERSION_METADATA ?? process.env.CLOUDFLARE_DEPLOYMENT_ID ?? null,
+      environment: process.env.NEXT_PUBLIC_ENV ?? process.env.NODE_ENV ?? null,
       checks: {
         database,
         authentication,

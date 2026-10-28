@@ -1,12 +1,12 @@
-const CANONICAL_APP_URL = "https://credi-marketplace-afiliados.vercel.app";
-
 const trimTrailingSlash = (value: string): string => value.replace(/\/+$/, "");
+
+const CANONICAL_APP_URL = trimTrailingSlash(
+  process.env.NEXT_PUBLIC_APP_URL?.trim() || "https://credi-marketplace.bazajhon.workers.dev",
+);
 
 /**
  * Canonical public URL for Credi Marketplace.
- *
- * Production SEO/canonical links always resolve to the single public domain.
- * Local development may still use localhost for development-only absolute URLs.
+ * Production links must resolve to the dedicated Cloudflare Workers deployment.
  */
 export function getAppUrl(): string {
   if (process.env.NODE_ENV === "production") {

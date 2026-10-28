@@ -1,4 +1,4 @@
-name: Credi Marketplace Preview Gate
+name: Credi Marketplace Cloudflare Preview Gate
 
 on:
   pull_request:
@@ -6,56 +6,58 @@ on:
 
 permissions:
   contents: read
-  statuses: read
 
 concurrency:
-  group: preview-gate-${{ github.event.pull_request.number }}
+  group: cloudflare-preview-gate-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
+env:
+  CI: "true"
+  NEXT_TELEMETRY_DISABLED: "1"
+  NODE_ENV: test
+  NEXT_PUBLIC_APP_URL: https://credi-marketplace-afiliados.bazajhon.workers.dev
+  NEXT_PUBLIC_SITE_URL: https://credi-marketplace-afiliados.bazajhon.workers.dev
+  NEXT_PUBLIC_APP_NAME: Credi Marketplace
+  NEXT_PUBLIC_DEFAULT_LOCALE: es
+  NEXT_PUBLIC_DEFAULT_CURRENCY: USD
+  NEXT_PUBLIC_DEFAULT_COUNTRY: VE
+  NEXT_PUBLIC_ENV: production
+  NEXT_PUBLIC_SUPABASE_URL: https://fusnmvmveqdzmzohhlzm.supabase.co
+  NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_68VV9wzImMYuu7cnrfLpzg_zYCL_OLV
+
 jobs:
-  vercel-preview:
-    name: Validate Vercel Preview
+  cloudflare-preview-build:
+    name: Validate Cloudflare Workers build
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 20
     steps:
-      - name: Wait for Vercel Preview status
-        env:
-          GH_TOKEN: ${{ github.token }}
-          REPOSITORY: ${{ github.repository }}
-          COMMIT_SHA: ${{ github.event.pull_request.head.sha }}
+      - name: Checkout reviewed pull request
+        uses: actions/checkout@v6
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          package-manager-cache: false
+      - name: Install pinned npm
+        run: |
+          set -euo pipefail
+          npm install --global npm@11.19.1
+          test "$(npm --version)" = "11.19.1"
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Block secret material in tracked Worker configuration
         shell: bash
         run: |
           set -euo pipefail
-
-          for attempt in $(seq 1 24); do
-            STATUS_JSON="$(gh api -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2026-03-10' "/repos/${REPOSITORY}/commits/${COMMIT_SHA}/status")"
-            VERCEL_STATUS="$(printf '%s' "${STATUS_JSON}" | jq -c '[.statuses[] | select(.context == "Vercel")] | first // {}')"
-            STATE="$(printf '%s' "${VERCEL_STATUS}" | jq -r '.state // ""')"
-            TARGET="$(printf '%s' "${VERCEL_STATUS}" | jq -r '.target_url // ""')"
-            DESCRIPTION="$(printf '%s' "${VERCEL_STATUS}" | jq -r '.description // ""')"
-
-            echo "Vercel Preview: ${STATE:-pending}"
-            echo "Details: ${DESCRIPTION:-pending}"
-            echo "Target: ${TARGET:-pending}"
-
-            case "${STATE}" in
-              success)
-                echo "Vercel Preview validation: PASSED"
-                exit 0
-                ;;
-              failure|error)
-                if printf '%s %s' "${DESCRIPTION}" "${TARGET}" | grep -Eqi 'rate.?limit|retry in 24 hours|build-rate-limit'; then
-                  echo "::error::Vercel blocked the Preview because the deployment build limit was reached. GitHub Actions cannot clear this provider-side limit. Retry after the window expires or resolve the limit in Vercel; do not treat this as a successful Preview."
-                  echo "Vercel deployment limits: https://vercel.com/credi-marketplace-afiliados?upgradeToPro=build-rate-limit"
-                else
-                  echo "::error::Vercel Preview failed: ${DESCRIPTION:-no provider details returned}."
-                fi
-                exit 1
-                ;;
-            esac
-
-            sleep 10
-          done
-
-          echo "::error::Vercel Preview did not reach success within 4 minutes."
-          exit 1
+          if grep -nE '(^|[[:space:]])(DATABASE_URL|OPENAI_API_KEY|GEMINI_API_KEY|STRIPE_SECRET_KEY|STRIPE_WEBHOOK_SECRET|SUPABASE_SECRET_KEY|SUPABASE_SERVICE_ROLE_KEY|TWILIO_AUTH_TOKEN|TWILIO_API_KEY_SECRET|CLOUDFLARE_API_TOKEN)[[:space:]]*:' wrangler.jsonc; then
+            echo "::error::Sensitive credentials must not be stored in wrangler.jsonc. Configure them as Cloudflare Worker secrets."
+            exit 1
+          fi
+          echo "No known secret-bearing variable names found in wrangler.jsonc."
+      - name: Validate Cloudflare adapter compatibility
+        run: npx opennextjs-cloudflare build
+      - name: Validate Worker bundle without publishing it
+        run: npx wrangler deploy --dry-run
+      - name: Report preview readiness
+        if: success()
+        run: echo "Cloudflare build and Wrangler dry-run passed. This job does not publish a deployment."

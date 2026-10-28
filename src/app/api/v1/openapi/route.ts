@@ -5,7 +5,7 @@ export const dynamic = 'force-static'
 
 export async function GET() {
   const origin =
-    process.env.NEXT_PUBLIC_APP_URL ?? 'https://credi-marketplace.vercel.app'
+    process.env.NEXT_PUBLIC_APP_URL ?? 'https://credi-marketplace.bazajhon.workers.dev'
 
   const document = {
     openapi: '3.1.0',

@@ -5,6 +5,8 @@ import { BarChart3, CalendarClock, Camera, CircleStop, Eye, Heart, KeyRound, Mes
 import type { LucideIcon } from 'lucide-react'
 import DomainBridge from '@/components/portal/DomainBridge'
 import { CrediLiveChat } from '@/components/live/CrediLiveChat'
+import { CrediLiveTwilioStage } from '@/components/live/CrediLiveTwilioStage'
+import { cloudflareStreamPlayerUrl } from '@/lib/cloudflare/stream-player-url'
 
 type Room={id:string;host_user_id:string;title:string;status:string;viewer_count:number;started_at:string|null;ended_at?:string|null;description:string;cover_media:unknown;scheduled_at:string|null;replay_url:string|null;playback_url:string|null;stream_provider:string;viewer_peak:number;likes_count:number;shares_count:number;settings:Record<string,unknown>}
 type Product={room_id:string;product_id:string;position:number;is_pinned:boolean;pinned_at:string|null;products?:{id:string;title:string;price:number;image_url:string|null}|null}
@@ -26,6 +28,9 @@ export default function LivePage(){
   const streamRef=useRef<MediaStream|null>(null)
   const [transport,setTransport]=useState<{inputId:string;rtmps:{url:string;streamKey:string}|null;playback:{hls?:string;dash?:string}|null;webRTC:{url:string}|null;status?:string|null;enabled?:boolean}|null>(null)
   const [transportBusy,setTransportBusy]=useState(false)
+  const selectedPlayerUrl = cloudflareStreamPlayerUrl(selected?.playback_url)
+  const [guestUserId,setGuestUserId]=useState('')
+  const [guestUserIds,setGuestUserIds]=useState<string[]>([])
 
   async function load(){
     const response=await fetch('/api/live',{cache:'no-store'})
@@ -44,6 +49,13 @@ export default function LivePage(){
     else setTransport(null)
   }
 
+  async function loadGuests(roomId:string){
+    const response=await fetch('/api/live/guests?roomId='+encodeURIComponent(roomId),{cache:'no-store'})
+    if(!response.ok){setGuestUserIds([]);return}
+    const data=await response.json().catch(()=>({guestUserIds:[]}))
+    setGuestUserIds(Array.isArray(data.guestUserIds)?data.guestUserIds:[])
+  }
+
   async function loadProducts(roomId:string){
     const response=await fetch('/api/live/products?roomId='+encodeURIComponent(roomId),{cache:'no-store'})
     if(!response.ok){setProducts([]);return}
@@ -52,7 +64,7 @@ export default function LivePage(){
   }
 
   useEffect(()=>{void load().catch(e=>setMessage(e instanceof Error?e.message:'No fue posible cargar Credi LIVE.'))},[])
-  useEffect(()=>{if(selected){void loadProducts(selected.id);void loadTransport(selected.id)}},[selected?.id])
+  useEffect(()=>{if(selected){void loadProducts(selected.id);void loadTransport(selected.id);void loadGuests(selected.id)}},[selected?.id])
 
   async function preflight(){
     if(cameraOn){
@@ -114,6 +126,18 @@ export default function LivePage(){
     finally{setBusy(false)}
   }
 
+  async function manageGuest(action:'invite'|'remove', id=guestUserId){
+    if(!selected||!id.trim())return
+    try{
+      const response=await fetch('/api/live/guests',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({roomId:selected.id,guestUserId:id.trim(),action})})
+      const data=await response.json().catch(()=>({}))
+      if(!response.ok)throw new Error(data.error||'No fue posible gestionar el invitado.')
+      setGuestUserIds(data.guestUserIds||[])
+      setGuestUserId('')
+      setMessage(data.message||'Invitados actualizados.')
+    }catch(error){setMessage(error instanceof Error?error.message:'No fue posible gestionar el invitado.')}
+  }
+
   async function addProduct(pinned:boolean){
     if(!selected||!productId)return
     const response=await fetch('/api/live/products',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({roomId:selected.id,productId,position:products.length,pinned})})
@@ -160,15 +184,31 @@ export default function LivePage(){
           <div className="flex items-center justify-between gap-3"><div><p className="text-xs font-black uppercase tracking-[.16em] text-[var(--primary)]">Control Room</p><h2 className="mt-1 text-2xl font-black">{selected?.title||'Selecciona o crea un LIVE'}</h2></div>{selected&&<span className="rounded-full bg-[var(--primary)]/10 px-3 py-1.5 text-xs font-black uppercase text-[var(--primary)]">{selected.status}</span>}</div>
 
           <div className="mt-5 aspect-video overflow-hidden rounded-[1.5rem] bg-slate-950">
-            {selected?.playback_url?<video src={selected.playback_url} controls playsInline className="h-full w-full object-cover"/>:
+            {selected?.playback_url ? (
+              selectedPlayerUrl ? (
+                <iframe
+                  src={selectedPlayerUrl}
+                  title={`${selected.title} — reproductor Credi LIVE`}
+                  allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture; fullscreen"
+                  referrerPolicy="strict-origin-when-cross-origin"
+                  allowFullScreen
+                  className="h-full w-full border-0"
+                />
+              ) : (
+                <div role="status" className="flex h-full items-center justify-center p-6 text-center text-sm text-white">
+                  No se pudo validar la URL de reproducción de Cloudflare Stream.
+                </div>
+              )
+            ) : (
               <div className="relative flex h-full flex-col items-center justify-center p-8 text-center text-white">
                 {cameraOn&&<video ref={previewRef} muted playsInline className="absolute inset-0 h-full w-full object-cover"/>}
                 <div className="relative z-10 max-w-md rounded-2xl bg-slate-950/75 px-5 py-4 backdrop-blur-md">
                   <Video className="mx-auto size-9 text-cyan-300"/>
-                  <p className="mt-2 font-black">{mediaReady?'Preflight listo':'Transporte LIVE de producción'}</p>
-                  <p className="mt-1 text-xs leading-5 text-slate-300">{mediaReady?'Cámara y micrófono verificados.':'La entrega multipunto requiere conectar el adaptador de streaming de producción; Credi ya conserva la sala, eventos, productos, chat y replay.'}</p>
+                  <p className="mt-2 font-black">{mediaReady?'Preflight listo':'Cloudflare Stream · emisión LIVE'}</p>
+                  <p className="mt-1 text-xs leading-5 text-slate-300">{mediaReady?'Cámara y micrófono verificados.':'El escenario interactivo Twilio Video puede componerse y enviarse a Cloudflare Stream por WebRTC; OBS/RTMPS sigue disponible para fuentes externas. La emisión solo se considera activa cuando el proveedor confirma la conexión.'}</p>
                 </div>
-              </div>}
+              </div>
+            )}
           </div>
 
           {selected&&<div className="mt-5 flex flex-wrap gap-2">
@@ -178,11 +218,24 @@ export default function LivePage(){
           </div>}
 
           {selected&&<section className="mt-6 rounded-2xl border border-cyan-500/20 bg-cyan-500/[.04] p-4">
-            <div className="flex items-start justify-between gap-3"><div><p className="text-[10px] font-black uppercase tracking-[.14em] text-cyan-700">Transporte de producción</p><h3 className="mt-1 font-black">Elgato 4K Pro → OBS → Credi LIVE</h3><p className="mt-1 text-xs leading-5 text-[var(--muted)]">Credi genera el Live Input de Cloudflare. La capturadora Elgato entra a OBS, y OBS publica la señal por RTMPS.</p></div><KeyRound className="size-5 text-cyan-700"/></div>
+            <div className="flex items-start justify-between gap-3"><div><p className="text-[10px] font-black uppercase tracking-[.14em] text-cyan-700">Transporte de producción</p><h3 className="mt-1 font-black">Cloudflare Stream · emisión y replay</h3><p className="mt-1 text-xs leading-5 text-[var(--muted)]">Twilio Video reúne al anfitrión y a los invitados; Credi compone su vídeo y audio en una señal WebRTC para Cloudflare Stream, que la distribuye al público y gestiona el replay. OBS/RTMPS permanece disponible para fuentes externas. El estado LIVE depende de la confirmación real del proveedor.</p></div><KeyRound className="size-5 text-cyan-700"/></div>
             <div className="mt-4 flex flex-wrap gap-2"><button type="button" disabled={transportBusy} onClick={async()=>{setTransportBusy(true);try{const r=await fetch('/api/live/stream',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({roomId:selected.id,action:'provision'})});const d=await r.json();if(!r.ok)throw new Error(d.error||'No fue posible provisionar el transporte.');setTransport(d);setMessage('Transporte Cloudflare provisionado. Configura OBS con la URL y clave RTMPS mostradas.')}catch(e){setMessage(e instanceof Error?e.message:'No fue posible provisionar el transporte.')}finally{setTransportBusy(false)}}} className="rounded-xl bg-cyan-700 px-3 py-2 text-xs font-black text-white disabled:opacity-50">{transportBusy?'Provisionando…':'Provisionar transporte'}</button>{transport?.rtmps?.url&&<span className="inline-flex items-center gap-1 rounded-xl bg-emerald-500/10 px-3 py-2 text-[10px] font-black text-emerald-700"><Eye className="size-3"/> RTMPS listo</span>}</div>
             {transport?.rtmps&&<div className="mt-4 grid gap-3 sm:grid-cols-2"><label className="text-[10px] font-black uppercase tracking-wide text-[var(--muted)]">Servidor RTMPS<input readOnly value={transport.rtmps.url} className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs font-mono"/></label><label className="text-[10px] font-black uppercase tracking-wide text-[var(--muted)]">Stream Key<input readOnly value={transport.rtmps.streamKey} className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs font-mono"/></label></div>}
             <p className="mt-3 text-[10px] text-[var(--muted)]">La clave se obtiene del backend autenticado; no se almacena en Supabase ni se expone al cliente público. Si fue compartida accidentalmente, usa rotación de credenciales.</p>
           </section>}
+
+          {selected&&<div className="mt-5 space-y-4">
+            <CrediLiveTwilioStage roomId={selected.id} active={selected.status!=='ended'&&selected.status!=='cancelled'} broadcastUrl={transport?.webRTC?.url??null}/>
+            <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
+              <h3 className="font-black">Gestionar invitados del escenario</h3>
+              <p className="mt-1 text-xs leading-5 text-[var(--muted)]">Introduce el UUID de la cuenta Credi a la que quieres autorizar cámara y audio. Solo el anfitrión puede invitar o revocar acceso.</p>
+              <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                <input value={guestUserId} onChange={e=>setGuestUserId(e.target.value)} placeholder="UUID del usuario invitado" className="min-w-0 flex-1 rounded-xl border border-[var(--border-strong)] bg-[var(--surface)] px-3 py-2 text-sm"/>
+                <button type="button" onClick={()=>void manageGuest('invite')} disabled={!guestUserId.trim()} className="rounded-xl bg-[var(--primary)] px-4 py-2 text-xs font-black text-white disabled:opacity-50">Autorizar invitado</button>
+              </div>
+              {guestUserIds.length>0&&<div className="mt-3 space-y-2">{guestUserIds.map(id=><div key={id} className="flex items-center justify-between gap-3 rounded-lg bg-[var(--surface-secondary)] p-2"><span className="truncate font-mono text-xs">{id}</span><button type="button" onClick={()=>void manageGuest('remove',id)} className="text-xs font-bold text-rose-600">Revocar</button></div>)}</div>}
+            </section>
+          </div>}
 
           {selected&&<div className="mt-6 grid gap-3 sm:grid-cols-4">{([
             [Users,selected.viewer_count,'Espectadores'],
