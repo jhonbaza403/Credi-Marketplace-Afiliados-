@@ -58,7 +58,7 @@
       "producers": [
         {
           "binding": "CREDI_WEBHOOK_QUEUE",
-          "queue": "credi-webhook-events"
+          "queue": "credi-webhook-events-preview"
         }
       ]
     }
