@@ -87,6 +87,25 @@ export default function LivePage(){
 
   useEffect(()=>{void load().catch(e=>setMessage(e instanceof Error?e.message:'No fue posible cargar Credi LIVE.'))},[])
   useEffect(()=>{if(selected){void loadProducts(selected.id);void loadTransport(selected.id)}},[selected?.id])
+  useEffect(()=>{
+    if(!selected||selected.status!=='ended'||replaySync?.state!=='processing')return
+    let cancelled=false
+    const interval=window.setInterval(async()=>{
+      try{
+        const response=await fetch('/api/live/stream',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({roomId:selected.id,action:'sync-replay'})})
+        const data=await response.json().catch(()=>({}))
+        if(!response.ok||cancelled||!data.replaySync)return
+        setReplaySync(data.replaySync)
+        if(data.replaySync.state==='ready'){
+          setSelected(current=>current?{...current,replay_url:data.replaySync.playbackUrl}:current)
+          setMessage('Replay listo: Cloudflare terminó la grabación y Credi la vinculó a la sala.')
+        }
+      }catch{
+        // Keep the processing state; the next interval retries without affecting the live room.
+      }
+    },12000)
+    return ()=>{cancelled=true;window.clearInterval(interval)}
+  },[selected?.id,selected?.status,replaySync?.state])
 
   async function preflight(){
     if(cameraOn){
