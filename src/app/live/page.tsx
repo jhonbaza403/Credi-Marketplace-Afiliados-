@@ -40,7 +40,7 @@ export default function LivePage(){
     if(!response.ok)throw new Error(data.error||'No fue posible cargar Credi LIVE.')
     setRooms(data.rooms||[])
     setDiscovery(data.discovery||[])
-    setSelected((current)=>current||data.rooms?.[0]||null)
+    setSelected((current)=>data.rooms?.find((room:Room)=>room.id===current?.id)||current||data.rooms?.[0]||null)
   }
 
   async function loadTransport(roomId:string){
@@ -60,8 +60,9 @@ export default function LivePage(){
       if(!response.ok)throw new Error(data.error||'No fue posible operar el transporte.')
       if(action==='sync-replay'){
         setReplaySync(data.replaySync||null)
+        if(data.roomStatus==='ended')setSelected(current=>current?{...current,status:'ended'}:current)
         if(data.replaySync?.state==='ready'){
-          setSelected(current=>current?{...current,replay_url:data.replaySync.playbackUrl}:current)
+          setSelected(current=>current?{...current,status:'ended',replay_url:data.replaySync.playbackUrl}:current)
           setMessage('Replay sincronizado y disponible en la sala.')
         }else if(data.replaySync?.state==='processing'){
           setMessage('Cloudflare está procesando la grabación. Vuelve a sincronizar en unos instantes.')
@@ -87,6 +88,11 @@ export default function LivePage(){
 
   useEffect(()=>{void load().catch(e=>setMessage(e instanceof Error?e.message:'No fue posible cargar Credi LIVE.'))},[])
   useEffect(()=>{if(selected){void loadProducts(selected.id);void loadTransport(selected.id)}},[selected?.id])
+  useEffect(()=>{
+    if(!selected||selected.status!=='live')return
+    const interval=window.setInterval(()=>{void load().catch(error=>setMessage(error instanceof Error?error.message:'No fue posible actualizar el estado LIVE.'))},15000)
+    return ()=>window.clearInterval(interval)
+  },[selected?.id,selected?.status])
   useEffect(()=>{
     if(!selected||selected.status!=='ended'||replaySync?.state!=='processing')return
     let cancelled=false
@@ -235,7 +241,7 @@ export default function LivePage(){
 
             <div className="mt-4 flex flex-wrap gap-2">
               {!transport&&<button type="button" disabled={transportBusy} onClick={()=>void operateTransport('provision')} className="rounded-xl bg-cyan-700 px-3 py-2 text-xs font-black text-white disabled:opacity-50">{transportBusy?'Provisionando…':'Provisionar entrada LIVE'}</button>}
-              {transport&&<><button type="button" disabled={transportBusy} onClick={()=>void operateTransport('diagnostics')} className="rounded-xl border border-[var(--border)] px-3 py-2 text-xs font-black disabled:opacity-50">Diagnosticar conexión</button><button type="button" disabled={transportBusy} onClick={()=>void operateTransport('recover')} className="rounded-xl border border-[var(--border)] px-3 py-2 text-xs font-black disabled:opacity-50">Recuperar entrada</button><button type="button" disabled={transportBusy} onClick={()=>void operateTransport('sync-replay')} className="rounded-xl border border-[var(--border)] px-3 py-2 text-xs font-black disabled:opacity-50">Sincronizar replay</button></>}
+              {transport&&<><button type="button" disabled={transportBusy} onClick={()=>void operateTransport('diagnostics')} className="rounded-xl border border-[var(--border)] px-3 py-2 text-xs font-black disabled:opacity-50">Diagnosticar conexión</button><button type="button" disabled={transportBusy} onClick={()=>void operateTransport('recover')} className="rounded-xl border border-[var(--border)] px-3 py-2 text-xs font-black disabled:opacity-50">Recuperar entrada</button>{selected.status==='ended'&&<button type="button" disabled={transportBusy} onClick={()=>void operateTransport('sync-replay')} className="rounded-xl border border-[var(--border)] px-3 py-2 text-xs font-black disabled:opacity-50">Sincronizar replay</button>}</>}
             </div>
 
             {transport&&<div className="mt-4 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3">
