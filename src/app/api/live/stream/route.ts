@@ -102,7 +102,7 @@ export async function POST(request: Request) {
     if (!inputId) return errorResponse('La sala todavía no tiene transporte Cloudflare provisionado.', 409, 'LIVE_TRANSPORT_NOT_PROVISIONED')
 
     if (action === 'sync-replay') {
-      const replay = await syncLatestReplay(inputId, room.started_at)
+      const replay = await syncLatestReplay(inputId, room.started_at || String(metadata.cloudflare_input_created_at || ''))
       const checkedAt = new Date().toISOString()
       const nextMetadata = {
         ...metadata,
