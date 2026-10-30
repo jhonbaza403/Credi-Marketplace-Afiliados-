@@ -79,7 +79,7 @@ export async function POST(request: Request) {
     next.cloudflare_replay_sync_state = 'pending'
 
     try {
-      const replay = await syncLatestReplay(inputId, room.started_at || eventAt)
+      const replay = await syncLatestReplay(inputId, room.started_at || String(metadata.cloudflare_input_created_at || ''))
       next.cloudflare_replay_sync_state = replay.state
       next.cloudflare_replay_last_checked_at = new Date().toISOString()
       if (replay.videoId) next.cloudflare_replay_video_id = replay.videoId
