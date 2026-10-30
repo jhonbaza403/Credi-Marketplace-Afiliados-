@@ -6,7 +6,19 @@ import { syncLatestReplay } from '@/lib/cloudflare/stream'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-function verify(body: string, header: string | null, secret: string) {
+function safeEqual(expected: string, actual: string) {
+  const expectedBytes = Buffer.from(expected, 'utf8')
+  const actualBytes = Buffer.from(actual, 'utf8')
+  return expectedBytes.length === actualBytes.length && crypto.timingSafeEqual(expectedBytes, actualBytes)
+}
+
+function verify(body: string, request: Request, secret: string) {
+  // Cloudflare Notifications generic destinations use cf-webhook-auth.
+  const notificationSecret = request.headers.get('cf-webhook-auth')
+  if (notificationSecret) return safeEqual(secret, notificationSecret)
+
+  // Standard Stream video webhooks use a timestamped HMAC signature.
+  const header = request.headers.get('Webhook-Signature')
   if (!header) return false
   const values = Object.fromEntries(header.split(',').map((part) => {
     const [key, value] = part.split('=', 2)
@@ -17,9 +29,7 @@ function verify(body: string, header: string | null, secret: string) {
   if (!timestamp || !signature || Math.abs(Date.now() / 1000 - timestamp) > 300) return false
 
   const expected = crypto.createHmac('sha256', secret).update(`${timestamp}.${body}`, 'utf8').digest('hex')
-  const expectedBytes = Buffer.from(expected, 'hex')
-  const actualBytes = Buffer.from(signature, 'hex')
-  return expectedBytes.length === actualBytes.length && crypto.timingSafeEqual(expectedBytes, actualBytes)
+  return safeEqual(expected, signature)
 }
 
 export async function POST(request: Request) {
@@ -27,7 +37,7 @@ export async function POST(request: Request) {
   if (!secret) return NextResponse.json({ success: false, error: 'Webhook no configurado.' }, { status: 503 })
 
   const body = await request.text()
-  if (!verify(body, request.headers.get('Webhook-Signature'), secret)) {
+  if (!verify(body, request, secret)) {
     return NextResponse.json({ success: false, error: 'Firma inválida.' }, { status: 403 })
   }
 
