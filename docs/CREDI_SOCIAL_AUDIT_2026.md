@@ -44,3 +44,32 @@ Se añade una barra de accesos rápidos para pantallas pequeñas, disponible baj
 - Hay que realizar una publicación real autenticada de cada tipo con un usuario de prueba para confirmar las inserciones y la lectura de contenido aprobado.
 - La inspección estática no prueba el estado efectivo de buckets, políticas activas, moderación ni proveedores externos en producción.
 - No se ejecutaron migraciones, no se modificaron secretos, no se desplegó ni se fusionó la rama.
+
+
+## Continuación de auditoría de formularios — 30 de octubre de 2026
+
+### Duplicación confirmada y retirada
+- La ruta /historias ahora comparte el compositor Credi Studio con /publish; se eliminó la implementación cliente que repetía autenticación, carga multimedia y envío a la misma API.
+- Se eliminó src/features/marketplace/components/CreateProductForm.tsx después de comprobar que la búsqueda de referencias del repositorio solo encontraba su definición. /products/create ya utiliza ProductPublisher.
+- No se eliminaron formularios B2B o Afiliados que siguen conectados a páginas o paneles.
+
+### Experiencia del compositor
+- Vista previa dinámica para publicación, historia, reel y anuncio.
+- Indicador de preparación antes de enviar y contadores de caracteres.
+- La acción informa que el contenido se envía a revisión; no promete publicación pública inmediata.
+- El cargador mixto muestra una acción que corresponde realmente a fotos o vídeos.
+
+### Formularios comerciales
+- ProductPublisher incorpora una ficha de vista previa que refleja portada, vídeo, título, descripción, precio, inventario y canales activos.
+- El formulario B2B valida en pantalla los precios, pedido mínimo, stock, país ISO-2 y longitud de la descripción antes de enviar al servidor.
+- El formulario compacto de inventario B2B se actualizó con campos accesibles y validación de nombre, precio y stock.
+- AffiliateApplicationForm conserva su proceso de solicitud independiente y ahora utiliza contraste de texto coherente con el tema de la página.
+
+### Estado verificado del commit 00679fa
+- ESLint, TypeScript, pruebas unitarias y build: aprobados.
+- Playwright: 62 aprobadas, 9 omitidas, ninguna fallida.
+- CodeQL, Gitleaks y auditorías de seguridad/dependencias: aprobadas.
+- El flujo de E2E que exige almacenamiento autenticado, identificadores de operación/sala y cuentas externas sigue necesitando credenciales y datos de prueba protegidos.
+- Durante E2E se observaron errores de conexión del catálogo (TypeError: fetch failed en database.getProducts); requieren revisión de conectividad Supabase y no se consideran resueltos por el build.
+
+No se ejecutaron migraciones, no se cambiaron secretos, no se escribió en la base de producción ni se fusionó la PR.

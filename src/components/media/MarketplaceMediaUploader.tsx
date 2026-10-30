@@ -70,6 +70,7 @@ export default function MarketplaceMediaUploader({
       : 'image/jpeg,image/png,image/webp,image/gif'
 
   const label = kind === 'video' ? 'vídeo' : kind === 'mixed' ? 'imágenes y vídeos' : 'imágenes'
+  const selectionLabel = kind === 'video' ? 'Seleccionar vídeo desde mi dispositivo' : kind === 'mixed' ? 'Seleccionar fotos o vídeos' : 'Seleccionar imágenes desde mi dispositivo'
   const Icon = kind === 'video' ? Video : kind === 'mixed' ? FileUp : ImagePlus
 
   return (
@@ -119,7 +120,7 @@ export default function MarketplaceMediaUploader({
             className="mt-5 inline-flex w-full max-w-sm items-center justify-center gap-2 rounded-2xl bg-cyan-300 px-5 py-3.5 text-sm font-black text-slate-950 shadow-[0_14px_35px_rgba(34,211,238,.16)] transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <FileUp className="size-5" aria-hidden="true" />
-            {kind === 'video' ? 'Seleccionar vídeo desde mi dispositivo' : 'Seleccionar imágenes desde mi dispositivo'}
+            {selectionLabel}
           </button>
 
           <div className="mt-4 flex flex-wrap items-center justify-center gap-3 text-[11px] text-slate-400">
@@ -129,7 +130,7 @@ export default function MarketplaceMediaUploader({
           </div>
 
           <p className="mt-3 text-[11px] text-slate-500">
-            También puedes arrastrar y soltar {kind === 'video' ? 'el vídeo' : 'las imágenes'} desde una computadora.
+            También puedes arrastrar y soltar {kind === 'video' ? 'el vídeo' : kind === 'mixed' ? 'fotos y vídeos' : 'las imágenes'} desde una computadora.
           </p>
 
           {busy && (

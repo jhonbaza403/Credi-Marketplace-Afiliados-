@@ -66,5 +66,5 @@ export default function AffiliateApplicationForm() {
 }
 
 function Field({ label, value, onChange, type = "text", required = false }: { label: string; value: string; onChange: (value: string) => void; type?: string; required?: boolean }) {
-  return <label className="text-sm font-bold text-slate-100">{label}<input required={required} type={type} value={value} onChange={(e) => onChange(e.target.value)} maxLength={240} className="mt-2 w-full rounded-2xl border border-[var(--border-strong)] bg-[var(--surface)] px-4 py-3 text-[var(--foreground)] outline-none focus:border-[var(--primary)]" /></label>
+  return <label className="text-sm font-bold text-[var(--foreground)]">{label}<input required={required} type={type} value={value} onChange={(e) => onChange(e.target.value)} maxLength={240} className="mt-2 w-full rounded-2xl border border-[var(--border-strong)] bg-[var(--surface)] px-4 py-3 text-[var(--foreground)] outline-none focus:border-[var(--primary)]" /></label>
 }

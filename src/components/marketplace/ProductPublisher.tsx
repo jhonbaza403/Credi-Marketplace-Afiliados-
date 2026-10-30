@@ -172,6 +172,40 @@ export default function ProductPublisher() {
           </section>
 
           <div className="space-y-6">
+            <section className="marketplace-card overflow-hidden rounded-[2rem] border border-[var(--border)] bg-[var(--surface)] shadow-xl">
+              <div className="border-b border-[var(--border)] px-5 py-4">
+                <p className="text-[10px] font-black uppercase tracking-[.18em] text-[var(--primary)]">Vista previa en vivo</p>
+                <h2 className="mt-1 text-lg font-black text-[var(--foreground)]">Así se verá tu oferta</h2>
+                <p className="mt-1 text-xs text-[var(--muted)]">La ficha se actualiza mientras completas el formulario.</p>
+              </div>
+              <article className="p-4">
+                <div className="overflow-hidden rounded-2xl bg-[var(--surface-secondary)]">
+                  {images[0] ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={images[0].url} alt="Portada de la oferta" className="aspect-[16/10] w-full object-cover" />
+                  ) : (
+                    <div className="flex aspect-[16/10] flex-col items-center justify-center gap-2 text-[var(--muted)]">
+                      <ImagePlus className="size-8"/>
+                      <span className="text-xs font-semibold">La imagen principal aparecerá aquí</span>
+                    </div>
+                  )}
+                </div>
+                {videos[0] && <div className="mt-3 overflow-hidden rounded-xl bg-slate-950"><video src={videos[0].url} controls playsInline preload="metadata" className="aspect-video w-full object-cover"/></div>}
+                <div className="mt-4 flex flex-wrap items-center gap-2">
+                  <span className="rounded-full bg-[var(--primary)]/10 px-2.5 py-1 text-[10px] font-black uppercase text-[var(--primary)]">{offeringType === "service" ? "Servicio" : "Producto"}</span>
+                  <span className="rounded-full bg-[var(--surface-secondary)] px-2.5 py-1 text-[10px] font-bold text-[var(--muted)]">{category}</span>
+                </div>
+                <h3 className="mt-3 text-xl font-black text-[var(--foreground)]">{title.trim() || "Nombre de tu oferta"}</h3>
+                <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-[var(--muted)]">{description.trim() || "Añade una descripción clara para ayudar a los compradores a decidir."}</p>
+                <div className="mt-4 flex items-end justify-between gap-3 border-t border-[var(--border)] pt-4">
+                  <div><p className="text-[10px] font-bold uppercase tracking-wide text-[var(--muted)]">Precio</p><p className="mt-1 text-2xl font-black text-[var(--foreground)]">{price.trim() || "Por definir"}</p></div>
+                  <div className="text-right"><p className="text-[10px] font-bold uppercase tracking-wide text-[var(--muted)]">{offeringType === "service" ? "Disponibilidad" : "Stock"}</p><p className="mt-1 text-sm font-black text-[var(--foreground)]">{stock || "—"}</p></div>
+                </div>
+                <div className="mt-4 flex flex-wrap gap-1.5">
+                  {CHANNELS.filter((channel) => channels[channel.key]).map((channel) => <span key={channel.key} className="rounded-full border border-[var(--border)] px-2.5 py-1 text-[10px] font-semibold text-[var(--muted)]">{channel.label}</span>)}
+                </div>
+              </article>
+            </section>
             <ProductPublishCopilot draft={draft} onApply={applySuggestion} />
             <section className="marketplace-card rounded-[2rem] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-xl sm:p-7"><p className="text-xs font-black uppercase tracking-[.18em] text-[var(--primary)]">04 · Operación</p><h2 className="mt-1 text-xl font-black text-[var(--foreground)]">Una ficha, un activo comercial</h2><p className="mt-2 text-sm leading-6 text-[var(--muted)]">La oferta alimenta inventario y publicación multicanal. Desde Inventario y Gestión Empresarial podrás revisar existencias, canales y operaciones.</p><div className="mt-5 grid gap-3">{[["Inventario","/inventario","Existencias y disponibilidad"],["Gestión Empresarial","/gestion-empresarial","Operaciones y rendimiento"],["Compras mayoristas","/compras-mayoristas","Abastecimiento B2B"],["Credi Chat","/chat","Negociación con contexto"]].map(([label, href, desc]) => <a key={href} href={href} className="rounded-2xl border border-[var(--border)] bg-[var(--surface-secondary)] p-4 transition hover:border-[var(--border-strong)]"><p className="text-sm font-black text-[var(--foreground)]">{label}</p><p className="mt-1 text-[11px] leading-5 text-[var(--muted)]">{desc}</p></a>)}</div></section>
           </div>

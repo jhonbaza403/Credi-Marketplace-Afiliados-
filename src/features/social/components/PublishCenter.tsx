@@ -2,7 +2,7 @@
 
 import { FormEvent, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { AlertCircle, CheckCircle2, ImagePlus, Megaphone, Play, Radio, Send, Sparkles } from "lucide-react";
+import { AlertCircle, Camera, CheckCircle2, Eye, ImagePlus, Megaphone, Play, Radio, Send, Sparkles, Users } from "lucide-react";
 import MarketplaceMediaUploader from "@/components/media/MarketplaceMediaUploader";
 import type { UploadedMarketplaceMedia } from "@/lib/storage/marketplace-media";
 import { normalizeUploadedMedia } from "@/lib/social/publishing";
@@ -38,8 +38,8 @@ const FIELD_LABELS: Record<string, string> = {
   operationContext: "Contexto comercial",
 };
 
-export default function PublishCenter() {
-  const [type, setType] = useState<ContentType>("post");
+export default function PublishCenter({ initialType = "post" }: { initialType?: ContentType }) {
+  const [type, setType] = useState<ContentType>(initialType);
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [media, setMedia] = useState<UploadedMarketplaceMedia[]>([]);
@@ -55,7 +55,7 @@ export default function PublishCenter() {
   const productId = searchParams.get("product_id") || searchParams.get("product");
   const affiliateRef = searchParams.get("ref");
   const operationSource = searchParams.get("source") || "publish";
-  const requiresDisclosure = type === "ad" || Boolean(productId || affiliateRef);
+  const requiresDisclosure = type === "ad" || Boolean(affiliateRef);
 
   const currentTab = useMemo(() => tabs.find((tab) => tab.value === type) ?? tabs[0], [type]);
 
@@ -157,6 +157,16 @@ export default function PublishCenter() {
 
   const uploaderKind = type === "reel" ? "video" : "mixed";
   const maxFiles = type === "post" ? 10 : 1;
+  const firstMedia = media[0] ?? null;
+  const previewShape = type === "story" ? "aspect-[4/5]" : type === "reel" ? "aspect-[9/14] max-h-[430px]" : "aspect-video";
+  const previewTitle = title.trim() || (type === "ad" ? "Tu campaña comercial" : type === "reel" ? "Tu nuevo reel" : type === "story" ? "Tu historia" : "Tu próxima publicación");
+  const previewBody = body.trim() || "El texto que escribas aparecerá aquí. Puedes combinarlo con imágenes o vídeos para presentar tu contenido.";
+  const readiness = [
+    { label: type === "reel" ? "Vídeo vertical añadido" : "Contenido preparado", done: type === "reel" ? media.some((item) => item.kind === "video") : Boolean(body.trim() || media.length) },
+    { label: type === "ad" ? "Título de campaña" : "Mensaje o multimedia", done: type === "ad" ? Boolean(title.trim()) : Boolean(body.trim() || media.length) },
+    { label: "Privacidad revisada", done: type === "ad" || Boolean(visibility) },
+    { label: "Declaración comercial", done: !requiresDisclosure || disclosure },
+  ];
 
   return (
     <section className="overflow-hidden rounded-[2rem] border border-[var(--border)] bg-[var(--surface)]/95 p-4 text-[var(--foreground)] shadow-2xl backdrop-blur-xl sm:p-7 lg:p-8">
@@ -166,10 +176,10 @@ export default function PublishCenter() {
             <Sparkles className="size-6" aria-hidden="true" />
           </div>
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-200">Credi Studio</p>
-            <h1 className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">Crea y comparte en un solo paso</h1>
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-200">Credi Studio · Social Commerce</p>
+            <h1 className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">Publica con estilo. Conecta con clientes.</h1>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-200">
-              Publicaciones, historias, reels y campañas desde el mismo espacio. Elige el formato, añade tu contenido y revisa el resultado antes de enviarlo.
+              Un compositor para tu comunidad y tu negocio. Crea contenido, presenta productos y dirige conversaciones comerciales desde Credi.
             </p>
           </div>
         </div>
@@ -213,7 +223,8 @@ export default function PublishCenter() {
         })}
       </div>
 
-      <form onSubmit={submit} className="space-y-5" aria-label={"Crear " + currentTab.label}>
+      <form onSubmit={submit} className="grid items-start gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(280px,.8fr)]" aria-label={"Crear " + currentTab.label}>
+        <div className="space-y-5">
         {(type === "ad") && (
           <label className="block text-sm font-semibold">
             Título de la campaña
@@ -237,6 +248,7 @@ export default function PublishCenter() {
               className="mt-2 w-full rounded-2xl border border-[var(--border-strong)] bg-[var(--surface)] px-4 py-3 outline-none focus:border-[var(--primary)] focus:ring-4 focus:ring-[var(--focus-ring)]"
               placeholder="Ponle un título a tu contenido"
             />
+            <span className="mt-1 block text-right text-[11px] text-[var(--muted)]">{title.length}/180</span>
           </label>
         )}
 
@@ -249,8 +261,9 @@ export default function PublishCenter() {
             rows={type === "story" ? 4 : 5}
             maxLength={5000}
             className="mt-2 w-full rounded-2xl border border-[var(--border-strong)] bg-[var(--surface)] px-4 py-3 outline-none focus:border-[var(--primary)] focus:ring-4 focus:ring-[var(--focus-ring)]"
-            placeholder={type === "story" ? "Escribe un mensaje para tu historia…" : "Comparte una idea, novedad o descripción…"}
+            placeholder={type === "story" ? "Escribe un mensaje para tu historia…" : type === "reel" ? "Cuenta qué verá la gente en el vídeo…" : "Comparte una idea, novedad o descripción…"}
           />
+          <span className="mt-1 block text-right text-[11px] text-[var(--muted)]">{body.length.toLocaleString("es-ES")}/5.000 caracteres</span>
         </label>
 
         <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-secondary)]/65 p-4 sm:p-5">
@@ -337,9 +350,64 @@ export default function PublishCenter() {
           aria-busy={saving}
           className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 px-5 py-3.5 text-sm font-black text-white shadow-lg shadow-blue-950/15 transition hover:brightness-105 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-500 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {saving ? "Enviando…" : type === "ad" ? "Enviar campaña a revisión" : "Compartir " + currentTab.label.toLowerCase()}
+          {saving ? "Enviando…" : type === "ad" ? "Enviar campaña a revisión" : "Enviar " + currentTab.label.toLowerCase() + " a revisión"}
         </button>
+
+        </div>
+        <aside className="space-y-4 xl:sticky xl:top-32 xl:self-start">
+          <section className="overflow-hidden rounded-3xl border border-[var(--border)] bg-[var(--surface)] shadow-lg">
+            <div className="flex items-center justify-between gap-3 border-b border-[var(--border)] px-4 py-3">
+              <span className="inline-flex items-center gap-2 text-sm font-black"><Eye className="size-4 text-[var(--primary)]"/> Vista previa</span>
+              <span className="rounded-full border border-[var(--border)] bg-[var(--surface-secondary)] px-2.5 py-1 text-[10px] font-bold text-[var(--muted)]">Borrador visual</span>
+            </div>
+            <article className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="grid size-10 place-items-center rounded-full bg-gradient-to-br from-cyan-400 to-blue-600 text-sm font-black text-white">C</div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-black">Tu perfil en Credi</p>
+                  <p className="text-[11px] text-[var(--muted)]">{type === "ad" ? "Campaña · revisión pendiente" : visibility === "public" ? "Público · comunidad Credi" : "Privado · solo tú"}</p>
+                </div>
+                <span className="text-[10px] font-black uppercase tracking-wide text-[var(--primary)]">{currentTab.label}</span>
+              </div>
+              <div className={"mt-4 overflow-hidden rounded-2xl bg-[var(--surface-secondary)] " + previewShape}>
+                {firstMedia ? firstMedia.kind === "video" ? (
+                  <video src={firstMedia.url} controls playsInline preload="metadata" className="h-full w-full object-cover" aria-label="Vista previa del vídeo"/>
+                ) : (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={firstMedia.url} alt="Vista previa de la publicación" className="h-full w-full object-cover"/>
+                ) : (
+                  <div className="flex h-full flex-col items-center justify-center gap-3 bg-[radial-gradient(circle_at_20%_20%,rgba(34,211,238,.14),transparent_45%),var(--surface-secondary)] p-6 text-center">
+                    <div className="grid size-14 place-items-center rounded-2xl bg-[var(--primary)]/10 text-[var(--primary)]"><Camera className="size-7"/></div>
+                    <p className="text-sm font-bold text-[var(--foreground)]">Tu contenido aparecerá aquí</p>
+                    <p className="max-w-xs text-xs leading-5 text-[var(--muted)]">Añade una foto, un vídeo o escribe tu mensaje para ver cómo se presentará.</p>
+                  </div>
+                )}
+              </div>
+              <div className="pt-4">
+                <h3 className="text-base font-black">{previewTitle}</h3>
+                <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-[var(--muted)]">{previewBody}</p>
+                {type === "ad" && destinationUrl.trim() && <p className="mt-3 truncate text-xs font-bold text-[var(--primary)]">{destinationUrl.trim()}</p>}
+              </div>
+              <div className="mt-4 flex items-center justify-between border-t border-[var(--border)] pt-3 text-[11px] font-semibold text-[var(--muted)]">
+                <span className="inline-flex items-center gap-1.5"><Users className="size-3.5"/> Comunidad</span>
+                <span>{media.length} archivo{media.length === 1 ? "" : "s"}</span>
+              </div>
+            </article>
+          </section>
+          <section className="rounded-3xl border border-[var(--border)] bg-[var(--surface-secondary)]/70 p-4">
+            <p className="text-sm font-black">Antes de enviar</p>
+            <div className="mt-3 space-y-2.5">
+              {readiness.map((item) => (
+                <div key={item.label} className="flex items-center gap-2.5 text-xs">
+                  {item.done ? <CheckCircle2 className="size-4 shrink-0 text-emerald-600"/> : <span className="size-4 shrink-0 rounded-full border border-[var(--border-strong)]"/>}
+                  <span className={item.done ? "font-semibold text-[var(--foreground)]" : "text-[var(--muted)]"}>{item.label}</span>
+                </div>
+              ))}
+            </div>
+            <p className="mt-4 border-t border-[var(--border)] pt-3 text-[11px] leading-5 text-[var(--muted)]">La vista previa es orientativa. La plataforma confirma el estado de revisión después de guardar.</p>
+          </section>
+        </aside>
       </form>
-    </section>
+      </section>
   );
 }
