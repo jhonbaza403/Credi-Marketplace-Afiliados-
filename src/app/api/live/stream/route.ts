@@ -117,6 +117,7 @@ export async function POST(request: Request) {
 
       return NextResponse.json({
         success: true,
+        roomStatus: room.status,
         replaySync: {
           state: replay.state,
           videoId: replay.videoId,
