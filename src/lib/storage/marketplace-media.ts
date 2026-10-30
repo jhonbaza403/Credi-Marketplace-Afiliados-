@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/client'
+import { resolveMarketplaceMediaKind } from '@/lib/social/publishing'
 
 export const MARKETPLACE_MEDIA_BUCKET = 'marketplace-media'
 
@@ -21,8 +22,7 @@ const MAX_VIDEO_SIZE = 500 * 1024 * 1024
 const MAX_AUDIO_SIZE = 500 * 1024 * 1024
 
 export function validateMarketplaceMedia(file: File, kind?: MarketplaceMediaKind) {
-  const inferredKind = file.type.startsWith('video/') ? 'video' : file.type.startsWith('audio/') ? 'audio' : 'image'
-  const validKind = kind === 'mixed' ? inferredKind : (kind ?? inferredKind)
+  const validKind = resolveMarketplaceMediaKind(file.type, kind)
   const allowed = validKind === 'video' ? VIDEO_TYPES : validKind === 'audio' ? AUDIO_TYPES : IMAGE_TYPES
   const maxSize = validKind === 'video' ? MAX_VIDEO_SIZE : validKind === 'audio' ? MAX_AUDIO_SIZE : MAX_IMAGE_SIZE
 
@@ -44,7 +44,8 @@ export function validateMarketplaceMedia(file: File, kind?: MarketplaceMediaKind
 }
 
 export async function uploadMarketplaceMedia(file: File, kind?: MarketplaceMediaKind) {
-  const resolvedKind = kind ?? (file.type.startsWith('video/') ? 'video' : file.type.startsWith('audio/') ? 'audio' : 'image')
+  // "mixed" describes the picker, not the uploaded asset. Preserve the actual MIME type.
+  const resolvedKind = resolveMarketplaceMediaKind(file.type, kind)
   validateMarketplaceMedia(file, resolvedKind)
 
   const supabase = createClient()

@@ -3,6 +3,7 @@ import "./globals.css";
 import "@/styles/premium-form-surfaces.css";
 import "@/styles/readability.css";
 import Header from "@/components/layout/Header";
+import CrediQuickAccess from "@/components/layout/CrediQuickAccess";
 import Footer from "@/components/layout/Footer";
 import MarketplaceAtmosphere from "@/components/layout/MarketplaceAtmosphere";
 import CrediCallManager from "@/components/chat/CrediCallManager";
@@ -50,6 +51,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
               <CartProvider>
                 <div className="relative z-10 flex min-h-screen flex-col">
                   <Header />
+                  <CrediQuickAccess />
                   <main className="app-content-layer flex-1">
                     <div className="app-readable-surface min-h-full">{children}</div>
                   </main>
