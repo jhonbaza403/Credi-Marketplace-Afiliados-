@@ -31,6 +31,7 @@ export default function LivePage(){
   const [ingestProtocol,setIngestProtocol]=useState<'rtmps'|'srt'>('rtmps')
   const [showSecrets,setShowSecrets]=useState(false)
   const [replaySync,setReplaySync]=useState<ReplaySync|null>(null)
+  const playbackPreviewUrl=selected?.status==='ended'?(selected.replay_url||selected.playback_url):selected?.playback_url
 
   async function load(){
     const response=await fetch('/api/live',{cache:'no-store'})
@@ -193,7 +194,7 @@ export default function LivePage(){
           <div className="flex items-center justify-between gap-3"><div><p className="text-xs font-black uppercase tracking-[.16em] text-[var(--primary)]">Control Room</p><h2 className="mt-1 text-2xl font-black">{selected?.title||'Selecciona o crea un LIVE'}</h2></div>{selected&&<span className="rounded-full bg-[var(--primary)]/10 px-3 py-1.5 text-xs font-black uppercase text-[var(--primary)]">{selected.status}</span>}</div>
 
           <div className="mx-auto mt-5 aspect-[9/16] max-h-[70vh] max-w-[405px] overflow-hidden rounded-[1.5rem] bg-slate-950">
-            {(selected?.status==='ended'&&selected.replay_url)||selected?.playback_url?<video src={selected.status==='ended'&&selected.replay_url?selected.replay_url:selected?.playback_url||undefined} controls playsInline className="h-full w-full object-cover"/>:
+            {playbackPreviewUrl?<video src={playbackPreviewUrl} controls playsInline className="h-full w-full object-cover"/>:
               <div className="relative flex h-full flex-col items-center justify-center p-8 text-center text-white">
                 {cameraOn&&<video ref={previewRef} muted playsInline className="absolute inset-0 h-full w-full object-cover"/>}
                 <div className="relative z-10 max-w-md rounded-2xl bg-slate-950/75 px-5 py-4 backdrop-blur-md">
