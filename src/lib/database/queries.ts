@@ -1,8 +1,21 @@
 import "server-only";
 
 import { getDatabaseServerClient } from "./server";
+import { isPlaywrightSupabasePlaceholder } from "./test-runtime";
 
 export async function getProducts(limit = 20) {
+  // Playwright starts Next with a deliberately fake local Supabase endpoint.
+  // Do not make server-side requests to a Supabase service that the E2E job
+  // does not start. Real local/preview/production credentials still query normally.
+  if (
+    isPlaywrightSupabasePlaceholder(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
+    )
+  ) {
+    return [];
+  }
+
   const supabase = await getDatabaseServerClient();
 
   const { data, error } = await supabase
