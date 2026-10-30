@@ -27,12 +27,12 @@ La ruta receptora es:
 En Cloudflare Dashboard:
 
 1. Abrir **Notifications → Destinations → Webhooks** y crear un destino con la URL anterior.
-2. Guardar el secreto de firma de ese destino en Vercel como `CLOUDFLARE_STREAM_WEBHOOK_SECRET`.
+2. Define un secreto para el destino genérico y guarda exactamente ese valor en Vercel como `CLOUDFLARE_STREAM_WEBHOOK_SECRET`. Cloudflare lo enviará en la cabecera `cf-webhook-auth`.
 3. En **Notifications → All Notifications**, crear una notificación de producto Stream y asociar el destino.
 4. Activar las notificaciones `live_input.connected` y `live_input.disconnected`; Cloudflare también puede emitir `live_input.errored` cuando detecta una incidencia. Aplicarla a todos los Live Inputs de Credi o filtrar los IDs que se quieran observar.
 5. Ejecutar **Save and Test** y verificar una respuesta satisfactoria del endpoint.
 
-La aplicación verifica la firma del webhook y actualiza la sala usando el cliente administrativo server-only de Supabase. La desconexión inicia la primera búsqueda del replay. Si el vídeo sigue procesándose, el Studio reintenta la sincronización cada 12 segundos mientras permanece abierto; también se puede repetir manualmente con **Sincronizar replay**.
+La aplicación valida `cf-webhook-auth` en las notificaciones de Cloudflare y conserva compatibilidad HMAC `Webhook-Signature` para webhooks estándar de Stream; después actualiza la sala usando el cliente administrativo server-only de Supabase. La desconexión inicia la primera búsqueda del replay. Si el vídeo sigue procesándose, el Studio reintenta la sincronización cada 12 segundos mientras permanece abierto; también se puede repetir manualmente con **Sincronizar replay**.
 
 ## Protocolos y perfil recomendado
 
