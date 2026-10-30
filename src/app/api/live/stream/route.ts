@@ -153,10 +153,15 @@ export async function POST(request: Request) {
 
     if (action === 'recover') {
       const current = await getLiveInput(inputId)
-      const input = current.enabled ? current : await setLiveInputEnabled(inputId, true)
+      const providerRequiresRestart = ['ttl_exceeded', 'failed_to_connect', 'failed_to_reconnect'].includes(current.status || '')
+      let input = current
+      if (!current.enabled || providerRequiresRestart) {
+        if (current.enabled) await setLiveInputEnabled(inputId, false)
+        input = await setLiveInputEnabled(inputId, true)
+      }
       return NextResponse.json({
         success: true,
-        recovered: !current.enabled,
+        recovered: !current.enabled || providerRequiresRestart,
         ...credentials(input),
         diagnostics: {
           state: classifyLiveInputStatus(input.status),
