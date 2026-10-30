@@ -29,10 +29,10 @@ En Cloudflare Dashboard:
 1. Abrir **Notifications → Destinations → Webhooks** y crear un destino con la URL anterior.
 2. Guardar el secreto de firma de ese destino en Vercel como `CLOUDFLARE_STREAM_WEBHOOK_SECRET`.
 3. En **Notifications → All Notifications**, crear una notificación de producto Stream y asociar el destino.
-4. Activar los eventos `live_input.connected`, `live_input.disconnected` y `live_input.errored`. Aplicarla a todos los Live Inputs de Credi o filtrar los IDs que se quieran observar.
+4. Activar las notificaciones `live_input.connected` y `live_input.disconnected`; Cloudflare también puede emitir `live_input.errored` cuando detecta una incidencia. Aplicarla a todos los Live Inputs de Credi o filtrar los IDs que se quieran observar.
 5. Ejecutar **Save and Test** y verificar una respuesta satisfactoria del endpoint.
 
-La aplicación verifica la firma del webhook y actualiza la sala; la desconexión inicia la primera búsqueda del replay. El botón **Sincronizar replay** permite repetir la consulta cuando Cloudflare termina de procesar la grabación.
+La aplicación verifica la firma del webhook y actualiza la sala usando el cliente administrativo server-only de Supabase. La desconexión inicia la primera búsqueda del replay. Si el vídeo sigue procesándose, el Studio reintenta la sincronización cada 12 segundos mientras permanece abierto; también se puede repetir manualmente con **Sincronizar replay**.
 
 ## Protocolos y perfil recomendado
 
@@ -53,7 +53,7 @@ La aplicación verifica la firma del webhook y actualiza la sala; la desconexió
 
 Objetivo inicial: vídeo vertical 1080 × 1920, 30 FPS, H.264 y audio AAC. La resolución y el bitrate efectivos dependen del codificador, del dispositivo de captura y de la conexión; la interfaz no afirma haberlos medido ni forzado.
 
-WHIP/WHEP no se usa en la entrada estándar de replay: Cloudflare documenta que esa modalidad no ofrece grabación ni playback HLS/DASH en conjunto con este flujo.
+Cloudflare también ofrece WebRTC mediante WHIP/WHEP para emisiones de latencia subsegundo. Esta primera integración expone RTMPS/SRT como perfiles de codificador y conserva HLS/DASH y replay; el modo WebRTC queda como ampliación separada para validar su ciclo completo de publicación, reproducción y grabación antes de habilitarlo en el Studio.
 
 ## Diagnóstico y recuperación
 
