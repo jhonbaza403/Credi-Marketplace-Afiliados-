@@ -126,7 +126,7 @@ export async function syncLatestReplay(inputId: string, startedAt?: string | nul
       const created = Date.parse(video.created)
       return Number.isFinite(created) && created >= start - 120_000
     })
-    .sort((a, b) => Date.parse(b.created || '') - Date.parse(a.created || ''))
+    .sort((a, b) => (Date.parse(b.created || '') || 0) - (Date.parse(a.created || '') || 0))
 
   const ready = currentBroadcast.find((video) =>
     video.readyToStream === true && video.status?.state === 'ready' && Boolean(video.playback?.hls),
