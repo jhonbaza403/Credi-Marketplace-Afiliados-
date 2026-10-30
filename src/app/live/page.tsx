@@ -8,6 +8,8 @@ import { CrediLiveChat } from '@/components/live/CrediLiveChat'
 
 type Room={id:string;host_user_id:string;title:string;status:string;viewer_count:number;started_at:string|null;ended_at?:string|null;description:string;cover_media:unknown;scheduled_at:string|null;replay_url:string|null;playback_url:string|null;stream_provider:string;viewer_peak:number;likes_count:number;shares_count:number;settings:Record<string,unknown>}
 type Product={room_id:string;product_id:string;position:number;is_pinned:boolean;pinned_at:string|null;products?:{id:string;title:string;price:number;image_url:string|null}|null}
+type LiveTransport={inputId:string;rtmps:{url:string;streamKey:string}|null;srt:{url:string;streamId:string;passphrase:string}|null;playback:{hls?:string;dash?:string}|null;status?:string|null;statusCategory?:string;enabled?:boolean;diagnostics?:{state:string;status:string;enabled:boolean;ingest:{rtmps:boolean;srt:boolean};playback:{hls:boolean;dash:boolean};recording:string;checkedAt:string}}
+type ReplaySync={state:'ready'|'processing'|'not_found';videoId:string|null;playbackUrl:string|null;dashUrl:string|null;checkedAt:string}
 
 export default function LivePage(){
   const [rooms,setRooms]=useState<Room[]>([])
@@ -24,8 +26,10 @@ export default function LivePage(){
   const [mediaReady,setMediaReady]=useState(false)
   const previewRef=useRef<HTMLVideoElement>(null)
   const streamRef=useRef<MediaStream|null>(null)
-  const [transport,setTransport]=useState<{inputId:string;rtmps:{url:string;streamKey:string}|null;playback:{hls?:string;dash?:string}|null;webRTC:{url:string}|null;status?:string|null;enabled?:boolean}|null>(null)
+  const [transport,setTransport]=useState<LiveTransport|null>(null)
   const [transportBusy,setTransportBusy]=useState(false)
+  const [ingestProtocol,setIngestProtocol]=useState<'rtmps'|'srt'>('rtmps')
+  const [replaySync,setReplaySync]=useState<ReplaySync|null>(null)
 
   async function load(){
     const response=await fetch('/api/live',{cache:'no-store'})
@@ -38,10 +42,38 @@ export default function LivePage(){
   }
 
   async function loadTransport(roomId:string){
-    const response=await fetch('/api/live/stream',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({roomId,action:'credentials'})})
+    const response=await fetch('/api/live/stream',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({roomId,action:'diagnostics'})})
     const data=await response.json().catch(()=>({}))
     if(response.ok)setTransport(data)
     else setTransport(null)
+  }
+
+  async function operateTransport(action:'provision'|'diagnostics'|'recover'|'sync-replay'){
+    if(!selected)return
+    setTransportBusy(true)
+    try{
+      const response=await fetch('/api/live/stream',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({roomId:selected.id,action})})
+      const data=await response.json().catch(()=>({}))
+      if(response.status===401){window.location.assign('/login?next=%2Flive');return}
+      if(!response.ok)throw new Error(data.error||'No fue posible operar el transporte.')
+      if(action==='sync-replay'){
+        setReplaySync(data.replaySync||null)
+        if(data.replaySync?.state==='ready'){
+          setSelected(current=>current?{...current,replay_url:data.replaySync.playbackUrl}:current)
+          setMessage('Replay sincronizado y disponible en la sala.')
+        }else if(data.replaySync?.state==='processing'){
+          setMessage('Cloudflare está procesando la grabación. Vuelve a sincronizar en unos instantes.')
+        }else{
+          setMessage('Todavía no aparece una grabación para esta sesión. Comprueba que la transmisión haya terminado y vuelve a intentar.')
+        }
+      }else{
+        setTransport(data)
+        if(action==='provision')setMessage('Entrada Cloudflare provisionada. Elige RTMPS o SRT y configura tu codificador. La sala no se marcará como LIVE hasta recibir señal.')
+        if(action==='diagnostics')setMessage('Diagnóstico actualizado desde Cloudflare Stream.')
+        if(action==='recover')setMessage(data.recovered?'Entrada reactivada. Comprueba el codificador y vuelve a diagnosticar.':'La entrada ya estaba habilitada. El diagnóstico indica el estado actual del proveedor.')
+      }
+    }catch(error){setMessage(error instanceof Error?error.message:'No fue posible operar el transporte.')}
+    finally{setTransportBusy(false)}
   }
 
   async function loadProducts(roomId:string){
@@ -68,12 +100,12 @@ export default function LivePage(){
       return
     }
     try{
-      const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:1920},height:{ideal:1080}},audio:true})
+      const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:1080},height:{ideal:1920}},audio:true})
       streamRef.current=stream
       if(previewRef.current){previewRef.current.srcObject=stream;await previewRef.current.play().catch(()=>{})}
       setCameraOn(true)
       setMediaReady(true)
-      setMessage('Fuente de captura y audio listos. Para producción, OBS puede tomar la señal de Elgato 4K Pro y enviarla por RTMPS a Credi LIVE.')
+      setMessage('Fuente de cámara y audio listas para previsualización vertical. Para transmitir, usa un codificador compatible con RTMPS o SRT y las credenciales privadas de esta sala.')
     }catch(error){setMessage(error instanceof Error?error.message:'No fue posible activar cámara y micrófono.')}
   }
 
@@ -90,9 +122,9 @@ export default function LivePage(){
       if(!response.ok)throw new Error(data.error||'No fue posible crear el LIVE.')
       setMessage(
         scheduledAt
-          ? 'LIVE programado. Antes de la hora de inicio, confirma que Cloudflare Stream esté configurado en Vercel y prepara OBS o un codificador RTMPS.'
+          ? 'LIVE programado. Antes de la hora de inicio, verifica el estado de Cloudflare Stream en este panel y prepara un codificador RTMPS o SRT.'
           : data.transport
-            ? 'Sala preparada. Todavía no está transmitiendo: inicia OBS u otro codificador con los datos RTMPS; Credi marcará LIVE al confirmar la señal.'
+            ? 'Sala preparada. Todavía no está transmitiendo: inicia tu codificador con RTMPS o SRT; Credi marcará LIVE al confirmar la señal.'
             : 'No hay transporte de transmisión disponible. Configura Cloudflare Stream en Vercel antes de intentar transmitir.'
       )
       setTitle('Nueva sesión Credi LIVE');setDescription('');setScheduledAt('')
@@ -159,14 +191,14 @@ export default function LivePage(){
         <section className="rounded-[2rem] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-xl sm:p-7">
           <div className="flex items-center justify-between gap-3"><div><p className="text-xs font-black uppercase tracking-[.16em] text-[var(--primary)]">Control Room</p><h2 className="mt-1 text-2xl font-black">{selected?.title||'Selecciona o crea un LIVE'}</h2></div>{selected&&<span className="rounded-full bg-[var(--primary)]/10 px-3 py-1.5 text-xs font-black uppercase text-[var(--primary)]">{selected.status}</span>}</div>
 
-          <div className="mt-5 aspect-video overflow-hidden rounded-[1.5rem] bg-slate-950">
+          <div className="mx-auto mt-5 aspect-[9/16] max-h-[70vh] max-w-[405px] overflow-hidden rounded-[1.5rem] bg-slate-950">
             {selected?.playback_url?<video src={selected.playback_url} controls playsInline className="h-full w-full object-cover"/>:
               <div className="relative flex h-full flex-col items-center justify-center p-8 text-center text-white">
                 {cameraOn&&<video ref={previewRef} muted playsInline className="absolute inset-0 h-full w-full object-cover"/>}
                 <div className="relative z-10 max-w-md rounded-2xl bg-slate-950/75 px-5 py-4 backdrop-blur-md">
                   <Video className="mx-auto size-9 text-cyan-300"/>
                   <p className="mt-2 font-black">{mediaReady?'Preflight listo':'Transporte LIVE de producción'}</p>
-                  <p className="mt-1 text-xs leading-5 text-slate-300">{mediaReady?'Cámara y micrófono verificados.':'La entrega multipunto requiere conectar el adaptador de streaming de producción; Credi ya conserva la sala, eventos, productos, chat y replay.'}</p>
+                  <p className="mt-1 text-xs leading-5 text-slate-300">{mediaReady?'Cámara y micrófono verificados.':'Provisiona Cloudflare Stream para obtener RTMPS y SRT, comprobar la conexión y sincronizar automáticamente la grabación de cada sesión.'}</p>
                 </div>
               </div>}
           </div>
@@ -178,10 +210,38 @@ export default function LivePage(){
           </div>}
 
           {selected&&<section className="mt-6 rounded-2xl border border-cyan-500/20 bg-cyan-500/[.04] p-4">
-            <div className="flex items-start justify-between gap-3"><div><p className="text-[10px] font-black uppercase tracking-[.14em] text-cyan-700">Transporte de producción</p><h3 className="mt-1 font-black">Elgato 4K Pro → OBS → Credi LIVE</h3><p className="mt-1 text-xs leading-5 text-[var(--muted)]">Credi genera el Live Input de Cloudflare. La capturadora Elgato entra a OBS, y OBS publica la señal por RTMPS.</p></div><KeyRound className="size-5 text-cyan-700"/></div>
-            <div className="mt-4 flex flex-wrap gap-2"><button type="button" disabled={transportBusy} onClick={async()=>{setTransportBusy(true);try{const r=await fetch('/api/live/stream',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({roomId:selected.id,action:'provision'})});const d=await r.json();if(!r.ok)throw new Error(d.error||'No fue posible provisionar el transporte.');setTransport(d);setMessage('Transporte Cloudflare provisionado. Configura OBS con la URL y clave RTMPS mostradas.')}catch(e){setMessage(e instanceof Error?e.message:'No fue posible provisionar el transporte.')}finally{setTransportBusy(false)}}} className="rounded-xl bg-cyan-700 px-3 py-2 text-xs font-black text-white disabled:opacity-50">{transportBusy?'Provisionando…':'Provisionar transporte'}</button>{transport?.rtmps?.url&&<span className="inline-flex items-center gap-1 rounded-xl bg-emerald-500/10 px-3 py-2 text-[10px] font-black text-emerald-700"><Eye className="size-3"/> RTMPS listo</span>}</div>
-            {transport?.rtmps&&<div className="mt-4 grid gap-3 sm:grid-cols-2"><label className="text-[10px] font-black uppercase tracking-wide text-[var(--muted)]">Servidor RTMPS<input readOnly value={transport.rtmps.url} className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs font-mono"/></label><label className="text-[10px] font-black uppercase tracking-wide text-[var(--muted)]">Stream Key<input readOnly value={transport.rtmps.streamKey} className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs font-mono"/></label></div>}
-            <p className="mt-3 text-[10px] text-[var(--muted)]">La clave se obtiene del backend autenticado; no se almacena en Supabase ni se expone al cliente público. Si fue compartida accidentalmente, usa rotación de credenciales.</p>
+            <div className="flex items-start justify-between gap-3"><div><p className="text-[10px] font-black uppercase tracking-[.14em] text-cyan-700">Adaptador Credi · Cloudflare Stream</p><h3 className="mt-1 font-black">Entrada profesional multiprotocolo</h3><p className="mt-1 text-xs leading-5 text-[var(--muted)]">Vercel ejecuta el adaptador seguro; Cloudflare recibe y distribuye el vídeo; Supabase conserva el estado de sala y el replay.</p></div><KeyRound className="size-5 text-cyan-700"/></div>
+
+            <div className="mt-4 flex flex-wrap gap-2">
+              {!transport&&<button type="button" disabled={transportBusy} onClick={()=>void operateTransport('provision')} className="rounded-xl bg-cyan-700 px-3 py-2 text-xs font-black text-white disabled:opacity-50">{transportBusy?'Provisionando…':'Provisionar entrada LIVE'}</button>}
+              {transport&&<><button type="button" disabled={transportBusy} onClick={()=>void operateTransport('diagnostics')} className="rounded-xl border border-[var(--border)] px-3 py-2 text-xs font-black disabled:opacity-50">Diagnosticar conexión</button><button type="button" disabled={transportBusy} onClick={()=>void operateTransport('recover')} className="rounded-xl border border-[var(--border)] px-3 py-2 text-xs font-black disabled:opacity-50">Recuperar entrada</button><button type="button" disabled={transportBusy} onClick={()=>void operateTransport('sync-replay')} className="rounded-xl border border-[var(--border)] px-3 py-2 text-xs font-black disabled:opacity-50">Sincronizar replay</button></>}
+            </div>
+
+            {transport&&<div className="mt-4 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2"><p className="text-[10px] font-black uppercase tracking-wide text-[var(--muted)]">Estado del transporte</p><span className="rounded-full bg-[var(--surface-secondary)] px-3 py-1 text-[10px] font-black uppercase">{transport.statusCategory||'sin diagnóstico'} · {transport.enabled?'habilitado':'deshabilitado'}</span></div>
+              <p className="mt-2 text-xs leading-5">{transport.status||'Cloudflare aún no informa un estado de conexión.'} · Grabación: {transport.diagnostics?.recording||'automática'}</p>
+              <p className="mt-1 text-[10px] text-[var(--muted)]">Última comprobación: {transport.diagnostics?.checkedAt?new Date(transport.diagnostics.checkedAt).toLocaleString():'pendiente'}</p>
+            </div>}
+
+            {transport&&<><div className="mt-4 flex flex-wrap gap-2">
+              <button type="button" onClick={()=>setIngestProtocol('rtmps')} disabled={!transport.rtmps} className={`rounded-xl px-3 py-2 text-xs font-black ${ingestProtocol==='rtmps'?'bg-cyan-700 text-white':'border border-[var(--border)]'} disabled:opacity-40`}>RTMPS</button>
+              <button type="button" onClick={()=>setIngestProtocol('srt')} disabled={!transport.srt} className={`rounded-xl px-3 py-2 text-xs font-black ${ingestProtocol==='srt'?'bg-cyan-700 text-white':'border border-[var(--border)]'} disabled:opacity-40`}>SRT</button>
+            </div>
+            {ingestProtocol==='rtmps'&&transport.rtmps&&<div className="mt-3 grid gap-3">
+              <label className="text-[10px] font-black uppercase tracking-wide text-[var(--muted)]">Servidor RTMPS<input readOnly value={transport.rtmps.url} className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs font-mono"/></label>
+              <label className="text-[10px] font-black uppercase tracking-wide text-[var(--muted)]">Clave privada de emisión<input readOnly type="password" value={transport.rtmps.streamKey} className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs font-mono"/></label>
+            </div>}
+            {ingestProtocol==='srt'&&transport.srt&&<div className="mt-3 grid gap-3">
+              <label className="text-[10px] font-black uppercase tracking-wide text-[var(--muted)]">Servidor SRT<input readOnly value={transport.srt.url} className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs font-mono"/></label>
+              <label className="text-[10px] font-black uppercase tracking-wide text-[var(--muted)]">Stream ID<input readOnly value={transport.srt.streamId} className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs font-mono"/></label>
+              <label className="text-[10px] font-black uppercase tracking-wide text-[var(--muted)]">Passphrase privada<input readOnly type="password" value={transport.srt.passphrase} className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs font-mono"/></label>
+            </div>}
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <label className="text-[10px] font-black uppercase tracking-wide text-[var(--muted)]">Playback HLS<input readOnly value={transport.playback?.hls||''} className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs font-mono"/></label>
+              <label className="text-[10px] font-black uppercase tracking-wide text-[var(--muted)]">Playback DASH<input readOnly value={transport.playback?.dash||''} className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs font-mono"/></label>
+            </div></>}
+            <p className="mt-3 text-[10px] leading-5 text-[var(--muted)]">Las credenciales de emisión solo llegan al propietario autenticado de la sala y no se guardan en Supabase. WebRTC WHIP/WHEP no se mezcla con esta entrada grabable: este perfil conserva HLS/DASH y replay automático.</p>
+            {replaySync&&<p className="mt-3 rounded-lg bg-[var(--surface)] p-3 text-xs">Replay: <strong>{replaySync.state==='ready'?'disponible':replaySync.state==='processing'?'procesándose':'sin grabación detectada'}</strong>{replaySync.videoId? ` · ID ${replaySync.videoId}`:''}</p>}
           </section>}
 
           {selected&&<div className="mt-6 grid gap-3 sm:grid-cols-4">{([
