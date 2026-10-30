@@ -146,15 +146,20 @@ export async function PATCH(request:Request) {
     if(existing.stream_provider==='cloudflare_stream'&&inputId){
       try{
         await setLiveInputEnabled(inputId,false)
+      }catch{
+        return errorResponse('No se pudo detener el transporte Cloudflare. La sala permanece en su estado actual hasta confirmar el cierre.',502,'LIVE_TRANSPORT_END_FAILED')
+      }
+      try{
         const replay=await syncLatestReplay(inputId,existing.started_at||String(metadata.cloudflare_input_created_at||''))
         metadata.cloudflare_replay_sync_state=replay.state
         metadata.cloudflare_replay_last_checked_at=new Date().toISOString()
         if(replay.videoId)metadata.cloudflare_replay_video_id=replay.videoId
-        updates.metadata=metadata
         if(replay.state==='ready')updates.replay_url=replay.playbackUrl
       }catch{
-        return errorResponse('No se pudo cerrar el transporte Cloudflare. La sala sigue sin finalizar para evitar dejar una transmisión activa.',502,'LIVE_TRANSPORT_END_FAILED')
+        metadata.cloudflare_replay_sync_state='retry_required'
+        metadata.cloudflare_replay_last_checked_at=new Date().toISOString()
       }
+      updates.metadata=metadata
     }
     updates.status='ended';updates.ended_at=new Date().toISOString()
   } else if(p.action==='cancel'){updates.status='cancelled';updates.ended_at=new Date().toISOString()}
