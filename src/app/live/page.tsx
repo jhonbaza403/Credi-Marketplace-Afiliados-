@@ -76,8 +76,10 @@ export default function LivePage(){
         if(action==='diagnostics')setMessage('Diagnóstico actualizado desde Cloudflare Stream.')
         if(action==='recover')setMessage(data.recovered?'Entrada reactivada. Comprueba el codificador y vuelve a diagnosticar.':'La entrada ya estaba habilitada. El diagnóstico indica el estado actual del proveedor.')
       }
-    }catch(error){setMessage(error instanceof Error?error.message:'No fue posible operar el transporte.')}
-    finally{setTransportBusy(false)}
+    }catch(error){
+      if(action==='sync-replay')setReplaySync({state:'processing',videoId:null,playbackUrl:null,dashUrl:null,checkedAt:new Date().toISOString()})
+      setMessage(error instanceof Error?error.message:'No fue posible operar el transporte.')
+    }finally{setTransportBusy(false)}
   }
 
   async function loadProducts(roomId:string){
