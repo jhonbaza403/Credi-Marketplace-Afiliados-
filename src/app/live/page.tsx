@@ -31,6 +31,7 @@ export default function LivePage(){
   const [ingestProtocol,setIngestProtocol]=useState<'rtmps'|'srt'>('rtmps')
   const [showSecrets,setShowSecrets]=useState(false)
   const [replaySync,setReplaySync]=useState<ReplaySync|null>(null)
+  const replaySyncRequestedRef=useRef<string|null>(null)
   const playbackPreviewUrl=selected?.status==='ended'?(selected.replay_url||selected.playback_url):selected?.playback_url
 
   async function load(){
@@ -93,6 +94,11 @@ export default function LivePage(){
     const interval=window.setInterval(()=>{void load().catch(error=>setMessage(error instanceof Error?error.message:'No fue posible actualizar el estado LIVE.'))},15000)
     return ()=>window.clearInterval(interval)
   },[selected?.id,selected?.status])
+  useEffect(()=>{
+    if(!selected||selected.status!=='ended'||selected.replay_url||replaySyncRequestedRef.current===selected.id)return
+    replaySyncRequestedRef.current=selected.id
+    void operateTransport('sync-replay')
+  },[selected?.id,selected?.status,selected?.replay_url])
   useEffect(()=>{
     if(!selected||selected.status!=='ended'||replaySync?.state!=='processing')return
     let cancelled=false
