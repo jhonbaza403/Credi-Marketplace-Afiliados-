@@ -29,6 +29,7 @@ export default function LivePage(){
   const [transport,setTransport]=useState<LiveTransport|null>(null)
   const [transportBusy,setTransportBusy]=useState(false)
   const [ingestProtocol,setIngestProtocol]=useState<'rtmps'|'srt'>('rtmps')
+  const [showSecrets,setShowSecrets]=useState(false)
   const [replaySync,setReplaySync]=useState<ReplaySync|null>(null)
 
   async function load(){
@@ -192,7 +193,7 @@ export default function LivePage(){
           <div className="flex items-center justify-between gap-3"><div><p className="text-xs font-black uppercase tracking-[.16em] text-[var(--primary)]">Control Room</p><h2 className="mt-1 text-2xl font-black">{selected?.title||'Selecciona o crea un LIVE'}</h2></div>{selected&&<span className="rounded-full bg-[var(--primary)]/10 px-3 py-1.5 text-xs font-black uppercase text-[var(--primary)]">{selected.status}</span>}</div>
 
           <div className="mx-auto mt-5 aspect-[9/16] max-h-[70vh] max-w-[405px] overflow-hidden rounded-[1.5rem] bg-slate-950">
-            {selected?.playback_url?<video src={selected.playback_url} controls playsInline className="h-full w-full object-cover"/>:
+            {(selected?.status==='ended'&&selected.replay_url)||selected?.playback_url?<video src={selected.status==='ended'&&selected.replay_url?selected.replay_url:selected?.playback_url||undefined} controls playsInline className="h-full w-full object-cover"/>:
               <div className="relative flex h-full flex-col items-center justify-center p-8 text-center text-white">
                 {cameraOn&&<video ref={previewRef} muted playsInline className="absolute inset-0 h-full w-full object-cover"/>}
                 <div className="relative z-10 max-w-md rounded-2xl bg-slate-950/75 px-5 py-4 backdrop-blur-md">
@@ -223,24 +224,25 @@ export default function LivePage(){
               <p className="mt-1 text-[10px] text-[var(--muted)]">Última comprobación: {transport.diagnostics?.checkedAt?new Date(transport.diagnostics.checkedAt).toLocaleString():'pendiente'}</p>
             </div>}
 
-            {transport&&<><div className="mt-4 flex flex-wrap gap-2">
+            {transport&&<><div className="mt-4 flex flex-wrap items-center gap-2">
               <button type="button" onClick={()=>setIngestProtocol('rtmps')} disabled={!transport.rtmps} className={`rounded-xl px-3 py-2 text-xs font-black ${ingestProtocol==='rtmps'?'bg-cyan-700 text-white':'border border-[var(--border)]'} disabled:opacity-40`}>RTMPS</button>
               <button type="button" onClick={()=>setIngestProtocol('srt')} disabled={!transport.srt} className={`rounded-xl px-3 py-2 text-xs font-black ${ingestProtocol==='srt'?'bg-cyan-700 text-white':'border border-[var(--border)]'} disabled:opacity-40`}>SRT</button>
+              <button type="button" onClick={()=>setShowSecrets(value=>!value)} className="ml-auto inline-flex items-center gap-1 rounded-xl border border-[var(--border)] px-3 py-2 text-xs font-bold"><Eye className="size-3"/>{showSecrets?'Ocultar claves':'Mostrar claves'}</button>
             </div>
             {ingestProtocol==='rtmps'&&transport.rtmps&&<div className="mt-3 grid gap-3">
               <label className="text-[10px] font-black uppercase tracking-wide text-[var(--muted)]">Servidor RTMPS<input readOnly value={transport.rtmps.url} className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs font-mono"/></label>
-              <label className="text-[10px] font-black uppercase tracking-wide text-[var(--muted)]">Clave privada de emisión<input readOnly type="password" value={transport.rtmps.streamKey} className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs font-mono"/></label>
+              <label className="text-[10px] font-black uppercase tracking-wide text-[var(--muted)]">Clave privada de emisión<input readOnly type={showSecrets?"text":"password"} value={transport.rtmps.streamKey} className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs font-mono"/></label>
             </div>}
             {ingestProtocol==='srt'&&transport.srt&&<div className="mt-3 grid gap-3">
               <label className="text-[10px] font-black uppercase tracking-wide text-[var(--muted)]">Servidor SRT<input readOnly value={transport.srt.url} className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs font-mono"/></label>
               <label className="text-[10px] font-black uppercase tracking-wide text-[var(--muted)]">Stream ID<input readOnly value={transport.srt.streamId} className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs font-mono"/></label>
-              <label className="text-[10px] font-black uppercase tracking-wide text-[var(--muted)]">Passphrase privada<input readOnly type="password" value={transport.srt.passphrase} className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs font-mono"/></label>
+              <label className="text-[10px] font-black uppercase tracking-wide text-[var(--muted)]">Passphrase privada<input readOnly type={showSecrets?"text":"password"} value={transport.srt.passphrase} className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs font-mono"/></label>
             </div>}
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               <label className="text-[10px] font-black uppercase tracking-wide text-[var(--muted)]">Playback HLS<input readOnly value={transport.playback?.hls||''} className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs font-mono"/></label>
               <label className="text-[10px] font-black uppercase tracking-wide text-[var(--muted)]">Playback DASH<input readOnly value={transport.playback?.dash||''} className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs font-mono"/></label>
             </div></>}
-            <p className="mt-3 text-[10px] leading-5 text-[var(--muted)]">Las credenciales de emisión solo llegan al propietario autenticado de la sala y no se guardan en Supabase. WebRTC WHIP/WHEP no se mezcla con esta entrada grabable: este perfil conserva HLS/DASH y replay automático.</p>
+            <p className="mt-3 text-[10px] leading-5 text-[var(--muted)]">Perfil sugerido: vídeo vertical 1080 × 1920, 30 FPS, H.264 y audio AAC. Ajusta el codificador a las condiciones reales de red. Las credenciales solo llegan al propietario autenticado y no se guardan en Supabase. WHIP/WHEP no se mezcla con esta entrada grabable: este perfil conserva HLS/DASH y replay automático.</p>
             {replaySync&&<p className="mt-3 rounded-lg bg-[var(--surface)] p-3 text-xs">Replay: <strong>{replaySync.state==='ready'?'disponible':replaySync.state==='processing'?'procesándose':'sin grabación detectada'}</strong>{replaySync.videoId? ` · ID ${replaySync.videoId}`:''}</p>}
           </section>}
 
