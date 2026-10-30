@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import crypto from 'node:crypto'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { syncLatestReplay } from '@/lib/cloudflare/stream'
 
 export const runtime = 'nodejs'
@@ -49,7 +49,7 @@ export async function POST(request: Request) {
   const eventType = payload.data?.event_type
   if (!inputId || !eventType) return NextResponse.json({ success: true, ignored: true })
 
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   const { data: rooms } = await supabase
     .from('chat_live_rooms')
     .select('id,metadata,status,started_at')
