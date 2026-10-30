@@ -139,7 +139,7 @@ export async function PATCH(request:Request) {
     if(!isCloudflareConfigured() || transportRoom?.stream_provider!=='cloudflare_stream' || typeof metadata.cloudflare_live_input_id!=='string') {
       return errorResponse('No se puede iniciar LIVE todavía: falta provisionar el transporte de transmisión. Configura Cloudflare Stream en Vercel y vuelve a preparar la sala.',503,'LIVE_TRANSPORT_NOT_READY')
     }
-    return errorResponse('La sala está preparada. Inicia la señal desde OBS u otro codificador RTMPS; Credi marcará LIVE cuando Cloudflare confirme la conexión.',409,'LIVE_WAITING_FOR_ENCODER')
+    return errorResponse('La sala está preparada. Inicia la señal desde tu codificador RTMPS o SRT; Credi marcará LIVE cuando Cloudflare confirme la conexión.',409,'LIVE_WAITING_FOR_ENCODER')
   } else if(p.action==='end'){
     const metadata=(existing.metadata&&typeof existing.metadata==='object'?existing.metadata:{}) as Record<string,unknown>
     const inputId=typeof metadata.cloudflare_live_input_id==='string'?metadata.cloudflare_live_input_id:null
