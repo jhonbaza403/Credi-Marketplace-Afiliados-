@@ -157,7 +157,6 @@ export default function PublishCenter() {
 
   const uploaderKind = type === "reel" ? "video" : "mixed";
   const maxFiles = type === "post" ? 10 : 1;
-  const activeIcon = currentTab.icon;
 
   return (
     <section className="overflow-hidden rounded-[2rem] border border-[var(--border)] bg-[var(--surface)]/95 p-4 text-[var(--foreground)] shadow-2xl backdrop-blur-xl sm:p-7 lg:p-8">
