@@ -99,3 +99,15 @@ Cada plan debe conservar `plan_id`, `request_id`, usuario propietario, intenció
 - Orquestador de lenguaje natural con grafo de operaciones, ejecución durable y recuperación: pendiente de implementación y pruebas.
 - LIVE real y llamadas multimedia con cuentas de prueba: pendientes de evidencia E2E.
 - La rama sigue sin fusionarse y no se ha desplegado a producción.
+
+## Red profesional y empleo
+
+La primera entrega de empleo se ha incorporado en la misma rama:
+- `/jobs` muestra vacantes activas y permite buscar por cargo, empresa y ubicación.
+- `POST /api/jobs` publica una vacante asociada a la sesión autenticada.
+- `GET /api/jobs/[jobId]` devuelve solo vacantes activas sin exponer el identificador interno del empleador.
+- `POST /api/jobs/[jobId]/applications` registra una postulación única por candidato/vacante; impide la auto-postulación.
+- `/jobs/profile` permite mantener un perfil profesional privado por defecto y hacerlo visible a usuarios autenticados cuando el titular lo decide.
+- La migración `20261031183000_credi_professional_jobs_and_profiles.sql` añade las tablas y políticas RLS. Está en la rama y no se aplicó a producción.
+
+La red profesional todavía no incluye revisión/gestión completa de candidaturas, currículum privado adjunto, entrevistas ni herramientas avanzadas de reclutamiento. Credi Intelligence aún no tiene operaciones específicas para vacantes y postulaciones; no debe afirmar que gestiona estos procesos hasta que existan y se prueben los handlers correspondientes.

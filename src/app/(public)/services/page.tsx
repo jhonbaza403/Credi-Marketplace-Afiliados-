@@ -71,6 +71,14 @@ const services = [
     tone: "from-sky-400/20 to-indigo-500/5",
   },
   {
+    title: "Empleo y talento",
+    description: "Publica oportunidades, encuentra profesionales y gestiona tu perfil laboral.",
+    detail: "Red profesional",
+    href: "/jobs",
+    icon: BriefcaseBusiness,
+    tone: "from-blue-400/20 to-cyan-500/5",
+  },
+  {
     title: "Credi Free",
     description: "Entra a la experiencia comunitaria y descubre las áreas disponibles.",
     detail: "Acceso gratuito",

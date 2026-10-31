@@ -6,6 +6,7 @@ import {
   Activity,
   BarChart3,
   Building2,
+  BriefcaseBusiness,
   MessageCircle,
   Radio,
   Share2,
@@ -25,6 +26,7 @@ const portals = [
   { href: '/wallet', label: 'Wallet', icon: WalletCards },
   { href: '/intelligence', label: 'Intelligence', icon: BarChart3 },
   { href: '/business-os', label: 'Business OS', icon: Activity },
+  { href: '/jobs', label: 'Empleo', icon: BriefcaseBusiness },
   { href: '/services', label: 'Servicios', icon: Sparkles },
 ] as const
 
