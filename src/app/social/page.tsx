@@ -32,29 +32,28 @@ function firstMedia(media: unknown): MediaItem | null {
   };
 }
 
-function MediaPreview({ media, alt = "" }: { media: unknown; alt?: string }) {
-  const item = firstMedia(media);
-  if (!item) return null;
-  const url = item.url;
+function mediaItems(value: unknown): MediaItem[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((item): item is MediaItem => Boolean(item && typeof item === "object" && typeof (item as MediaItem).url === "string" && (item as MediaItem).url?.trim()));
+}
+
+function MediaPreview({ item, alt = "" }: { item: MediaItem; alt?: string }) {
+  const url = item.url || "";
   if (!url) return null;
-
-  if (item.type === "video" || url.match(/\.(mp4|webm|mov)(?:\?|$)/i)) {
-    return (
-      <video
-        src={url}
-        controls
-        playsInline
-        preload="metadata"
-        className="h-full w-full object-cover"
-        aria-label={alt || "Vídeo"}
-      />
-    );
+  if (item.type === "video" || url.match(/\\.(mp4|webm|mov)(?:\\?|$)/i)) {
+    return <video src={url} controls playsInline preload="metadata" className="h-full w-full object-cover" aria-label={alt || "Vídeo"} />;
   }
-
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img src={url} alt={alt} loading="lazy" className="h-full w-full object-cover" />
   );
+}
+
+function MediaGallery({ media, alt = "" }: { media: unknown; alt?: string }) {
+  const items = mediaItems(media);
+  if (!items.length) return null;
+  if (items.length === 1) return <div className="aspect-video overflow-hidden rounded-2xl bg-[var(--surface-secondary)]"><MediaPreview item={items[0]} alt={alt} /></div>;
+  return <div className="grid grid-cols-2 gap-2 overflow-hidden rounded-2xl sm:gap-3">{items.map((item, index) => <div key={`${item.url}-${index}`} className="aspect-video overflow-hidden rounded-xl bg-[var(--surface-secondary)]"><MediaPreview item={item} alt={`${alt} · ${index + 1}`} /></div>)}</div>;
 }
 
 export const metadata = {
@@ -146,7 +145,7 @@ export default async function SocialPage() {
                 <h2 id="active-ads-title" className="mt-2 text-2xl font-black">Publicidad activa</h2>
                 <div className="mt-5 grid gap-4 md:grid-cols-2">
                   {ads.map((ad) => <article key={ad.id} className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface-secondary)]">
-                    <div className="aspect-video overflow-hidden bg-[var(--surface)]"><MediaPreview media={ad.media} alt={ad.title} /></div>
+                    <div className="p-3"><MediaGallery media={ad.media} alt={ad.title} /></div>
                     <div className="p-4"><h3 className="font-black">{ad.title}</h3><p className="mt-1 line-clamp-3 text-sm text-[var(--muted)]">{ad.body || "Oportunidad comercial en Credi."}</p>
                       <div className="mt-4 flex flex-wrap gap-2">{ad.destination_url && <a href={ad.destination_url} target="_blank" rel="noreferrer" className="rounded-xl bg-[var(--primary)] px-3 py-2 text-xs font-black text-white">Ver campaña</a>}{commerceActions(ad.operation_context) && <Link href={commerceActions(ad.operation_context)!.product} className="rounded-xl border border-[var(--border)] px-3 py-2 text-xs font-black">Ver producto</Link>}</div>
                     </div>
@@ -162,10 +161,9 @@ export default async function SocialPage() {
           {storiesResult.error ? <p className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 text-sm text-[var(--muted)]">Las historias no están disponibles ahora.</p> : stories.length ? (
             <div className="flex gap-4 overflow-x-auto pb-2">
               {stories.map((story) => {
-                const media = firstMedia(story.media);
                 return <article key={story.id} className="min-w-[220px] flex-1 overflow-hidden rounded-[1.5rem] border border-[var(--border)] bg-[var(--surface)] shadow-sm transition hover:-translate-y-1 hover:shadow-lg">
                   <div className="aspect-[4/5] bg-gradient-to-br from-brand-500/20 via-[var(--surface-secondary)] to-cyan-500/10">
-                    {media ? <MediaPreview media={[media]} alt="Historia de Credi" /> : <div className="flex h-full flex-col items-center justify-center gap-2 p-5 text-center"><Camera className="size-8 text-[var(--primary)]" /><span className="text-sm font-bold">Historia de la comunidad</span></div>}
+                    {mediaItems(story.media).length ? <MediaGallery media={story.media} alt="Historia de Credi" /> : <div className="flex h-full flex-col items-center justify-center gap-2 p-5 text-center"><Camera className="size-8 text-[var(--primary)]" /><span className="text-sm font-bold">Historia de la comunidad</span></div>}
                   </div>
                   <div className="p-4"><p className="line-clamp-3 text-sm font-semibold leading-6">{story.body || "Nueva historia en Credi."}</p><p className="mt-3 text-[11px] font-semibold text-[var(--muted)]">Expira {new Date(story.expires_at).toLocaleString()}</p></div>
                 </article>;
@@ -200,19 +198,17 @@ export default async function SocialPage() {
             <div className="mb-4"><p className="text-xs font-black uppercase tracking-[.16em] text-[var(--primary)]">Feed</p><h2 id="feed-title" className="mt-1 text-2xl font-black">Publicaciones y reels</h2></div>
             <div className="space-y-5">
               {reels.map((reel) => {
-                const media = firstMedia(reel.media);
                 return <article key={`reel-${reel.id}`} className="overflow-hidden rounded-[1.75rem] border border-[var(--border)] bg-[var(--surface)] shadow-sm">
-                  <div className="aspect-video bg-[var(--surface-secondary)]">{media ? <MediaPreview media={[media]} alt={reel.title || "Reel de Credi"} /> : <div className="flex h-full items-center justify-center gap-2 text-sm font-semibold text-[var(--muted)]"><Play className="size-5" /> Reel sin multimedia</div>}</div>
+                  <div className="aspect-video bg-[var(--surface-secondary)]">{mediaItems(reel.media).length ? <MediaGallery media={reel.media} alt={reel.title || "Reel de Credi"} /> : <div className="flex h-full items-center justify-center gap-2 text-sm font-semibold text-[var(--muted)]"><Play className="size-5" /> Reel sin multimedia</div>}</div>
                   <div className="p-6"><span className="text-[11px] font-black uppercase tracking-[.14em] text-[var(--primary)]">Reel</span><h3 className="mt-2 text-xl font-black">{reel.title || "Reel de la comunidad"}</h3><p className="mt-2 text-sm leading-7 text-[var(--muted)]">{reel.body || "Contenido comercial de la comunidad Credi."}</p>{commerceActions(reel.operation_context) && <div className="mt-5 flex flex-wrap gap-2"><Link href={commerceActions(reel.operation_context)!.product} className="rounded-xl bg-[var(--primary)] px-4 py-2 text-xs font-black text-white">Ver producto</Link><Link href={commerceActions(reel.operation_context)!.chat} className="rounded-xl border border-[var(--border)] px-4 py-2 text-xs font-black">Contactar</Link><Link href={commerceActions(reel.operation_context)!.checkout} className="rounded-xl border border-emerald-400/30 bg-emerald-400/10 px-4 py-2 text-xs font-black text-emerald-700">Comprar</Link></div>}</div>
                 </article>;
               })}
               {posts.map((post) => {
-                const media = firstMedia(post.media);
                 return <article key={`post-${post.id}`} className="rounded-[1.75rem] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-sm">
                   <span className="text-[11px] font-black uppercase tracking-[.14em] text-[var(--primary)]">Publicación</span>
                   <h3 className="mt-2 text-xl font-black">{post.title || "Publicación de la comunidad"}</h3>
-                  <p className="mt-2 whitespace-pre-wrap text-sm leading-7">{post.body}</p>{media && <div className="mt-5 aspect-video overflow-hidden rounded-2xl bg-[var(--surface-secondary)]"><MediaPreview media={[media]} alt={post.title || "Publicación de Credi"} /></div>}{commerceActions(post.operation_context) && <div className="mt-5 flex flex-wrap gap-2"><Link href={commerceActions(post.operation_context)!.product} className="rounded-xl bg-[var(--primary)] px-4 py-2 text-xs font-black text-white">Ver producto</Link><Link href={commerceActions(post.operation_context)!.chat} className="rounded-xl border border-[var(--border)] px-4 py-2 text-xs font-black">Contactar</Link><Link href={commerceActions(post.operation_context)!.checkout} className="rounded-xl border border-emerald-400/30 bg-emerald-400/10 px-4 py-2 text-xs font-black text-emerald-700">Comprar</Link></div>}
-                  {media && <a className="mt-4 inline-flex items-center gap-2 rounded-xl bg-[var(--surface-secondary)] px-4 py-2.5 text-sm font-bold text-[var(--primary)] hover:opacity-80" href={media.url} target="_blank" rel="noreferrer">Abrir multimedia <ArrowRight className="size-4" /></a>}
+                  <p className="mt-2 whitespace-pre-wrap text-sm leading-7">{post.body}</p><div className="mt-5"><MediaGallery media={post.media} alt={post.title || "Publicación de Credi"} /></div>{commerceActions(post.operation_context) && <div className="mt-5 flex flex-wrap gap-2"><Link href={commerceActions(post.operation_context)!.product} className="rounded-xl bg-[var(--primary)] px-4 py-2 text-xs font-black text-white">Ver producto</Link><Link href={commerceActions(post.operation_context)!.chat} className="rounded-xl border border-[var(--border)] px-4 py-2 text-xs font-black">Contactar</Link><Link href={commerceActions(post.operation_context)!.checkout} className="rounded-xl border border-emerald-400/30 bg-emerald-400/10 px-4 py-2 text-xs font-black text-emerald-700">Comprar</Link></div>}
+                  {mediaItems(post.media)[0]?.url && <a className="mt-4 inline-flex items-center gap-2 rounded-xl bg-[var(--surface-secondary)] px-4 py-2.5 text-sm font-bold text-[var(--primary)] hover:opacity-80" href={mediaItems(post.media)[0].url} target="_blank" rel="noreferrer">Abrir multimedia <ArrowRight className="size-4" /></a>}
                   <FeedPostInteractions postId={post.id} />
                 </article>;
               })}
