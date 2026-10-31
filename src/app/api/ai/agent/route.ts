@@ -64,6 +64,7 @@ export async function POST(request:Request){
  const requestId=typeof body.request_id==='string'&&body.request_id.trim()?body.request_id.trim():crypto.randomUUID()
  const resourceId=typeof body.resource_id==='string'&&body.resource_id.trim()?body.resource_id.trim():null
  const audit=async(status:string,input:Record<string,unknown>,output:Record<string,unknown>={})=>{const result=await admin.from('agent_action_audit').insert({owner_id:auth.user.id,agent_name:'credi-ai',action,resource_type:typeof body.resource_type==='string'?body.resource_type:null,resource_id:resourceId,authorization_level:level,status,request_id:requestId,input,output});if(result.error)throw result.error}
+ const markExecuted=async(output:Record<string,unknown>)=>{const result=await admin.from('agent_action_audit').update({status:'executed',output}).eq('owner_id',auth.user.id).eq('request_id',requestId).in('status',['executing','authorized']);if(result.error)throw result.error}
 
  if(level==='read'){
   await audit('executing',{action},{})
@@ -101,6 +102,103 @@ export async function POST(request:Request){
   if(action==='b2b_pipeline'){
    const [{count:openRfqs},{count:activeAutomations}]=await Promise.all([supabase.from('business_rfqs').select('id',{count:'exact',head:true}).eq('buyer_id',auth.user.id).in('status',['open','quoted']),supabase.from('business_automation_rules').select('id',{count:'exact',head:true}).eq('owner_id',auth.user.id).eq('enabled',true)])
    const summary={open_rfqs:openRfqs??0,active_automations:activeAutomations??0}; await admin.from('agent_action_audit').update({status:'executed',output:{summary}}).eq('owner_id',auth.user.id).eq('request_id',requestId).in('status',['executing','authorized']); return json({ok:true,action,request_id:requestId,summary})
+  }
+  if(action==='commerce_summary'){
+   const {data:store,error:storeError}=await supabase.from('stores').select('id,store_name').eq('vendor_id',auth.user.id).maybeSingle()
+   if(storeError)throw storeError
+   if(!store){const summary={store:null,products:0,active_products:0,units_in_stock:0,low_stock_products:0};await markExecuted({summary});return json({ok:true,action,request_id:requestId,summary})}
+   const {data:products,error}=await supabase.from('products').select('id,stock,is_active').eq('store_id',store.id).limit(2000)
+   if(error)throw error
+   const rows=products??[]
+   const summary={store:store.store_name,products:rows.length,active_products:rows.filter((row)=>row.is_active).length,units_in_stock:rows.reduce((sum,row)=>sum+Math.max(0,Number(row.stock)||0),0),low_stock_products:rows.filter((row)=>Number(row.stock)>0&&Number(row.stock)<=5).length}
+   await markExecuted({summary})
+   return json({ok:true,action,request_id:requestId,summary})
+  }
+  if(action==='affiliate_summary'){
+   const {data:affiliate,error:affiliateError}=await supabase.from('affiliates').select('id,code,is_active,commission_rate').eq('user_id',auth.user.id).limit(1).maybeSingle()
+   if(affiliateError)throw affiliateError
+   if(!affiliate){const summary={enrolled:false,active_links:0,total_links:0,tracked_clicks:0,tracked_conversions:0,commission_balances:'not_exposed_by_affiliate_ledger_policy'};await markExecuted({summary});return json({ok:true,action,request_id:requestId,summary})}
+   const {data:links,error}=await supabase.from('affiliate_product_links').select('id,clicks,conversions,is_active').eq('affiliate_id',affiliate.id).limit(2000)
+   if(error)throw error
+   const rows=links??[]
+   const summary={enrolled:true,affiliate_code:affiliate.code,active:affiliate.is_active,base_commission_rate:Number(affiliate.commission_rate),total_links:rows.length,active_links:rows.filter((row)=>row.is_active).length,tracked_clicks:rows.reduce((sum,row)=>sum+Number(row.clicks||0),0),tracked_conversions:rows.reduce((sum,row)=>sum+Number(row.conversions||0),0),commission_balances:'not_exposed_by_affiliate_ledger_policy'}
+   await markExecuted({summary})
+   return json({ok:true,action,request_id:requestId,summary})
+  }
+  if(action==='chat_summary'){
+   const {data:members,error:membersError}=await supabase.from('conversation_members').select('conversation_id,member_role').eq('user_id',auth.user.id).limit(500)
+   if(membersError)throw membersError
+   const ids=[...new Set((members??[]).map((row)=>row.conversation_id))]
+   let recentMessages=0
+   if(ids.length){const {count,error}=await supabase.from('messages').select('id',{count:'exact',head:true}).in('conversation_id',ids).gte('created_at',new Date(Date.now()-30*86400000).toISOString());if(error)throw error;recentMessages=count??0}
+   const summary={conversations:ids.length,admin_or_support_memberships:(members??[]).filter((row)=>['admin','support'].includes(row.member_role)).length,messages_last_30_days:recentMessages,group_channel_creation:'not_enabled_until_membership_policy_is_hardened'}
+   await markExecuted({summary})
+   return json({ok:true,action,request_id:requestId,summary})
+  }
+  if(action==='live_summary'){
+   const {data:rooms,error}=await supabase.from('chat_live_rooms').select('id,status,viewer_count,replay_url,scheduled_at').eq('host_user_id',auth.user.id).order('created_at',{ascending:false}).limit(500)
+   if(error)throw error
+   const rows=rooms??[]
+   const summary={rooms:rows.length,live_now:rows.filter((row)=>row.status==='live').length,scheduled:rows.filter((row)=>row.status==='scheduled'||Boolean(row.scheduled_at&&row.status!=='live')).length,ended:rows.filter((row)=>row.status==='ended'||Boolean(row.replay_url)).length,replays_available:rows.filter((row)=>Boolean(row.replay_url)).length,viewers_now:rows.filter((row)=>row.status==='live').reduce((sum,row)=>sum+Number(row.viewer_count||0),0),transport_verification:'not_verified_by_summary_query'}
+   await markExecuted({summary})
+   return json({ok:true,action,request_id:requestId,summary})
+  }
+  if(action==='social_summary'){
+   const [{count:posts,error:postsError},{count:stories,error:storiesError},{count:reels,error:reelsError}]=await Promise.all([
+    supabase.from('feed_posts').select('id',{count:'exact',head:true}).eq('owner_id',auth.user.id),
+    supabase.from('stories').select('id',{count:'exact',head:true}).eq('owner_id',auth.user.id),
+    supabase.from('reels').select('id',{count:'exact',head:true}).eq('owner_id',auth.user.id),
+   ])
+   if(postsError)throw postsError
+   if(storiesError)throw storiesError
+   if(reelsError)throw reelsError
+   const summary={posts:posts??0,stories:stories??0,reels:reels??0,publication_moderation:'moderation_status_is_preserved; AI cannot self-approve content'}
+   await markExecuted({summary})
+   return json({ok:true,action,request_id:requestId,summary})
+  }
+  if(action==='support_summary'){
+   const {data:cases,error}=await supabase.from('support_cases').select('id,status,priority,created_at').eq('user_id',auth.user.id).order('created_at',{ascending:false}).limit(500)
+   if(error)throw error
+   const rows=cases??[]
+   const summary={total:rows.length,open:rows.filter((row)=>!['resolved','not_planned'].includes(row.status)).length,critical:rows.filter((row)=>row.priority==='critical'&&!['resolved','not_planned'].includes(row.status)).length,by_status:rows.reduce((result,row)=>{result[row.status]=(result[row.status]??0)+1;return result},{} as Record<string,number>)}
+   await markExecuted({summary})
+   return json({ok:true,action,request_id:requestId,summary})
+  }
+  if(action==='create_support_case'){
+   const title=typeof body.title==='string'?body.title.trim(): ''
+   const description=typeof body.description==='string'?body.description.trim(): ''
+   const categories=['account','orders','payments','products','chat','affiliate','b2b','live','security','technical','suggestion','other']
+   const category=typeof body.category==='string'?body.category:'other'
+   if(title.length<5||title.length>180||description.length<10||description.length>10000||!categories.includes(category))return json({error:'INVALID_SUPPORT_CASE_INPUT',request_id:requestId},400)
+   const {data:created,error}=await supabase.from('support_cases').insert({user_id:auth.user.id,source:'support',category,title,description}).select('id,reference_code,category,title,status,priority,created_at').single()
+   if(error||!created)throw error??new Error('SUPPORT_CASE_CREATE_FAILED')
+   const {error:eventError}=await supabase.from('support_case_events').insert({case_id:created.id,actor_id:auth.user.id,event_type:'created',body:'Caso creado desde Credi AI a solicitud del usuario.',visibility:'user',metadata:{request_id:requestId,source:'credi-ai'}})
+   await markExecuted({case_id:created.id,reference_code:created.reference_code,timeline_recorded:!eventError})
+   return json({ok:true,action,request_id:requestId,status:'executed',case:created,timeline_recorded:!eventError},201)
+  }
+  if(action==='create_b2b_rfq'){
+   const title=typeof body.title==='string'?body.title.trim():''
+   const description=typeof body.description==='string'?body.description.trim():''
+   const quantity=Number(body.quantity)
+   const currency=typeof body.currency==='string'?body.currency.trim().toUpperCase():'USD'
+   const targetPrice=body.target_unit_price==null||body.target_unit_price===''?null:Number(body.target_unit_price)
+   const country=typeof body.delivery_country==='string'?body.delivery_country.trim().toUpperCase():null
+   const neededBy=typeof body.needed_by==='string'&&body.needed_by.trim()?body.needed_by.trim():null
+   if(title.length<3||title.length>300||description.length<10||description.length>12000||!Number.isFinite(quantity)||quantity<=0||!/^[A-Z]{3}$/.test(currency)||(targetPrice!==null&&(!Number.isFinite(targetPrice)||targetPrice<0))||(country!==null&&!/^[A-Z]{2}$/.test(country))||(neededBy!==null&&!/^\\d{4}-\\d{2}-\\d{2}$/.test(neededBy)))return json({error:'INVALID_B2B_RFQ_INPUT',request_id:requestId},400)
+   const {data:rfq,error}=await supabase.from('business_rfqs').insert({buyer_id:auth.user.id,title,description,quantity,currency,target_unit_price:targetPrice,delivery_country:country,needed_by:neededBy,status:'open',visibility:'network',metadata:{created_by:'credi-ai',request_id:requestId}}).select('id,title,description,quantity,currency,target_unit_price,delivery_country,needed_by,status,created_at').single()
+   if(error||!rfq)throw error??new Error('B2B_RFQ_CREATE_FAILED')
+   await markExecuted({rfq_id:rfq.id,status:rfq.status})
+   return json({ok:true,action,request_id:requestId,status:'executed',rfq},201)
+  }
+  if(action==='create_social_post'){
+   const title=typeof body.title==='string'?body.title.trim().slice(0,200):''
+   const postBody=typeof body.body==='string'?body.body.trim():''
+   const visibility=body.visibility==='private'?'private':'public'
+   if(postBody.length<1||postBody.length>10000)return json({error:'INVALID_SOCIAL_POST_BODY',request_id:requestId},400)
+   const {data:post,error}=await supabase.from('feed_posts').insert({owner_id:auth.user.id,title,body:postBody,visibility,status:'published',operation_context:{source:'credi-ai',request_id:requestId}}).select('id,title,body,visibility,status,moderation_status,created_at').single()
+   if(error||!post)throw error??new Error('SOCIAL_POST_CREATE_FAILED')
+   await markExecuted({post_id:post.id,moderation_status:post.moderation_status})
+   return json({ok:true,action,request_id:requestId,status:'executed',publication:post,publicly_visible:post.moderation_status==='approved',message:post.moderation_status==='approved'?'Publicación aprobada y visible.':'Publicación creada y enviada al flujo de moderación; todavía no es visible públicamente.'},201)
   }
   if(action==='create_payment'){
    if(!resourceId)return json({error:'ORDER_ID_REQUIRED',request_id:requestId},400)
