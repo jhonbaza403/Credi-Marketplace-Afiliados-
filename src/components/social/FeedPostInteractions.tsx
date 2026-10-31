@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
-import { Heart, MessageCircle, Send } from "lucide-react";
+import { Heart, MessageCircle, Send, Share2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 type Stats = { like_count: number; comment_count: number; liked_by_me: boolean };
@@ -79,6 +79,7 @@ export default function FeedPostInteractions({ postId }: { postId: string }) {
       <div className="flex flex-wrap items-center gap-3">
         <button type="button" onClick={()=>void toggleLike()} disabled={busy} aria-pressed={stats.liked_by_me} className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-bold transition disabled:opacity-50 ${stats.liked_by_me?"bg-rose-500/10 text-rose-600":"bg-[var(--surface-secondary)] text-[var(--foreground)] hover:text-rose-600"}`}><Heart size={17} fill={stats.liked_by_me?"currentColor":"none"}/> {stats.liked_by_me?"Te gusta":"Me gusta"} · {stats.like_count}</button>
         <button type="button" onClick={()=>void toggleComments()} aria-expanded={open} className="inline-flex items-center gap-2 rounded-xl bg-[var(--surface-secondary)] px-3 py-2 text-sm font-bold text-[var(--foreground)] hover:text-[var(--primary)]"><MessageCircle size={17}/> Comentar · {stats.comment_count}</button>
+        <button type="button" onClick={async()=>{const url=`${window.location.origin}/social#post-${postId}`;try{if(navigator.share)await navigator.share({title:"Publicación de Credi",url});else{await navigator.clipboard.writeText(url);setNotice("Enlace de la publicación copiado.");}}catch(error){if(error instanceof Error&&error.name!=="AbortError")setNotice("No fue posible compartir la publicación.");}}} className="inline-flex items-center gap-2 rounded-xl bg-[var(--surface-secondary)] px-3 py-2 text-sm font-bold text-[var(--foreground)] hover:text-[var(--primary)]"><Share2 size={17}/> Compartir</button>
       </div>
       {open && <div className="mt-4 space-y-4 rounded-2xl bg-[var(--surface-secondary)] p-4">
         <form onSubmit={submitComment} className="flex flex-col gap-2 sm:flex-row">
