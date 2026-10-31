@@ -16,6 +16,10 @@ export type CrediAgentAction =
   | 'create_support_case'
   | 'create_b2b_rfq'
   | 'create_social_post'
+  | 'orders_summary'
+  | 'wallet_summary'
+  | 'marketing_summary'
+  | 'create_marketing_campaign'
 
 const LEVELS: Record<CrediAgentAction, AgentAuthorizationLevel> = {
   inventory_summary: 'read',
@@ -33,6 +37,10 @@ const LEVELS: Record<CrediAgentAction, AgentAuthorizationLevel> = {
   create_support_case: 'execute',
   create_b2b_rfq: 'execute',
   create_social_post: 'execute',
+  orders_summary: 'read',
+  wallet_summary: 'read',
+  marketing_summary: 'read',
+  create_marketing_campaign: 'execute',
 }
 
 export function getAgentAuthorizationLevel(action: CrediAgentAction): AgentAuthorizationLevel {
