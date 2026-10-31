@@ -325,7 +325,7 @@ export default function CrediBusinessChat() {
     setCommunityBusy(true)
     setError(null)
     try {
-      const identifiers = communityPins.split(/[\\n,;]+/).map((value) => value.trim()).filter(Boolean)
+      const identifiers = communityPins.split(/[,;\r\n]+/).map((value) => value.trim()).filter(Boolean)
       if (identifiers.length > 200) throw new Error('Puedes invitar hasta 200 participantes en este momento.')
       const memberIds: string[] = []
       for (const identifier of identifiers) {
