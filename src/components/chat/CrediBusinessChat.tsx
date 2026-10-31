@@ -175,7 +175,32 @@ export default function CrediBusinessChat() {
     ])
     if (messageError) throw messageError
     if (conversation?.metadata) setContext(conversation.metadata as Record<string, unknown>)
-    setMessages((data ?? []) as ChatMessage[])
+    const loadedMessages = (data ?? []) as ChatMessage[]
+    const messageIds = loadedMessages.map((message) => message.id)
+    let reactionsByMessage = new Map<string, { reaction: string; user_id: string }[]>()
+    if (messageIds.length) {
+      const { data: reactionRows, error: reactionError } = await supabase
+        .from('message_reactions')
+        .select('message_id,user_id,reaction')
+        .in('message_id', messageIds)
+      if (reactionError) throw reactionError
+      for (const reaction of reactionRows ?? []) {
+        const current = reactionsByMessage.get(reaction.message_id) ?? []
+        current.push({ reaction: reaction.reaction, user_id: reaction.user_id })
+        reactionsByMessage.set(reaction.message_id, current)
+      }
+    }
+    setMessages(loadedMessages.map((message) => {
+      const rows = reactionsByMessage.get(message.id) ?? []
+      const grouped = new Map<string, { count: number; mine: boolean }>()
+      for (const row of rows) {
+        const entry = grouped.get(row.reaction) ?? { count: 0, mine: false }
+        entry.count += 1
+        if (row.user_id === userId) entry.mine = true
+        grouped.set(row.reaction, entry)
+      }
+      return { ...message, reactions: [...grouped.entries()].map(([reaction, value]) => ({ reaction, ...value })) }
+    }))
     if (userId) {
       const readAt = new Date().toISOString()
       const { error: readError } = await supabase.from('conversation_members').update({ last_read_at: readAt }).eq('conversation_id', conversationId).eq('user_id', userId)
@@ -361,9 +386,23 @@ export default function CrediBusinessChat() {
     }
   }
 
-  async function action(message: ChatMessage, type: 'react'|'copy'|'pin'|'delete'|'edit'|'forward') {
+  async function action(message: ChatMessage, type: 'react'|'copy'|'pin'|'delete'|'edit'|'forward', reaction = '👍') {
     if (!userId) return
-    if (type === 'react') { const { error: e } = await supabase.from('message_reactions').upsert({ message_id: message.id, user_id: userId, reaction: '👍' }, { onConflict: 'message_id,user_id,reaction' }); if (e) setError(fail(e, 'No fue posible reaccionar.')); return }
+    if (type === 'react') {
+      const { data: existing, error: lookupError } = await supabase.from('message_reactions')
+        .select('message_id,user_id,reaction')
+        .eq('message_id', message.id)
+        .eq('user_id', userId)
+        .eq('reaction', reaction)
+        .maybeSingle()
+      if (lookupError) { setError(fail(lookupError, 'No fue posible consultar la reacción.')); return }
+      const result = existing
+        ? await supabase.from('message_reactions').delete().eq('message_id', message.id).eq('user_id', userId).eq('reaction', reaction)
+        : await supabase.from('message_reactions').insert({ message_id: message.id, user_id: userId, reaction })
+      if (result.error) setError(fail(result.error, 'No fue posible reaccionar.'))
+      else if (selectedId) await loadMessages(selectedId)
+      return
+    }
     if (type === 'copy') { if (message.body) await navigator.clipboard.writeText(message.body); return }
     if (type === 'pin') { const { error: e } = await supabase.from('messages').update({ metadata: { ...message.metadata, pinned: !Boolean(message.metadata.pinned) } }).eq('id', message.id); if (e) setError(fail(e, 'No fue posible fijar el mensaje.')); return }
     if (type === 'delete') { if (message.sender_id !== userId) return; const { error: e } = await supabase.from('messages').update({ body: null, deleted_at: new Date().toISOString() }).eq('id', message.id).eq('sender_id', userId); if (e) setError(fail(e, 'No fue posible eliminar el mensaje.')); return }
@@ -489,7 +528,7 @@ export default function CrediBusinessChat() {
 
             <div ref={messageBox} className="credi-chat-messages flex-1 space-y-3 overflow-y-auto px-3 py-5 sm:px-5">
               {!selected ? <div className="flex min-h-[500px] items-center justify-center p-6 text-center"><div><span className="mx-auto grid size-16 place-items-center rounded-[1.5rem] bg-gradient-to-br from-violet-500/15 to-cyan-400/15 text-[var(--primary)]"><MessageCircle size={29}/></span><h2 className="mt-4 text-xl font-black text-[var(--foreground)]">Tu centro de comunicación</h2><p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-[var(--muted)]">Habla con tu comunidad, coordina pedidos y conecta con empresas desde una sola bandeja.</p></div></div>
-                : shown.map((m)=><div key={m.id} className={`group flex ${m.sender_id===userId?'justify-end':'justify-start'}`}><div className={`relative max-w-[90%] rounded-2xl px-4 py-3 shadow-sm sm:max-w-[78%] ${m.sender_id===userId?'credi-chat-message-own':'credi-chat-message-other'}`}>{Boolean(m.metadata.pinned)&&<div className="mb-2 flex items-center gap-1 text-[10px] font-black"><Pin size={11}/> Mensaje fijado</div>}{m.reply_to_id&&<div className="mb-2 rounded-xl bg-black/10 px-3 py-2 text-[11px]">Respuesta · {messages.find((x)=>x.id===m.reply_to_id)?.body||'Contenido multimedia'}</div>}{m.deleted_at?<p className="text-sm italic opacity-60">Mensaje eliminado</p>:<>{(()=>{const meta=getMeta(m);const url=typeof meta.public_url==='string'?meta.public_url:null;return <>{m.message_type==='image'&&url&&<img src={url} alt={String(meta.file_name||'Imagen')} className="mb-2 max-h-80 rounded-xl object-cover"/>}{m.message_type==='video'&&url&&<video src={url} controls playsInline className="mb-2 max-h-96 w-full rounded-xl"/>}{m.message_type==='audio'&&url&&<audio src={url} controls className="mb-2 w-full"/>}{(m.message_type==='document'||m.message_type==='file')&&url&&<a href={url} target="_blank" rel="noreferrer" className="mb-2 flex items-center gap-2 rounded-xl bg-black/10 p-3 text-sm font-bold underline"><FileText size={17}/>{String(meta.file_name||'Abrir archivo')}</a>}</>})()}{m.body&&<p className="whitespace-pre-wrap text-sm leading-6">{m.body}</p>}<div className="mt-2 flex items-center justify-end gap-2 text-[10px] opacity-70">{m.edited_at&&<span>editado</span>}<span>{fmt(m.created_at)}</span>{m.sender_id===userId&&<CheckCheck size={13}/>}</div></>}</div><div className="credi-chat-message-actions ml-2 mt-1 flex flex-wrap gap-1"><button type="button" onClick={()=>void action(m,'react')} className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-[10px]" aria-label="Reaccionar al mensaje">👍</button><button type="button" onClick={()=>setReply(m)} className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-[10px]">Responder</button><button type="button" onClick={()=>void action(m,'pin')} className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-[10px]">Fijar</button>{m.sender_id===userId&&<><button type="button" onClick={()=>void action(m,'edit')} className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-[10px]">Editar</button><button type="button" onClick={()=>void action(m,'delete')} className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-[10px]">Eliminar</button></>}<button type="button" onClick={()=>void action(m,'forward')} className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-[10px]">Reenviar</button></div></div>)}
+                : shown.map((m)=><div key={m.id} className={`group flex ${m.sender_id===userId?'justify-end':'justify-start'}`}><div className={`relative max-w-[90%] rounded-2xl px-4 py-3 shadow-sm sm:max-w-[78%] ${m.sender_id===userId?'credi-chat-message-own':'credi-chat-message-other'}`}>{Boolean(m.metadata.pinned)&&<div className="mb-2 flex items-center gap-1 text-[10px] font-black"><Pin size={11}/> Mensaje fijado</div>}{m.reply_to_id&&<div className="mb-2 rounded-xl bg-black/10 px-3 py-2 text-[11px]">Respuesta · {messages.find((x)=>x.id===m.reply_to_id)?.body||'Contenido multimedia'}</div>}{m.deleted_at?<p className="text-sm italic opacity-60">Mensaje eliminado</p>:<>{(()=>{const meta=getMeta(m);const url=typeof meta.public_url==='string'?meta.public_url:null;return <>{m.message_type==='image'&&url&&<img src={url} alt={String(meta.file_name||'Imagen')} className="mb-2 max-h-80 rounded-xl object-cover"/>}{m.message_type==='video'&&url&&<video src={url} controls playsInline className="mb-2 max-h-96 w-full rounded-xl"/>}{m.message_type==='audio'&&url&&<audio src={url} controls className="mb-2 w-full"/>}{(m.message_type==='document'||m.message_type==='file')&&url&&<a href={url} target="_blank" rel="noreferrer" className="mb-2 flex items-center gap-2 rounded-xl bg-black/10 p-3 text-sm font-bold underline"><FileText size={17}/>{String(meta.file_name||'Abrir archivo')}</a>}</>})()}{m.body&&<p className="whitespace-pre-wrap text-sm leading-6">{m.body}</p>}{m.reactions && m.reactions.length>0 && <div className="mt-2 flex flex-wrap gap-1.5">{m.reactions.map((reaction)=> <button key={reaction.reaction} type="button" onClick={()=>void action(m,'react',reaction.reaction)} aria-pressed={reaction.mine} className={`rounded-full border px-2 py-1 text-[10px] font-bold ${reaction.mine?'border-violet-400 bg-violet-500/15 text-violet-700 dark:text-violet-200':'border-[var(--border)] bg-[var(--surface)] text-[var(--muted)]'}`}>{reaction.reaction} {reaction.count}</button>)}</div>}<div className="mt-2 flex items-center justify-end gap-2 text-[10px] opacity-70">{m.edited_at&&<span>editado</span>}<span>{fmt(m.created_at)}</span>{m.sender_id===userId&&<CheckCheck size={13}/>}</div></>}</div><div className="credi-chat-message-actions ml-2 mt-1 flex flex-wrap gap-1"><button type="button" onClick={()=>void action(m,'react','👍')} className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-[10px]" aria-label="Reaccionar al mensaje">👍</button><button type="button" onClick={()=>setReply(m)} className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-[10px]">Responder</button><button type="button" onClick={()=>void action(m,'pin')} className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-[10px]">Fijar</button>{m.sender_id===userId&&<><button type="button" onClick={()=>void action(m,'edit')} className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-[10px]">Editar</button><button type="button" onClick={()=>void action(m,'delete')} className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-[10px]">Eliminar</button></>}<button type="button" onClick={()=>void action(m,'forward')} className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-[10px]">Reenviar</button></div></div>)}
             </div>
 
             {reply&&<div className="border-t border-[var(--border)] bg-[var(--surface-secondary)] px-4 py-3 text-xs text-[var(--foreground)]"><div className="flex items-center justify-between gap-2"><span className="truncate">Respondiendo a: <strong>{reply.body||'Contenido multimedia'}</strong></span><button type="button" onClick={()=>setReply(null)} className="text-[var(--primary)]">Cerrar</button></div></div>}
