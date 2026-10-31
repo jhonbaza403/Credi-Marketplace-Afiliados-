@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import "@/styles/credi-social-shell.css";
+import "@/styles/credi-chat-experience.css";
 import "@/styles/premium-form-surfaces.css";
 import "@/styles/readability.css";
 import Header from "@/components/layout/Header";
