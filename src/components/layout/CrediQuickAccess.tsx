@@ -227,7 +227,7 @@ export default function CrediQuickAccess() {
       </aside>
 
       <div className="sticky top-[72px] z-30 border-b border-[var(--border)] bg-[color-mix(in_srgb,var(--surface)_94%,transparent)] shadow-[0_8px_22px_rgba(30,25,90,.06)] backdrop-blur-xl xl:hidden">
-        <nav aria-label="Accesos rápidos de Credi" className="mx-auto flex max-w-[1600px] items-center gap-1 overflow-x-auto px-2 py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:px-4">
+        <nav aria-label="Navegación principal" className="mx-auto flex max-w-[1600px] items-center gap-1 overflow-x-auto px-2 py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:px-4">
           {mobilePrimary.map((item) => {
             const Icon = item.icon;
             const active = activePath(pathname, item.href);
