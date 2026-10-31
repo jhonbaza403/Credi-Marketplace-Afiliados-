@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
-import { createHash, createHmac } from 'node:crypto'
+import { createHash } from 'node:crypto'
+import { hashAgentApprovalInput, signAgentApprovalToken, verifyAgentApprovalToken } from '@/lib/ai/agent-approval'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getAgentAuthorizationLevel, isCrediAgentAction } from '@/lib/ai/agent-permissions'
@@ -21,31 +22,7 @@ function approvalSecret(){
  if(!secret)throw new Error('AGENT_APPROVAL_SECRET_NOT_CONFIGURED')
  return secret
 }
-function canonicalize(value:unknown):unknown{
- if(Array.isArray(value))return value.map(canonicalize)
- if(value&&typeof value==='object')return Object.fromEntries(Object.entries(value as Record<string,unknown>).sort(([a],[b])=>a.localeCompare(b)).map(([key,item])=>[key,canonicalize(item)]))
- return value
-}
-function approvalInputHash(body:Record<string,unknown>){
- const excluded=new Set(['approved','approval_token','request_id'])
- const input=Object.fromEntries(Object.entries(body).filter(([key])=>!excluded.has(key)))
- return createHash('sha256').update(JSON.stringify(canonicalize(input))).digest('hex')
-}
-function approvalToken(requestId:string,ownerId:string,action:string,resourceId:string|null,inputHash:string,expiresAt:number){
- const payload=Buffer.from(JSON.stringify({requestId,ownerId,action,resourceId,inputHash,expiresAt})).toString('base64url')
- const signature=createHmac('sha256',approvalSecret()).update(payload).digest('base64url')
- return `${payload}.${signature}`
-}
-function verifyApprovalToken(token:string,requestId:string,ownerId:string,action:string,resourceId:string|null,inputHash:string){
- const [payload,signature]=token.split('.')
- if(!payload||!signature)return false
- const expected=createHmac('sha256',approvalSecret()).update(payload).digest('base64url')
- if(signature.length!==expected.length||!createHash('sha256').update(signature).digest().equals(createHash('sha256').update(expected).digest()))return false
- try{
-  const parsed=JSON.parse(Buffer.from(payload,'base64url').toString('utf8')) as {requestId:string;ownerId:string;action:string;resourceId:string|null;inputHash:string;expiresAt:number}
-  return parsed.requestId===requestId&&parsed.ownerId===ownerId&&parsed.action===action&&(parsed.resourceId??null)===(resourceId??null)&&parsed.inputHash===inputHash&&Number.isFinite(parsed.expiresAt)&&parsed.expiresAt>Date.now()
- }catch{return false}
-}
+
 
 export async function POST(request:Request){
  if(!isSameOrigin(request))return json({error:'Origen no autorizado'},403)
@@ -64,21 +41,21 @@ export async function POST(request:Request){
  const requestId=typeof body.request_id==='string'&&body.request_id.trim()?body.request_id.trim():crypto.randomUUID()
  const resourceId=typeof body.resource_id==='string'&&body.resource_id.trim()?body.resource_id.trim():null
  const audit=async(status:string,input:Record<string,unknown>,output:Record<string,unknown>={})=>{const result=await admin.from('agent_action_audit').insert({owner_id:auth.user.id,agent_name:'credi-ai',action,resource_type:typeof body.resource_type==='string'?body.resource_type:null,resource_id:resourceId,authorization_level:level,status,request_id:requestId,input,output});if(result.error)throw result.error}
- const markExecuted=async(output:Record<string,unknown>)=>{const result=await admin.from('agent_action_audit').update({status:'executed',output}).eq('owner_id',auth.user.id).eq('request_id',requestId).in('status',['executing','authorized']);if(result.error)throw result.error}
+ const markExecuted=async(output:Record<string,unknown>)=>{const result=await admin.from('agent_action_audit').update({status:'executed',output}).eq('owner_id',auth.user.id).eq('action',action).eq('request_id',requestId).in('status',['executing','authorized']);if(result.error)throw result.error}
 
  if(level==='read'){
   await audit('executing',{action},{})
  }else if(!approved){
   const expiresAt=Date.now()+APPROVAL_TTL_MS
-  const inputHash=approvalInputHash(body)
-  const token=approvalToken(requestId,auth.user.id,action,resourceId,inputHash,expiresAt)
+  const inputHash=hashAgentApprovalInput(body)
+  const token=signAgentApprovalToken({requestId,ownerId:auth.user.id,action,resourceId,inputHash,expiresAt},approvalSecret())
   const tokenHash=createHash('sha256').update(token).digest('hex')
   await audit('proposed',{action,resource_id:resourceId},{approval_token_hash:tokenHash,approval_payload_hash:inputHash,approval_expires_at:new Date(expiresAt).toISOString()})
   return json({ok:true,request_id:requestId,status:'approval_required',action,authorization_level:level,approval_expires_at:new Date(expiresAt).toISOString(),approval_token:token,message:'La acción queda preparada. La autorización expira en 10 minutos y solo permite ejecutar exactamente los datos revisados.'},202)
  }else{
-  const inputHash=approvalInputHash(body)
+  const inputHash=hashAgentApprovalInput(body)
   const token=typeof body.approval_token==='string'?body.approval_token:''
-  if(!token||!verifyApprovalToken(token,requestId,auth.user.id,action,resourceId,inputHash))return json({error:'APPROVAL_INVALID_OR_EXPIRED_OR_PAYLOAD_CHANGED',request_id:requestId},403)
+  if(!token||!verifyAgentApprovalToken(token,{requestId,ownerId:auth.user.id,action,resourceId,inputHash},approvalSecret()))return json({error:'APPROVAL_INVALID_OR_EXPIRED_OR_PAYLOAD_CHANGED',request_id:requestId},403)
   const tokenHash=createHash('sha256').update(token).digest('hex')
   const {data:proposal}=await admin.from('agent_action_audit').select('id,status,output').eq('owner_id',auth.user.id).eq('action',action).eq('request_id',requestId).eq('status','proposed').maybeSingle()
   if(!proposal)return json({error:'APPROVAL_ALREADY_USED_OR_NOT_FOUND',request_id:requestId},409)
