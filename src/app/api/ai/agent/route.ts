@@ -35,7 +35,7 @@ export async function POST(request:Request){
  if(!limit.success)return json({error:'RATE_LIMITED'},429)
  let body:Record<string,unknown>; try{body=await request.json() as Record<string,unknown>}catch{return json({error:'JSON inválido'},400)}
  const action=body.action
- const allowed=['inventory_summary','b2b_pipeline','prepare_rfq_followup','publish_offer','send_commercial_message','create_payment','commerce_summary','affiliate_summary','chat_summary','live_summary','social_summary','support_summary','create_support_case','create_b2b_rfq','create_social_post']
+ const allowed=['inventory_summary','b2b_pipeline','prepare_rfq_followup','publish_offer','send_commercial_message','create_payment','commerce_summary','affiliate_summary','chat_summary','live_summary','social_summary','support_summary','create_support_case','create_b2b_rfq','create_social_post','orders_summary','wallet_summary','marketing_summary','create_marketing_campaign']
  if(!isCrediAgentAction(action))return json({error:'ACCION_NO_PERMITIDA',allowed_actions:allowed},400)
  const level=getAgentAuthorizationLevel(action); const approved=body.approved===true; const admin=createAdminClient()
  const requestId=typeof body.request_id==='string'&&body.request_id.trim()?body.request_id.trim():crypto.randomUUID()
@@ -176,6 +176,46 @@ export async function POST(request:Request){
    if(error||!post)throw error??new Error('SOCIAL_POST_CREATE_FAILED')
    await markExecuted({post_id:post.id,moderation_status:post.moderation_status})
    return json({ok:true,action,request_id:requestId,status:'executed',publication:post,publicly_visible:post.moderation_status==='approved',message:post.moderation_status==='approved'?'Publicación aprobada y visible.':'Publicación creada y enviada al flujo de moderación; todavía no es visible públicamente.'},201)
+  }
+  if(action==='orders_summary'){
+   const {data:orders,error}=await supabase.from('orders').select('id,status,total_amount,currency,payment_status,created_at').eq('buyer_id',auth.user.id).order('created_at',{ascending:false}).limit(1000)
+   if(error)throw error
+   const rows=orders??[]
+   const byStatus=rows.reduce((result,row)=>{result[String(row.status)]=(result[String(row.status)]??0)+1;return result},{} as Record<string,number>)
+   const pendingByCurrency=rows.filter((row)=>row.payment_status==='pending').reduce((result,row)=>{const code=String(row.currency||'USD').trim();result[code]=(result[code]??0)+Number(row.total_amount||0);return result},{} as Record<string,number>)
+   const summary={orders:rows.length,by_status:byStatus,pending_payment_totals_by_currency:Object.entries(pendingByCurrency).map(([currency,amount])=>({currency,amount:Number(amount.toFixed(2))}))}
+   await markExecuted({summary})
+   return json({ok:true,action,request_id:requestId,summary})
+  }
+  if(action==='wallet_summary'){
+   const {data:accounts,error}=await supabase.from('wallet_accounts').select('id,currency,available_balance,pending_balance,status').eq('user_id',auth.user.id).order('currency',{ascending:true}).limit(100)
+   if(error)throw error
+   const summary={accounts:(accounts??[]).map((account)=>({id:account.id,currency:String(account.currency).trim(),available_balance:Number(account.available_balance),pending_balance:Number(account.pending_balance),status:account.status})),currency_note:'Los saldos se muestran separados por moneda; no se suman monedas diferentes.'}
+   await markExecuted({summary})
+   return json({ok:true,action,request_id:requestId,summary})
+  }
+  if(action==='marketing_summary'){
+   const {data:campaigns,error}=await supabase.from('marketing_campaigns').select('id,name,objective,status,currency,daily_budget,lifetime_budget,start_at,end_at').eq('owner_id',auth.user.id).order('created_at',{ascending:false}).limit(500)
+   if(error)throw error
+   const rows=campaigns??[]
+   const byStatus=rows.reduce((result,row)=>{result[row.status]=(result[row.status]??0)+1;return result},{} as Record<string,number>)
+   const dailyBudgets=rows.reduce((result,row)=>{const code=String(row.currency||'USD');result[code]=(result[code]??0)+Number(row.daily_budget||0);return result},{} as Record<string,number>)
+   const summary={campaigns:rows.length,by_status:byStatus,daily_budget_totals_by_currency:Object.entries(dailyBudgets).map(([currency,amount])=>({currency,amount:Number(amount.toFixed(2))})),active_campaigns:rows.filter((row)=>row.status==='active').length}
+   await markExecuted({summary})
+   return json({ok:true,action,request_id:requestId,summary})
+  }
+  if(action==='create_marketing_campaign'){
+   const name=typeof body.name==='string'?body.name.trim():''
+   const objective=typeof body.objective==='string'?body.objective:'sales'
+   const allowedObjectives=['awareness','traffic','engagement','leads','sales','catalog','live_attendance']
+   const currency=typeof body.currency==='string'?body.currency.trim().toUpperCase():'USD'
+   const dailyBudget=body.daily_budget==null?0:Number(body.daily_budget)
+   const lifetimeBudget=body.lifetime_budget==null||body.lifetime_budget===''?null:Number(body.lifetime_budget)
+   if(name.length<2||name.length>180||!allowedObjectives.includes(objective)||!/^[A-Z]{3}$/.test(currency)||!Number.isFinite(dailyBudget)||dailyBudget<0||(lifetimeBudget!==null&&(!Number.isFinite(lifetimeBudget)||lifetimeBudget<0)))return json({error:'INVALID_MARKETING_CAMPAIGN_INPUT',request_id:requestId},400)
+   const {data:campaign,error}=await supabase.from('marketing_campaigns').insert({owner_id:auth.user.id,name,objective,currency,daily_budget:dailyBudget,lifetime_budget:lifetimeBudget,status:'draft'}).select('id,name,objective,status,currency,daily_budget,lifetime_budget,created_at').single()
+   if(error||!campaign)throw error??new Error('MARKETING_CAMPAIGN_CREATE_FAILED')
+   await markExecuted({campaign_id:campaign.id,status:'draft',budget_is_not_spent:true})
+   return json({ok:true,action,request_id:requestId,status:'executed',campaign,launch_requires_separate_approval:true,message:'Borrador creado; no se ha activado ni consumido presupuesto.'},201)
   }
   if(action==='create_payment'){
    if(!resourceId)return json({error:'ORDER_ID_REQUIRED',request_id:requestId},400)
