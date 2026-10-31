@@ -176,7 +176,13 @@ export default function CrediBusinessChat() {
     if (messageError) throw messageError
     if (conversation?.metadata) setContext(conversation.metadata as Record<string, unknown>)
     setMessages((data ?? []) as ChatMessage[])
-    if (userId) await supabase.from('conversation_members').update({ last_read_at: new Date().toISOString() }).eq('conversation_id', conversationId).eq('user_id', userId)
+    if (userId) {
+      const readAt = new Date().toISOString()
+      const { error: readError } = await supabase.from('conversation_members').update({ last_read_at: readAt }).eq('conversation_id', conversationId).eq('user_id', userId)
+      if (!readError) {
+        setConversations((current) => current.map((item) => item.id === conversationId ? { ...item, unread: 0 } : item))
+      }
+    }
     requestAnimationFrame(() => messageBox.current?.scrollTo({ top: messageBox.current.scrollHeight, behavior: 'smooth' }))
   }, [supabase, userId])
 
@@ -197,6 +203,7 @@ export default function CrediBusinessChat() {
       const next = payload.new as ChatMessage
       if (payload.eventType === 'INSERT') setMessages((current) => current.some((m) => m.id === next.id) ? current : [...current, next])
       if (payload.eventType === 'UPDATE') setMessages((current) => current.map((m) => m.id === next.id ? next : m))
+      if (payload.eventType === 'INSERT') requestAnimationFrame(() => messageBox.current?.scrollTo({ top: messageBox.current.scrollHeight, behavior: 'smooth' }))
     }).subscribe()
     return () => { void supabase.removeChannel(channel) }
   }, [loadMessages, selectedId, supabase])
