@@ -56,3 +56,46 @@ Credi AI debe convertir solicitudes del usuario en operaciones dentro de Credi, 
 ## Estado de esta fase
 
 20 operaciones con manejadores explícitos guardadas en la rama `feat/credi-ai-operations-console`. El Preview de Vercel y las pruebas automatizadas deben pasar sobre el último commit antes de abrir revisión. No se ha fusionado la rama ni desplegado en producción.
+
+## Capa de portales premium
+
+La navegación transversal compartida está implementada como `CrediServicePortalNav` y se integra en la plantilla `ModuleShell` y en los portales principales de servicios. Cada área conserva su ruta, componentes, datos y controles; la navegación común no sustituye los permisos ni crea datos ficticios.
+
+Portales contemplados: Comunidad/Muro, Marketplace, Credi Chat, Credi LIVE, Afiliados, B2B, Wallet, Credi Intelligence y Business OS. La siguiente iteración visual debe profundizar en el espacio de trabajo específico de cada área (indicadores, cola de trabajo, actividad, acciones disponibles y estados reales), no duplicar pantallas con botones decorativos.
+
+## Siguiente fase: orquestador de lenguaje natural
+
+Esta fase es una especificación de construcción, no una capacidad que se declare terminada todavía.
+
+1. **Interpretación segura:** convertir la petición en una intención tipada y limitada al catálogo de capacidades registradas. Rechazar lo ambiguo cuando pueda cambiar destinatarios, importes, publicaciones, permisos o datos irreversibles.
+2. **Planificación sin efectos:** construir un plan explícito con pasos, dependencias, datos requeridos, propietario, recursos y resultado esperado. Las consultas previas usan la sesión del usuario y RLS; planificar nunca ejecuta escrituras.
+3. **Autorización por paso:** presentar cada escritura sensible con recurso, destinatario, contenido e importe exactos. Emitir la aprobación HMAC existente por operación; no permitir que una aprobación genérica autorice todo un flujo financiero o externo.
+4. **Ejecución coordinada:** ejecutar el grafo de pasos de manera secuencial o por dependencias, con idempotencia y registro persistente de cada transición. Los reintentos automáticos se limitan a operaciones seguras; pagos, mensajes ya enviados y acciones no reversibles pasan a revisión manual cuando el resultado sea incierto.
+5. **Verificación independiente:** volver a consultar el estado persistido desde el backend, contrastar el resultado esperado y cerrar como exitoso solo cuando exista evidencia. Ante fallo parcial, conservar los pasos completados, señalar el bloqueo y ejecutar una compensación únicamente cuando esté definida y sea segura.
+
+### Contrato mínimo del plan
+
+Cada plan debe conservar `plan_id`, `request_id`, usuario propietario, intención, versión del plan, pasos ordenados, dependencias, entradas canónicas, nivel de riesgo, aprobaciones por paso, claves de idempotencia, estado, evidencia de verificación y vínculo a `agent_action_audit`. Nunca confiar en datos del modelo para identidad, precios, saldos, permisos, propiedad de recursos ni confirmación de operaciones.
+
+### Criterios de aceptación de la orquestación
+
+- Una petición en lenguaje natural produce un plan comprensible y sin efectos secundarios.
+- El plan resuelve los recursos con datos de la sesión actual y no puede acceder a los recursos de otra cuenta.
+- Cada paso de escritura se autoriza individualmente y el payload ejecutado coincide exactamente con el aprobado.
+- Un fallo a mitad de flujo deja un estado parcial explícito y permite reanudar de forma idempotente sin duplicar pagos o mensajes.
+- La verificación consulta el objeto real y su auditoría; una respuesta del modelo o un HTTP 200 sin persistencia no bastan.
+
+## Validación real aún pendiente
+
+- **LIVE:** codificador real → Cloudflare Stream → al menos dos espectadores autenticados → desconexión y reconexión → finalización → replay reproducible. Deben revisarse webhooks, sincronización de estados y recuperación.
+- **Credi Chat y llamadas:** dos cuentas de prueba distintas, conversación existente con membresía correcta, envío y recepción de texto/imagen/vídeo/archivo, permisos de cámara y micrófono, llamada bidireccional, desconexión y recuperación.
+- Los tests E2E que dependen de `E2E_USER_EMAIL`, `E2E_PEER_EMAIL`, `E2E_CONVERSATION_ID`, `PLAYWRIGHT_BASE_URL`, `E2E_STORAGE_STATE_PATH`, `E2E_OPERATION_ID` y `E2E_LIVE_ROOM_ID` deben constar como omitidos cuando falta su configuración. Un workflow verde con esos tests omitidos no valida LIVE ni llamadas reales.
+
+## Estado actualizado
+
+- Navegación común de portales: implementada en esta rama.
+- Plantilla premium compartida para módulos avanzados: implementada en esta rama.
+- Áreas de negocio con sus propios flujos y pantallas: existentes, con madurez desigual; requieren auditoría funcional individual.
+- Orquestador de lenguaje natural con grafo de operaciones, ejecución durable y recuperación: pendiente de implementación y pruebas.
+- LIVE real y llamadas multimedia con cuentas de prueba: pendientes de evidencia E2E.
+- La rama sigue sin fusionarse y no se ha desplegado a producción.
