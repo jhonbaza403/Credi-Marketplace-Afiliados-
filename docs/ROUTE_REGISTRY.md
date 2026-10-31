@@ -2,7 +2,7 @@
 
 ## Alcance
 
-Inventario de la rama `feat/credi-ai-operations-console`. El árbol inspeccionado contenía 104 archivos de página y 88 handlers API; esta rama incorpora dos páginas profesionales y cuatro handlers de empleo, para un total esperado de 106 páginas y 92 handlers. Estos conteos describen archivos, no la madurez de cada servicio.
+Inventario de la rama `feat/credi-ai-operations-console`. El árbol inspeccionado en esta actualización contiene 106 páginas y 93 handlers API, incluyendo las rutas de empleo y preferencias sociales. Estos conteos describen archivos, no la madurez de cada servicio.
 
 Los grupos de rutas Next.js como `(public)` y `(auth)` no forman parte de la URL. La protección aquí indicada es una clasificación inicial: la autorización definitiva debe estar aplicada en el handler, RLS y pruebas. Ocultar enlaces en el frontend no sustituye autorización backend.
 
@@ -11,7 +11,7 @@ Los grupos de rutas Next.js como `(public)` y `(auth)` no forman parte de la URL
 | Ruta | Tipo | Protección / rol | Estado |
 |---|---|---|---|
 | `/` | Página | Pública | Portal de entrada; recorrido social-comercial por validar |
-| `/social` | Página | Lectura pública; escritura autenticada | Parcial: feed y contenido; grupos/eventos/personalización pendientes |
+| `/social` | Página | Lectura pública solo de contenido aprobado; preferencias personales autenticadas | Parcial: primeras preferencias explícitas en rama; grupos/eventos y E2E de staging pendientes |
 | `/marketplace` | Página | Catálogo público; operaciones comerciales autenticadas | Parcial: recorrido integral de compra aún requiere E2E |
 | `/chat` | Página | Usuario autenticado y miembro; invitaciones visibles solo para el destinatario | Parcial: directos y grupos con invitación/aceptación en rama; migración/RLS y E2E de dos cuentas pendientes; canales y llamadas multiparte no implementados |
 | `/live` | Página | Anfitrión autenticado; audiencia según permisos de sala | Parcial: transporte y replay reales pendientes |
@@ -36,6 +36,7 @@ Los grupos de rutas Next.js como `(public)` y `(auth)` no forman parte de la URL
 | `/api/jobs/[jobId]` | GET público solo si la vacante está activa | Implementado en rama; depende de migración |
 | `/api/jobs/[jobId]/applications` | POST autenticado; postulación única a vacante activa ajena | Implementado en rama; depende de migración |
 | `/api/jobs/profile` | GET/PUT autenticado y limitado al perfil propio | Implementado en rama; depende de migración |
+| `/api/social/preferences` | GET/PUT autenticado; RLS por propietario, temas permitidos y rate limit | Preferencias explícitas del Muro; depende de migración y E2E de staging |
 | `/api/ai/agent` | Autenticación, permisos por acción, aprobación y auditoría | 20 operaciones discretas; orquestador multi-paso pendiente |
 | `/api/live`, `/api/live/stream`, `/api/live/cloudflare-webhook` | Sesión/host, verificación de webhook y autorización por sala | Requiere E2E real de extremo a extremo |
 | `/api/chat/media` y `/api/chat/turn` | Autenticación y membresía de conversación | Requiere pruebas de dos cuentas y multimedia real |

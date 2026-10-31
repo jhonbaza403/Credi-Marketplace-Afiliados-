@@ -1,6 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import CrediServicePortalNav from '@/components/portal/CrediServicePortalNav'
+import SocialFeedPreferences from '@/components/social/SocialFeedPreferences'
+import { rankFeedItemsForUser, isFeedInterestId, type FeedRankingMode } from '@/lib/social/feed-ranking'
 import { ArrowRight, BadgeCheck, Building2, Camera, Megaphone, MessageCircle, Play, Radio, ShoppingBag, Sparkles, TrendingUp, Users } from "lucide-react";
 import { getDatabaseServerClient } from "@/lib/database/server";
 import { withOperationContext } from "@/lib/portal/operation-context";
@@ -67,17 +69,52 @@ export const dynamic = "force-dynamic";
 export default async function SocialPage() {
   const supabase = await getDatabaseServerClient();
   const now = new Date().toISOString();
+  const { data: auth } = await supabase.auth.getUser();
+
+  let feedPreferences: { interests: string[]; mode: FeedRankingMode } = {
+    interests: [],
+    mode: 'chronological',
+  };
+
+  // Personalization is opt-in and uses only topic IDs explicitly chosen by the
+  // signed-in user. If the feature migration is absent, keep chronological order.
+  if (auth.user) {
+    const { data: savedPreferences, error: preferenceError } = await supabase
+      .from('social_feed_preferences')
+      .select('interests,feed_mode')
+      .eq('user_id', auth.user.id)
+      .maybeSingle();
+
+    if (!preferenceError && savedPreferences) {
+      const interests = Array.isArray(savedPreferences.interests)
+        ? savedPreferences.interests.filter((value: unknown): value is string =>
+            typeof value === 'string' && isFeedInterestId(value))
+        : [];
+      feedPreferences = {
+        interests,
+        mode: savedPreferences.feed_mode === 'interests' && interests.length > 0
+          ? 'interests'
+          : 'chronological',
+      };
+    }
+  }
 
   const [postsResult, storiesResult, reelsResult, adsResult] = await Promise.all([
-    supabase.from("feed_posts").select("id,title,body,media,published_at,created_at,operation_context").eq("status", "published").eq("visibility", "public").order("created_at", { ascending: false }).limit(20),
-    supabase.from("stories").select("id,body,media,expires_at,created_at,operation_context").eq("visibility", "public").gt("expires_at", now).order("created_at", { ascending: false }).limit(20),
-    supabase.from("reels").select("id,title,body,media,published_at,created_at,operation_context").eq("status", "published").eq("visibility", "public").order("created_at", { ascending: false }).limit(20),
-    supabase.from("advertisements").select("id,title,body,media,destination_url,starts_at,ends_at,created_at,operation_context").eq("status", "active").or(`starts_at.is.null,starts_at.lte.${now}`).or(`ends_at.is.null,ends_at.gt.${now}`).order("created_at", { ascending: false }).limit(10),
+    supabase.from("feed_posts").select("id,title,body,media,published_at,created_at,operation_context").eq("status", "published").eq("moderation_status", "approved").eq("visibility", "public").order("created_at", { ascending: false }).limit(20),
+    supabase.from("stories").select("id,body,media,expires_at,created_at,operation_context").eq("moderation_status", "approved").eq("visibility", "public").gt("expires_at", now).order("created_at", { ascending: false }).limit(20),
+    supabase.from("reels").select("id,title,body,media,published_at,created_at,operation_context").eq("status", "published").eq("moderation_status", "approved").eq("visibility", "public").order("created_at", { ascending: false }).limit(20),
+    supabase.from("advertisements").select("id,title,body,media,destination_url,starts_at,ends_at,created_at,operation_context").eq("status", "active").eq("moderation_status", "approved").or(`starts_at.is.null,starts_at.lte.${now}`).or(`ends_at.is.null,ends_at.gt.${now}`).order("created_at", { ascending: false }).limit(10),
   ]);
 
   const stories = storiesResult.data ?? [];
-  const reels = reelsResult.data ?? [];
-  const posts = postsResult.data ?? [];
+  const rawReels = reelsResult.data ?? [];
+  const rawPosts = postsResult.data ?? [];
+  const rankedReels = rankFeedItemsForUser(rawReels, feedPreferences);
+  const rankedPosts = rankFeedItemsForUser(rawPosts, feedPreferences);
+  const reels = rankedReels.map(({ item }) => item);
+  const posts = rankedPosts.map(({ item }) => item);
+  const reelInterestMatches = new Map(rankedReels.map(({ item, matchedInterests }) => [item.id, matchedInterests]));
+  const postInterestMatches = new Map(rankedPosts.map(({ item, matchedInterests }) => [item.id, matchedInterests]));
   const ads = adsResult.data ?? [];
   const totalContent = stories.length + reels.length + posts.length;
 
@@ -192,13 +229,19 @@ export default async function SocialPage() {
             </div>
           </aside>
           <div>
-            <div className="mb-4"><p className="text-xs font-black uppercase tracking-[.16em] text-[var(--primary)]">Feed</p><h2 id="feed-title" className="mt-1 text-2xl font-black">Publicaciones y reels</h2></div>
+            <div className="mb-4 space-y-3">
+              <div><p className="text-xs font-black uppercase tracking-[.16em] text-[var(--primary)]">Feed</p><h2 id="feed-title" className="mt-1 text-2xl font-black">Publicaciones y reels</h2></div>
+              <SocialFeedPreferences />
+              {feedPreferences.mode === 'interests' && feedPreferences.interests.length > 0
+                ? <p className="text-xs text-[var(--muted)]">Ordenamos las publicaciones por coincidencias con los temas que elegiste y mantenemos los más recientes primero en caso de empate. Puedes cambiarlo cuando quieras.</p>
+                : null}
+            </div>
             <div className="space-y-5">
               {reels.map((reel) => {
                 const media = firstMedia(reel.media);
                 return <article key={`reel-${reel.id}`} className="overflow-hidden rounded-[1.75rem] border border-[var(--border)] bg-[var(--surface)] shadow-sm">
                   <div className="aspect-video bg-[var(--surface-secondary)]">{media ? <MediaPreview media={[media]} alt={reel.title || "Reel de Credi"} /> : <div className="flex h-full items-center justify-center gap-2 text-sm font-semibold text-[var(--muted)]"><Play className="size-5" /> Reel sin multimedia</div>}</div>
-                  <div className="p-6"><span className="text-[11px] font-black uppercase tracking-[.14em] text-[var(--primary)]">Reel</span><h3 className="mt-2 text-xl font-black">{reel.title || "Reel de la comunidad"}</h3><p className="mt-2 text-sm leading-7 text-[var(--muted)]">{reel.body || "Contenido comercial de la comunidad Credi."}</p>{commerceActions(reel.operation_context) && <div className="mt-5 flex flex-wrap gap-2"><Link href={commerceActions(reel.operation_context)!.product} className="rounded-xl bg-[var(--primary)] px-4 py-2 text-xs font-black text-white">Ver producto</Link><Link href={commerceActions(reel.operation_context)!.chat} className="rounded-xl border border-[var(--border)] px-4 py-2 text-xs font-black">Contactar</Link><Link href={commerceActions(reel.operation_context)!.checkout} className="rounded-xl border border-emerald-400/30 bg-emerald-400/10 px-4 py-2 text-xs font-black text-emerald-700">Comprar</Link></div>}</div>
+                  <div className="p-6"><span className="text-[11px] font-black uppercase tracking-[.14em] text-[var(--primary)]">Reel</span><h3 className="mt-2 text-xl font-black">{reel.title || "Reel de la comunidad"}</h3><p className="mt-2 text-sm leading-7 text-[var(--muted)]">{reel.body || "Contenido comercial de la comunidad Credi."}</p>{feedPreferences.mode === 'interests' && reelInterestMatches.get(reel.id)?.length ? <p className="mt-2 text-[11px] font-semibold text-[var(--primary)]">Coincide con tus intereses: {reelInterestMatches.get(reel.id)!.join(", ")}</p> : null}{commerceActions(reel.operation_context) && <div className="mt-5 flex flex-wrap gap-2"><Link href={commerceActions(reel.operation_context)!.product} className="rounded-xl bg-[var(--primary)] px-4 py-2 text-xs font-black text-white">Ver producto</Link><Link href={commerceActions(reel.operation_context)!.chat} className="rounded-xl border border-[var(--border)] px-4 py-2 text-xs font-black">Contactar</Link><Link href={commerceActions(reel.operation_context)!.checkout} className="rounded-xl border border-emerald-400/30 bg-emerald-400/10 px-4 py-2 text-xs font-black text-emerald-700">Comprar</Link></div>}</div>
                 </article>;
               })}
               {posts.map((post) => {
@@ -206,7 +249,7 @@ export default async function SocialPage() {
                 return <article key={`post-${post.id}`} className="rounded-[1.75rem] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-sm">
                   <span className="text-[11px] font-black uppercase tracking-[.14em] text-[var(--primary)]">Publicación</span>
                   <h3 className="mt-2 text-xl font-black">{post.title || "Publicación de la comunidad"}</h3>
-                  <p className="mt-2 whitespace-pre-wrap text-sm leading-7">{post.body}</p>{media && <div className="mt-5 aspect-video overflow-hidden rounded-2xl bg-[var(--surface-secondary)]"><MediaPreview media={[media]} alt={post.title || "Publicación de Credi"} /></div>}{commerceActions(post.operation_context) && <div className="mt-5 flex flex-wrap gap-2"><Link href={commerceActions(post.operation_context)!.product} className="rounded-xl bg-[var(--primary)] px-4 py-2 text-xs font-black text-white">Ver producto</Link><Link href={commerceActions(post.operation_context)!.chat} className="rounded-xl border border-[var(--border)] px-4 py-2 text-xs font-black">Contactar</Link><Link href={commerceActions(post.operation_context)!.checkout} className="rounded-xl border border-emerald-400/30 bg-emerald-400/10 px-4 py-2 text-xs font-black text-emerald-700">Comprar</Link></div>}
+                  <p className="mt-2 whitespace-pre-wrap text-sm leading-7">{post.body}</p>{feedPreferences.mode === 'interests' && postInterestMatches.get(post.id)?.length ? <p className="mt-2 text-[11px] font-semibold text-[var(--primary)]">Coincide con tus intereses: {postInterestMatches.get(post.id)!.join(", ")}</p> : null}{media && <div className="mt-5 aspect-video overflow-hidden rounded-2xl bg-[var(--surface-secondary)]"><MediaPreview media={[media]} alt={post.title || "Publicación de Credi"} /></div>}{commerceActions(post.operation_context) && <div className="mt-5 flex flex-wrap gap-2"><Link href={commerceActions(post.operation_context)!.product} className="rounded-xl bg-[var(--primary)] px-4 py-2 text-xs font-black text-white">Ver producto</Link><Link href={commerceActions(post.operation_context)!.chat} className="rounded-xl border border-[var(--border)] px-4 py-2 text-xs font-black">Contactar</Link><Link href={commerceActions(post.operation_context)!.checkout} className="rounded-xl border border-emerald-400/30 bg-emerald-400/10 px-4 py-2 text-xs font-black text-emerald-700">Comprar</Link></div>}
                   {media && <a className="mt-4 inline-flex items-center gap-2 rounded-xl bg-[var(--surface-secondary)] px-4 py-2.5 text-sm font-bold text-[var(--primary)] hover:opacity-80" href={media.url} target="_blank" rel="noreferrer">Abrir multimedia <ArrowRight className="size-4" /></a>}
                 </article>;
               })}

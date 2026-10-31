@@ -5,7 +5,7 @@
 ## Evidencia revisada
 
 - Rama: `feat/credi-ai-operations-console`.
-- Snapshot anterior a esta incorporación: 104 archivos de página, 88 handlers API, 214 migraciones y 22 archivos de pruebas.
+- Snapshot de la entrega original del inventario: 104 archivos de página, 88 handlers API y 214 migraciones. La rama ha incorporado desde entonces empleo, seguridad de grupos Chat y preferencias explícitas del Muro; los conteos acumulados se registran al final de esta fase.
 - Esta entrega añade 2 páginas, 4 handlers API, 1 migración y 2 archivos de pruebas.
 - Inventario de rutas: [ROUTE_REGISTRY.md](ROUTE_REGISTRY.md). Visión canónica: [CREDI_PRODUCT_VISION.md](CREDI_PRODUCT_VISION.md).
 
@@ -18,7 +18,7 @@
 | P0 | Chat multimedia/llamadas | Existe UI, almacenamiento privado y gestores de llamadas. El test requiere dos cuentas y conversación configuradas. | Ejecutar texto, imagen, vídeo, archivo, voz, llamada bidireccional y recuperación con dos cuentas reales. | Parcial; E2E pendiente |
 | P0 | Supabase/migraciones | Historial local/remoto sensible; no se ha autorizado aplicar nuevas migraciones a producción. | Reconciliar drift, probar la migración en entorno seguro y preparar despliegue reversible. | No aplicar automáticamente |
 | P1 | Empleo/red profesional | `/jobs` redirigía a servicios; el formulario insertaba directamente en `jobs`; faltaban APIs de consulta/postulación y migración dedicada en el árbol revisado. | Vacantes, búsqueda, detalle, postulación única, perfil profesional con visibilidad y RLS. | Código incorporado en esta rama; migración/E2E pendientes |
-| P1 | Personalización | `src/features/recommendation/index.ts` rankea productos por región/intereses. No se encontró persistencia/API de preferencias personales ni feed social personalizado conectado. | Preferencias explícitas, feedback, feed por seguidos/intereses/actualidad, modo cronológico, explicación, reset y opt-out. No inferir atributos sensibles. | Motor parcial; feed social y persistencia pendientes |
+| P1 | Personalización | Esta rama incorpora tabla privada de preferencias, API autenticada y ranking determinístico del Muro basado solo en temas elegidos explícitamente. | Falta integrar señales de seguimiento de cuentas y comunidades cuando existan, evaluar diversidad/frescura, feedback opcional y métricas con consentimiento. | Primera versión explícita en rama; migración/E2E de staging pendientes |
 | P1 | Grupos/comunidades/eventos | Credi Chat incorpora grupos privados con invitaciones pendientes y aceptación expresa. No equivale aún a una red de comunidades. | Gestión posterior de miembros, transferencia de propiedad, canales, descubrimiento de comunidades, eventos, RSVP, moderación y notificaciones. | Chat groups en rama; comunidades/eventos/canales pendientes |
 | P1 | Creadores/contenido | Existen muro, historias, reels, anuncios e interacciones. | Composer avanzado, edición, subtítulos, borradores, colaboraciones y analítica fiable de alcance/retención. | Parcial |
 | P1 | Marketplace B2C | Existen catálogo, productos, carrito, checkout, pedidos y eventos. | E2E producto→carrito→pago→webhook→pedido→inventario→notificación; devoluciones y disputas. | Parcial; E2E de producción pendiente |
@@ -52,6 +52,13 @@
 - Se añaden pruebas unitarias de validación y E2E de disponibilidad pública.
 
 **Condición de activación:** la migración solo está en la rama. No se aplicó a Supabase de producción. El módulo no se declara operativo hasta probar la migración, los permisos y el recorrido con cuentas de empleador y candidato.
+
+## Conteo acumulado de artefactos de esta rama
+
+- Páginas Next.js: 106.
+- Handlers API: 93.
+- Migraciones Supabase locales: 217.
+- Los archivos de pruebas unitarias, E2E y SQL se verifican contra el árbol del commit; no equivalen a pruebas ejecutadas en entornos reales.
 
 ## Orden recomendado
 
