@@ -127,7 +127,7 @@ export default function Navbar() {
         </span>
       </Link>
 
-      <div className="ml-auto hidden min-w-0 flex-1 items-center justify-center gap-1 xl:flex">
+      <div className="hidden">
         {PRIMARY_LINKS.map((item) => {
           const Icon = item.icon;
           const active = isPathActive(pathname, item.href);
