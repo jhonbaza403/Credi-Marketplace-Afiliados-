@@ -72,8 +72,9 @@ export async function POST(request:Request){
   const storedHash=typeof proposal.output?.approval_token_hash==='string'?proposal.output.approval_token_hash:''
   const storedExpiry=typeof proposal.output?.approval_expires_at==='string'?new Date(proposal.output.approval_expires_at).getTime():0
   if(storedHash!==tokenHash||storedExpiry<=Date.now())return json({error:'APPROVAL_INVALID_OR_EXPIRED',request_id:requestId},403)
-  const {error:authorizationError}=await admin.from('agent_action_audit').update({status:'authorized',output:{approval_expires_at:proposal.output.approval_expires_at}}).eq('id',proposal.id).eq('status','proposed')
+  const {data:authorizedProposal,error:authorizationError}=await admin.from('agent_action_audit').update({status:'authorized',output:{approval_expires_at:proposal.output.approval_expires_at}}).eq('id',proposal.id).eq('owner_id',auth.user.id).eq('status','proposed').select('id').maybeSingle()
   if(authorizationError)return json({error:'APPROVAL_STATE_ERROR',request_id:requestId},500)
+  if(!authorizedProposal)return json({error:'APPROVAL_ALREADY_USED_OR_NOT_FOUND',request_id:requestId},409)
  }
 
  try{
