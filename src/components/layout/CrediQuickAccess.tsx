@@ -24,7 +24,6 @@ import {
   TrendingUp,
   Users,
   Wallet,
-  X,
 } from "lucide-react";
 
 const sections = [
