@@ -179,7 +179,7 @@ export default function CrediQuickAccess() {
           <div className="border-t border-white/10 pt-3">
             <button
               type="button"
-              onClick={() => setMoreOpen((value) => !value)
+              onClick={() => setMoreOpen((value) => !value)}
               aria-expanded={moreOpen}
               aria-controls="credi-sidebar-more"
               className="flex min-h-10 w-full items-center justify-between rounded-xl px-3 text-xs font-bold text-slate-300 transition hover:bg-white/[.07] hover:text-white focus-visible:outline-2 focus-visible:outline-cyan-300"
