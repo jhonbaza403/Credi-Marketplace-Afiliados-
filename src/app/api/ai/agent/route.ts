@@ -230,9 +230,10 @@ export async function POST(request:Request){
     if(message.includes('PLATFORM_REVENUE_ACCOUNT_NOT_CONFIGURED'))return json({error:'PLATFORM_WALLET_NOT_CONFIGURED',request_id:requestId},409)
     throw error
    }
-   const result=paymentResult&&typeof paymentResult==='object'?paymentResult as Record<string,unknown>:{result:paymentResult}
+   const result:Record<string,unknown>=paymentResult&&typeof paymentResult==='object'?paymentResult as Record<string,unknown>:{result:paymentResult}
+   const paymentStatus=typeof result.status==='string'?result.status:'unknown'
    await markExecuted({payment:result,provider:'wallet',idempotency_key:idempotencyKey})
-   return json({ok:true,action,request_id:requestId,status:result.status==='succeeded'?'executed':'submitted',payment:result,message:result.status==='succeeded'?'El pago con billetera fue confirmado por la transacción contable de Credi.':'La billetera devolvió un estado que requiere revisión.'})
+   return json({ok:true,action,request_id:requestId,status:paymentStatus==='succeeded'?'executed':'submitted',payment:result,message:paymentStatus==='succeeded'?'El pago con billetera fue confirmado por la transacción contable de Credi.':'La billetera devolvió un estado que requiere revisión.'})
   }
   if(action==='create_payment'){
    if(!resourceId)return json({error:'ORDER_ID_REQUIRED',request_id:requestId},400)
