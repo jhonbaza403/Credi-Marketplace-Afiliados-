@@ -20,7 +20,6 @@ import {
   ShieldCheck,
   ShoppingBag,
   Sparkles,
-  Store,
   TrendingUp,
   Users,
   Wallet,
