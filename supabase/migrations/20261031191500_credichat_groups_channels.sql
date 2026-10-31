@@ -68,6 +68,7 @@ DECLARE
   v_member_ids uuid[];
   v_requested_count integer;
   v_valid_count integer;
+  v_rate record;
 BEGIN
   IF v_user_id IS NULL THEN
     RAISE EXCEPTION 'UNAUTHORIZED' USING ERRCODE = '42501';
@@ -75,6 +76,12 @@ BEGIN
 
   IF p_kind NOT IN ('group', 'channel') THEN
     RAISE EXCEPTION 'INVALID_COMMUNITY_KIND' USING ERRCODE = '22023';
+  END IF;
+
+  SELECT * INTO v_rate
+  FROM public.consume_api_rate_limit('credichat_community:' || v_user_id::text, 10, 60);
+  IF NOT COALESCE(v_rate.allowed, false) THEN
+    RAISE EXCEPTION 'RATE_LIMITED' USING ERRCODE = '42900';
   END IF;
 
   IF p_title IS NULL OR length(trim(p_title)) < 2 OR length(trim(p_title)) > 80 THEN
