@@ -131,7 +131,7 @@ export default function ServicesPage() {
             <div>
               <p className="text-xs font-black uppercase tracking-[.16em] text-[var(--primary)]">Explora Credi</p>
               <h2 id="services-title" className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">Servicios y herramientas</h2>
-              <p className="mt-2 text-sm leading-6 text-[var(--muted)]">Ocho accesos principales, cada uno conectado con su área real de la plataforma.</p>
+              <p className="mt-2 text-sm leading-6 text-[var(--muted)]">Nueve accesos principales, cada uno conectado con su área de la plataforma.</p>
             </div>
             <span className="rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs font-bold text-[var(--muted)]">Un portal · Una cuenta</span>
           </div>

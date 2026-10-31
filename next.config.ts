@@ -59,8 +59,6 @@ const nextConfig: NextConfig = {
       { source: "/seller", destination: "/sellers", permanent: false },
       { source: "/seller/b2b", destination: "/b2b", permanent: false },
       { source: "/seller/b2b/:path*", destination: "/b2b/:path*", permanent: false },
-      { source: "/jobs", destination: "/services", permanent: false },
-      { source: "/jobs/:path*", destination: "/services/:path*", permanent: false },
       { source: "/explorar", destination: "/marketplace", permanent: false },
       { source: "/servicios", destination: "/services", permanent: false },
       { source: "/servicios/:path*", destination: "/services/:path*", permanent: false },

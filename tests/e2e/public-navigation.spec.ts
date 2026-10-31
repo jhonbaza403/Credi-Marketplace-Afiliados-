@@ -49,7 +49,7 @@ test.describe("Public navigation", () => {
     await page.goto("/services", { waitUntil: "domcontentloaded" });
 
     const serviceLinks = page.getByRole("link", { name: /Abrir servicio/i });
-    await expect(serviceLinks).toHaveCount(8);
+    await expect(serviceLinks).toHaveCount(9);
 
     for (const link of await serviceLinks.all()) {
       await expect(link).not.toHaveAttribute("href", /^(https?:|mailto:|#)/i);
@@ -79,7 +79,7 @@ test.describe("Public navigation", () => {
     const aliases = [
       ["/dashboard/orders", "/login"],
       ["/dashboard/profile", "/login"],
-      ["/jobs", "/services"],
+      ["/jobs", "/jobs"],
       ["/seller/b2b", "/b2b"],
       ["/products/create", "/login"],
       ["/publish", "/login"],

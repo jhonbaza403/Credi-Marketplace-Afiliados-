@@ -20,7 +20,13 @@ export async function GET(request: Request) {
 
   if (error) {
     console.error('[jobs:list]', error)
-    return NextResponse.json({ error: 'No fue posible cargar las vacantes.' }, { status: 500 })
+    // CI and newly provisioned environments may not have the Supabase service
+    // running or the feature migration applied yet. Report dependency unavailability
+    // explicitly instead of pretending the catalog is empty or leaking a 500.
+    return NextResponse.json(
+      { error: 'JOBS_SERVICE_UNAVAILABLE', code: 'DEPENDENCY_UNAVAILABLE' },
+      { status: 503, headers: { 'Retry-After': '30' } },
+    )
   }
 
   const jobs = (data ?? []).filter(job => {
