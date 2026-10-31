@@ -23,7 +23,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Validate required production E2E secrets
         shell: bash
@@ -39,7 +39,7 @@ jobs:
           node -e "JSON.parse(require('fs').readFileSync(process.env.E2E_STORAGE_STATE_PATH, 'utf8'));"
 
       - name: Setup Node 24
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: npm
