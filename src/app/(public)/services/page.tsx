@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import DomainBridge from "@/components/portal/DomainBridge";
+import CrediServicePortalNav from '@/components/portal/CrediServicePortalNav'
 import {
   ArrowRight,
   BriefcaseBusiness,
@@ -92,6 +93,7 @@ export default function ServicesPage() {
     <main className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
       <div className="mx-auto w-full max-w-[1500px] px-4 py-5 sm:px-6 lg:px-8 lg:py-9">
         <DomainBridge context="services" />
+        <CrediServicePortalNav />
 
         <section className="relative isolate overflow-hidden rounded-[2rem] border border-indigo-300/15 bg-[linear-gradient(125deg,#09172d_0%,#17153c_58%,#102e3c_100%)] px-5 py-9 text-white shadow-[0_26px_80px_rgba(2,8,28,.24)] sm:px-9 sm:py-12">
           <div aria-hidden="true" className="pointer-events-none absolute -right-20 -top-24 size-80 rounded-full bg-cyan-300/15 blur-3xl" />
