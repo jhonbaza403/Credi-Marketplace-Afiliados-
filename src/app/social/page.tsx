@@ -22,16 +22,6 @@ function commerceActions(context: unknown) {
   };
 }
 
-function firstMedia(media: unknown): MediaItem | null {
-  if (!Array.isArray(media)) return null;
-  const first = media[0] as MediaItem | undefined;
-  if (!first?.url || typeof first.url !== "string") return null;
-  return {
-    url: first.url,
-    type: typeof first.type === "string" ? first.type : undefined,
-  };
-}
-
 function mediaItems(value: unknown): MediaItem[] {
   if (!Array.isArray(value)) return [];
   return value.filter((item): item is MediaItem => Boolean(item && typeof item === "object" && typeof (item as MediaItem).url === "string" && (item as MediaItem).url?.trim()));
