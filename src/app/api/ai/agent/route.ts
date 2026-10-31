@@ -219,7 +219,7 @@ export async function POST(request:Request){
   }
   if(action==='pay_order_from_wallet'){
    if(!resourceId)return json({error:'ORDER_ID_REQUIRED',request_id:requestId},400)
-   const idempotencyKey=`credi-ai:${requestId}`
+   const idempotencyKey=`credi-ai:${createHash('sha256').update(requestId).digest('hex')}`
    const {data:paymentResult,error}=await supabase.rpc('wallet_pay_order',{p_order_id:resourceId,p_idempotency_key:idempotencyKey})
    if(error){
     const message=String(error.message||'')
