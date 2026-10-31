@@ -11,16 +11,16 @@ const legalLinks = [
 
 export default function Footer() {
   return (
-    <footer className="border-t border-slate-200 bg-slate-50">
+    <footer className="border-t border-[var(--border)] bg-[var(--surface)] xl:ml-[248px]">
       <div className="mx-auto flex max-w-7xl flex-col gap-8 px-4 py-10 sm:px-6 lg:px-8 md:flex-row md:items-start md:justify-between">
         <div className="max-w-md">
           <Link href="/" className="inline-flex items-center gap-3" aria-label="Credi Marketplace - Inicio">
             <span className="relative flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-slate-200">
               <Image src="/logo.png" alt="Credi Marketplace" fill sizes="40px" className="object-contain p-1" />
             </span>
-            <span className="font-extrabold text-slate-950">Credi Marketplace</span>
+            <span className="font-extrabold text-[var(--foreground)]">Credi Marketplace</span>
           </Link>
-          <p className="mt-3 max-w-sm text-sm leading-6 text-slate-600">
+          <p className="mt-3 max-w-sm text-sm leading-6 text-[var(--muted)]">
             Comercio, servicios, B2B, afiliados y operaciones digitales en una sola plataforma.
           </p>
         </div>
@@ -41,7 +41,7 @@ export default function Footer() {
         </div>
       </div>
 
-      <div className="border-t border-slate-200 px-4 py-5 text-center text-xs text-slate-500">
+      <div className="border-t border-[var(--border)] px-4 py-5 text-center text-xs text-[var(--muted)]">
         © 2026 Credi Marketplace. Todos los derechos reservados.
       </div>
     </footer>
