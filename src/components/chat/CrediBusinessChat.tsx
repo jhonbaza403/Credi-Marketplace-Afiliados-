@@ -216,7 +216,10 @@ export default function CrediBusinessChat() {
     void refresh().then((id) => {
       if (id && alive) void openBusinessContext(id)
     }).catch((e) => {
-      if (alive) setError(fail(e, 'No fue posible cargar Credi Business Chat.'))
+      if (alive) {
+        setLoadingState(false)
+        setError(fail(e, 'No fue posible cargar Credi Chat.'))
+      }
     })
     return () => { alive = false }
   }, [openBusinessContext, refresh])
