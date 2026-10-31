@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 
 export default function ChatPage() {
   return (
-    <main className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
+    <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
       <div className="mx-auto max-w-[1760px] space-y-4 px-2 py-3 sm:px-5 sm:py-6">
         <DomainBridge context="chat" />
         <CrediContactDirectory />
@@ -23,6 +23,6 @@ export default function ChatPage() {
           <AIAssistant />
         </div>
       </div>
-    </main>
+    </div>
   )
 }
