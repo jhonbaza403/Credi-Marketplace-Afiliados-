@@ -8,6 +8,7 @@ type AgentAction =
   | 'send_commercial_message' | 'create_payment' | 'commerce_summary' | 'affiliate_summary'
   | 'chat_summary' | 'live_summary' | 'social_summary' | 'support_summary'
   | 'create_support_case' | 'create_b2b_rfq' | 'create_social_post'
+  | 'orders_summary' | 'wallet_summary' | 'marketing_summary' | 'create_marketing_campaign'
 
 type AgentResult = Record<string, unknown>
 type PendingApproval = {
@@ -34,6 +35,10 @@ const ACTIONS: Array<{ value: AgentAction; label: string; module: string; descri
   { value: 'create_payment', label: 'Preparar intento de pago', module: 'Pagos', description: 'Crea un intento de pago de un pedido propio. No realiza por sí solo el cargo bancario.', level: 'Requiere aprobación', resource: true },
   { value: 'support_summary', label: 'Estado de mis casos', module: 'Atención', description: 'Consulta tus casos de soporte, prioridades y estados.', level: 'Consulta', resource: false },
   { value: 'create_support_case', label: 'Abrir caso de soporte', module: 'Atención', description: 'Registra un caso de soporte y crea su primer evento de seguimiento.', level: 'Requiere aprobación', resource: false },
+  { value: 'orders_summary', label: 'Resumen de pedidos', module: 'Marketplace', description: 'Consulta pedidos propios y pagos pendientes, con totales separados por moneda.', level: 'Consulta', resource: false },
+  { value: 'wallet_summary', label: 'Consultar billetera', module: 'Billetera', description: 'Muestra saldos disponibles y pendientes de tus cuentas, separados por moneda.', level: 'Consulta', resource: false },
+  { value: 'marketing_summary', label: 'Resumen de campañas', module: 'Marketing', description: 'Consulta campañas, estados y presupuestos configurados; no confunde presupuesto con gasto.', level: 'Consulta', resource: false },
+  { value: 'create_marketing_campaign', label: 'Crear borrador de campaña', module: 'Marketing', description: 'Prepara un borrador de campaña. No lo activa ni consume presupuesto.', level: 'Requiere aprobación', resource: false },
 ]
 
 const inputClass = 'mt-1.5 w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15'
@@ -55,6 +60,9 @@ export default function CrediAgentOperations() {
   const [targetPrice, setTargetPrice] = useState('')
   const [deliveryCountry, setDeliveryCountry] = useState('')
   const [neededBy, setNeededBy] = useState('')
+  const [marketingObjective, setMarketingObjective] = useState('sales')
+  const [dailyBudget, setDailyBudget] = useState('0')
+  const [lifetimeBudget, setLifetimeBudget] = useState('')
   const [visibility, setVisibility] = useState<'public' | 'private'>('public')
   const [confirmed, setConfirmed] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -65,6 +73,7 @@ export default function CrediAgentOperations() {
   const selected = useMemo(() => ACTIONS.find((item) => item.value === action)!, [action])
   const needsResource = selected.resource
   const isSocialPost = action === 'create_social_post'
+  const isMarketingDraft = action === 'create_marketing_campaign'
   const isSupportCase = action === 'create_support_case'
   const isB2bRfq = action === 'create_b2b_rfq'
   const canPrepare = !loading &&
@@ -73,7 +82,8 @@ export default function CrediAgentOperations() {
     (action !== 'send_commercial_message' || message.trim().length > 0) &&
     (!isSupportCase || (title.trim().length >= 5 && description.trim().length >= 10)) &&
     (!isB2bRfq || (title.trim().length >= 3 && description.trim().length >= 10 && Number.isFinite(Number(quantity)) && Number(quantity) > 0 && /^[A-Z]{3}$/.test(currency.toUpperCase()))) &&
-    (!isSocialPost || contentBody.trim().length > 0)
+    (!isSocialPost || contentBody.trim().length > 0) &&
+    (!isMarketingDraft || (title.trim().length >= 2 && Number.isFinite(Number(dailyBudget)) && Number(dailyBudget) >= 0 && (!lifetimeBudget.trim() || (Number.isFinite(Number(lifetimeBudget)) && Number(lifetimeBudget) >= 0))))
 
   function buildBody(): Record<string, unknown> {
     return {
@@ -90,6 +100,7 @@ export default function CrediAgentOperations() {
         ...(neededBy ? { needed_by: neededBy } : {}),
       } : {}),
       ...(isSocialPost ? { title: title.trim(), body: contentBody.trim(), visibility } : {}),
+      ...(isMarketingDraft ? { name: title.trim(), objective: marketingObjective, currency: currency.toUpperCase(), daily_budget: Number(dailyBudget), ...(lifetimeBudget.trim() ? { lifetime_budget: Number(lifetimeBudget) } : {}) } : {}),
     }
   }
 
@@ -228,6 +239,21 @@ export default function CrediAgentOperations() {
             </label>
           </>}
 
+          {isMarketingDraft && <>
+            <label className={labelClass}>Nombre de campaña<input className={inputClass} value={title} onChange={(event) => setTitle(event.target.value)} maxLength={180} /></label>
+            <label className={labelClass}>Objetivo
+              <select className={inputClass} value={marketingObjective} onChange={(event) => setMarketingObjective(event.target.value)}>
+                {['awareness','traffic','engagement','leads','sales','catalog','live_attendance'].map((item) => <option key={item} value={item}>{item}</option>)}
+              </select>
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              <label className={labelClass}>Moneda<input className={inputClass} maxLength={3} value={currency} onChange={(event) => setCurrency(event.target.value.toUpperCase())} /></label>
+              <label className={labelClass}>Presupuesto diario<input className={inputClass} type="number" min="0" step="0.01" value={dailyBudget} onChange={(event) => setDailyBudget(event.target.value)} /></label>
+              <label className={labelClass}>Presupuesto total (opcional)<input className={inputClass} type="number" min="0" step="0.01" value={lifetimeBudget} onChange={(event) => setLifetimeBudget(event.target.value)} /></label>
+            </div>
+            <p className="rounded-xl bg-muted/40 px-3 py-2 text-xs leading-5 text-muted-foreground">Esto crea un borrador en Credi. No conecta una red publicitaria, no activa anuncios ni gasta presupuesto.</p>
+          </>}
+
           <button type="button" disabled={!canPrepare} onClick={() => void prepare()} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-black text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50">
             {loading ? <Loader2 className="size-4 animate-spin" /> : selected.level === 'Consulta' ? <PackageSearch className="size-4" /> : <ArrowRight className="size-4" />}
             {loading ? 'Procesando…' : selected.level === 'Consulta' ? 'Consultar ahora' : 'Revisar operación'}
@@ -259,7 +285,7 @@ export default function CrediAgentOperations() {
           </div> : null}
         </div>
       </div>
-      <div className="flex items-start gap-2 border-t border-border bg-muted/20 px-6 py-4 text-xs leading-5 text-muted-foreground sm:px-8"><Send className="mt-0.5 size-3.5 shrink-0" />15 operaciones conectadas a datos y servicios existentes. Grupos/canales, aprobación de moderación, liquidaciones de afiliados y transmisión LIVE siguen sujetos a sus controles especializados; no se simulan desde este panel.</div>
+      <div className="flex items-start gap-2 border-t border-border bg-muted/20 px-6 py-4 text-xs leading-5 text-muted-foreground sm:px-8"><Send className="mt-0.5 size-3.5 shrink-0" />19 operaciones conectadas a datos y servicios existentes. Grupos/canales, aprobación de moderación, liquidaciones de afiliados y transmisión LIVE siguen sujetos a sus controles especializados; no se simulan desde este panel.</div>
     </section>
   )
 }
