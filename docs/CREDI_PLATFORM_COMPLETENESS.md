@@ -52,3 +52,12 @@ Un módulo solo se declara operativo cuando se comprueba su recorrido completo e
 - Las APIs de redes externas requieren OAuth, scopes y aprobación de cada proveedor; no se debe anunciar publicación multiplataforma activa solo por existir una matriz de capacidades.
 - Los contenidos sociales y las ofertas B2B permanecen sujetos a moderación y verificación. La publicación instantánea significa que el contenido aprobado se distribuye sin programación artificial; no significa saltarse controles.
 - Las pruebas de producción no pueden reemplazarse por una compilación ni por una respuesta simulada.
+
+## Hallazgos verificados en Supabase de producción (2026-10-31)
+
+- `conversations.kind` permite actualmente `direct`, `group`, `business` y `support`; **no existe el tipo `channel`** en la restricción actual.
+- La política vigente `conversation_members_insert` permite insertar la propia membresía por `user_id = auth.uid()` sin comprobar invitación o pertenencia previa. Antes de habilitar grupos/canales y exponer descubrimiento o unirse a conversaciones, debe endurecerse esa política y mover la creación/alta de miembros a un flujo servidor transaccional. No se debe habilitar el alta abierta desde el navegador.
+- El esquema de `chat_live_rooms.started_at` es `NOT NULL DEFAULT now()`. El endpoint LIVE de esta rama enviaba explícitamente `started_at: null` al crear salas programadas; se corrigió omitiendo el campo para que PostgreSQL aplique el valor por defecto y `scheduled_at` conserve la hora planificada.
+- La base Supabase ya registra migraciones del 2026-10-31 que no están presentes en la cabeza de la rama de esta PR. Antes de fusionar, hay que reconciliar el historial de migraciones y actualizar la rama desde `main`; no ejecutar una migración de esta rama contra producción mientras exista esa divergencia.
+
+Estos hallazgos son bloqueos reales de seguridad/consistencia, no detalles visuales. Se mantienen visibles para evitar presentar grupos, canales o LIVE como terminados sin validación.
