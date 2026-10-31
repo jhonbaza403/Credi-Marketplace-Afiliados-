@@ -8,7 +8,7 @@ type AgentAction =
   | 'send_commercial_message' | 'create_payment' | 'commerce_summary' | 'affiliate_summary'
   | 'chat_summary' | 'live_summary' | 'social_summary' | 'support_summary'
   | 'create_support_case' | 'create_b2b_rfq' | 'create_social_post'
-  | 'orders_summary' | 'wallet_summary' | 'marketing_summary' | 'create_marketing_campaign'
+  | 'orders_summary' | 'wallet_summary' | 'marketing_summary' | 'create_marketing_campaign' | 'pay_order_from_wallet'
 
 type AgentResult = Record<string, unknown>
 type PendingApproval = {
@@ -33,6 +33,7 @@ const ACTIONS: Array<{ value: AgentAction; label: string; module: string; descri
   { value: 'publish_offer', label: 'Crear oferta comercial', module: 'Marketplace', description: 'Crea una oferta activa asociada a un anuncio propio.', level: 'Requiere aprobación', resource: true },
   { value: 'send_commercial_message', label: 'Enviar mensaje comercial', module: 'Chat', description: 'Envía un mensaje en una conversación a la que perteneces.', level: 'Requiere aprobación', resource: true },
   { value: 'create_payment', label: 'Preparar intento de pago', module: 'Pagos', description: 'Crea un intento de pago de un pedido propio. No realiza por sí solo el cargo bancario.', level: 'Requiere aprobación', resource: true },
+  { value: 'pay_order_from_wallet', label: 'Pagar pedido con billetera', module: 'Billetera', description: 'Debita el saldo de la billetera del comprador y registra el pago del pedido mediante la operación contable atómica de Credi. Requiere aprobación expresa.', level: 'Requiere aprobación', resource: true },
   { value: 'support_summary', label: 'Estado de mis casos', module: 'Atención', description: 'Consulta tus casos de soporte, prioridades y estados.', level: 'Consulta', resource: false },
   { value: 'create_support_case', label: 'Abrir caso de soporte', module: 'Atención', description: 'Registra un caso de soporte y crea su primer evento de seguimiento.', level: 'Requiere aprobación', resource: false },
   { value: 'orders_summary', label: 'Resumen de pedidos', module: 'Marketplace', description: 'Consulta pedidos propios y pagos pendientes, con totales separados por moneda.', level: 'Consulta', resource: false },
@@ -285,7 +286,7 @@ export default function CrediAgentOperations() {
           </div> : null}
         </div>
       </div>
-      <div className="flex items-start gap-2 border-t border-border bg-muted/20 px-6 py-4 text-xs leading-5 text-muted-foreground sm:px-8"><Send className="mt-0.5 size-3.5 shrink-0" />19 operaciones conectadas a datos y servicios existentes. Grupos/canales, aprobación de moderación, liquidaciones de afiliados y transmisión LIVE siguen sujetos a sus controles especializados; no se simulan desde este panel.</div>
+      <div className="flex items-start gap-2 border-t border-border bg-muted/20 px-6 py-4 text-xs leading-5 text-muted-foreground sm:px-8"><Send className="mt-0.5 size-3.5 shrink-0" />20 operaciones conectadas a datos y servicios existentes. Grupos/canales, aprobación de moderación, liquidaciones de afiliados y transmisión LIVE siguen sujetos a sus controles especializados; no se simulan desde este panel.</div>
     </section>
   )
 }
