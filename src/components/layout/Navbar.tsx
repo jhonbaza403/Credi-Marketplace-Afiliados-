@@ -109,7 +109,7 @@ export default function Navbar() {
 
   return (
     <nav
-      aria-label="Navegación principal"
+      aria-label="Barra superior"
       className="relative mx-auto flex min-h-[72px] max-w-[1600px] items-center gap-3 px-3 sm:px-5 lg:px-6"
     >
       <Link
