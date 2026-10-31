@@ -1,0 +1,193 @@
+/* Credi Chat — desktop messenger, mobile-ready and theme aware. */
+.credi-chat-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-height: 720px;
+  background: var(--surface);
+  border-color: var(--border);
+  box-shadow: 0 22px 70px rgb(19 24 64 / 11%);
+}
+
+.credi-chat-topbar,
+.credi-chat-inbox,
+.credi-chat-thread,
+.credi-chat-info {
+  background: var(--surface);
+  border-color: var(--border);
+}
+
+.credi-chat-inbox {
+  display: flex;
+  min-height: 0;
+  max-height: 400px;
+  flex-direction: column;
+  background: var(--surface-secondary);
+}
+
+.credi-chat-conversation-list {
+  scrollbar-gutter: stable;
+  overscroll-behavior: contain;
+}
+
+.credi-chat-conversation {
+  border-color: var(--border);
+}
+
+.credi-chat-conversation:hover {
+  background: color-mix(in srgb, var(--primary) 5%, var(--surface));
+}
+
+.credi-chat-conversation.is-active {
+  background: color-mix(in srgb, var(--primary) 10%, var(--surface));
+  box-shadow: inset 3px 0 0 var(--primary);
+}
+
+.credi-chat-avatar {
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 11%, var(--surface-tertiary));
+}
+
+.credi-chat-avatar.is-group {
+  color: #087f9f;
+  background: #dff7ff;
+}
+
+.credi-chat-avatar.is-channel {
+  color: #6d48dd;
+  background: #eee8ff;
+}
+
+.dark .credi-chat-avatar.is-group {
+  color: #8fe3ff;
+  background: rgb(8 127 159 / 22%);
+}
+
+.dark .credi-chat-avatar.is-channel {
+  color: #c5b2ff;
+  background: rgb(109 72 221 / 23%);
+}
+
+.credi-chat-folders {
+  scrollbar-width: none;
+}
+
+.credi-chat-folders::-webkit-scrollbar {
+  display: none;
+}
+
+.credi-chat-thread {
+  min-width: 0;
+  background:
+    radial-gradient(circle at 86% 5%, color-mix(in srgb, var(--primary) 5%, transparent), transparent 23rem),
+    var(--surface);
+}
+
+.credi-chat-thread-head,
+.credi-chat-composer {
+  background: color-mix(in srgb, var(--surface) 96%, var(--surface-secondary));
+  border-color: var(--border);
+}
+
+.credi-chat-messages {
+  background-image:
+    radial-gradient(circle at 1px 1px, color-mix(in srgb, var(--muted-light) 10%, transparent) 1px, transparent 0);
+  background-size: 22px 22px;
+  overscroll-behavior: contain;
+}
+
+.credi-chat-message-other {
+  background: var(--surface-secondary);
+  color: var(--foreground);
+  border: 1px solid var(--border);
+  border-bottom-left-radius: 5px;
+}
+
+.credi-chat-message-own {
+  background: linear-gradient(135deg, #6847ed 0%, #4266dc 100%);
+  color: #fff;
+  border: 1px solid rgb(255 255 255 / 10%);
+  border-bottom-right-radius: 5px;
+}
+
+.credi-chat-message-actions {
+  align-self: flex-start;
+  max-width: 90px;
+  opacity: 0;
+  transition: opacity 160ms ease;
+}
+
+.credi-chat-message-actions button {
+  color: var(--foreground);
+  box-shadow: 0 2px 8px rgb(15 23 42 / 6%);
+}
+
+.group:hover .credi-chat-message-actions,
+.group:focus-within .credi-chat-message-actions {
+  opacity: 1;
+}
+
+.credi-chat-info {
+  min-width: 0;
+  background: var(--surface-secondary);
+  border-color: var(--border);
+}
+
+.credi-chat-info > div {
+  position: sticky;
+  top: 96px;
+}
+
+.credi-chat-inbox,
+.credi-chat-thread,
+.credi-chat-info {
+  min-height: 720px;
+}
+
+@media (min-width: 768px) {
+  .credi-chat-workspace {
+    grid-template-columns: minmax(260px, 310px) minmax(0, 1fr);
+  }
+  .credi-chat-inbox {
+    max-height: none;
+  }
+}
+
+@media (min-width: 1280px) {
+  .credi-chat-workspace {
+    grid-template-columns: minmax(270px, 310px) minmax(0, 1fr) minmax(245px, 285px);
+  }
+}
+
+@media (hover: none) {
+  .credi-chat-message-actions {
+    opacity: 1;
+  }
+}
+
+@media (max-width: 767px) {
+  .credi-chat-workspace {
+    min-height: 0;
+  }
+  .credi-chat-inbox {
+    min-height: 250px;
+    max-height: 350px;
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .credi-chat-thread {
+    min-height: 650px;
+  }
+  .credi-chat-message-actions {
+    max-width: 74px;
+  }
+  .credi-chat-message-actions button {
+    padding-left: 7px;
+    padding-right: 7px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .credi-chat-message-actions {
+    transition: none;
+  }
+}

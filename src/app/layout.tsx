@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import "@/styles/credi-social-shell.css";
+import "@/styles/credi-chat-experience.css";
 import "@/styles/premium-form-surfaces.css";
 import "@/styles/readability.css";
 import Header from "@/components/layout/Header";
@@ -43,7 +45,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="es" suppressHydrationWarning>
-      <body className="min-h-screen bg-[var(--background)] text-[var(--foreground)] antialiased" suppressHydrationWarning>
+      <body className="credi-shell-body min-h-screen bg-[var(--background)] text-[var(--foreground)] antialiased" suppressHydrationWarning>
         <MarketplaceAtmosphere />
         <LanguageProvider>
           <RegionProvider>
@@ -52,7 +54,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
                 <div className="relative z-10 flex min-h-screen flex-col">
                   <Header />
                   <CrediQuickAccess />
-                  <main className="app-content-layer flex-1">
+                  <main className="app-content-layer min-w-0 flex-1 xl:pl-[248px]">
                     <div className="app-readable-surface min-h-full">{children}</div>
                   </main>
                   <Footer />

@@ -1,0 +1,226 @@
+/* Credi social-commerce shell: immersive, responsive and accessible. */
+:root {
+  --background: #f4f5fc;
+  --surface: #ffffff;
+  --surface-secondary: #f7f7ff;
+  --surface-tertiary: #eeeffa;
+  --border: #e4e5f0;
+  --border-strong: #cfd1e4;
+  --foreground: #17152b;
+  --muted: #62637d;
+  --muted-light: #8586a0;
+  --primary: #5944df;
+  --primary-hover: #4834c6;
+  --primary-active: #3928a8;
+  --focus-ring: color-mix(in srgb, #654ff0 30%, transparent);
+}
+
+.dark {
+  --background: #101020;
+  --surface: #19192d;
+  --surface-secondary: #202039;
+  --surface-tertiary: #292944;
+  --border: #343451;
+  --border-strong: #484866;
+  --foreground: #f6f4ff;
+  --muted: #b5b2ce;
+  --muted-light: #8b89a8;
+  --primary: #a89aff;
+  --primary-hover: #c0b7ff;
+  --primary-active: #d7d1ff;
+  --focus-ring: rgb(168 154 255 / 35%);
+}
+
+.credi-shell-body {
+  background:
+    radial-gradient(circle at 82% 10%, rgb(126 92 255 / 8%), transparent 28rem),
+    radial-gradient(circle at 4% 50%, rgb(42 195 255 / 5%), transparent 24rem),
+    var(--background);
+}
+
+.credi-global-header {
+  border-bottom: 1px solid rgb(226 225 244 / 85%);
+  background: rgb(255 255 255 / 88%);
+  box-shadow: 0 8px 30px rgb(31 26 77 / 7%);
+  backdrop-filter: blur(22px) saturate(145%);
+}
+
+.dark .credi-global-header {
+  border-bottom-color: rgb(80 76 118 / 55%);
+  background: rgb(22 21 42 / 90%);
+}
+
+.credi-app-sidebar {
+  background:
+    radial-gradient(circle at 5% 0%, rgb(111 82 255 / 28%), transparent 17rem),
+    linear-gradient(180deg, #17142e 0%, #11152c 54%, #101b35 100%);
+  color: #f7f6ff;
+  border-right: 1px solid rgb(255 255 255 / 9%);
+  box-shadow: 16px 0 45px rgb(29 25 72 / 10%);
+}
+
+.credi-sidebar-link {
+  display: flex;
+  min-height: 42px;
+  align-items: center;
+  gap: 11px;
+  border: 1px solid transparent;
+  border-radius: 13px;
+  padding: 9px 12px;
+  color: rgb(230 229 248 / 83%);
+  font-size: 12px;
+  font-weight: 750;
+  transition: background-color 180ms ease, color 180ms ease, border-color 180ms ease, transform 180ms ease;
+}
+
+.credi-sidebar-link:hover {
+  transform: translateX(2px);
+  background: rgb(255 255 255 / 8%);
+  color: #fff;
+}
+
+.credi-sidebar-link[aria-current="page"] {
+  border-color: rgb(175 157 255 / 28%);
+  background: linear-gradient(105deg, #6846ed 0%, #4935c6 100%);
+  color: #fff;
+  box-shadow: 0 8px 24px rgb(92 64 225 / 30%);
+}
+
+.credi-sidebar-link svg {
+  color: #bdb3ff;
+}
+
+.credi-sidebar-link[aria-current="page"] svg {
+  color: #fff;
+}
+
+.credi-dashboard-hero {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border: 1px solid rgb(255 255 255 / 14%);
+  background:
+    radial-gradient(circle at 78% 30%, rgb(105 75 255 / 44%), transparent 28rem),
+    radial-gradient(circle at 100% 110%, rgb(0 198 255 / 22%), transparent 28rem),
+    linear-gradient(112deg, #15123c 0%, #20145d 52%, #1d3479 100%);
+  box-shadow: 0 24px 70px rgb(43 34 115 / 17%);
+}
+
+.credi-dashboard-hero h1,
+.credi-dashboard-hero h2 { color: #fff; }
+
+.credi-app-sidebar h2 { color: rgb(148 163 184 / .78); }
+
+.credi-dashboard-hero::before,
+.credi-dashboard-hero::after {
+  position: absolute;
+  z-index: -1;
+  content: "";
+  pointer-events: none;
+  border-radius: 999px;
+}
+
+.credi-dashboard-hero::before {
+  width: 26rem;
+  height: 26rem;
+  right: 8%;
+  top: -15rem;
+  border: 1px solid rgb(180 166 255 / 20%);
+  box-shadow: 0 0 0 32px rgb(180 166 255 / 4%), 0 0 0 68px rgb(180 166 255 / 3%);
+  animation: credi-orbit 24s linear infinite;
+}
+
+.credi-dashboard-hero::after {
+  width: 22rem;
+  height: 22rem;
+  right: 22%;
+  bottom: -19rem;
+  background: rgb(22 193 255 / 19%);
+  filter: blur(48px);
+}
+
+.credi-dashboard-card {
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface) 94%, #f0edff);
+  box-shadow: 0 8px 28px rgb(28 26 72 / 5%);
+  transition: transform 220ms ease, box-shadow 220ms ease, border-color 220ms ease;
+}
+
+.credi-dashboard-card:hover {
+  transform: translateY(-3px);
+  border-color: color-mix(in srgb, var(--primary) 28%, var(--border));
+  box-shadow: 0 18px 42px rgb(48 37 116 / 12%);
+}
+
+.credi-module-card {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  transition: transform 220ms ease, border-color 220ms ease, box-shadow 220ms ease;
+}
+
+.credi-module-card::after {
+  position: absolute;
+  z-index: -1;
+  content: "";
+  width: 9rem;
+  height: 9rem;
+  right: -5rem;
+  bottom: -5rem;
+  border-radius: 999px;
+  background: var(--module-glow, rgb(105 75 255 / 13%));
+  filter: blur(15px);
+  transition: transform 260ms ease;
+}
+
+.credi-module-card:hover {
+  transform: translateY(-4px);
+  border-color: color-mix(in srgb, var(--module-accent, #654ff0) 35%, var(--border));
+  box-shadow: 0 18px 40px rgb(37 33 91 / 10%);
+}
+
+.credi-module-card:hover::after {
+  transform: scale(1.5);
+}
+
+.credi-module-icon {
+  background: var(--module-tint, #f0edff);
+  color: var(--module-accent, #654ff0);
+}
+
+.credi-live-pulse {
+  animation: credi-live-pulse 2.1s ease-in-out infinite;
+}
+
+.credi-float {
+  animation: credi-float 6s ease-in-out infinite;
+}
+
+@keyframes credi-orbit {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes credi-live-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgb(244 63 94 / 30%); }
+  50% { box-shadow: 0 0 0 8px rgb(244 63 94 / 0%); }
+}
+
+@keyframes credi-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-7px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .credi-dashboard-hero::before,
+  .credi-live-pulse,
+  .credi-float {
+    animation: none !important;
+  }
+  .credi-dashboard-card,
+  .credi-module-card,
+  .credi-sidebar-link {
+    transition: none !important;
+  }
+}

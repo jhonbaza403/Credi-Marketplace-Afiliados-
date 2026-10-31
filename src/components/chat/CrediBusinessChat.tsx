@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { CheckCheck, FileText, MessageCircle, Mic, Paperclip, Pin, Search, Send, Smile, Square, X } from 'lucide-react'
+import { ArrowRight, Building2, CheckCheck, FileText, Megaphone, MessageCircle, Mic, Paperclip, Pin, Plus, Search, Send, Settings2, Smile, Square, Users, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import CrediBusinessCall from '@/components/chat/CrediBusinessCall'
 import { uploadCrediBusinessChatMedia } from '@/lib/storage/credibusiness-chat-media'
@@ -12,6 +12,12 @@ type Profile = { id: string; full_name: string | null; avatar_url: string | null
 type RealtimePayload<T> = { eventType: 'INSERT' | 'UPDATE' | 'DELETE'; new: T; old: Partial<T> | null }
 type ConversationRow = { id: string; [key: string]: unknown }
 type ContactRow = { id?: string; user_id?: string; [key: string]: unknown }
+type ConversationView = ChatConversation & {
+  my_role: string
+  last_message_preview: string
+  last_message_at: string | null
+}
+type ChatFolder = 'all' | 'unread' | 'direct' | 'group' | 'channel' | 'business'
 const QUICK = ['Consultar disponibilidad', 'Solicitar precio mayorista', 'Solicitar catálogo', 'Preguntar MOQ', 'Solicitar condiciones de envío', 'Preguntar tiempo de entrega', 'Solicitar factura', 'Negociar pedido', 'Solicitar cotización']
 const EMOJIS = ['😀','😎','🔥','✅','📦','💼','💰','🚚','⭐','🎉','👏','🤝','👍','❤️','😂','😮','🙏']
 
@@ -33,7 +39,7 @@ export default function CrediBusinessChat() {
   const chunks = useRef<Blob[]>([])
   const [userId, setUserId] = useState<string | null>(null)
   const [profiles, setProfiles] = useState<Record<string, Profile>>({})
-  const [conversations, setConversations] = useState<ChatConversation[]>([])
+  const [conversations, setConversations] = useState<ConversationView[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(params.get('conversation'))
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [search, setSearch] = useState('')
@@ -47,22 +53,33 @@ export default function CrediBusinessChat() {
   const [emojiOpen, setEmojiOpen] = useState(false)
   const [attachOpen, setAttachOpen] = useState(false)
   const [context, setContext] = useState<Record<string, unknown> | null>(null)
+  const [folder, setFolder] = useState<ChatFolder>('all')
+  const [communityOpen, setCommunityOpen] = useState(false)
+  const [communityKind, setCommunityKind] = useState<'group' | 'channel'>('group')
+  const [communityName, setCommunityName] = useState('')
+  const [communityDescription, setCommunityDescription] = useState('')
+  const [communityPins, setCommunityPins] = useState('')
+  const [communityBusy, setCommunityBusy] = useState(false)
+  const [loadingState, setLoadingState] = useState(true)
+  const [infoOpen, setInfoOpen] = useState(true)
 
   const refresh = useCallback(async () => {
     const { data: auth, error: authError } = await supabase.auth.getUser()
     if (authError) throw authError
     if (!auth.user) { router.replace(`/login?next=${encodeURIComponent('/chat')}`); return null }
     setUserId(auth.user.id)
-    const { data: memberships, error: membershipError } = await supabase.from('conversation_members').select('conversation_id,user_id,last_read_at,joined_at').eq('user_id', auth.user.id).order('joined_at', { ascending: false })
+    const { data: memberships, error: membershipError } = await supabase.from('conversation_members').select('conversation_id,user_id,last_read_at,joined_at,member_role').eq('user_id', auth.user.id).order('joined_at', { ascending: false })
     if (membershipError) throw membershipError
-    const ids = [...new Set((memberships ?? []).map((m: ChatMessage) => m.conversation_id))]
-    if (!ids.length) { setConversations([]); return auth.user.id }
-    const [{ data: rows, error: rowError }, { data: members, error: membersError }] = await Promise.all([
+    const ids = [...new Set((memberships ?? []).map((m: { conversation_id: string }) => m.conversation_id))]
+    if (!ids.length) { setConversations([]); setLoadingState(false); return auth.user.id }
+    const [{ data: rows, error: rowError }, { data: members, error: membersError }, { data: recentMessages, error: recentMessageError }] = await Promise.all([
       supabase.from('conversations').select('id,kind,title,created_by,product_id,order_id,store_id,b2b_product_id,created_at,updated_at,metadata').in('id', ids).order('updated_at', { ascending: false }),
-      supabase.from('conversation_members').select('conversation_id,user_id,last_read_at').in('conversation_id', ids),
+      supabase.from('conversation_members').select('conversation_id,user_id,last_read_at,member_role').in('conversation_id', ids),
+      supabase.from('messages').select('id,conversation_id,sender_id,message_type,body,created_at').in('conversation_id', ids).order('created_at', { ascending: false }).limit(1200),
     ])
     if (rowError) throw rowError
     if (membersError) throw membersError
+    if (recentMessageError) throw recentMessageError
     const memberIds = [...new Set((members ?? []).map((m: ContactRow) => m.user_id).filter((id: unknown): id is string => typeof id === 'string'))]
     const profileMap: Record<string, Profile> = {}
     if (memberIds.length) {
@@ -71,13 +88,43 @@ export default function CrediBusinessChat() {
       for (const person of people ?? []) profileMap[person.id] = person as Profile
     }
     setProfiles(profileMap)
+    const lastMessageByConversation = new Map<string, { body: string | null; message_type: string; created_at: string }>()
+    const unreadByConversation = new Map<string, number>()
+    for (const message of recentMessages ?? []) {
+      if (!lastMessageByConversation.has(message.conversation_id)) {
+        lastMessageByConversation.set(message.conversation_id, message)
+      }
+      const mine = (members ?? []).find((member: { conversation_id: string; user_id: string }) =>
+        member.conversation_id === message.conversation_id && member.user_id === auth.user!.id
+      )
+      if (message.sender_id !== auth.user.id && (!mine?.last_read_at || message.created_at > mine.last_read_at)) {
+        unreadByConversation.set(message.conversation_id, (unreadByConversation.get(message.conversation_id) ?? 0) + 1)
+      }
+    }
     const mapped = (rows ?? []).map((row: ConversationRow) => {
-      const ms = (members ?? []).filter((m: { conversation_id: string; user_id: string }) => m.conversation_id === row.id)
-      const otherId = ms.find((m: { user_id: string }) => m.user_id !== auth.user!.id)?.user_id
-      return { ...row, member_ids: ms.map((m: { user_id: string }) => m.user_id), display_name: row.title || (otherId ? profileMap[otherId]?.full_name : null) || 'Usuario Credi', unread: 0 } as ChatConversation
+      const ms = (members ?? []).filter((member: { conversation_id: string; user_id: string }) => member.conversation_id === row.id)
+      const otherId = ms.find((member: { user_id: string }) => member.user_id !== auth.user!.id)?.user_id
+      const mine = ms.find((member: { user_id: string }) => member.user_id === auth.user!.id)
+      const last = lastMessageByConversation.get(row.id)
+      const preview = last?.body?.trim()
+        || (last?.message_type === 'image' ? '📷 Imagen'
+          : last?.message_type === 'video' ? '🎬 Vídeo'
+          : last?.message_type === 'audio' ? '🎙 Nota de voz'
+          : last?.message_type === 'document' || last?.message_type === 'file' ? '📎 Archivo'
+          : last ? 'Nuevo mensaje' : 'Inicia una conversación')
+      return {
+        ...row,
+        member_ids: ms.map((member: { user_id: string }) => member.user_id),
+        display_name: row.title || (otherId ? profileMap[otherId]?.full_name : null) || 'Usuario Credi',
+        unread: unreadByConversation.get(row.id) ?? 0,
+        my_role: mine?.member_role ?? 'member',
+        last_message_preview: preview,
+        last_message_at: last?.created_at ?? null,
+      } as ConversationView
     })
     setConversations(mapped)
     setSelectedId((current) => current && mapped.some((c: ChatConversation) => c.id === current) ? current : mapped[0]?.id ?? null)
+    setLoadingState(false)
     return auth.user.id
   }, [router, supabase])
 
@@ -128,8 +175,39 @@ export default function CrediBusinessChat() {
     ])
     if (messageError) throw messageError
     if (conversation?.metadata) setContext(conversation.metadata as Record<string, unknown>)
-    setMessages((data ?? []) as ChatMessage[])
-    if (userId) await supabase.from('conversation_members').update({ last_read_at: new Date().toISOString() }).eq('conversation_id', conversationId).eq('user_id', userId)
+    const loadedMessages = (data ?? []) as ChatMessage[]
+    const messageIds = loadedMessages.map((message) => message.id)
+    const reactionsByMessage = new Map<string, { reaction: string; user_id: string }[]>()
+    if (messageIds.length) {
+      const { data: reactionRows, error: reactionError } = await supabase
+        .from('message_reactions')
+        .select('message_id,user_id,reaction')
+        .in('message_id', messageIds)
+      if (reactionError) throw reactionError
+      for (const reaction of reactionRows ?? []) {
+        const current = reactionsByMessage.get(reaction.message_id) ?? []
+        current.push({ reaction: reaction.reaction, user_id: reaction.user_id })
+        reactionsByMessage.set(reaction.message_id, current)
+      }
+    }
+    setMessages(loadedMessages.map((message) => {
+      const rows = reactionsByMessage.get(message.id) ?? []
+      const grouped = new Map<string, { count: number; mine: boolean }>()
+      for (const row of rows) {
+        const entry = grouped.get(row.reaction) ?? { count: 0, mine: false }
+        entry.count += 1
+        if (row.user_id === userId) entry.mine = true
+        grouped.set(row.reaction, entry)
+      }
+      return { ...message, reactions: [...grouped.entries()].map(([reaction, value]) => ({ reaction, ...value })) }
+    }))
+    if (userId) {
+      const readAt = new Date().toISOString()
+      const { error: readError } = await supabase.from('conversation_members').update({ last_read_at: readAt }).eq('conversation_id', conversationId).eq('user_id', userId)
+      if (!readError) {
+        setConversations((current) => current.map((item) => item.id === conversationId ? { ...item, unread: 0 } : item))
+      }
+    }
     requestAnimationFrame(() => messageBox.current?.scrollTo({ top: messageBox.current.scrollHeight, behavior: 'smooth' }))
   }, [supabase, userId])
 
@@ -138,7 +216,10 @@ export default function CrediBusinessChat() {
     void refresh().then((id) => {
       if (id && alive) void openBusinessContext(id)
     }).catch((e) => {
-      if (alive) setError(fail(e, 'No fue posible cargar Credi Business Chat.'))
+      if (alive) {
+        setLoadingState(false)
+        setError(fail(e, 'No fue posible cargar Credi Chat.'))
+      }
     })
     return () => { alive = false }
   }, [openBusinessContext, refresh])
@@ -150,6 +231,7 @@ export default function CrediBusinessChat() {
       const next = payload.new as ChatMessage
       if (payload.eventType === 'INSERT') setMessages((current) => current.some((m) => m.id === next.id) ? current : [...current, next])
       if (payload.eventType === 'UPDATE') setMessages((current) => current.map((m) => m.id === next.id ? next : m))
+      if (payload.eventType === 'INSERT') requestAnimationFrame(() => messageBox.current?.scrollTo({ top: messageBox.current.scrollHeight, behavior: 'smooth' }))
     }).subscribe()
     return () => { void supabase.removeChannel(channel) }
   }, [loadMessages, selectedId, supabase])
@@ -265,9 +347,65 @@ export default function CrediBusinessChat() {
     recordingStream.current?.getTracks().forEach((track) => track.stop())
   }, [])
 
-  async function action(message: ChatMessage, type: 'react'|'copy'|'pin'|'delete'|'edit'|'forward') {
+  async function createCommunity() {
+    const title = communityName.trim()
+    if (title.length < 2 || communityBusy) return
+    setCommunityBusy(true)
+    setError(null)
+    try {
+      const identifiers = communityPins.split(/[,;\r\n]+/).map((value) => value.trim()).filter(Boolean)
+      if (identifiers.length > 200) throw new Error('Puedes invitar hasta 200 participantes en este momento.')
+      const memberIds: string[] = []
+      for (const identifier of identifiers) {
+        const { data, error: contactError } = await supabase.rpc('get_credi_contact', { p_identifier: identifier })
+        if (contactError) throw contactError
+        const contact = Array.isArray(data) ? data[0] : data
+        if (!contact || typeof contact.id !== 'string') {
+          throw new Error('No encontramos un contacto activo para uno de los PIN o números indicados.')
+        }
+        memberIds.push(contact.id)
+      }
+      const { data, error: createError } = await supabase.rpc('create_credichat_community', {
+        p_title: title,
+        p_kind: communityKind,
+        p_member_ids: memberIds,
+        p_description: communityDescription.trim() || null,
+      })
+      if (createError) throw createError
+      const id = String(data)
+      if (!id || id === 'null') throw new Error('No se recibió el identificador de la comunidad.')
+      setCommunityOpen(false)
+      setCommunityName('')
+      setCommunityDescription('')
+      setCommunityPins('')
+      setFolder(communityKind)
+      await refresh()
+      setSelectedId(id)
+      router.replace(`/chat?conversation=${encodeURIComponent(id)}`)
+    } catch (e) {
+      setError(fail(e, 'No fue posible crear la comunidad de Credi Chat.'))
+    } finally {
+      setCommunityBusy(false)
+    }
+  }
+
+  async function action(message: ChatMessage, type: 'react'|'copy'|'pin'|'delete'|'edit'|'forward', reaction = '👍') {
     if (!userId) return
-    if (type === 'react') { const { error: e } = await supabase.from('message_reactions').upsert({ message_id: message.id, user_id: userId, reaction: '👍' }, { onConflict: 'message_id,user_id' }); if (e) setError(fail(e, 'No fue posible reaccionar.')); return }
+    if (type === 'react') {
+      const { data: existing, error: lookupError } = await supabase.from('message_reactions')
+        .select('message_id,user_id,reaction')
+        .eq('message_id', message.id)
+        .eq('user_id', userId)
+        .eq('reaction', reaction)
+        .maybeSingle()
+      if (lookupError) { setError(fail(lookupError, 'No fue posible consultar la reacción.')); return }
+      const result = existing
+        ? await supabase.from('message_reactions').delete().eq('message_id', message.id).eq('user_id', userId).eq('reaction', reaction)
+        : await supabase.from('message_reactions').insert({ message_id: message.id, user_id: userId, reaction })
+      if (result.error) setError(fail(result.error, 'No fue posible reaccionar.'))
+      else if (selectedId) await loadMessages(selectedId)
+      return
+    }
     if (type === 'copy') { if (message.body) await navigator.clipboard.writeText(message.body); return }
     if (type === 'pin') { const { error: e } = await supabase.from('messages').update({ metadata: { ...message.metadata, pinned: !Boolean(message.metadata.pinned) } }).eq('id', message.id); if (e) setError(fail(e, 'No fue posible fijar el mensaje.')); return }
     if (type === 'delete') { if (message.sender_id !== userId) return; const { error: e } = await supabase.from('messages').update({ body: null, deleted_at: new Date().toISOString() }).eq('id', message.id).eq('sender_id', userId); if (e) setError(fail(e, 'No fue posible eliminar el mensaje.')); return }
@@ -283,17 +421,169 @@ export default function CrediBusinessChat() {
   const selected = conversations.find((c) => c.id === selectedId) ?? null
   const peerId = selected?.member_ids.find((id: string) => id !== userId) ?? null
   const peer = peerId ? profiles[peerId] : null
-  const list = conversations.filter((c) => { const q = search.toLowerCase().trim(); return !q || c.display_name.toLowerCase().includes(q) || Boolean(c.title?.toLowerCase().includes(q)) })
+  const list = conversations.filter((c) => {
+    const q = search.toLowerCase().trim()
+    const matchesSearch = !q || c.display_name.toLowerCase().includes(q) || Boolean(c.title?.toLowerCase().includes(q)) || c.last_message_preview?.toLowerCase().includes(q)
+    const matchesFolder = folder === 'all'
+      || (folder === 'unread' && c.unread > 0)
+      || c.kind === folder
+      || (folder === 'business' && ['business', 'support'].includes(c.kind))
+    return matchesSearch && matchesFolder
+  })
+  const canPost = !selected || selected.kind !== 'channel' || ['admin', 'support'].includes((selected as ConversationView).my_role)
+  const sharedMediaCount = messages.filter((message) => ['image', 'video', 'audio', 'document', 'file'].includes(message.message_type)).length
   const shown = messages.filter((m) => !chatSearch.trim() || Boolean(m.body?.toLowerCase().includes(chatSearch.toLowerCase()))).slice(-500)
 
-  return <main className="credi-business-chat credi-chat-page min-h-[calc(100vh-80px)]"><div className="mx-auto max-w-[1500px] px-3 py-4 sm:px-6 sm:py-7">
-    <header className="mb-4 rounded-[1.75rem] border credi-chat-hero p-5 sm:p-7"><div className="flex items-center justify-between gap-3"><div className="flex items-center gap-3"><span className="flex size-11 items-center justify-center rounded-xl credi-chat-icon credi-chat-accent"><MessageCircle size={22}/></span><div><p className="text-[10px] font-black uppercase tracking-[.2em] credi-chat-accent">Credi Business Chat</p><h1 className="text-2xl font-black sm:text-3xl">Mensajería comercial instantánea</h1></div></div><span className="rounded-full border border-emerald-400/15 bg-emerald-400/5 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-emerald-200">● Tiempo real</span></div><p className="mt-3 text-sm leading-6 text-[var(--foreground)]">Comunicación privada y empresarial vinculada al negocio, con multimedia, notas de voz, respuestas, reacciones, documentos, búsqueda y llamadas de voz o vídeo.</p></header>
-    {error && <div className="mb-4 flex items-center justify-between rounded-2xl border border-rose-400/20 bg-rose-400/10 p-4 text-sm text-rose-100"><span>{error}</span><button onClick={()=>setError(null)} aria-label="Cerrar"><X size={17}/></button></div>}
-    <div className="chat-shell grid min-h-[720px] overflow-hidden rounded-[2rem] border border-white/10 credi-chat-panel shadow-2xl lg:grid-cols-[330px_1fr]">
-      <aside className="border-b border-white/10 credi-chat-sidebar lg:border-b-0 lg:border-r"><div className="border-b border-white/10 p-4"><div className="relative"><Search className="absolute left-3 top-3.5 size-4 text-slate-500"/><input value={search} onChange={(e)=>setSearch(e.target.value)} placeholder="Buscar conversaciones" className="w-full rounded-xl border border border-[var(--border)] credi-chat-input py-3 pl-9 pr-3 text-sm outline-none placeholder:text-[var(--muted-light)]"/></div></div><div className="max-h-[630px] overflow-y-auto">{list.length ? list.map((c)=><button key={c.id} type="button" onClick={()=>{setSelectedId(c.id);router.replace(`/chat?conversation=${encodeURIComponent(c.id)}`)}} className={`w-full border-b border-white/5 px-4 py-4 text-left hover:bg-white/[.04] ${selectedId===c.id?'bg-[color-mix(in_oklab,var(--primary)_8%,transparent)]':''}`}><div className="flex gap-3"><div className="flex size-11 shrink-0 items-center justify-center rounded-full credi-chat-icon font-black text-cyan-100">{c.display_name.slice(0,1).toUpperCase()}</div><div className="min-w-0 flex-1"><p className="truncate text-sm font-black">{c.display_name}</p><p className="mt-1 truncate text-xs credi-chat-muted">{c.title||'Conversación comercial'}</p></div></div></button>):<div className="p-6 text-sm leading-6 credi-chat-muted">No hay conversaciones. Abre un producto y pulsa “Contactar al proveedor”.</div>}</div></aside>
-      <section className="chat-panel flex min-h-[720px] flex-col"><div className="border-b border-white/10 credi-chat-sidebar px-4 py-3 sm:px-5"><div className="flex items-center justify-between gap-3"><div className="flex min-w-0 items-center gap-3"><div className="flex size-10 shrink-0 items-center justify-center rounded-full credi-chat-icon font-black">{selected?.display_name.slice(0,1).toUpperCase()||'C'}</div><div className="min-w-0"><p className="truncate text-sm font-black">{selected?.display_name||'Selecciona una conversación'}</p><p className="truncate text-xs credi-chat-muted">{peer?.role ? `${peer.role} · Credi Marketplace` : 'Canal comercial'}</p></div></div><CrediBusinessCall conversationId={selectedId} peerUserId={peerId} peerName={selected?.display_name||'Contacto comercial'}/></div>{context && <div className="mt-3 grid gap-2 rounded-2xl border border-cyan-300/10 bg-cyan-300/[.04] p-3 text-xs sm:grid-cols-2 lg:grid-cols-4"><div><span className="font-black credi-chat-accent">Producto</span><p className="mt-1 text-[var(--foreground)]">{String(context.product_title||context.b2b_title||context.product_id||context.b2b_product_id||'—')}</p></div><div><span className="font-black credi-chat-accent">Empresa / tienda</span><p className="mt-1 text-[var(--foreground)]">{String(context.store_name||'—')}</p></div><div><span className="font-black credi-chat-accent">Pedido / país</span><p className="mt-1 text-[var(--foreground)]">{String(context.order_id||context.country||'—')}</p></div><div><span className="font-black credi-chat-accent">Afiliado</span><p className="mt-1 text-[var(--foreground)]">{String(context.affiliate_ref||'—')}</p></div></div>}{selected && <div className="mt-3 flex gap-2 overflow-x-auto pb-1">{QUICK.map((q)=><button key={q} type="button" onClick={()=>void sendText(q)} className="shrink-0 rounded-full border border border-[var(--border)] credi-chat-input px-3 py-2 text-[11px] font-bold text-slate-200">{q}</button>)}</div>}{selected && <div className="relative mt-3"><Search className="absolute left-3 top-2.5 size-4 text-slate-500"/><input value={chatSearch} onChange={(e)=>setChatSearch(e.target.value)} placeholder="Buscar dentro del chat" className="w-full rounded-xl border border-white/10 credi-chat-panel py-2 pl-9 pr-3 text-xs outline-none placeholder:text-[var(--muted-light)]"/></div>}</div>
-      <div ref={messageBox} className="flex-1 space-y-3 overflow-y-auto px-3 py-5 sm:px-6">{!selected?<div className="flex min-h-[500px] items-center justify-center text-center"><div><MessageCircle className="mx-auto size-16 credi-chat-accent"/><h2 className="mt-5 text-xl font-black">Centro de comunicación comercial</h2><p className="mx-auto mt-2 max-w-md text-sm leading-6 credi-chat-muted">Toda la negociación permanece dentro de Credi Marketplace.</p></div></div>:shown.map((m)=><div key={m.id} className={`flex ${m.sender_id===userId?'justify-end':'justify-start'}`}><div className={`group relative max-w-[90%] rounded-2xl px-4 py-3 sm:max-w-[78%] ${m.sender_id===userId?'credi-chat-message-own':'credi-chat-message-other'}`}>{Boolean(m.metadata.pinned)&&<div className="mb-2 flex items-center gap-1 text-[10px] font-black"><Pin size={11}/> Fijado</div>}{m.reply_to_id&&<div className="mb-2 rounded-xl bg-black/10 px-3 py-2 text-[11px]">Respuesta · {messages.find((x)=>x.id===m.reply_to_id)?.body||'Contenido multimedia'}</div>}{m.deleted_at?<p className="text-sm italic opacity-60">Mensaje eliminado</p>:<>{(()=>{const meta=getMeta(m);const url=typeof meta.public_url==='string'?meta.public_url:null;return <>{m.message_type==='image'&&url&&<img src={url} alt={String(meta.file_name||'Imagen')} className="mb-2 max-h-80 rounded-xl object-cover"/>}{m.message_type==='video'&&url&&<video src={url} controls playsInline className="mb-2 max-h-96 w-full rounded-xl"/>}{m.message_type==='audio'&&url&&<audio src={url} controls className="mb-2 w-full"/>}{(m.message_type==='document'||m.message_type==='file')&&url&&<a href={url} target="_blank" rel="noreferrer" className="mb-2 flex items-center gap-2 rounded-xl bg-black/10 p-3 text-sm font-bold underline"><FileText size={17}/>{String(meta.file_name||'Abrir archivo')}</a>}</>})()}{m.body&&<p className="whitespace-pre-wrap text-sm leading-6">{m.body}</p>}<div className="mt-2 flex items-center justify-end gap-2 text-[10px] opacity-70">{m.edited_at&&<span>editado</span>}<span>{fmt(m.created_at)}</span>{m.sender_id===userId&&<CheckCheck size={13}/>}</div></>}</div><div className="mt-1 flex gap-1 opacity-0 transition group-hover:opacity-100">{([['react','👍'],['copy','Copiar'],['pin','Fijar'],['edit','Editar'],['delete','Eliminar'],['forward','Reenviar']] as const).map(([type,label])=><button key={type} type="button" onClick={()=>void action(m,type)} className="rounded-lg border border-white/10 bg-slate-950 px-2 py-1 text-[10px] text-[var(--foreground)]">{label}</button>)}</div></div>)}</div>
-      {reply&&<div className="border-t border-white/10 credi-chat-sidebar px-4 py-3 text-xs text-[var(--foreground)]">Respondiendo a: <strong>{reply.body||'Contenido multimedia'}</strong><button onClick={()=>setReply(null)} className="ml-3 text-cyan-300">Cerrar</button></div>}
-      <div className="border-t border-white/10 credi-chat-sidebar p-3 sm:p-4"><div className="mb-2 flex items-center justify-between gap-3"><p className="text-[11px] credi-chat-muted">{selected ? 'Escribe tu mensaje y presiona Enter para enviar.' : 'Puedes escribir un borrador. Selecciona o abre un contacto para enviarlo.'}</p>{!selected && <span className="rounded-full border border-white/10 px-2 py-1 text-[10px] font-bold credi-chat-muted">Sin conversación</span>}</div><div className="flex items-end gap-2"><div className="relative"><button type="button" onClick={()=>setEmojiOpen((v)=>!v)} className="flex size-11 items-center justify-center rounded-xl border border border-[var(--border)] credi-chat-input credi-chat-accent"><Smile size={19}/></button>{emojiOpen&&<div className="absolute bottom-14 left-0 z-20 grid w-72 grid-cols-9 gap-1 rounded-2xl border border-white/10 bg-slate-950 p-3 shadow-2xl">{EMOJIS.map((emoji)=><button key={emoji} type="button" onClick={()=>setDraft((d)=>d+emoji)} className="rounded-lg p-2 text-lg hover:bg-white/10">{emoji}</button>)}</div>}</div><div className="relative"><button type="button" onClick={()=>setAttachOpen((v)=>!v)} className="flex size-11 items-center justify-center rounded-xl border border border-[var(--border)] credi-chat-input credi-chat-accent" aria-label="Adjuntar archivo"><Paperclip size={19}/></button>{attachOpen&&<div className="absolute bottom-14 left-0 z-20 w-60 rounded-2xl border border-white/10 bg-slate-950 p-2 shadow-2xl"><label className="flex cursor-pointer items-center gap-2 rounded-xl p-3 text-sm hover:bg-white/10"><FileText size={17}/> Archivo<input type="file" accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt" className="hidden" onChange={(e)=>{const f=e.target.files?.[0];e.currentTarget.value='';if(f)void sendFile(f)}}/></label></div>}</div><button type="button" onClick={()=>void recordVoice()} disabled={!selectedId||uploading} className={`flex size-11 items-center justify-center rounded-xl border border-white/10 ${recording?'bg-rose-500/15 text-rose-200':'bg-white/[.04] credi-chat-accent'} disabled:cursor-not-allowed disabled:opacity-40`} aria-label={recording?'Detener grabación':'Grabar nota de voz'}>{recording?<Square size={17}/>:<Mic size={19}/>}</button><textarea value={draft} onChange={(e)=>setDraft(e.target.value)} onKeyDown={(e)=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();if(selectedId)void sendText()}}} disabled={busy} aria-disabled={!selectedId} placeholder={selectedId?'Escribe un mensaje…':'Escribe un borrador…'} rows={1} className="min-h-11 flex-1 resize-none rounded-xl border border border-[var(--border)] credi-chat-input px-4 py-3 text-sm outline-none placeholder:text-[var(--muted-light)] disabled:cursor-not-allowed disabled:opacity-60"/><button type="button" onClick={()=>void sendText()} disabled={!draft.trim()||busy||!selectedId} className="flex size-11 shrink-0 items-center justify-center rounded-xl credi-chat-message-own disabled:cursor-not-allowed disabled:opacity-40" aria-label="Enviar mensaje"><Send size={18}/></button></div>{uploading&&<p className="mt-2 text-[11px] credi-chat-accent">Procesando archivo o nota de voz…</p>}{recording&&<p className="mt-2 flex items-center gap-2 text-[11px] font-semibold text-rose-500"><span className="size-2 animate-pulse rounded-full bg-rose-500"/> Grabando nota de voz</p>}</div>
-    </section></div></div></main>
+  return (
+    <section className="credi-business-chat credi-chat-page min-h-[calc(100vh-80px)]" aria-label="Mensajería de Credi">
+      <div className="mx-auto max-w-[1680px] px-2 py-3 sm:px-4 sm:py-5">
+        <header className="credi-chat-topbar mb-3 flex flex-wrap items-center justify-between gap-3 rounded-2xl border p-3 sm:px-5">
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-violet-500 to-blue-500 text-white shadow-lg shadow-violet-900/25"><MessageCircle size={21}/></span>
+            <div className="min-w-0">
+              <p className="truncate text-[10px] font-black uppercase tracking-[.2em] text-[var(--primary)]">Credi Connect</p>
+              <h1 className="truncate text-lg font-black tracking-tight text-[var(--foreground)] sm:text-xl">Mensajería instantánea</h1>
+            </div>
+          </div>
+          <div className="flex flex-1 items-center justify-end gap-2">
+            <span className="hidden rounded-full border border-emerald-400/20 bg-emerald-400/[.06] px-3 py-2 text-[10px] font-black uppercase tracking-wider text-emerald-600 sm:inline-flex">● Tiempo real</span>
+            <button type="button" onClick={() => { setCommunityKind('group'); setCommunityOpen(true) }} className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-blue-500 px-3.5 text-xs font-black text-white shadow-md transition hover:-translate-y-0.5 hover:brightness-110 sm:px-4">
+              <Plus size={16}/> <span className="hidden sm:inline">Nueva comunidad</span><span className="sm:hidden">Nuevo</span>
+            </button>
+          </div>
+        </header>
+
+        {error && <div role="alert" className="mb-3 flex items-center justify-between rounded-2xl border border-rose-400/20 bg-rose-400/10 p-3 text-sm text-rose-700 dark:text-rose-100"><span>{error}</span><button type="button" onClick={()=>setError(null)} aria-label="Cerrar error"><X size={17}/></button></div>}
+
+        <div className="credi-chat-workspace grid min-h-[720px] overflow-hidden rounded-[1.75rem] border shadow-2xl">
+          <aside className="credi-chat-inbox min-w-0 border-r">
+            <div className="border-b p-4">
+              <div className="flex items-center justify-between gap-2">
+                <div><p className="text-[10px] font-black uppercase tracking-[.16em] text-[var(--primary)]">Tu mensajería</p><h2 className="mt-1 text-lg font-black text-[var(--foreground)]">Conversaciones</h2></div>
+                <button type="button" onClick={() => setCommunityOpen(true)} className="grid size-9 place-items-center rounded-xl border border-[var(--border)] text-[var(--primary)] transition hover:bg-[var(--surface-secondary)]" aria-label="Crear grupo o canal"><Plus size={17}/></button>
+              </div>
+              <div className="relative mt-4">
+                <Search className="absolute left-3 top-3 size-4 text-[var(--muted)]"/>
+                <input value={search} onChange={(e)=>setSearch(e.target.value)} placeholder="Buscar chats, grupos y mensajes" aria-label="Buscar conversaciones" className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface-secondary)] py-3 pl-9 pr-3 text-xs text-[var(--foreground)] outline-none transition focus:border-[var(--primary)]"/>
+              </div>
+              <div className="credi-chat-folders mt-4 flex flex-wrap gap-1.5" role="tablist" aria-label="Filtros de conversaciones">
+                {([
+                  ['all','Todos'],
+                  ['unread','No leídos'],
+                  ['direct','Personales'],
+                  ['group','Grupos'],
+                  ['channel','Canales'],
+                  ['business','Negocios'],
+                ] as const).map(([key,label]) => (
+                  <button key={key} type="button" role="tab" aria-selected={folder===key} onClick={()=>setFolder(key)} className={`rounded-full px-3 py-1.5 text-[10px] font-black transition ${folder===key?'bg-[var(--primary)] text-white shadow-md':'bg-[var(--surface-secondary)] text-[var(--muted)] hover:text-[var(--foreground)]'}`}>
+                    {label}{key==='unread' && conversations.some((c)=>c.unread>0) ? <span className="ml-1.5 rounded-full bg-rose-500 px-1.5 py-0.5 text-[9px] text-white">{conversations.reduce((n,c)=>n+c.unread,0)}</span> : null}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="credi-chat-conversation-list min-h-0 flex-1 overflow-y-auto">
+              {loadingState ? <div className="p-6 text-xs text-[var(--muted)]">Sincronizando conversaciones…</div>
+                : list.length ? list.map((c) => {
+                  const kindLabel = c.kind === 'channel' ? 'Canal' : c.kind === 'group' ? 'Grupo' : ['business','support'].includes(c.kind) ? 'Negocio' : 'Personal'
+                  const active = selectedId===c.id
+                  return (
+                    <button key={c.id} type="button" onClick={()=>{setSelectedId(c.id);router.replace(`/chat?conversation=${encodeURIComponent(c.id)}`)}} aria-current={active?'true':undefined} className={`credi-chat-conversation w-full border-b px-4 py-3.5 text-left transition ${active?'is-active':''}`}>
+                      <div className="flex items-center gap-3">
+                        <span className={`credi-chat-avatar grid size-12 shrink-0 place-items-center rounded-full text-sm font-black ${c.kind==='channel'?'is-channel':c.kind==='group'?'is-group':''}`}>{c.kind==='channel'?<Megaphone size={19}/>:c.kind==='group'?<Users size={19}/>:c.display_name.slice(0,1).toUpperCase()}</span>
+                        <span className="min-w-0 flex-1">
+                          <span className="flex items-center justify-between gap-2"><span className="truncate text-sm font-black text-[var(--foreground)]">{c.display_name}</span><span className="shrink-0 text-[9px] text-[var(--muted)]">{c.last_message_at?fmt(c.last_message_at):''}</span></span>
+                          <span className="mt-1 flex items-center justify-between gap-2"><span className="truncate text-[11px] text-[var(--muted)]">{c.last_message_preview || c.title || 'Conversación de Credi'}</span>{c.unread>0?<span className="grid min-w-5 place-items-center rounded-full bg-violet-600 px-1.5 py-0.5 text-[9px] font-black text-white">{c.unread>99?'99+':c.unread}</span>:null}</span>
+                          <span className="mt-1 flex items-center gap-1.5"><span className="rounded-full bg-[var(--surface-tertiary)] px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider text-[var(--muted)]">{kindLabel}</span>{c.member_ids.length>2?<span className="text-[9px] text-[var(--muted)]">{c.member_ids.length} participantes</span>:null}</span>
+                        </span>
+                      </div>
+                    </button>
+                  )
+                }) : <div className="px-5 py-12 text-center"><span className="mx-auto grid size-12 place-items-center rounded-2xl bg-[var(--primary)]/10 text-[var(--primary)]"><MessageCircle size={21}/></span><p className="mt-3 text-sm font-black text-[var(--foreground)]">{folder==='channel'?'Aún no sigues canales':folder==='group'?'Todavía no tienes grupos':'No hay conversaciones aquí'}</p><p className="mt-1 text-xs leading-5 text-[var(--muted)]">Inicia un chat desde un producto o crea una comunidad privada.</p><button type="button" onClick={()=>setCommunityOpen(true)} className="mt-4 rounded-xl bg-[var(--primary)] px-4 py-2 text-xs font-black text-white">Crear grupo o canal</button></div>}
+            </div>
+            <div className="border-t border-[var(--border)] p-3">
+              <div className="flex items-center justify-between gap-2 rounded-xl bg-[var(--surface-secondary)] px-3 py-2.5">
+                <span className="inline-flex items-center gap-2 text-[10px] font-bold text-[var(--muted)]"><Settings2 size={14}/> Herramientas comerciales</span>
+                <span className="text-[9px] font-black text-[var(--primary)]">CREDI OS</span>
+              </div>
+            </div>
+          </aside>
+
+          <section className="credi-chat-thread flex min-h-[720px] min-w-0 flex-col">
+            <div className="credi-chat-thread-head border-b px-4 py-3 sm:px-5">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-3">
+                  <span className="credi-chat-avatar grid size-11 shrink-0 place-items-center rounded-full text-sm font-black">{selected?.kind==='channel'?<Megaphone size={18}/>:selected?.kind==='group'?<Users size={18}/>:selected?.display_name.slice(0,1).toUpperCase()||'C'}</span>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-black text-[var(--foreground)]">{selected?.display_name||'Selecciona una conversación'}</p>
+                    <p className="truncate text-[10px] text-[var(--muted)]">{selected?.kind==='channel'?'Canal de difusión · Solo administradores publican':selected?.kind==='group'?`Grupo privado · ${selected.member_ids.length} participantes`:peer?.role?`${peer.role} · Credi Marketplace`:'Mensajería privada y comercial'}</p>
+                  </div>
+                </div>
+                <div className="flex shrink-0 items-center gap-1.5">
+                  {selected && <button type="button" onClick={()=>setInfoOpen((value)=>!value)} className="grid size-9 place-items-center rounded-xl border border-[var(--border)] text-[var(--muted)] hover:bg-[var(--surface-secondary)]" aria-label="Información del chat"><Building2 size={16}/></button>}
+                  {selected?.kind==='direct' && <CrediBusinessCall conversationId={selectedId} peerUserId={peerId} peerName={selected?.display_name||'Contacto comercial'}/>}
+                </div>
+              </div>
+              {context && <div className="mt-3 grid gap-2 rounded-xl border border-cyan-300/10 bg-cyan-300/[.04] p-3 text-[10px] sm:grid-cols-2 lg:grid-cols-4"><div><span className="font-black text-cyan-700 dark:text-cyan-200">Producto</span><p className="mt-1 truncate text-[var(--foreground)]">{String(context.product_title||context.b2b_title||context.product_id||context.b2b_product_id||'—')}</p></div><div><span className="font-black text-cyan-700 dark:text-cyan-200">Tienda</span><p className="mt-1 truncate text-[var(--foreground)]">{String(context.store_name||'—')}</p></div><div><span className="font-black text-cyan-700 dark:text-cyan-200">Pedido / país</span><p className="mt-1 truncate text-[var(--foreground)]">{String(context.order_id||context.country||'—')}</p></div><div><span className="font-black text-cyan-700 dark:text-cyan-200">Afiliado</span><p className="mt-1 truncate text-[var(--foreground)]">{String(context.affiliate_ref||'—')}</p></div></div>}
+              {selected && canPost && <div className="mt-3 flex gap-2 overflow-x-auto pb-1">{QUICK.slice(0,5).map((q)=><button key={q} type="button" onClick={()=>void sendText(q)} className="shrink-0 rounded-full border border-[var(--border)] bg-[var(--surface-secondary)] px-3 py-1.5 text-[10px] font-bold text-[var(--muted)] transition hover:text-[var(--foreground)]">{q}</button>)}</div>}
+              {selected && <div className="relative mt-3"><Search className="absolute left-3 top-2.5 size-4 text-[var(--muted)]"/><input value={chatSearch} onChange={(e)=>setChatSearch(e.target.value)} placeholder="Buscar dentro de esta conversación" aria-label="Buscar dentro del chat" className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface-secondary)] py-2 pl-9 pr-3 text-xs text-[var(--foreground)] outline-none placeholder:text-[var(--muted-light)]"/></div>}
+            </div>
+
+            <div ref={messageBox} className="credi-chat-messages flex-1 space-y-3 overflow-y-auto px-3 py-5 sm:px-5">
+              {!selected ? <div className="flex min-h-[500px] items-center justify-center p-6 text-center"><div><span className="mx-auto grid size-16 place-items-center rounded-[1.5rem] bg-gradient-to-br from-violet-500/15 to-cyan-400/15 text-[var(--primary)]"><MessageCircle size={29}/></span><h2 className="mt-4 text-xl font-black text-[var(--foreground)]">Tu centro de comunicación</h2><p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-[var(--muted)]">Habla con tu comunidad, coordina pedidos y conecta con empresas desde una sola bandeja.</p></div></div>
+                : shown.map((m)=><div key={m.id} className={`group flex ${m.sender_id===userId?'justify-end':'justify-start'}`}><div className={`relative max-w-[90%] rounded-2xl px-4 py-3 shadow-sm sm:max-w-[78%] ${m.sender_id===userId?'credi-chat-message-own':'credi-chat-message-other'}`}>{Boolean(m.metadata.pinned)&&<div className="mb-2 flex items-center gap-1 text-[10px] font-black"><Pin size={11}/> Mensaje fijado</div>}{m.reply_to_id&&<div className="mb-2 rounded-xl bg-black/10 px-3 py-2 text-[11px]">Respuesta · {messages.find((x)=>x.id===m.reply_to_id)?.body||'Contenido multimedia'}</div>}{m.deleted_at?<p className="text-sm italic opacity-60">Mensaje eliminado</p>:<>{(()=>{const meta=getMeta(m);const url=typeof meta.public_url==='string'?meta.public_url:null;return <>{m.message_type==='image'&&url&&<img src={url} alt={String(meta.file_name||'Imagen')} className="mb-2 max-h-80 rounded-xl object-cover"/>}{m.message_type==='video'&&url&&<video src={url} controls playsInline className="mb-2 max-h-96 w-full rounded-xl"/>}{m.message_type==='audio'&&url&&<audio src={url} controls className="mb-2 w-full"/>}{(m.message_type==='document'||m.message_type==='file')&&url&&<a href={url} target="_blank" rel="noreferrer" className="mb-2 flex items-center gap-2 rounded-xl bg-black/10 p-3 text-sm font-bold underline"><FileText size={17}/>{String(meta.file_name||'Abrir archivo')}</a>}</>})()}{m.body&&<p className="whitespace-pre-wrap text-sm leading-6">{m.body}</p>}{m.reactions && m.reactions.length>0 && <div className="mt-2 flex flex-wrap gap-1.5">{m.reactions.map((reaction)=> <button key={reaction.reaction} type="button" onClick={()=>void action(m,'react',reaction.reaction)} aria-pressed={reaction.mine} className={`rounded-full border px-2 py-1 text-[10px] font-bold ${reaction.mine?'border-violet-400 bg-violet-500/15 text-violet-700 dark:text-violet-200':'border-[var(--border)] bg-[var(--surface)] text-[var(--muted)]'}`}>{reaction.reaction} {reaction.count}</button>)}</div>}<div className="mt-2 flex items-center justify-end gap-2 text-[10px] opacity-70">{m.edited_at&&<span>editado</span>}<span>{fmt(m.created_at)}</span>{m.sender_id===userId&&<CheckCheck size={13}/>}</div></>}</div><div className="credi-chat-message-actions ml-2 mt-1 flex flex-wrap gap-1"><button type="button" onClick={()=>void action(m,'react','👍')} className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-[10px]" aria-label="Reaccionar al mensaje">👍</button><button type="button" onClick={()=>setReply(m)} className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-[10px]">Responder</button><button type="button" onClick={()=>void action(m,'pin')} className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-[10px]">Fijar</button>{m.sender_id===userId&&<><button type="button" onClick={()=>void action(m,'edit')} className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-[10px]">Editar</button><button type="button" onClick={()=>void action(m,'delete')} className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-[10px]">Eliminar</button></>}<button type="button" onClick={()=>void action(m,'forward')} className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-[10px]">Reenviar</button></div></div>)}
+            </div>
+
+            {reply&&<div className="border-t border-[var(--border)] bg-[var(--surface-secondary)] px-4 py-3 text-xs text-[var(--foreground)]"><div className="flex items-center justify-between gap-2"><span className="truncate">Respondiendo a: <strong>{reply.body||'Contenido multimedia'}</strong></span><button type="button" onClick={()=>setReply(null)} className="text-[var(--primary)]">Cerrar</button></div></div>}
+            <div className="credi-chat-composer border-t border-[var(--border)] p-3 sm:p-4">
+              {!selected ? <p className="text-xs text-[var(--muted)]">Selecciona una conversación para escribir.</p>
+                : !canPost ? <div className="rounded-xl bg-[var(--surface-secondary)] p-3 text-xs text-[var(--muted)]">Este canal es de difusión. Solo los administradores pueden publicar; puedes leer y compartir el contenido.</div>
+                : <>
+                  <div className="flex items-end gap-2">
+                    <div className="relative"><button type="button" onClick={()=>setEmojiOpen((v)=>!v)} className="grid size-11 place-items-center rounded-xl border border-[var(--border)] bg-[var(--surface-secondary)] text-[var(--primary)]" aria-label="Abrir emojis"><Smile size={19}/></button>{emojiOpen&&<div className="absolute bottom-14 left-0 z-20 grid w-72 grid-cols-9 gap-1 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-3 shadow-2xl">{EMOJIS.map((emoji)=><button key={emoji} type="button" onClick={()=>setDraft((d)=>d+emoji)} className="rounded-lg p-2 text-lg hover:bg-[var(--surface-secondary)]">{emoji}</button>)}</div>}</div>
+                    <div className="relative"><button type="button" onClick={()=>setAttachOpen((v)=>!v)} className="grid size-11 place-items-center rounded-xl border border-[var(--border)] bg-[var(--surface-secondary)] text-[var(--primary)]" aria-label="Adjuntar archivo"><Paperclip size={19}/></button>{attachOpen&&<div className="absolute bottom-14 left-0 z-20 w-60 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-2 shadow-2xl"><label className="flex cursor-pointer items-center gap-2 rounded-xl p-3 text-sm text-[var(--foreground)] hover:bg-[var(--surface-secondary)]"><FileText size={17}/> Imagen, vídeo o documento<input type="file" accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt" className="hidden" onChange={(e)=>{const file=e.target.files?.[0];e.currentTarget.value='';if(file)void sendFile(file)}}/></label></div>}</div>
+                    <button type="button" onClick={()=>void recordVoice()} disabled={uploading} className={`grid size-11 place-items-center rounded-xl border ${recording?'border-rose-400 bg-rose-500/10 text-rose-600':'border-[var(--border)] bg-[var(--surface-secondary)] text-[var(--primary)]'} disabled:opacity-40`} aria-label={recording?'Detener nota de voz':'Grabar nota de voz'}>{recording?<Square size={17}/>:<Mic size={19}/>}</button>
+                    <textarea value={draft} onChange={(e)=>setDraft(e.target.value)} onKeyDown={(e)=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();if(selectedId)void sendText()}}} disabled={busy||!selectedId} placeholder="Escribe un mensaje…" rows={1} className="min-h-11 max-h-36 flex-1 resize-y rounded-xl border border-[var(--border)] bg-[var(--surface-secondary)] px-4 py-3 text-sm text-[var(--foreground)] outline-none placeholder:text-[var(--muted-light)] focus:border-[var(--primary)] disabled:opacity-50"/>
+                    <button type="button" onClick={()=>void sendText()} disabled={!draft.trim()||busy||!selectedId} className="grid size-11 shrink-0 place-items-center rounded-xl bg-gradient-to-r from-violet-600 to-blue-500 text-white shadow-md disabled:opacity-40" aria-label="Enviar mensaje"><Send size={18}/></button>
+                  </div>
+                  {uploading&&<p className="mt-2 text-[11px] text-[var(--primary)]">Procesando archivo o nota de voz…</p>}
+                  {recording&&<p className="mt-2 flex items-center gap-2 text-[11px] font-semibold text-rose-600"><span className="size-2 animate-pulse rounded-full bg-rose-500"/> Grabando nota de voz</p>}
+                </>}
+            </div>
+          </section>
+
+          {infoOpen && <aside className="credi-chat-info hidden border-l p-4 xl:block">
+            {selected ? <>
+              <div className="text-center">
+                <span className="mx-auto grid size-16 place-items-center rounded-[1.5rem] bg-gradient-to-br from-violet-500/15 to-cyan-400/15 text-[var(--primary)]">{selected.kind==='channel'?<Megaphone size={25}/>:selected.kind==='group'?<Users size={25}/>:<Building2 size={25}/>}</span>
+                <h2 className="mt-3 text-sm font-black text-[var(--foreground)]">{selected.display_name}</h2>
+                <p className="mt-1 text-[10px] text-[var(--muted)]">{selected.kind==='channel'?'Canal privado':selected.kind==='group'?'Grupo privado':'Conversación comercial'}</p>
+              </div>
+              <div className="mt-5 space-y-3 border-y border-[var(--border)] py-4">
+                <div><p className="text-[9px] font-black uppercase tracking-wider text-[var(--muted)]">Participantes</p><p className="mt-1 text-xs font-bold text-[var(--foreground)]">{selected.member_ids.length} personas</p></div>
+                <div><p className="text-[9px] font-black uppercase tracking-wider text-[var(--muted)]">Mensajes cargados</p><p className="mt-1 text-xs font-bold text-[var(--foreground)]">{messages.length}</p></div>
+                <div><p className="text-[9px] font-black uppercase tracking-wider text-[var(--muted)]">Archivos y multimedia</p><p className="mt-1 text-xs font-bold text-[var(--foreground)]">{sharedMediaCount} elementos</p></div>
+                {selected.kind==='channel'&&<div className="rounded-xl bg-[var(--surface-secondary)] p-3 text-[10px] leading-5 text-[var(--muted)]">Canal de difusión: solo las cuentas administradoras pueden publicar mensajes.</div>}
+              </div>
+              <div className="mt-4"><p className="mb-2 text-[9px] font-black uppercase tracking-wider text-[var(--muted)]">Funciones disponibles</p><div className="grid grid-cols-2 gap-2">{[['Audio','🎙'],['Vídeo','🎬'],['Archivos','📎'],['Reacciones','❤️'],['Buscar','🔎'],['Citar','↩']].map(([label,emoji])=><div key={label} className="rounded-xl bg-[var(--surface-secondary)] p-2 text-center"><span className="text-lg">{emoji}</span><p className="mt-1 text-[9px] font-bold text-[var(--muted)]">{label}</p></div>)}</div></div>
+            </> : <div className="py-10 text-center"><Users className="mx-auto size-8 text-[var(--muted)]"/><p className="mt-3 text-xs font-bold text-[var(--muted)]">Información del chat</p></div>}
+          </aside>}
+        </div>
+
+        {communityOpen && <div className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/70 p-3 backdrop-blur-md" role="dialog" aria-modal="true" aria-labelledby="credi-community-title">
+          <form onSubmit={(event)=>{event.preventDefault();void createCommunity()}} className="w-full max-w-lg rounded-[1.75rem] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-2xl sm:p-7">
+            <div className="flex items-start justify-between gap-3"><div><p className="text-[10px] font-black uppercase tracking-[.17em] text-[var(--primary)]">Credi Connect</p><h2 id="credi-community-title" className="mt-1 text-xl font-black text-[var(--foreground)]">Crear comunidad</h2><p className="mt-1 text-xs leading-5 text-[var(--muted)]">Crea un grupo privado o un canal de difusión para clientes, equipos y comunidades.</p></div><button type="button" onClick={()=>setCommunityOpen(false)} className="grid size-9 place-items-center rounded-xl border border-[var(--border)] text-[var(--muted)]" aria-label="Cerrar"><X size={17}/></button></div>
+            <div className="mt-5 grid grid-cols-2 gap-2">
+              <button type="button" onClick={()=>setCommunityKind('group')} aria-pressed={communityKind==='group'} className={`rounded-xl border p-3 text-left ${communityKind==='group'?'border-[var(--primary)] bg-[var(--primary)]/10':'border-[var(--border)] bg-[var(--surface-secondary)]'}`}><Users className="size-5 text-[var(--primary)]"/><span className="mt-2 block text-xs font-black text-[var(--foreground)]">Grupo privado</span><span className="mt-1 block text-[10px] leading-4 text-[var(--muted)]">Todos los miembros pueden conversar.</span></button>
+              <button type="button" onClick={()=>setCommunityKind('channel')} aria-pressed={communityKind==='channel'} className={`rounded-xl border p-3 text-left ${communityKind==='channel'?'border-[var(--primary)] bg-[var(--primary)]/10':'border-[var(--border)] bg-[var(--surface-secondary)]'}`}><Megaphone className="size-5 text-[var(--primary)]"/><span className="mt-2 block text-xs font-black text-[var(--foreground)]">Canal</span><span className="mt-1 block text-[10px] leading-4 text-[var(--muted)]">Solo administradores publican.</span></button>
+            </div>
+            <label className="mt-4 block text-xs font-bold text-[var(--foreground)]">Nombre de la comunidad<input required minLength={2} maxLength={80} value={communityName} onChange={(event)=>setCommunityName(event.target.value)} placeholder={communityKind==='group'?'Ej. Equipo de ventas':'Ej. Novedades de mi tienda'} className="mt-2 min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-secondary)] px-3 text-sm outline-none focus:border-[var(--primary)]"/></label>
+            <label className="mt-4 block text-xs font-bold text-[var(--foreground)]">Descripción <span className="font-normal text-[var(--muted)]">(opcional)</span><textarea maxLength={500} rows={2} value={communityDescription} onChange={(event)=>setCommunityDescription(event.target.value)} placeholder="¿De qué trata esta comunidad?" className="mt-2 w-full resize-y rounded-xl border border-[var(--border)] bg-[var(--surface-secondary)] p-3 text-sm outline-none focus:border-[var(--primary)]"/></label>
+            <label className="mt-4 block text-xs font-bold text-[var(--foreground)]">Invitar por PIN Credi o teléfono <span className="font-normal text-[var(--muted)]">(opcional)</span><textarea rows={2} value={communityPins} onChange={(event)=>setCommunityPins(event.target.value)} placeholder="Un PIN o número por línea; también puedes separarlos por comas." className="mt-2 w-full resize-y rounded-xl border border-[var(--border)] bg-[var(--surface-secondary)] p-3 text-sm outline-none focus:border-[var(--primary)]"/></label>
+            <div className="mt-5 flex flex-wrap justify-end gap-2"><button type="button" onClick={()=>setCommunityOpen(false)} className="min-h-10 rounded-xl border border-[var(--border)] px-4 text-xs font-bold text-[var(--foreground)]">Cancelar</button><button type="submit" disabled={communityBusy||communityName.trim().length<2} className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-blue-500 px-5 text-xs font-black text-white disabled:opacity-50">{communityBusy?'Creando…':'Crear comunidad'}<ArrowRight size={14}/></button></div>
+          </form>
+        </div>}
+      </div>
+    </section>
+  )
 }
