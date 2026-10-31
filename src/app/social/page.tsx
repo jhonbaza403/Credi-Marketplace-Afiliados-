@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ArrowRight, BadgeCheck, Building2, Camera, Megaphone, MessageCircle, Play, Radio, ShoppingBag, Sparkles, TrendingUp, Users } from "lucide-react";
 import { getDatabaseServerClient } from "@/lib/database/server";
 import { withOperationContext } from "@/lib/portal/operation-context";
+import FeedPostInteractions from "@/components/social/FeedPostInteractions";
 
 type MediaItem = { type?: string; url?: string };
 type OperationContextRecord = Record<string, unknown>;
@@ -68,10 +69,10 @@ export default async function SocialPage() {
   const now = new Date().toISOString();
 
   const [postsResult, storiesResult, reelsResult, adsResult] = await Promise.all([
-    supabase.from("feed_posts").select("id,title,body,media,published_at,created_at,operation_context").eq("status", "published").eq("visibility", "public").order("created_at", { ascending: false }).limit(20),
-    supabase.from("stories").select("id,body,media,expires_at,created_at,operation_context").eq("visibility", "public").gt("expires_at", now).order("created_at", { ascending: false }).limit(20),
-    supabase.from("reels").select("id,title,body,media,published_at,created_at,operation_context").eq("status", "published").eq("visibility", "public").order("created_at", { ascending: false }).limit(20),
-    supabase.from("advertisements").select("id,title,body,media,destination_url,starts_at,ends_at,created_at,operation_context").eq("status", "active").or(`starts_at.is.null,starts_at.lte.${now}`).or(`ends_at.is.null,ends_at.gt.${now}`).order("created_at", { ascending: false }).limit(10),
+    supabase.from("feed_posts").select("id,title,body,media,published_at,created_at,operation_context").eq("status", "published").eq("visibility", "public").eq("moderation_status", "approved").order("created_at", { ascending: false }).limit(20),
+    supabase.from("stories").select("id,body,media,expires_at,created_at,operation_context").eq("visibility", "public").eq("moderation_status", "approved").gt("expires_at", now).order("created_at", { ascending: false }).limit(20),
+    supabase.from("reels").select("id,title,body,media,published_at,created_at,operation_context").eq("status", "published").eq("visibility", "public").eq("moderation_status", "approved").order("created_at", { ascending: false }).limit(20),
+    supabase.from("advertisements").select("id,title,body,media,destination_url,starts_at,ends_at,created_at,operation_context").eq("status", "active").eq("moderation_status", "approved").or(`starts_at.is.null,starts_at.lte.${now}`).or(`ends_at.is.null,ends_at.gt.${now}`).order("created_at", { ascending: false }).limit(10),
   ]);
 
   const stories = storiesResult.data ?? [];
@@ -212,6 +213,7 @@ export default async function SocialPage() {
                   <h3 className="mt-2 text-xl font-black">{post.title || "Publicación de la comunidad"}</h3>
                   <p className="mt-2 whitespace-pre-wrap text-sm leading-7">{post.body}</p>{media && <div className="mt-5 aspect-video overflow-hidden rounded-2xl bg-[var(--surface-secondary)]"><MediaPreview media={[media]} alt={post.title || "Publicación de Credi"} /></div>}{commerceActions(post.operation_context) && <div className="mt-5 flex flex-wrap gap-2"><Link href={commerceActions(post.operation_context)!.product} className="rounded-xl bg-[var(--primary)] px-4 py-2 text-xs font-black text-white">Ver producto</Link><Link href={commerceActions(post.operation_context)!.chat} className="rounded-xl border border-[var(--border)] px-4 py-2 text-xs font-black">Contactar</Link><Link href={commerceActions(post.operation_context)!.checkout} className="rounded-xl border border-emerald-400/30 bg-emerald-400/10 px-4 py-2 text-xs font-black text-emerald-700">Comprar</Link></div>}
                   {media && <a className="mt-4 inline-flex items-center gap-2 rounded-xl bg-[var(--surface-secondary)] px-4 py-2.5 text-sm font-bold text-[var(--primary)] hover:opacity-80" href={media.url} target="_blank" rel="noreferrer">Abrir multimedia <ArrowRight className="size-4" /></a>}
+                  <FeedPostInteractions postId={post.id} />
                 </article>;
               })}
               {!reels.length && !posts.length && <div className="rounded-[1.75rem] border border-dashed border-[var(--border)] bg-[var(--surface)] p-10 text-center"><p className="text-lg font-black">Tu muro está listo.</p><p className="mt-2 text-sm text-[var(--muted)]">Cuando la comunidad publique, el contenido aparecerá aquí automáticamente.</p><Link href="/publish" className="mt-5 inline-flex rounded-xl bg-[var(--primary)] px-5 py-3 text-sm font-black text-white">Publicar ahora</Link></div>}
