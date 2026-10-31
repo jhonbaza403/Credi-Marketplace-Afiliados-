@@ -99,7 +99,10 @@ export async function POST(request:Request) {
 
     const {data:room,error}=await supabase.from('chat_live_rooms').insert({
       host_user_id:user.id,title:p.title,description:p.description,status,
-      scheduled_at:scheduledAt?.toISOString()??null,started_at:null,
+      scheduled_at:scheduledAt?.toISOString()??null,
+      // chat_live_rooms.started_at is NOT NULL with a database default.
+      // Omit it for scheduled rooms so PostgreSQL supplies the creation timestamp;
+      // scheduled_at remains the authoritative planned start time.
       cover_media:p.coverMedia,stream_provider:isCloudflareConfigured()?'cloudflare_stream':'external',
       settings:{q_and_a:true,comments:true,record_replay:true,product_pinning:true,moderation:true,reactions:true,guest_stage:true},
       metadata:{module:'CREDI-LIVE',version:'2.3',request_id:requestId,transport_state:isCloudflareConfigured()?'provisioning':'not_configured'}
