@@ -1,4 +1,36 @@
 -- Credi Chat: private groups and broadcast channels.
+-- Keep the public direct-chat RPC usable by authenticated sessions.
+-- The private implementation validates auth.uid(), rate limits and context.
+-- This wrapper runs with its owner privileges and exposes no private schema.
+CREATE OR REPLACE FUNCTION public.create_credichat_direct_conversation(
+  p_target_user_id uuid,
+  p_product_id uuid DEFAULT NULL,
+  p_order_id uuid DEFAULT NULL,
+  p_store_id uuid DEFAULT NULL,
+  p_b2b_product_id uuid DEFAULT NULL,
+  p_title text DEFAULT NULL,
+  p_metadata jsonb DEFAULT '{}'::jsonb
+)
+RETURNS uuid
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = ''
+AS $function$
+  SELECT private.create_credichat_direct_conversation(
+    p_target_user_id,
+    p_product_id,
+    p_order_id,
+    p_store_id,
+    p_b2b_product_id,
+    p_title,
+    p_metadata
+  );
+$function$;
+
+REVOKE ALL ON FUNCTION public.create_credichat_direct_conversation(uuid, uuid, uuid, uuid, uuid, text, jsonb) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.create_credichat_direct_conversation(uuid, uuid, uuid, uuid, uuid, text, jsonb) TO authenticated, service_role;
+
+
 -- Channel messages are restricted to conversation admins/support members.
 ALTER TABLE public.conversations
   DROP CONSTRAINT IF EXISTS conversations_kind_check;
