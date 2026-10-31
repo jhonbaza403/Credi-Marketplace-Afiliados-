@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import DomainBridge from "@/components/portal/DomainBridge";
+import CrediServicePortalNav from '@/components/portal/CrediServicePortalNav'
 import {
   ArrowRight,
   BriefcaseBusiness,
@@ -70,6 +71,14 @@ const services = [
     tone: "from-sky-400/20 to-indigo-500/5",
   },
   {
+    title: "Empleo y talento",
+    description: "Publica oportunidades, encuentra profesionales y gestiona tu perfil laboral.",
+    detail: "Red profesional",
+    href: "/jobs",
+    icon: BriefcaseBusiness,
+    tone: "from-blue-400/20 to-cyan-500/5",
+  },
+  {
     title: "Credi Free",
     description: "Entra a la experiencia comunitaria y descubre las áreas disponibles.",
     detail: "Acceso gratuito",
@@ -92,6 +101,7 @@ export default function ServicesPage() {
     <main className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
       <div className="mx-auto w-full max-w-[1500px] px-4 py-5 sm:px-6 lg:px-8 lg:py-9">
         <DomainBridge context="services" />
+        <CrediServicePortalNav />
 
         <section className="relative isolate overflow-hidden rounded-[2rem] border border-indigo-300/15 bg-[linear-gradient(125deg,#09172d_0%,#17153c_58%,#102e3c_100%)] px-5 py-9 text-white shadow-[0_26px_80px_rgba(2,8,28,.24)] sm:px-9 sm:py-12">
           <div aria-hidden="true" className="pointer-events-none absolute -right-20 -top-24 size-80 rounded-full bg-cyan-300/15 blur-3xl" />
@@ -121,7 +131,7 @@ export default function ServicesPage() {
             <div>
               <p className="text-xs font-black uppercase tracking-[.16em] text-[var(--primary)]">Explora Credi</p>
               <h2 id="services-title" className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">Servicios y herramientas</h2>
-              <p className="mt-2 text-sm leading-6 text-[var(--muted)]">Ocho accesos principales, cada uno conectado con su área real de la plataforma.</p>
+              <p className="mt-2 text-sm leading-6 text-[var(--muted)]">Nueve accesos principales, cada uno conectado con su área de la plataforma.</p>
             </div>
             <span className="rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs font-bold text-[var(--muted)]">Un portal · Una cuenta</span>
           </div>

@@ -4,7 +4,7 @@ import { FormEvent, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { useAuth } from '@/context/AuthContext';
-import { createClient } from '@/lib/supabase/client';
+import CrediServicePortalNav from '@/components/portal/CrediServicePortalNav';
 
 interface JobFormData {
   title: string;
@@ -118,28 +118,30 @@ export default function CreateJobPage() {
     setLoading(true);
 
     try {
-      // Crear el cliente únicamente en respuesta a una acción del usuario.
-      // Esto evita ejecutar createBrowserClient durante el prerender del build.
-      const supabase = createClient();
-
-      const { error: insertError } = await supabase
-        .from('jobs')
-        .insert({
+      const response = await fetch('/api/jobs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           title: form.title.trim(),
           company: form.company.trim(),
           description: form.description.trim(),
           location: form.location.trim() || null,
           salary: form.salary.trim() || null,
-          employer_id: user.id,
-        });
-
-      if (insertError) {
-        throw insertError;
+          work_mode: /remoto/i.test(form.location) ? 'remote' : 'on_site',
+        }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (response.status === 401) {
+        router.push('/login?next=%2Fjobs%2Fcreate');
+        return;
+      }
+      if (!response.ok) {
+        throw new Error(typeof result.error === 'string' ? result.error : 'No fue posible publicar la vacante.');
       }
 
       setForm(INITIAL_FORM);
       setSuccess(
-        'La oferta de empleo fue publicada correctamente.'
+        'La vacante quedó publicada y disponible en el portal de oportunidades.'
       );
 
       window.setTimeout(() => {
@@ -186,6 +188,7 @@ export default function CreateJobPage() {
             Credi Marketplace · Empleo
           </div>
 
+          <CrediServicePortalNav />
           <h1 className="text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
             Publicar oferta de empleo
           </h1>

@@ -22,6 +22,7 @@ const PUBLIC_PREFIXES = [
   "/seller",
   "/search",
   "/social",
+  "/jobs",
   "/free",
   "/magazines",
   "/videos",
@@ -129,7 +130,6 @@ export async function proxy(request: NextRequest) {
   const canonicalAliases: Record<string, string> = {
     "/explorar": "/marketplace",
     "/servicios": "/services",
-    "/jobs": "/services",
     "/seller/b2b": "/b2b",
   };
   const aliasTarget = canonicalAliases[pathname];

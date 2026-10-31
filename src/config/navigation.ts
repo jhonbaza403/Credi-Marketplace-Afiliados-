@@ -14,6 +14,7 @@ export const PUBLIC_NAVIGATION = [
   { label: "Marketplace", href: "/marketplace" },
   { label: "Productos", href: "/products" },
   { label: "Servicios", href: "/services" },
+  { label: "Empleo", href: "/jobs" },
   { label: "B2B", href: "/b2b" },
   { label: "Vendedores", href: "/sellers" },
   { label: "Buscar", href: "/search" },

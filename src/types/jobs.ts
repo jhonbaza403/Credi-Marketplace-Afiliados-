@@ -1,151 +1,51 @@
-// ==========================================================
-// ARCHIVO: src/types/jobs.ts
-// Tipos de datos para Ofertas de Empleo y Postulaciones
-// Credi Marketplace
-// ==========================================================
+export type JobLocationType = 'remote' | 'on_site' | 'hybrid'
+export type JobStatus = 'draft' | 'active' | 'closed'
+export type JobEmploymentType = 'full_time' | 'part_time' | 'contract' | 'temporary' | 'internship' | 'freelance'
+export type JobApplicationStatus = 'pending' | 'reviewed' | 'accepted' | 'rejected'
 
-/**
- * Modalidad de trabajo.
- */
-export type JobLocationType =
-  | 'remote'
-  | 'on_site'
-  | 'hybrid';
-
-/**
- * Estado de una oferta de empleo.
- */
-export type JobStatus =
-  | 'draft'
-  | 'active'
-  | 'closed';
-
-/**
- * Estado de una postulación.
- */
-export type JobApplicationStatus =
-  | 'pending'
-  | 'reviewed'
-  | 'accepted'
-  | 'rejected';
-
-/**
- * Oferta de empleo publicada en Credi Marketplace.
- *
- * IMPORTANTE:
- * Los nombres utilizan camelCase porque estos son
- * los tipos consumidos por la aplicación Next.js.
- *
- * La base de datos puede utilizar snake_case.
- */
+/** Shape returned by the Supabase jobs table (snake_case). */
 export interface JobOffer {
-  /** UUID de la oferta */
-  id: string;
-
-  /** UUID del usuario/empresa que publica la oferta */
-  companyId: string;
-
-  /** Título de la posición */
-  title: string;
-
-  /** Descripción completa del empleo */
-  description: string;
-
-  /** Categoría profesional o laboral */
-  category: string;
-
-  /** Modalidad de trabajo */
-  locationType: JobLocationType;
-
-  /** País donde se encuentra la oportunidad */
-  country: string;
-
-  /** Ubicación específica opcional */
-  location?: string | null;
-
-  /** Salario mínimo */
-  salaryMin?: number | null;
-
-  /** Salario máximo */
-  salaryMax?: number | null;
-
-  /** Moneda del salario */
-  currency: string;
-
-  /** Estado de la oferta */
-  status: JobStatus;
-
-  /** Fecha de publicación */
-  createdAt: string;
-
-  /** Fecha de última actualización */
-  updatedAt: string;
+  id: string
+  employer_id: string
+  company: string
+  title: string
+  description: string
+  category: string | null
+  employment_type: JobEmploymentType
+  work_mode: JobLocationType
+  country: string | null
+  location: string | null
+  salary: string | null
+  salary_min: number | null
+  salary_max: number | null
+  salary_currency: string
+  status: JobStatus
+  created_at: string
+  updated_at: string
 }
 
-/**
- * Postulación de un candidato a una oferta laboral.
- */
 export interface JobApplication {
-  /** UUID de la postulación */
-  id: string;
-
-  /** UUID de la oferta de empleo */
-  jobId: string;
-
-  /** UUID del candidato */
-  candidateId: string;
-
-  /** Carta de presentación */
-  coverLetter?: string | null;
-
-  /** URL del currículum */
-  resumeUrl?: string | null;
-
-  /** Estado de la postulación */
-  status: JobApplicationStatus;
-
-  /** Fecha de creación */
-  createdAt: string;
-
-  /** Fecha de última actualización */
-  updatedAt: string;
+  id: string
+  job_id: string
+  candidate_id: string
+  cover_letter: string | null
+  resume_path: string | null
+  status: JobApplicationStatus
+  created_at: string
+  updated_at: string
 }
 
-/**
- * Versión resumida de una oferta laboral.
- *
- * Útil para tarjetas, búsquedas y listados.
- */
-export interface JobOfferSummary {
-  id: string;
-  companyId: string;
-  title: string;
-  category: string;
-  locationType: JobLocationType;
-  country: string;
-  salaryMin?: number | null;
-  salaryMax?: number | null;
-  currency: string;
-  status: JobStatus;
-  createdAt: string;
-}
-
-/**
- * Información resumida de una postulación.
- *
- * Útil para paneles administrativos y del candidato.
- */
-export interface JobApplicationSummary {
-  id: string;
-  jobId: string;
-  candidateId: string;
-  status: JobApplicationStatus;
-  createdAt: string;
-}
-
-/**
- * Oferta laboral junto con sus postulaciones.
- */
-export interface JobOfferWithApplications extends JobOffer {
-  applications?: JobApplication[];
+export interface ProfessionalProfile {
+  user_id: string
+  full_name: string | null
+  headline: string | null
+  summary: string | null
+  location: string | null
+  skills: string[]
+  experience: Array<Record<string, unknown>>
+  education: Array<Record<string, unknown>>
+  website_url: string | null
+  portfolio_url: string | null
+  visibility: 'private' | 'public'
+  updated_at: string
 }
