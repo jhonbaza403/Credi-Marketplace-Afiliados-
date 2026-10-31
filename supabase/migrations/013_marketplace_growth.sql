@@ -87,7 +87,7 @@ BEGIN
     NEW.updated_at = now();
     RETURN NEW;
 END;
-$;
+$$;
 
 DROP TRIGGER IF EXISTS trg_b2b_crypto_payment_updated_at
 ON public.b2b_crypto_payment_intents;
@@ -154,7 +154,7 @@ BEGIN
 
     RETURN NEW;
 END;
-$;
+$$;
 
 DROP TRIGGER IF EXISTS trg_create_affiliate_commission_ledger
 ON public.orders;
