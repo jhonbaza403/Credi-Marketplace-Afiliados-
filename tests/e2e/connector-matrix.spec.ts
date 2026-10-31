@@ -76,7 +76,7 @@ test.describe("Credi connector matrix", () => {
   test("legacy seller and jobs connectors remain safe", async ({ page }) => {
     const aliases = [
       ["/seller/b2b", "/b2b"],
-      ["/jobs", "/services"],
+      ["/jobs", "/jobs"],
     ] as const;
 
     for (const [source, target] of aliases) {

@@ -13,13 +13,13 @@
 
 | Prioridad | Servicio | Evidencia / brecha | Trabajo requerido | Estado |
 |---|---|---|---|---|
-| P0 | Seguridad Chat | La membresía de conversación debe impedir auto-unión arbitraria. No se habilitan grupos/canales desde el agente. | RPC transaccional de invitaciones, roles, aceptación, revocación y auditoría; pruebas RLS entre usuarios. | Bloqueado hasta endurecer y validar |
+| P0 | Seguridad Chat | La política original de inserción directa permitía auto-unión. La migración nueva elimina esa política, crea el grupo con solo su creador y registra invitaciones pendientes; solo el destinatario puede aceptar y convertirse en miembro. | Validar migración, RPC y RLS en staging; ejecutar prueba SQL y E2E con dos cuentas/PINs dedicados. Canales y llamadas multiparte no implementados; IA no gestiona grupos. | Código en rama; validación de staging pendiente |
 | P0 | LIVE | Existen sala, Stream, webhook, productos y chat LIVE. No hay evidencia E2E real completa. | Codificador real, Cloudflare Stream, dos espectadores, caída/reconexión, cierre y replay reproducible. | Código parcial; E2E real pendiente |
 | P0 | Chat multimedia/llamadas | Existe UI, almacenamiento privado y gestores de llamadas. El test requiere dos cuentas y conversación configuradas. | Ejecutar texto, imagen, vídeo, archivo, voz, llamada bidireccional y recuperación con dos cuentas reales. | Parcial; E2E pendiente |
 | P0 | Supabase/migraciones | Historial local/remoto sensible; no se ha autorizado aplicar nuevas migraciones a producción. | Reconciliar drift, probar la migración en entorno seguro y preparar despliegue reversible. | No aplicar automáticamente |
 | P1 | Empleo/red profesional | `/jobs` redirigía a servicios; el formulario insertaba directamente en `jobs`; faltaban APIs de consulta/postulación y migración dedicada en el árbol revisado. | Vacantes, búsqueda, detalle, postulación única, perfil profesional con visibilidad y RLS. | Código incorporado en esta rama; migración/E2E pendientes |
 | P1 | Personalización | `src/features/recommendation/index.ts` rankea productos por región/intereses. No se encontró persistencia/API de preferencias personales ni feed social personalizado conectado. | Preferencias explícitas, feedback, feed por seguidos/intereses/actualidad, modo cronológico, explicación, reset y opt-out. No inferir atributos sensibles. | Motor parcial; feed social y persistencia pendientes |
-| P1 | Grupos/comunidades/eventos | No se identificó un portal/recorrido completo de comunidades y eventos en el inventario revisado. | Comunidades, roles, invitaciones, eventos, RSVP, moderación, notificaciones y aislamiento. | Pendiente |
+| P1 | Grupos/comunidades/eventos | Credi Chat incorpora grupos privados con invitaciones pendientes y aceptación expresa. No equivale aún a una red de comunidades. | Gestión posterior de miembros, transferencia de propiedad, canales, descubrimiento de comunidades, eventos, RSVP, moderación y notificaciones. | Chat groups en rama; comunidades/eventos/canales pendientes |
 | P1 | Creadores/contenido | Existen muro, historias, reels, anuncios e interacciones. | Composer avanzado, edición, subtítulos, borradores, colaboraciones y analítica fiable de alcance/retención. | Parcial |
 | P1 | Marketplace B2C | Existen catálogo, productos, carrito, checkout, pedidos y eventos. | E2E producto→carrito→pago→webhook→pedido→inventario→notificación; devoluciones y disputas. | Parcial; E2E de producción pendiente |
 | P1 | B2B | Existen catálogo, RFQ, cotizaciones, selección/award y órdenes/pagos B2B. | Comparación de proveedores, negociación, términos, entrega, recepción, discrepancias y reputación. | Parcial |
@@ -29,6 +29,17 @@
 | P1 | Portales premium | Hay páginas y navegación común, con profundidad desigual. | Paneles propios, colas, indicadores reales, configuración, actividad, ayuda y accesibilidad por servicio. | Navegación integrada; profundidad pendiente |
 | P2 | Accesibilidad/performance | No existe evidencia de auditoría transversal terminada por servicio/dispositivo. | WCAG, teclado/lector, subtítulos, contraste, mobile, Core Web Vitals y redes lentas. | Pendiente |
 | P2 | Confianza/soporte | Hay moderación, cumplimiento, notificaciones y soporte. | Ciclo denuncia→revisión→decisión→apelación→notificación y métricas SLA. | Parcial |
+
+## Incorporación realizada ahora: seguridad de Chat
+
+- `20261101090000_credi_secure_chat_groups.sql` elimina la política RLS de INSERT directo sobre `conversation_members` y crea una tabla de invitaciones privada.
+- La creación añade solo al creador como administrador; los otros contactos quedan en estado `pending` durante siete días.
+- El destinatario es el único que puede aceptar/rechazar; al aceptar se crea su membresía en la misma transacción.
+- Las RPC de invitación validan identidad y rol, y limitan cada grupo a 24 invitaciones activas.
+- El directorio Credi permite seleccionar contactos por PIN, crear el grupo y procesar invitaciones recibidas.
+- Se añade una prueba SQL de seguridad y un E2E opcional con creador e invitado.
+
+**Activación pendiente:** ejecutar la migración y `supabase/tests/006_credichat_membership_security.sql` en staging, después E2E con dos cuentas dedicadas. No se ha aplicado a producción.
 
 ## Incorporación realizada ahora: red profesional
 

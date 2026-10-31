@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import DomainBridge from "@/components/portal/DomainBridge"
 import CrediServicePortalNav from '@/components/portal/CrediServicePortalNav'
 import CrediBusinessChat from '@/components/chat/CrediBusinessChat'
+import CrediChatGroupInvitations from '@/components/chat/CrediChatGroupInvitations'
 import CrediContactDirectory from '@/components/chat/CrediContactDirectory'
 import CrediLiveChatPanel from '@/components/chat/CrediLiveChatPanel'
 import AIAssistant from '@/components/ai/AIAssistant'
@@ -23,6 +24,7 @@ export default function ChatPage() {
         </section>
         <DomainBridge context="chat" />
         <CrediServicePortalNav />
+        <CrediChatGroupInvitations />
         <CrediContactDirectory />
         <CrediBusinessChat />
         <CrediLiveChatPanel />

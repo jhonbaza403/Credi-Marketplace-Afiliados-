@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Check, Copy, MessageCircle, Search, UserRound } from 'lucide-react'
+import { Check, Copy, MessageCircle, Search, UserRound, Users, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 
@@ -27,6 +27,9 @@ export default function CrediContactDirectory() {
   const [busy, setBusy] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [groupMembers, setGroupMembers] = useState<Contact[]>([])
+  const [groupTitle, setGroupTitle] = useState('')
+  const [creatingGroup, setCreatingGroup] = useState(false)
 
 useEffect(() => {
     const supabase = createClient()
@@ -63,6 +66,54 @@ useEffect(() => {
     }).catch(() => setNotice('PIN: ' + myPin))
   }
 
+
+  function addGroupMember() {
+    if (!contact) return
+    setGroupMembers((current) => current.some((member) => member.id === contact.id)
+      ? current
+      : [...current, contact])
+    setNotice(null)
+    setError(null)
+  }
+
+  function removeGroupMember(userId: string) {
+    setGroupMembers((current) => current.filter((member) => member.id !== userId))
+  }
+
+  async function createGroup() {
+    if (groupMembers.length < 2 || groupMembers.length > 24) {
+      setError('Selecciona entre 2 y 24 contactos para crear un grupo.')
+      return
+    }
+    const title = groupTitle.trim()
+    if (title.length < 2 || title.length > 120) {
+      setError('El nombre del grupo debe tener entre 2 y 120 caracteres.')
+      return
+    }
+
+    setCreatingGroup(true)
+    setError(null)
+    setNotice(null)
+    try {
+      const supabase = createClient()
+      const { data, error: rpcError } = await supabase.rpc('create_credichat_group_conversation', {
+        p_title: title,
+        p_member_user_ids: groupMembers.map((member) => member.id),
+      })
+      if (rpcError) throw rpcError
+      const conversationId = typeof data === 'string' ? data : ''
+      if (!conversationId) throw new Error('La creación del grupo no devolvió una conversación válida.')
+      window.location.assign('/chat?conversation=' + encodeURIComponent(conversationId))
+    } catch (cause) {
+      const message = cause && typeof cause === 'object' && 'message' in cause
+        ? String((cause as { message?: unknown }).message || '')
+        : ''
+      setError(message || 'No fue posible crear el grupo. Comprueba que la migración de seguridad del Chat esté aplicada.')
+    } finally {
+      setCreatingGroup(false)
+    }
+  }
+
   function openChat() {
     if (!contact) return
     router.push(`/chat?to=${encodeURIComponent(contact.id)}`)
@@ -87,7 +138,30 @@ useEffect(() => {
       </div>
       {notice && <p className="mt-3 text-xs font-semibold text-emerald-200"><Check className="mr-1 inline size-3.5" />{notice}</p>}
       {error && <p className="mt-3 text-xs font-semibold text-rose-200">{error}</p>}
-      {contact && <div className="mt-4 flex flex-col gap-3 rounded-2xl border border-white/10 bg-white/[.03] p-4 sm:flex-row sm:items-center sm:justify-between"><div className="flex min-w-0 items-center gap-3"><div className="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-cyan-300/10 text-cyan-100">{contact.avatar_url ? <img src={contact.avatar_url} alt="" className="size-full object-cover" /> : <UserRound size={22} />}</div><div className="min-w-0"><p className="truncate text-sm font-black text-white">{contact.full_name || 'Participante Credi'}</p><p className="truncate text-xs text-slate-400">{contact.store_name || contact.role} {contact.is_verified ? '· Verificado' : ''}</p></div></div><button type="button" onClick={openChat} className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-white/10 px-4 py-2.5 text-xs font-black text-white hover:bg-white/15"><MessageCircle size={16} /> Abrir Credi Chat</button></div>}
+      {contact && <div className="mt-4 flex flex-col gap-3 rounded-2xl border border-white/10 bg-white/[.03] p-4 sm:flex-row sm:items-center sm:justify-between"><div className="flex min-w-0 items-center gap-3"><div className="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-cyan-300/10 text-cyan-100">{contact.avatar_url ? <img src={contact.avatar_url} alt="" className="size-full object-cover" /> : <UserRound size={22} />}</div><div className="min-w-0"><p className="truncate text-sm font-black text-white">{contact.full_name || 'Participante Credi'}</p><p className="truncate text-xs text-slate-400">{contact.store_name || contact.role} {contact.is_verified ? '· Verificado' : ''}</p></div></div><div className="flex flex-wrap gap-2">
+          <button type="button" onClick={openChat} className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-white/10 px-4 py-2.5 text-xs font-black text-white hover:bg-white/15"><MessageCircle size={16} /> Abrir Credi Chat</button>
+          <button type="button" onClick={addGroupMember} disabled={groupMembers.some((member) => member.id === contact.id)} className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-cyan-300/20 bg-cyan-300/[.08] px-4 py-2.5 text-xs font-black text-cyan-100 disabled:opacity-40"><Users size={16} /> {groupMembers.some((member) => member.id === contact.id) ? 'Añadido al grupo' : 'Añadir al grupo'}</button>
+        </div></div>}
+
+      {groupMembers.length > 0 && <div className="mt-4 rounded-2xl border border-cyan-300/15 bg-cyan-300/[.04] p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div><p className="text-sm font-black text-white">Nuevo grupo privado</p><p className="mt-1 text-xs text-slate-400">Selecciona entre 2 y 24 contactos. Tú serás administrador; cada persona recibirá una invitación que debe aceptar para entrar.</p></div>
+          <span className="rounded-full border border-cyan-300/20 px-2.5 py-1 text-[10px] font-black text-cyan-100">{groupMembers.length}/24 contactos</span>
+        </div>
+        <label className="mt-3 block text-xs font-bold text-slate-300">Nombre del grupo
+          <input value={groupTitle} onChange={(event) => setGroupTitle(event.target.value)} maxLength={120} placeholder="Ej. Proveedores de tecnología" className="mt-1.5 w-full rounded-xl border border-white/10 bg-white/[.04] px-3 py-2.5 text-sm text-white outline-none focus:border-cyan-300/40" />
+        </label>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {groupMembers.map((member) => <span key={member.id} className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[.05] px-3 py-1.5 text-xs font-semibold text-slate-100">
+            {member.full_name || member.role}
+            <button type="button" onClick={() => removeGroupMember(member.id)} aria-label={'Quitar ' + (member.full_name || 'contacto')} className="text-slate-400 hover:text-white"><X size={13} /></button>
+          </span>)}
+        </div>
+        <div className="mt-4 flex flex-wrap justify-end gap-2">
+          <button type="button" onClick={() => { setGroupMembers([]); setGroupTitle('') }} disabled={creatingGroup} className="rounded-xl border border-white/10 px-4 py-2.5 text-xs font-bold text-slate-300 disabled:opacity-40">Cancelar</button>
+          <button type="button" onClick={() => void createGroup()} disabled={creatingGroup || groupMembers.length < 2 || !groupTitle.trim()} className="inline-flex items-center gap-2 rounded-xl bg-cyan-300 px-4 py-2.5 text-xs font-black text-slate-950 disabled:opacity-40"><Users size={15} /> {creatingGroup ? 'Creando grupo…' : 'Crear grupo seguro'}</button>
+        </div>
+      </div>}
     </section>
   )
 }

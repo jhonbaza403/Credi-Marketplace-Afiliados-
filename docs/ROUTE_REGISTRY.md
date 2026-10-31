@@ -13,7 +13,7 @@ Los grupos de rutas Next.js como `(public)` y `(auth)` no forman parte de la URL
 | `/` | Página | Pública | Portal de entrada; recorrido social-comercial por validar |
 | `/social` | Página | Lectura pública; escritura autenticada | Parcial: feed y contenido; grupos/eventos/personalización pendientes |
 | `/marketplace` | Página | Catálogo público; operaciones comerciales autenticadas | Parcial: recorrido integral de compra aún requiere E2E |
-| `/chat` | Página | Usuario autenticado y miembro de conversación | Parcial: multimedia y llamadas requieren dos cuentas; grupos/canales bloqueados por seguridad |
+| `/chat` | Página | Usuario autenticado y miembro; invitaciones visibles solo para el destinatario | Parcial: directos y grupos con invitación/aceptación en rama; migración/RLS y E2E de dos cuentas pendientes; canales y llamadas multiparte no implementados |
 | `/live` | Página | Anfitrión autenticado; audiencia según permisos de sala | Parcial: transporte y replay reales pendientes |
 | `/b2b` | Página | Catálogo público; publicación y negociación autenticadas | Parcial: ciclo completo de abastecimiento/entrega por validar |
 | `/affiliate` | Página | Programa público; panel afiliado autenticado | Parcial: liquidación de comisiones segura pendiente |

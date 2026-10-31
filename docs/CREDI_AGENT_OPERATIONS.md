@@ -85,6 +85,16 @@ Cada plan debe conservar `plan_id`, `request_id`, usuario propietario, intenció
 - Un fallo a mitad de flujo deja un estado parcial explícito y permite reanudar de forma idempotente sin duplicar pagos o mensajes.
 - La verificación consulta el objeto real y su auditoría; una respuesta del modelo o un HTTP 200 sin persistencia no bastan.
 
+## Seguridad de grupos en Credi Chat
+
+En esta rama se añade una base de grupos privados con consentimiento:
+- La política de INSERT directo en `conversation_members` se elimina.
+- Crear un grupo agrega al creador como administrador y registra hasta 24 invitaciones pendientes; los invitados no se hacen miembros automáticamente.
+- Solo el destinatario autenticado puede aceptar o rechazar. La aceptación añade su membresía en la misma transacción.
+- Las invitaciones expiran a los siete días y la tabla solo es legible por quien invita y quien recibe.
+- El cambio requiere migración y prueba SQL en staging y E2E con dos cuentas/PINs de prueba. No se ha aplicado a producción.
+- Canales, gestión avanzada de roles y llamadas multiparte siguen pendientes. Credi AI no gestiona grupos.
+
 ## Validación real aún pendiente
 
 - **LIVE:** codificador real → Cloudflare Stream → al menos dos espectadores autenticados → desconexión y reconexión → finalización → replay reproducible. Deben revisarse webhooks, sincronización de estados y recuperación.
