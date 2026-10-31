@@ -325,19 +325,39 @@ export default function BusinessControlCenter() {
   }
 
   async function createStory() {
-    if (!user || storyText.trim().length < 2) return
-    const { error: storyError } = await supabase.from('stories').insert({
-      owner_id: user.id,
-      body: storyText.trim(),
-      product_id: selectedProductForContent || null,
-      catalog_id: selectedCatalog || null,
-      visibility: 'public',
-      expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-      moderation_status: 'pending',
+    if (!user || storyText.trim().length < 2) {
+      setError('Escribe al menos dos caracteres para publicar la historia.')
+      return
+    }
+
+    setError(null)
+    setMessage(null)
+    const response = await fetch('/api/social/publish', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 'story',
+        title: '',
+        body: storyText.trim(),
+        media: [],
+        visibility: 'public',
+        disclosure: true,
+        operationContext: {
+          productId: selectedProductForContent || null,
+          catalogId: selectedCatalog || null,
+          source: 'business_control_center',
+        },
+      }),
     })
-    if (storyError) return setError(storyError.message)
+
+    const result = await response.json() as { success?: boolean; error?: string }
+    if (!response.ok || !result.success) {
+      setError(result.error || 'No fue posible publicar la historia.')
+      return
+    }
+
     setStoryText('')
-    setMessage('Historia creada y enviada a moderación.')
+    setMessage('Historia creada y enviada a moderación; estará visible cuando sea aprobada.')
   }
 
   if (authLoading || busy) {

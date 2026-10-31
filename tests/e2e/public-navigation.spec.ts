@@ -49,7 +49,7 @@ test.describe("Public navigation", () => {
     await page.goto("/services", { waitUntil: "domcontentloaded" });
 
     const serviceLinks = page.getByRole("link", { name: /Abrir servicio/i });
-    await expect(serviceLinks).toHaveCount(4);
+    await expect(serviceLinks).toHaveCount(8);
 
     for (const link of await serviceLinks.all()) {
       await expect(link).not.toHaveAttribute("href", /^(https?:|mailto:|#)/i);
