@@ -20,6 +20,7 @@ export type CrediAgentAction =
   | 'wallet_summary'
   | 'marketing_summary'
   | 'create_marketing_campaign'
+  | 'pay_order_from_wallet'
 
 const LEVELS: Record<CrediAgentAction, AgentAuthorizationLevel> = {
   inventory_summary: 'read',
@@ -41,6 +42,7 @@ const LEVELS: Record<CrediAgentAction, AgentAuthorizationLevel> = {
   wallet_summary: 'read',
   marketing_summary: 'read',
   create_marketing_campaign: 'execute',
+  pay_order_from_wallet: 'execute',
 }
 
 export function getAgentAuthorizationLevel(action: CrediAgentAction): AgentAuthorizationLevel {
