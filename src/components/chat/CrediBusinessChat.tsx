@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { ArrowRight, Building2, CheckCheck, FileText, Hash, Megaphone, MessageCircle, Mic, Paperclip, Pin, Plus, Search, Send, Settings2, Smile, Square, Users, X } from 'lucide-react'
+import { ArrowRight, Building2, CheckCheck, FileText, Megaphone, MessageCircle, Mic, Paperclip, Pin, Plus, Search, Send, Settings2, Smile, Square, Users, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import CrediBusinessCall from '@/components/chat/CrediBusinessCall'
 import { uploadCrediBusinessChatMedia } from '@/lib/storage/credibusiness-chat-media'
@@ -39,7 +39,7 @@ export default function CrediBusinessChat() {
   const chunks = useRef<Blob[]>([])
   const [userId, setUserId] = useState<string | null>(null)
   const [profiles, setProfiles] = useState<Record<string, Profile>>({})
-  const [conversations, setConversations] = useState<ChatConversation[]>([])
+  const [conversations, setConversations] = useState<ConversationView[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(params.get('conversation'))
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [search, setSearch] = useState('')
@@ -537,5 +537,4 @@ export default function CrediBusinessChat() {
       </div>
     </main>
   )
-}
 }
