@@ -31,6 +31,10 @@ Credi AI debe convertir solicitudes del usuario en operaciones dentro de Credi, 
 | Pagos | `create_payment` | Aprobación | Crea intent para pedido propio, con importe derivado del servidor y límites; el proveedor aún debe completar el flujo |
 | Atención | `support_summary` | Consulta | Estado de casos propios |
 | Atención | `create_support_case` | Aprobación | Crea caso y registra evento inicial cuando el historial lo permite |
+| Marketplace | `orders_summary` | Consulta | Resume pedidos propios y totales pendientes por moneda |
+| Billetera | `wallet_summary` | Consulta | Lee cuentas propias y separa saldos por moneda |
+| Marketing | `marketing_summary` | Consulta | Campañas propias, estados y presupuestos configurados |
+| Marketing | `create_marketing_campaign` | Aprobación | Crea únicamente un borrador; no activa anuncios ni consume presupuesto |
 
 ## Bloqueos deliberados
 
@@ -50,4 +54,4 @@ Credi AI debe convertir solicitudes del usuario en operaciones dentro de Credi, 
 
 ## Estado de esta fase
 
-Código guardado en la rama `feat/credi-ai-operations-console`. El Preview de Vercel y las pruebas automatizadas deben pasar sobre el último commit antes de abrir revisión. No se ha fusionado la rama ni desplegado en producción.
+19 operaciones con manejadores explícitos guardadas en la rama `feat/credi-ai-operations-console`. El Preview de Vercel y las pruebas automatizadas deben pasar sobre el último commit antes de abrir revisión. No se ha fusionado la rama ni desplegado en producción.
