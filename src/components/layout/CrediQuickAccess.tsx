@@ -3,23 +3,67 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import { ArrowUpRight, Building2, ChevronDown, Radio, Send, ShoppingBag, Store, Users, MessageCircle, Sparkles, BadgeCheck, TrendingUp } from "lucide-react";
+import {
+  ArrowUpRight,
+  BarChart3,
+  BadgeCheck,
+  Building2,
+  Camera,
+  ChevronDown,
+  CirclePlay,
+  Compass,
+  HeartHandshake,
+  Home,
+  MessageCircle,
+  Radio,
+  Send,
+  ShieldCheck,
+  ShoppingBag,
+  Sparkles,
+  Store,
+  TrendingUp,
+  Users,
+  Wallet,
+  X,
+} from "lucide-react";
 
-const primary = [
-  { label: "Muro", href: "/social", icon: Users },
-  { label: "Marketplace", href: "/marketplace", icon: ShoppingBag },
-  { label: "Publicar", href: "/publish", icon: Send, highlight: true },
-  { label: "Chat", href: "/chat", icon: MessageCircle },
-  { label: "LIVE", href: "/live", icon: Radio },
-];
+const sections = [
+  {
+    title: "Tu comunidad",
+    items: [
+      { label: "Inicio", href: "/", icon: Home },
+      { label: "Muro social", href: "/social", icon: Users },
+      { label: "Historias", href: "/historias", icon: Camera },
+      { label: "Reels y vídeos", href: "/videos", icon: CirclePlay },
+      { label: "Credi Chat", href: "/chat", icon: MessageCircle },
+      { label: "Credi LIVE", href: "/live", icon: Radio, live: true },
+    ],
+  },
+  {
+    title: "Comercio",
+    items: [
+      { label: "Marketplace", href: "/marketplace", icon: ShoppingBag },
+      { label: "Servicios", href: "/services", icon: BadgeCheck },
+      { label: "Publicar contenido", href: "/publish", icon: Send },
+      { label: "Afiliados", href: "/affiliate", icon: TrendingUp },
+      { label: "B2B empresarial", href: "/b2b", icon: Building2 },
+      { label: "Credi Free", href: "/free", icon: Sparkles },
+    ],
+  },
+  {
+    title: "Gestiona y crece",
+    items: [
+      { label: "Mi billetera", href: "/wallet", icon: Wallet },
+      { label: "Analytics", href: "/analytics", icon: BarChart3 },
+      { label: "Seguridad", href: "/security", icon: ShieldCheck },
+      { label: "Proveedores", href: "/proveedores-verificados", icon: HeartHandshake },
+    ],
+  },
+] as const;
 
-const more = [
-  { label: "Inicio", href: "/", icon: Store },
-  { label: "Servicios", href: "/services", icon: BadgeCheck },
-  { label: "Credi Free", href: "/free", icon: Sparkles },
-  { label: "Afiliados", href: "/affiliate", icon: TrendingUp },
-  { label: "B2B", href: "/b2b", icon: Building2 },
-];
+const mobilePrimary = sections.flatMap((section) => section.items).filter((item) =>
+  ["/", "/social", "/marketplace", "/publish", "/chat", "/live"].includes(item.href),
+);
 
 function activePath(pathname: string, href: string) {
   return href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(href + "/");
@@ -31,26 +75,111 @@ export default function CrediQuickAccess() {
 
   useEffect(() => setMoreOpen(false), [pathname]);
 
+  useEffect(() => {
+    if (!moreOpen) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMoreOpen(false);
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [moreOpen]);
+
   return (
-    <div className="sticky top-[72px] z-30 border-b border-slate-200 bg-white/95 shadow-[0_4px_18px_rgba(15,23,42,.06)] backdrop-blur-xl xl:hidden">
-      <div className="relative mx-auto max-w-[1600px] px-2 sm:px-4">
-        <nav aria-label="Accesos rápidos de Credi" className="flex items-center gap-1 overflow-x-auto py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {primary.map(({ label, href, icon: Icon, highlight }) => {
+    <>
+      <aside className="credi-app-sidebar fixed inset-y-[72px] left-0 z-30 hidden w-[248px] flex-col xl:flex" aria-label="Navegación del ecosistema Credi">
+        <div className="border-b border-white/10 px-5 py-5">
+          <p className="text-[10px] font-black uppercase tracking-[.2em] text-violet-200/80">Tu espacio</p>
+          <div className="mt-1 flex items-center gap-2">
+            <span className="text-lg font-black tracking-tight text-white">Credi</span>
+            <span className="rounded-full border border-cyan-300/20 bg-cyan-300/10 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-cyan-100">Connect</span>
+          </div>
+          <p className="mt-1 text-[11px] leading-5 text-slate-300/70">Personas, contenido y comercio en un mismo lugar.</p>
+        </div>
+
+        <nav className="credi-sidebar-scroll min-h-0 flex-1 space-y-5 overflow-y-auto px-3 py-4" aria-label="Secciones principales">
+          {sections.map((section) => (
+            <section key={section.title} aria-label={section.title}>
+              <h2 className="mb-2 px-3 text-[9px] font-black uppercase tracking-[.19em] text-slate-400/75">{section.title}</h2>
+              <div className="space-y-1">
+                {section.items.map(({ label, href, icon: Icon, ...item }) => {
+                  const active = activePath(pathname, href);
+                  return (
+                    <Link
+                      key={href}
+                      href={href}
+                      aria-current={active ? "page" : undefined}
+                      className={"credi-sidebar-link " + (item.live ? "relative" : "")}
+                    >
+                      <Icon className="size-[17px] shrink-0" aria-hidden="true" />
+                      <span className="min-w-0 flex-1 truncate">{label}</span>
+                      {item.live && <span className="credi-live-pulse rounded-md bg-rose-500 px-1.5 py-0.5 text-[8px] font-black tracking-wider text-white">LIVE</span>}
+                      {active && <span className="size-1.5 rounded-full bg-cyan-200 shadow-[0_0_10px_rgba(103,232,249,.8)]" aria-hidden="true" />}
+                    </Link>
+                  );
+                })}
+              </div>
+            </section>
+          ))}
+
+          <div className="border-t border-white/10 pt-3">
+            <button
+              type="button"
+              onClick={() => setMoreOpen((value) => !value)}
+              aria-expanded={moreOpen}
+              aria-controls="credi-sidebar-more"
+              className="flex min-h-10 w-full items-center justify-between rounded-xl px-3 text-xs font-bold text-slate-300 transition hover:bg-white/[.07] hover:text-white focus-visible:outline-2 focus-visible:outline-cyan-300"
+            >
+              <span className="inline-flex items-center gap-2"><Compass className="size-4 text-violet-200" /> Más herramientas</span>
+              <ChevronDown className={"size-4 transition-transform " + (moreOpen ? "rotate-180" : "")} />
+            </button>
+            {moreOpen && (
+              <div id="credi-sidebar-more" className="mt-1 space-y-1">
+                {[
+                  { label: "Inventario", href: "/inventario" },
+                  { label: "Pagos y cobros", href: "/pagos" },
+                  { label: "Marketing", href: "/marketing" },
+                  { label: "Credi Intelligence", href: "/intelligence" },
+                ].map((item) => (
+                  <Link key={item.href} href={item.href} className="flex min-h-9 items-center rounded-lg px-3 pl-9 text-[11px] font-semibold text-slate-300 transition hover:bg-white/[.07] hover:text-white">
+                    {item.label}<ArrowUpRight className="ml-auto size-3 text-slate-500" />
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+        </nav>
+
+        <div className="border-t border-white/10 p-4">
+          <div className="rounded-2xl border border-violet-300/15 bg-gradient-to-br from-violet-500/20 to-cyan-400/10 p-3.5">
+            <div className="flex items-center gap-2">
+              <span className="grid size-8 place-items-center rounded-xl bg-violet-400/20 text-violet-100"><Sparkles className="size-4" /></span>
+              <div className="min-w-0">
+                <p className="text-xs font-black text-white">Crece con Credi</p>
+                <p className="text-[10px] text-slate-300">Activa tu espacio comercial</p>
+              </div>
+            </div>
+            <Link href="/affiliate" className="mt-3 inline-flex min-h-9 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-300 to-blue-400 px-3 text-[11px] font-black text-slate-950 transition hover:brightness-110">
+              Conocer afiliados <ArrowUpRight className="size-3.5" />
+            </Link>
+          </div>
+          <Link href="/register" className="mt-3 flex min-h-10 items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/[.06] text-xs font-bold text-white transition hover:bg-white/[.11]">
+            Crear cuenta Credi
+          </Link>
+        </div>
+      </aside>
+
+      <div className="sticky top-[72px] z-30 border-b border-[var(--border)] bg-[color-mix(in_srgb,var(--surface)_94%,transparent)] shadow-[0_8px_22px_rgba(30,25,90,.06)] backdrop-blur-xl xl:hidden">
+        <nav aria-label="Accesos rápidos de Credi" className="mx-auto flex max-w-[1600px] items-center gap-1 overflow-x-auto px-2 py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:px-4">
+          {mobilePrimary.map(({ label, href, icon: Icon }) => {
             const active = activePath(pathname, href);
             return (
               <Link
                 key={href}
                 href={href}
                 aria-current={active ? "page" : undefined}
-                className={"inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl px-3 text-xs font-black transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 sm:px-4 sm:text-sm " +
-                  (highlight
-                    ? "bg-gradient-to-r from-cyan-300 to-blue-400 text-slate-950 shadow-sm"
-                    : active
-                      ? "bg-blue-50 text-blue-700 ring-1 ring-blue-200"
-                      : "text-slate-700 hover:bg-slate-100")}
+                className={"inline-flex min-h-10 shrink-0 items-center gap-2 rounded-xl px-3 text-xs font-black transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary)] " + (href === "/publish" ? "bg-gradient-to-r from-violet-600 to-blue-500 text-white shadow-sm" : active ? "bg-[var(--primary)]/10 text-[var(--primary)]" : "text-[var(--foreground)] hover:bg-[var(--surface-secondary)]")}
               >
-                <Icon className="size-4 shrink-0" aria-hidden="true" />
-                {label}
+                <Icon className="size-4 shrink-0" aria-hidden="true" />{label === "Muro social" ? "Muro" : label === "Publicar contenido" ? "Publicar" : label === "Credi Chat" ? "Chat" : label === "Credi LIVE" ? "LIVE" : label}
               </Link>
             );
           })}
@@ -58,31 +187,22 @@ export default function CrediQuickAccess() {
             type="button"
             onClick={() => setMoreOpen((value) => !value)}
             aria-expanded={moreOpen}
-            aria-controls="credi-quick-access-more"
-            className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-xs font-black text-slate-700 transition hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 sm:px-4 sm:text-sm"
+            aria-controls="credi-mobile-more"
+            className="inline-flex min-h-10 shrink-0 items-center gap-1 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 text-xs font-black text-[var(--foreground)]"
           >
-            Más <ChevronDown className={"size-4 transition-transform " + (moreOpen ? "rotate-180" : "")} aria-hidden="true" />
+            Más <ChevronDown className={"size-4 transition-transform " + (moreOpen ? "rotate-180" : "")} />
           </button>
         </nav>
         {moreOpen && (
-          <div id="credi-quick-access-more" className="absolute left-2 right-2 top-full z-[110] grid grid-cols-2 gap-2 rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_18px_55px_rgba(15,23,42,.2)] sm:grid-cols-5">
-            {more.map(({ label, href, icon: Icon }) => {
-              const active = activePath(pathname, href);
-              return (
-                <Link
-                  key={href}
-                  href={href}
-                  aria-current={active ? "page" : undefined}
-                  className={"inline-flex min-h-11 items-center justify-between gap-2 rounded-xl px-3 py-2 text-xs font-bold transition focus-visible:outline-2 focus-visible:outline-blue-600 " + (active ? "bg-blue-50 text-blue-700" : "text-slate-700 hover:bg-slate-50")}
-                >
-                  <span className="inline-flex items-center gap-2"><Icon className="size-4 text-blue-600" aria-hidden="true" />{label}</span>
-                  <ArrowUpRight className="size-3.5 shrink-0 text-slate-400" aria-hidden="true" />
-                </Link>
-              );
-            })}
+          <div id="credi-mobile-more" className="absolute left-2 right-2 top-full z-[110] grid grid-cols-2 gap-2 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-3 shadow-[0_18px_55px_rgba(15,23,42,.2)] sm:left-4 sm:right-4 sm:grid-cols-4">
+            {sections.flatMap((section) => section.items).filter((item) => !mobilePrimary.some((primary) => primary.href === item.href)).map(({ label, href, icon: Icon }) => (
+              <Link key={href} href={href} aria-current={activePath(pathname, href) ? "page" : undefined} className="inline-flex min-h-10 items-center gap-2 rounded-xl px-3 text-xs font-bold text-[var(--foreground)] transition hover:bg-[var(--surface-secondary)]">
+                <Icon className="size-4 text-[var(--primary)]" />{label}
+              </Link>
+            ))}
           </div>
         )}
       </div>
-    </div>
+    </>
   );
 }
