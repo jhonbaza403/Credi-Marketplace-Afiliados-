@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getAgentAuthorizationLevel, isCrediAgentAction } from '@/lib/ai/agent-permissions'
 import { distributedRateLimit } from '@/lib/security/rate-limit'
+import { isAgentPaymentWithinLimit, resolveAgentMaxPaymentAmount } from '@/lib/ai/agent-limits'
 import { getRequestIp } from '@/lib/security/auth'
 import { isSameOrigin } from '@/lib/security/csrf'
 
@@ -15,7 +16,7 @@ const MAX_BODY_SIZE=32_768
 
 const json=(data:unknown,status=200)=>NextResponse.json(data,{status,headers:{'Cache-Control':'no-store'}})
 const APPROVAL_TTL_MS=10*60*1000
-const AGENT_MAX_PAYMENT_AMOUNT=Number(process.env.CREDI_AGENT_MAX_PAYMENT_AMOUNT||'1000')
+const AGENT_MAX_PAYMENT_AMOUNT=resolveAgentMaxPaymentAmount(process.env.CREDI_AGENT_MAX_PAYMENT_AMOUNT)
 
 function approvalSecret(){
  const secret=process.env.AGENT_APPROVAL_SECRET||process.env.SUPABASE_SECRET_KEY||process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -37,7 +38,7 @@ export async function POST(request:Request){
  const action=body.action
  const allowed=['inventory_summary','b2b_pipeline','prepare_rfq_followup','publish_offer','send_commercial_message','create_payment','commerce_summary','affiliate_summary','chat_summary','live_summary','social_summary','support_summary','create_support_case','create_b2b_rfq','create_social_post','orders_summary','wallet_summary','marketing_summary','create_marketing_campaign','pay_order_from_wallet']
  if(!isCrediAgentAction(action))return json({error:'ACCION_NO_PERMITIDA',allowed_actions:allowed},400)
- const level=getAgentAuthorizationLevel(action); const approved=body.approved===true; const admin=createAdminClient()
+ const level=getAgentAuthorizationLevel(action); const admin=createAdminClient()
  const requestId=typeof body.request_id==='string'&&body.request_id.trim()?body.request_id.trim():crypto.randomUUID()
  const resourceId=typeof body.resource_id==='string'&&body.resource_id.trim()?body.resource_id.trim():null
  const audit=async(status:string,input:Record<string,unknown>,output:Record<string,unknown>={})=>{const result=await admin.from('agent_action_audit').insert({owner_id:auth.user.id,agent_name:'credi-ai',action,resource_type:typeof body.resource_type==='string'?body.resource_type:null,resource_id:resourceId,authorization_level:level,status,request_id:requestId,input,output});if(result.error)throw result.error}
@@ -45,24 +46,32 @@ export async function POST(request:Request){
 
  if(level==='read'){
   await audit('executing',{action},{})
- }else if(!approved){
-  const expiresAt=Date.now()+APPROVAL_TTL_MS
-  const inputHash=hashAgentApprovalInput(body)
-  const token=signAgentApprovalToken({requestId,ownerId:auth.user.id,action,resourceId,inputHash,expiresAt},approvalSecret())
-  const tokenHash=createHash('sha256').update(token).digest('hex')
-  await audit('proposed',{action,resource_id:resourceId},{approval_token_hash:tokenHash,approval_payload_hash:inputHash,approval_expires_at:new Date(expiresAt).toISOString()})
-  return json({ok:true,request_id:requestId,status:'approval_required',action,authorization_level:level,approval_expires_at:new Date(expiresAt).toISOString(),approval_token:token,message:'La acción queda preparada. La autorización expira en 10 minutos y solo permite ejecutar exactamente los datos revisados.'},202)
  }else{
   const inputHash=hashAgentApprovalInput(body)
   const token=typeof body.approval_token==='string'?body.approval_token:''
-  if(!token||!verifyAgentApprovalToken(token,{requestId,ownerId:auth.user.id,action,resourceId,inputHash},approvalSecret()))return json({error:'APPROVAL_INVALID_OR_EXPIRED_OR_PAYLOAD_CHANGED',request_id:requestId},403)
+  if(!token){
+   const expiresAt=Date.now()+APPROVAL_TTL_MS
+   const proposalToken=signAgentApprovalToken({requestId,ownerId:auth.user.id,action,resourceId,inputHash,expiresAt},approvalSecret())
+   const tokenHash=createHash('sha256').update(proposalToken).digest('hex')
+   await audit('proposed',{action,resource_id:resourceId},{approval_token_hash:tokenHash,approval_payload_hash:inputHash,approval_expires_at:new Date(expiresAt).toISOString()})
+   return json({ok:true,request_id:requestId,status:'approval_required',action,authorization_level:level,approval_expires_at:new Date(expiresAt).toISOString(),approval_token:proposalToken,message:'La acción queda preparada. La autorización expira en 10 minutos y solo permite ejecutar exactamente los datos revisados.'},202)
+  }
+
+  // A client-controlled boolean is never an authorization signal.
+  // Every write requires a server-signed token bound to session, action, resource,
+  // exact payload, expiry and the still-pending server audit proposal.
+  if(!verifyAgentApprovalToken(token,{requestId,ownerId:auth.user.id,action,resourceId,inputHash},approvalSecret()))return json({error:'APPROVAL_INVALID_OR_EXPIRED_OR_PAYLOAD_CHANGED',request_id:requestId},403)
+
   const tokenHash=createHash('sha256').update(token).digest('hex')
-  const {data:proposal}=await admin.from('agent_action_audit').select('id,status,output').eq('owner_id',auth.user.id).eq('action',action).eq('request_id',requestId).eq('status','proposed').maybeSingle()
+  const {data:proposal,error:proposalError}=await admin.from('agent_action_audit').select('id,status,output').eq('owner_id',auth.user.id).eq('action',action).eq('request_id',requestId).eq('status','proposed').maybeSingle()
+  if(proposalError)return json({error:'APPROVAL_STATE_ERROR',request_id:requestId},500)
   if(!proposal)return json({error:'APPROVAL_ALREADY_USED_OR_NOT_FOUND',request_id:requestId},409)
+
   const storedHash=typeof proposal.output?.approval_token_hash==='string'?proposal.output.approval_token_hash:''
   const storedPayloadHash=typeof proposal.output?.approval_payload_hash==='string'?proposal.output.approval_payload_hash:''
   const storedExpiry=typeof proposal.output?.approval_expires_at==='string'?new Date(proposal.output.approval_expires_at).getTime():0
-  if(storedHash!==tokenHash||storedPayloadHash!==inputHash||storedExpiry<=Date.now())return json({error:'APPROVAL_INVALID_OR_EXPIRED_OR_PAYLOAD_CHANGED',request_id:requestId},403)
+  if(storedHash!==tokenHash||storedPayloadHash!==inputHash||!Number.isFinite(storedExpiry)||storedExpiry<=Date.now())return json({error:'APPROVAL_INVALID_OR_EXPIRED_OR_PAYLOAD_CHANGED',request_id:requestId},403)
+
   const {data:authorizedProposal,error:authorizationError}=await admin.from('agent_action_audit').update({status:'authorized',output:{approval_expires_at:proposal.output.approval_expires_at}}).eq('id',proposal.id).eq('owner_id',auth.user.id).eq('status','proposed').select('id').maybeSingle()
   if(authorizationError)return json({error:'APPROVAL_STATE_ERROR',request_id:requestId},500)
   if(!authorizedProposal)return json({error:'APPROVAL_ALREADY_USED_OR_NOT_FOUND',request_id:requestId},409)
@@ -251,7 +260,7 @@ export async function POST(request:Request){
    if(itemsError||!items?.length)return json({error:'ORDER_ITEMS_UNAVAILABLE',request_id:requestId},409)
    const itemTotal=items.reduce((sum,r)=>sum+Number(r.subtotal),0)
    if(!Number.isFinite(itemTotal)||Math.round(itemTotal*100)!==Math.round(amount*100))return json({error:'ORDER_TOTAL_MISMATCH',request_id:requestId},409)
-   if(amount>AGENT_MAX_PAYMENT_AMOUNT)return json({error:'AGENT_PAYMENT_LIMIT_EXCEEDED',request_id:requestId,max_amount:AGENT_MAX_PAYMENT_AMOUNT},403)
+   if(!isAgentPaymentWithinLimit(amount,AGENT_MAX_PAYMENT_AMOUNT))return json({error:'AGENT_PAYMENT_LIMIT_EXCEEDED',request_id:requestId,max_amount:AGENT_MAX_PAYMENT_AMOUNT},403)
    const {data:payment,error}=await supabase.from('payment_orchestrations').insert({user_id:auth.user.id,order_id:order.id,amount,currency,method_type:method,provider:method,status:method==='manual'?'requires_action':'pending',client_reference:order.id,idempotency_key:`agent:${requestId}`,metadata:{agent:true,request_id:requestId,server_derived_amount:true},expires_at:new Date(Date.now()+30*60*1000).toISOString()}).select('id,status,method_type,amount,currency,expires_at').single()
    if(error||!payment)throw error??new Error('payment')
    await admin.from('agent_action_audit').update({status:'executed',output:{payment_id:payment.id,server_derived_amount:true}}).eq('owner_id',auth.user.id).eq('action',action).eq('request_id',requestId).in('status',['executing','authorized']); return json({ok:true,action,request_id:requestId,status:'executed',requires_human_confirmation:true,payment})

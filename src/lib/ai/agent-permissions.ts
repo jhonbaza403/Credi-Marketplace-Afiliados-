@@ -49,11 +49,6 @@ export function getAgentAuthorizationLevel(action: CrediAgentAction): AgentAutho
   return LEVELS[action]
 }
 
-export function canAgentExecute(action: CrediAgentAction, approved: boolean): boolean {
-  const level = getAgentAuthorizationLevel(action)
-  return level === 'read' || approved
-}
-
 export function isCrediAgentAction(value: unknown): value is CrediAgentAction {
   return typeof value === 'string' && Object.prototype.hasOwnProperty.call(LEVELS, value)
 }

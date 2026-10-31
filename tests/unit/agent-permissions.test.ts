@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 import {
-  canAgentExecute,
   getAgentAuthorizationLevel,
   isCrediAgentAction,
   type CrediAgentAction,
@@ -23,7 +22,6 @@ describe('Credi AI governed operation permissions', () => {
     ]
     for (const action of reads) {
       expect(getAgentAuthorizationLevel(action)).toBe('read')
-      expect(canAgentExecute(action, false)).toBe(true)
     }
   })
 
@@ -41,8 +39,6 @@ describe('Credi AI governed operation permissions', () => {
     ]
     for (const action of writes) {
       expect(['propose', 'execute']).toContain(getAgentAuthorizationLevel(action))
-      expect(canAgentExecute(action, false)).toBe(false)
-      expect(canAgentExecute(action, true)).toBe(true)
     }
   })
 

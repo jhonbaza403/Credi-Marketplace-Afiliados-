@@ -22,7 +22,6 @@ test.describe("Public route availability", () => {
     test(`${route} does not return 404`, async ({ request }) => {
       const response = await request.get(route, { maxRedirects: 5 });
       expect(response.status(), `${route} returned ${response.status()}`).not.toBe(404);
-      if (response.status() >= 500 && !process.env.PLAYWRIGHT_BASE_URL) test.skip(true, `Local CI route ${route} depends on unavailable production services.`);
       expect(response.status(), `${route} returned an unexpected server error`).toBeLessThan(500);
     });
   }

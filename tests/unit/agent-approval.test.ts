@@ -25,10 +25,14 @@ describe('Credi AI approval integrity', () => {
   })
 
   it('ignores only request/approval transport fields, not operation data', () => {
-    const input = { action: 'create', title: 'Offer', request_id: 'r1', approved: false }
-    const sameApproval = { approved: true, request_id: 'r2', action: 'create', title: 'Offer', approval_token: 'token' }
+    const input = { action: 'create', title: 'Offer', request_id: 'r1' }
+    const sameApproval = { request_id: 'r2', action: 'create', title: 'Offer', approval_token: 'token' }
     expect(hashAgentApprovalInput(input)).toBe(hashAgentApprovalInput(sameApproval))
     expect(hashAgentApprovalInput(input)).not.toBe(hashAgentApprovalInput({ ...sameApproval, title: 'Different offer' }))
+    expect(hashAgentApprovalInput({ action: 'create', title: 'Offer' }))
+      .not.toBe(hashAgentApprovalInput({ action: 'create', title: 'Offer', approved: true }))
+    expect(hashAgentApprovalInput({ action: 'create', title: 'Offer', approved: false }))
+      .not.toBe(hashAgentApprovalInput({ action: 'create', title: 'Offer', approved: true }))
   })
 
   it('verifies a single-use token only for the same user, action, resource and payload', () => {

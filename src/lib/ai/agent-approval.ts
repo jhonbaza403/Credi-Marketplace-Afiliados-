@@ -23,7 +23,7 @@ function canonicalize(value: unknown): unknown {
 
 /** Hashes the exact user-reviewed operation input, ignoring only approval transport fields. */
 export function hashAgentApprovalInput(body: Record<string, unknown>): string {
-  const excluded = new Set(['approved', 'approval_token', 'request_id'])
+  const excluded = new Set(['approval_token', 'request_id'])
   const input = Object.fromEntries(Object.entries(body).filter(([key]) => !excluded.has(key)))
   return createHash('sha256').update(JSON.stringify(canonicalize(input))).digest('hex')
 }

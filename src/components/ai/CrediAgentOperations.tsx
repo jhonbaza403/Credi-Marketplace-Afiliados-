@@ -151,7 +151,6 @@ export default function CrediAgentOperations() {
     try {
       const response = await callAgent({
         ...pending.body,
-        approved: true,
         request_id: pending.request_id,
         approval_token: pending.approval_token,
       })
