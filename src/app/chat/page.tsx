@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import DomainBridge from "@/components/portal/DomainBridge"
+import CrediServicePortalNav from '@/components/portal/CrediServicePortalNav'
 import CrediBusinessChat from '@/components/chat/CrediBusinessChat'
 import CrediContactDirectory from '@/components/chat/CrediContactDirectory'
 import CrediLiveChatPanel from '@/components/chat/CrediLiveChatPanel'
@@ -21,6 +22,7 @@ export default function ChatPage() {
           <p className="mt-3 max-w-4xl text-sm leading-7 text-[var(--muted)]">Conecta con vendedores y proveedores mediante Credi Business Chat, trabaja sobre operaciones reales y utiliza Credi AI como copiloto para preparar consultas, ofertas y estrategias comerciales.</p>
         </section>
         <DomainBridge context="chat" />
+        <CrediServicePortalNav />
         <CrediContactDirectory />
         <CrediBusinessChat />
         <CrediLiveChatPanel />
