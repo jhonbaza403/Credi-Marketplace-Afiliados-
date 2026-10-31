@@ -35,7 +35,7 @@ export async function POST(request:Request){
  if(!limit.success)return json({error:'RATE_LIMITED'},429)
  let body:Record<string,unknown>; try{body=await request.json() as Record<string,unknown>}catch{return json({error:'JSON inválido'},400)}
  const action=body.action
- const allowed=['inventory_summary','b2b_pipeline','prepare_rfq_followup','publish_offer','send_commercial_message','create_payment','commerce_summary','affiliate_summary','chat_summary','live_summary','social_summary','support_summary','create_support_case','create_b2b_rfq','create_social_post','orders_summary','wallet_summary','marketing_summary','create_marketing_campaign']
+ const allowed=['inventory_summary','b2b_pipeline','prepare_rfq_followup','publish_offer','send_commercial_message','create_payment','commerce_summary','affiliate_summary','chat_summary','live_summary','social_summary','support_summary','create_support_case','create_b2b_rfq','create_social_post','orders_summary','wallet_summary','marketing_summary','create_marketing_campaign','pay_order_from_wallet']
  if(!isCrediAgentAction(action))return json({error:'ACCION_NO_PERMITIDA',allowed_actions:allowed},400)
  const level=getAgentAuthorizationLevel(action); const approved=body.approved===true; const admin=createAdminClient()
  const requestId=typeof body.request_id==='string'&&body.request_id.trim()?body.request_id.trim():crypto.randomUUID()
@@ -216,6 +216,23 @@ export async function POST(request:Request){
    if(error||!campaign)throw error??new Error('MARKETING_CAMPAIGN_CREATE_FAILED')
    await markExecuted({campaign_id:campaign.id,status:'draft',budget_is_not_spent:true})
    return json({ok:true,action,request_id:requestId,status:'executed',campaign,launch_requires_separate_approval:true,message:'Borrador creado; no se ha activado ni consumido presupuesto.'},201)
+  }
+  if(action==='pay_order_from_wallet'){
+   if(!resourceId)return json({error:'ORDER_ID_REQUIRED',request_id:requestId},400)
+   const idempotencyKey=`credi-ai:${requestId}`
+   const {data:paymentResult,error}=await supabase.rpc('wallet_pay_order',{p_order_id:resourceId,p_idempotency_key:idempotencyKey})
+   if(error){
+    const message=String(error.message||'')
+    if(message.includes('INSUFFICIENT_FUNDS'))return json({error:'INSUFFICIENT_WALLET_FUNDS',request_id:requestId},409)
+    if(message.includes('ORDER_NOT_FOUND'))return json({error:'ORDER_NOT_FOUND',request_id:requestId},404)
+    if(message.includes('ORDER_NOT_PAYABLE'))return json({error:'ORDER_NOT_PAYABLE',request_id:requestId},409)
+    if(message.includes('WALLET_NOT_ACTIVE'))return json({error:'WALLET_NOT_ACTIVE',request_id:requestId},409)
+    if(message.includes('PLATFORM_REVENUE_ACCOUNT_NOT_CONFIGURED'))return json({error:'PLATFORM_WALLET_NOT_CONFIGURED',request_id:requestId},409)
+    throw error
+   }
+   const result=paymentResult&&typeof paymentResult==='object'?paymentResult as Record<string,unknown>:{result:paymentResult}
+   await markExecuted({payment:result,provider:'wallet',idempotency_key:idempotencyKey})
+   return json({ok:true,action,request_id:requestId,status:result.status==='succeeded'?'executed':'submitted',payment:result,message:result.status==='succeeded'?'El pago con billetera fue confirmado por la transacción contable de Credi.':'La billetera devolvió un estado que requiere revisión.'})
   }
   if(action==='create_payment'){
    if(!resourceId)return json({error:'ORDER_ID_REQUIRED',request_id:requestId},400)
