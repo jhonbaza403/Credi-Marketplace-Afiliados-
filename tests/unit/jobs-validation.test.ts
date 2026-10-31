@@ -23,19 +23,28 @@ describe('Credi professional network input validation', () => {
   })
 
   it('rejects a missing or too-short job description', () => {
-    expect(validateCreateJobInput({ ...validJob, description: 'Muy corto' })).toMatchObject({ ok: false })
+    const result = validateCreateJobInput({ ...validJob, description: 'Muy corto' })
+    expect(result).toMatchObject({ ok: false })
   })
 
   it('rejects a salary minimum greater than the maximum', () => {
-    expect(validateCreateJobInput({ ...validJob, salary_min: 3000, salary_max: 2000 })).toMatchObject({ ok: false })
+    const result = validateCreateJobInput({ ...validJob, salary_min: 3000, salary_max: 2000 })
+    expect(result).toMatchObject({ ok: false })
   })
 
   it('rejects malformed currency', () => {
-    expect(validateCreateJobInput({ ...validJob, salary_currency: 'US dollars' })).toMatchObject({ ok: false })
+    const result = validateCreateJobInput({ ...validJob, salary_currency: 'US dollars' })
+    expect(result).toMatchObject({ ok: false })
   })
 
   it('accepts an optional cover letter and rejects oversized text', () => {
-    expect(validateJobApplicationInput({ cover_letter: 'Experiencia relevante para esta oportunidad.' }).ok).toBe(true)
-    expect(validateJobApplicationInput({ cover_letter: 'x'.repeat(5001 })).ok).toBe(false)
+    const validApplication = validateJobApplicationInput({
+      cover_letter: 'Experiencia relevante para esta oportunidad.',
+    })
+    const oversizedApplication = validateJobApplicationInput({
+      cover_letter: 'x'.repeat(5001),
+    })
+    expect(validApplication.ok).toBe(true)
+    expect(oversizedApplication.ok).toBe(false)
   })
 })
