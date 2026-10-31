@@ -17,6 +17,9 @@ describe('Credi AI governed operation permissions', () => {
       'live_summary',
       'social_summary',
       'support_summary',
+      'orders_summary',
+      'wallet_summary',
+      'marketing_summary',
     ]
     for (const action of reads) {
       expect(getAgentAuthorizationLevel(action)).toBe('read')
@@ -33,6 +36,7 @@ describe('Credi AI governed operation permissions', () => {
       'create_support_case',
       'create_b2b_rfq',
       'create_social_post',
+      'create_marketing_campaign',
     ]
     for (const action of writes) {
       expect(['propose', 'execute']).toContain(getAgentAuthorizationLevel(action))
