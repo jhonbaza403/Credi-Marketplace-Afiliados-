@@ -71,14 +71,14 @@ export async function POST(request:Request){
  try{
   if(action==='inventory_summary'){
    const {data:store}=await supabase.from('stores').select('id').eq('vendor_id',auth.user.id).maybeSingle();
-   if(!store){const summary={products:0,active_products:0,stock:0,low_stock:0}; await admin.from('agent_action_audit').update({status:'executed',output:{summary}}).eq('owner_id',auth.user.id).eq('request_id',requestId).in('status',['executing','authorized']); return json({ok:true,action,request_id:requestId,summary})}
+   if(!store){const summary={products:0,active_products:0,stock:0,low_stock:0}; await admin.from('agent_action_audit').update({status:'executed',output:{summary}}).eq('owner_id',auth.user.id).eq('action',action).eq('request_id',requestId).in('status',['executing','authorized']); return json({ok:true,action,request_id:requestId,summary})}
    const {data:products,error}=await supabase.from('products').select('stock,is_active').eq('store_id',store.id).limit(1000); if(error)throw error
    const rows=products??[]; const summary={products:rows.length,active_products:rows.filter((r)=>r.is_active).length,stock:rows.reduce((s,r)=>s+Math.max(0,Number(r.stock)),0),low_stock:rows.filter((r)=>Number(r.stock)>0&&Number(r.stock)<=5).length}
-   await admin.from('agent_action_audit').update({status:'executed',output:{summary}}).eq('owner_id',auth.user.id).eq('request_id',requestId).in('status',['executing','authorized']); return json({ok:true,action,request_id:requestId,summary})
+   await admin.from('agent_action_audit').update({status:'executed',output:{summary}}).eq('owner_id',auth.user.id).eq('action',action).eq('request_id',requestId).in('status',['executing','authorized']); return json({ok:true,action,request_id:requestId,summary})
   }
   if(action==='b2b_pipeline'){
    const [{count:openRfqs},{count:activeAutomations}]=await Promise.all([supabase.from('business_rfqs').select('id',{count:'exact',head:true}).eq('buyer_id',auth.user.id).in('status',['open','quoted']),supabase.from('business_automation_rules').select('id',{count:'exact',head:true}).eq('owner_id',auth.user.id).eq('enabled',true)])
-   const summary={open_rfqs:openRfqs??0,active_automations:activeAutomations??0}; await admin.from('agent_action_audit').update({status:'executed',output:{summary}}).eq('owner_id',auth.user.id).eq('request_id',requestId).in('status',['executing','authorized']); return json({ok:true,action,request_id:requestId,summary})
+   const summary={open_rfqs:openRfqs??0,active_automations:activeAutomations??0}; await admin.from('agent_action_audit').update({status:'executed',output:{summary}}).eq('owner_id',auth.user.id).eq('action',action).eq('request_id',requestId).in('status',['executing','authorized']); return json({ok:true,action,request_id:requestId,summary})
   }
   if(action==='commerce_summary'){
    const {data:store,error:storeError}=await supabase.from('stores').select('id,store_name').eq('vendor_id',auth.user.id).maybeSingle()
@@ -236,12 +236,12 @@ export async function POST(request:Request){
    if(amount>AGENT_MAX_PAYMENT_AMOUNT)return json({error:'AGENT_PAYMENT_LIMIT_EXCEEDED',request_id:requestId,max_amount:AGENT_MAX_PAYMENT_AMOUNT},403)
    const {data:payment,error}=await supabase.from('payment_orchestrations').insert({user_id:auth.user.id,order_id:order.id,amount,currency,method_type:method,provider:method,status:method==='manual'?'requires_action':'pending',client_reference:order.id,idempotency_key:`agent:${requestId}`,metadata:{agent:true,request_id:requestId,server_derived_amount:true},expires_at:new Date(Date.now()+30*60*1000).toISOString()}).select('id,status,method_type,amount,currency,expires_at').single()
    if(error||!payment)throw error??new Error('payment')
-   await admin.from('agent_action_audit').update({status:'executed',output:{payment_id:payment.id,server_derived_amount:true}}).eq('owner_id',auth.user.id).eq('request_id',requestId).in('status',['executing','authorized']); return json({ok:true,action,request_id:requestId,status:'executed',requires_human_confirmation:true,payment})
+   await admin.from('agent_action_audit').update({status:'executed',output:{payment_id:payment.id,server_derived_amount:true}}).eq('owner_id',auth.user.id).eq('action',action).eq('request_id',requestId).in('status',['executing','authorized']); return json({ok:true,action,request_id:requestId,status:'executed',requires_human_confirmation:true,payment})
   }
   if(action==='prepare_rfq_followup'){
    if(!resourceId)return json({error:'RESOURCE_REQUIRED',request_id:requestId},400)
    const {data:rfq}=await supabase.from('business_rfqs').select('id,title,status,quantity,currency,needed_by').eq('id',resourceId).eq('buyer_id',auth.user.id).maybeSingle(); if(!rfq)return json({error:'RFQ_NOT_FOUND',request_id:requestId},404)
-   const result={rfq,follow_up_message:`Seguimiento de RFQ: ${rfq.title}. Confirmar disponibilidad para ${rfq.quantity} unidades y fecha objetivo ${rfq.needed_by??'pendiente'}.`}; await admin.from('agent_action_audit').update({status:'executed',output:result}).eq('owner_id',auth.user.id).eq('request_id',requestId).in('status',['executing','authorized']); return json({ok:true,action,request_id:requestId,status:'executed',result})
+   const result={rfq,follow_up_message:`Seguimiento de RFQ: ${rfq.title}. Confirmar disponibilidad para ${rfq.quantity} unidades y fecha objetivo ${rfq.needed_by??'pendiente'}.`}; await admin.from('agent_action_audit').update({status:'executed',output:result}).eq('owner_id',auth.user.id).eq('action',action).eq('request_id',requestId).in('status',['executing','authorized']); return json({ok:true,action,request_id:requestId,status:'executed',result})
   }
   if(action==='publish_offer'){
    const title=typeof body.title==='string'?body.title.trim().slice(0,200):''; const price=Number(body.offer_price); const endsAt=typeof body.ends_at==='string'?body.ends_at:''
@@ -249,7 +249,7 @@ export async function POST(request:Request){
    const {data:listing}=await supabase.from('listings').select('id,seller_id,title,price_amount,currency,status').eq('id',resourceId).eq('seller_id',auth.user.id).maybeSingle(); if(!listing)return json({error:'LISTING_NOT_FOUND',request_id:requestId},404)
    const {data:offer,error}=await supabase.from('listing_offers').insert({listing_id:resourceId,seller_id:auth.user.id,title,offer_price:price,currency:listing.currency,original_price:listing.price_amount,starts_at:new Date().toISOString(),ends_at:endsAt,status:'active',max_quantity:body.max_quantity==null?null:Number(body.max_quantity),terms:typeof body.terms==='string'?body.terms.slice(0,1000):null}).select('id,listing_id,title,offer_price,currency,starts_at,ends_at,status,max_quantity,terms').single()
    if(error||!offer)throw error??new Error('offer')
-   await admin.from('agent_action_audit').update({status:'executed',output:{offer_id:offer.id}}).eq('owner_id',auth.user.id).eq('request_id',requestId).in('status',['executing','authorized']); return json({ok:true,action,request_id:requestId,status:'executed',offer})
+   await admin.from('agent_action_audit').update({status:'executed',output:{offer_id:offer.id}}).eq('owner_id',auth.user.id).eq('action',action).eq('request_id',requestId).in('status',['executing','authorized']); return json({ok:true,action,request_id:requestId,status:'executed',offer})
   }
   if(action==='send_commercial_message'){
    const message=typeof body.message==='string'?body.message.trim().slice(0,4000):''
@@ -257,12 +257,12 @@ export async function POST(request:Request){
    const {data:member}=await supabase.from('conversation_members').select('conversation_id').eq('conversation_id',resourceId).eq('user_id',auth.user.id).maybeSingle(); if(!member)return json({error:'CONVERSATION_ACCESS_DENIED',request_id:requestId},403)
    const {data:created,error}=await supabase.from('messages').insert({conversation_id:resourceId,sender_id:auth.user.id,message_type:'text',body:message,metadata:{source:'credi-ai-agent',request_id:requestId}}).select('id,conversation_id,sender_id,message_type,body,created_at').single()
    if(error||!created)throw error??new Error('message')
-   await admin.from('agent_action_audit').update({status:'executed',output:{message_id:created.id}}).eq('owner_id',auth.user.id).eq('request_id',requestId).in('status',['executing','authorized']); return json({ok:true,action,request_id:requestId,status:'executed',message:created})
+   await admin.from('agent_action_audit').update({status:'executed',output:{message_id:created.id}}).eq('owner_id',auth.user.id).eq('action',action).eq('request_id',requestId).in('status',['executing','authorized']); return json({ok:true,action,request_id:requestId,status:'executed',message:created})
   }
   throw new Error(`UNIMPLEMENTED_AGENT_ACTION:${String(action)}`)
  }catch(error){
   console.error('Agent action failed',{requestId,userId:auth.user.id,action,error})
-  await admin.from('agent_action_audit').update({status:'failed',output:{error:'operation_failed'}}).eq('owner_id',auth.user.id).eq('request_id',requestId).in('status',['executing','authorized'])
+  await admin.from('agent_action_audit').update({status:'failed',output:{error:'operation_failed'}}).eq('owner_id',auth.user.id).eq('action',action).eq('request_id',requestId).in('status',['executing','authorized'])
   return json({error:'AGENT_OPERATION_FAILED',request_id:requestId},500)
  }
 }
