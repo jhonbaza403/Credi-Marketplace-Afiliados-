@@ -7,7 +7,7 @@ import AIAssistant from '@/components/ai/AIAssistant'
 
 export const metadata: Metadata = {
   title: 'Credi Chat | Mensajería instantánea',
-  description: 'Mensajería privada en tiempo real de Credi: conversaciones, grupos, canales, archivos, notas de voz y llamadas.',
+  description: 'Mensajería privada en tiempo real de Credi: conversaciones, grupos, archivos, notas de voz y llamadas.',
   robots: { index: false, follow: false },
 }
 
