@@ -17,7 +17,7 @@ export interface ChatConversation {
   unread: number
 }
 
-export interface ChatMessage {
+export interface ChatReaction {\n  reaction: string\n  count: number\n  mine: boolean\n}\n\nexport interface ChatMessage {
   id: string
   conversation_id: string
   sender_id: string
