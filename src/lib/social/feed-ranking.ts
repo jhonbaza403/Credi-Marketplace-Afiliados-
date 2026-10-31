@@ -17,7 +17,9 @@ export interface FeedRankingPreferences { interests: readonly string[]; mode: Fe
 export interface FeedRankableItem { title?: string | null; body?: string | null; created_at?: string | null }
 export interface RankedFeedItem<T> { item: T; matchedInterests: string[] }
 
-const interestLookup = new Map(FEED_INTERESTS.map((interest) => [interest.id, interest]))
+const interestLookup = new Map<string, (typeof FEED_INTERESTS)[number]>(
+  FEED_INTERESTS.map((interest) => [interest.id, interest]),
+)
 
 export function isFeedInterestId(value: string): value is FeedInterestId {
   return interestLookup.has(value)
