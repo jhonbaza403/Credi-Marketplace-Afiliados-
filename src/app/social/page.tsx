@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import CrediServicePortalNav from '@/components/portal/CrediServicePortalNav'
 import { ArrowRight, BadgeCheck, Building2, Camera, Megaphone, MessageCircle, Play, Radio, ShoppingBag, Sparkles, TrendingUp, Users } from "lucide-react";
 import { getDatabaseServerClient } from "@/lib/database/server";
 import { withOperationContext } from "@/lib/portal/operation-context";
@@ -83,6 +84,7 @@ export default async function SocialPage() {
   return (
     <main className="min-h-screen bg-[var(--background)] px-4 pb-8 text-[var(--foreground)] sm:px-4 lg:px-8">
       <div className="mx-auto max-w-7xl space-y-8">
+        <CrediServicePortalNav />
         <header className="overflow-hidden rounded-[2rem] border border-[var(--border)] bg-[var(--surface)] shadow-marketplace-xl">
           <div className="social-wall-hero relative isolate overflow-hidden bg-gradient-to-br from-[#07152a] via-[#10112e] to-[#21113f] px-5 py-7 text-white sm:px-8 sm:py-10 lg:px-10 lg:py-11">
             <div aria-hidden="true" className="pointer-events-none absolute -left-24 -top-24 size-72 rounded-full bg-cyan-400/15 blur-3xl" />
