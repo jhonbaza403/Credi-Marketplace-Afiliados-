@@ -1,4 +1,4 @@
-export type ChatConversationKind = 'direct' | 'group' | 'business' | 'support'
+export type ChatConversationKind = 'direct' | 'group' | 'business' | 'support' | 'channel'
 export type ChatMessageType = 'text' | 'image' | 'video' | 'audio' | 'document' | 'file' | 'link' | 'system' | 'quote' | 'product' | 'order'
 
 export interface ChatConversation {
