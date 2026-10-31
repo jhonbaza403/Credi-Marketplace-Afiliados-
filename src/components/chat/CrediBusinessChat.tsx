@@ -177,7 +177,7 @@ export default function CrediBusinessChat() {
     if (conversation?.metadata) setContext(conversation.metadata as Record<string, unknown>)
     const loadedMessages = (data ?? []) as ChatMessage[]
     const messageIds = loadedMessages.map((message) => message.id)
-    let reactionsByMessage = new Map<string, { reaction: string; user_id: string }[]>()
+    const reactionsByMessage = new Map<string, { reaction: string; user_id: string }[]>()
     if (messageIds.length) {
       const { data: reactionRows, error: reactionError } = await supabase
         .from('message_reactions')
