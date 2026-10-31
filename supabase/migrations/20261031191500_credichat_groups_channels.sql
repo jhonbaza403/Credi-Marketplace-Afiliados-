@@ -39,6 +39,31 @@ ALTER TABLE public.conversations
   ADD CONSTRAINT conversations_kind_check
   CHECK (kind IN ('direct', 'group', 'business', 'support', 'channel'));
 
+-- Security-definer lookup avoids recursive RLS queries against conversation_members.
+CREATE OR REPLACE FUNCTION public.credichat_is_community_admin(
+  p_conversation_id uuid,
+  p_user_id uuid DEFAULT auth.uid()
+)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = ''
+AS $function$
+  SELECT (SELECT auth.uid()) IS NOT NULL
+    AND p_user_id = (SELECT auth.uid())
+    AND EXISTS (
+      SELECT 1
+      FROM public.conversation_members cm
+      WHERE cm.conversation_id = p_conversation_id
+        AND cm.user_id = p_user_id
+        AND cm.member_role IN ('admin', 'support')
+    );
+$function$;
+
+REVOKE ALL ON FUNCTION public.credichat_is_community_admin(uuid, uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.credichat_is_community_admin(uuid, uuid) TO authenticated, service_role;
+
 -- A participant cannot join arbitrary conversations by guessing their UUID.
 -- New memberships must be added by a conversation admin or trusted RPC.
 DROP POLICY IF EXISTS conversation_members_insert ON public.conversation_members;
@@ -47,13 +72,7 @@ CREATE POLICY conversation_members_insert
   FOR INSERT
   TO authenticated
   WITH CHECK (
-    EXISTS (
-      SELECT 1
-      FROM public.conversation_members actor
-      WHERE actor.conversation_id = conversation_members.conversation_id
-        AND actor.user_id = (SELECT auth.uid())
-        AND actor.member_role IN ('admin', 'support')
-    )
+    public.credichat_is_community_admin(conversation_id, (SELECT auth.uid()))
   );
 
 -- Only channel owners/admins can publish to a channel. Group members can
@@ -73,13 +92,7 @@ CREATE POLICY messages_member_insert
         WHERE c.id = messages.conversation_id
           AND c.kind = 'channel'
       )
-      OR EXISTS (
-        SELECT 1
-        FROM public.conversation_members cm
-        WHERE cm.conversation_id = messages.conversation_id
-          AND cm.user_id = (SELECT auth.uid())
-          AND cm.member_role IN ('admin', 'support')
-      )
+      OR public.credichat_is_community_admin(messages.conversation_id, (SELECT auth.uid()))
     )
   );
 
@@ -93,26 +106,14 @@ CREATE POLICY conversations_member_update
     private.credichat_is_member(id, (SELECT auth.uid()))
     AND (
       kind NOT IN ('group', 'channel')
-      OR EXISTS (
-        SELECT 1
-        FROM public.conversation_members cm
-        WHERE cm.conversation_id = conversations.id
-          AND cm.user_id = (SELECT auth.uid())
-          AND cm.member_role IN ('admin', 'support')
-      )
+      OR public.credichat_is_community_admin(conversations.id, (SELECT auth.uid()))
     )
   )
   WITH CHECK (
     private.credichat_is_member(id, (SELECT auth.uid()))
     AND (
       kind NOT IN ('group', 'channel')
-      OR EXISTS (
-        SELECT 1
-        FROM public.conversation_members cm
-        WHERE cm.conversation_id = conversations.id
-          AND cm.user_id = (SELECT auth.uid())
-          AND cm.member_role IN ('admin', 'support')
-      )
+      OR public.credichat_is_community_admin(conversations.id, (SELECT auth.uid()))
     )
   );
 
