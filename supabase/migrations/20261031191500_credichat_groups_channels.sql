@@ -51,6 +51,39 @@ CREATE POLICY messages_member_insert
     )
   );
 
+-- Only group/channel administrators can edit community metadata.
+DROP POLICY IF EXISTS conversations_member_update ON public.conversations;
+CREATE POLICY conversations_member_update
+  ON public.conversations
+  FOR UPDATE
+  TO authenticated
+  USING (
+    private.credichat_is_member(id, (SELECT auth.uid()))
+    AND (
+      kind NOT IN ('group', 'channel')
+      OR EXISTS (
+        SELECT 1
+        FROM public.conversation_members cm
+        WHERE cm.conversation_id = conversations.id
+          AND cm.user_id = (SELECT auth.uid())
+          AND cm.member_role IN ('admin', 'support')
+      )
+    )
+  )
+  WITH CHECK (
+    private.credichat_is_member(id, (SELECT auth.uid()))
+    AND (
+      kind NOT IN ('group', 'channel')
+      OR EXISTS (
+        SELECT 1
+        FROM public.conversation_members cm
+        WHERE cm.conversation_id = conversations.id
+          AND cm.user_id = (SELECT auth.uid())
+          AND cm.member_role IN ('admin', 'support')
+      )
+    )
+  );
+
 CREATE OR REPLACE FUNCTION public.create_credichat_community(
   p_title text,
   p_kind text DEFAULT 'group',
