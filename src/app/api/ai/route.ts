@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createHash } from "node:crypto";
 import { z } from "zod";
 
+import { resolveCrediAiAccess } from "@/lib/ai/access";
 import { AI_LIMITS } from "@/lib/ai/limits";
 import { generateOpenAIText, isOpenAIConfigured, type CrediAiMode } from "@/lib/ai/openai";
 import { generateGeminiText, isGeminiConfigured } from "@/lib/ai/gemini";
@@ -122,15 +123,38 @@ export async function POST(request: Request) {
       return errorResponse("No autenticado.", 401, "UNAUTHENTICATED", requestId);
     }
 
-    const [{ data: owner }, { data: entitlement }] = await Promise.all([
-      supabase.rpc("is_platform_owner", { p_user_id: user.id }),
-      supabase.rpc("get_user_entitlement", { p_feature_key: "ai.copilot", p_user_id: user.id }),
-    ]);
-    const isOwner = owner === true;
-    const hasAiEntitlement = Array.isArray(entitlement)
-      ? entitlement.some((row) => row?.enabled === true)
-      : Boolean(entitlement?.enabled === true);
-    if (!isOwner && !hasAiEntitlement) {
+    const access = await resolveCrediAiAccess({
+      isPlatformOwner: async () => {
+        const { data, error } = await supabase.rpc("is_platform_owner", {
+          p_user_id: user.id,
+        });
+        return { data, error };
+      },
+      getAiEntitlement: async () => {
+        const { data, error } = await supabase.rpc("get_user_entitlement", {
+          p_feature_key: "ai.copilot",
+          p_user_id: user.id,
+        });
+        return { data, error };
+      },
+    });
+
+    if (!access.allowed && access.reason !== "subscription_required") {
+      console.error("[credi-ai] access check failed", {
+        requestId,
+        userId: user.id,
+        stage: access.reason,
+        code: access.errorCode ?? "unknown",
+      });
+      return errorResponse(
+        "No fue posible verificar los permisos de Credi AI. Inténtalo nuevamente.",
+        503,
+        "AI_ACCESS_CHECK_FAILED",
+        requestId,
+      );
+    }
+
+    if (!access.allowed) {
       return errorResponse(
         "Credi AI requiere una suscripción comercial activa. El acceso del propietario de la plataforma se gestiona por separado del plan comercial.",
         402,
