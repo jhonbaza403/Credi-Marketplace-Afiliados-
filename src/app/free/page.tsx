@@ -15,10 +15,14 @@ export default async function FreePage() {
   try { productCount = (await getProducts(12)).length; } catch { productCount = 0; }
 
   const cards = [
-    { title: "Muro", text: "Historias, publicaciones y reels en un feed social conectado al comercio.", href: "/social", icon: Users },
-    { title: "Marketplace", text: "Descubre productos, tiendas y oportunidades comerciales.", href: "/marketplace", icon: ShoppingBag },
-    { title: "Servicios", text: "Encuentra profesionales y soluciones dentro de Credi.", href: "/services", icon: Store },
-    { title: "Chat", text: "Conversa, pregunta, negocia y comparte información comercial.", href: "/chat", icon: MessageCircle },
+    { title: "Muro", text: "Historias, publicaciones y reels con interacción social.", href: "/social", icon: Users },
+    { title: "Marketplace", text: "Descubre productos, tiendas, precios y disponibilidad.", href: "/marketplace", icon: ShoppingBag },
+    { title: "Servicios", text: "Encuentra servicios y soluciones dentro de Credi.", href: "/services", icon: Store },
+    { title: "Credi Chat", text: "Conversa con personas, comerciantes y proveedores.", href: "/chat", icon: MessageCircle },
+    { title: "Credi LIVE", text: "Explora transmisiones y demostraciones en directo.", href: "/live", icon: Sparkles },
+    { title: "Publicar", text: "Comparte contenido o registra productos y servicios.", href: "/publish", icon: Store },
+    { title: "Afiliados", text: "Conoce el programa de recomendaciones y comisiones.", href: "/affiliate", icon: Users },
+    { title: "Mercado B2B", text: "Descubre oportunidades de comercio entre empresas.", href: "/b2b", icon: ShoppingBag },
   ];
 
   return (
