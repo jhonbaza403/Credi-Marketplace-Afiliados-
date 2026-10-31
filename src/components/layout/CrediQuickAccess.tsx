@@ -23,9 +23,22 @@ import {
   TrendingUp,
   Users,
   Wallet,
+  type LucideIcon,
 } from "lucide-react";
 
-const sections = [
+type NavigationItem = {
+  label: string;
+  href: string;
+  icon: LucideIcon;
+  live?: boolean;
+};
+
+type NavigationSection = {
+  title: string;
+  items: NavigationItem[];
+};
+
+const sections: NavigationSection[] = [
   {
     title: "Tu comunidad",
     items: [
@@ -57,11 +70,11 @@ const sections = [
       { label: "Proveedores", href: "/proveedores-verificados", icon: HeartHandshake },
     ],
   },
-] as const;
+];
 
-const mobilePrimary = sections.flatMap((section) => section.items).filter((item) =>
-  ["/", "/social", "/marketplace", "/publish", "/chat", "/live"].includes(item.href),
-);
+const mobilePrimary: NavigationItem[] = sections
+  .flatMap((section) => section.items)
+  .filter((item) => ["/", "/social", "/marketplace", "/publish", "/chat", "/live"].includes(item.href));
 
 function activePath(pathname: string, href: string) {
   return href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(href + "/");
@@ -99,18 +112,19 @@ export default function CrediQuickAccess() {
             <section key={section.title} aria-label={section.title}>
               <h2 className="mb-2 px-3 text-[9px] font-black uppercase tracking-[.19em] text-slate-400/75">{section.title}</h2>
               <div className="space-y-1">
-                {section.items.map(({ label, href, icon: Icon, ...item }) => {
-                  const active = activePath(pathname, href);
+                {section.items.map((entry) => {
+                  const Icon = entry.icon;
+                  const active = activePath(pathname, entry.href);
                   return (
                     <Link
-                      key={href}
-                      href={href}
+                      key={entry.href}
+                      href={entry.href}
                       aria-current={active ? "page" : undefined}
-                      className={"credi-sidebar-link " + (item.live ? "relative" : "")}
+                      className="credi-sidebar-link"
                     >
                       <Icon className="size-[17px] shrink-0" aria-hidden="true" />
-                      <span className="min-w-0 flex-1 truncate">{label}</span>
-                      {item.live && <span className="credi-live-pulse rounded-md bg-rose-500 px-1.5 py-0.5 text-[8px] font-black tracking-wider text-white">LIVE</span>}
+                      <span className="min-w-0 flex-1 truncate">{entry.label}</span>
+                      {entry.live && <span className="credi-live-pulse rounded-md bg-rose-500 px-1.5 py-0.5 text-[8px] font-black tracking-wider text-white">LIVE</span>}
                       {active && <span className="size-1.5 rounded-full bg-cyan-200 shadow-[0_0_10px_rgba(103,232,249,.8)]" aria-hidden="true" />}
                     </Link>
                   );
@@ -171,16 +185,18 @@ export default function CrediQuickAccess() {
 
       <div className="sticky top-[72px] z-30 border-b border-[var(--border)] bg-[color-mix(in_srgb,var(--surface)_94%,transparent)] shadow-[0_8px_22px_rgba(30,25,90,.06)] backdrop-blur-xl xl:hidden">
         <nav aria-label="Accesos rápidos de Credi" className="mx-auto flex max-w-[1600px] items-center gap-1 overflow-x-auto px-2 py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:px-4">
-          {mobilePrimary.map(({ label, href, icon: Icon }) => {
-            const active = activePath(pathname, href);
+          {mobilePrimary.map((item) => {
+            const Icon = item.icon;
+            const active = activePath(pathname, item.href);
+            const label = item.href === "/social" ? "Muro" : item.href === "/publish" ? "Publicar" : item.href === "/chat" ? "Chat" : item.href === "/live" ? "LIVE" : item.label;
             return (
               <Link
-                key={href}
-                href={href}
+                key={item.href}
+                href={item.href}
                 aria-current={active ? "page" : undefined}
-                className={"inline-flex min-h-10 shrink-0 items-center gap-2 rounded-xl px-3 text-xs font-black transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary)] " + (href === "/publish" ? "bg-gradient-to-r from-violet-600 to-blue-500 text-white shadow-sm" : active ? "bg-[var(--primary)]/10 text-[var(--primary)]" : "text-[var(--foreground)] hover:bg-[var(--surface-secondary)]")}
+                className={"inline-flex min-h-10 shrink-0 items-center gap-2 rounded-xl px-3 text-xs font-black transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary)] " + (item.href === "/publish" ? "bg-gradient-to-r from-violet-600 to-blue-500 text-white shadow-sm" : active ? "bg-[var(--primary)]/10 text-[var(--primary)]" : "text-[var(--foreground)] hover:bg-[var(--surface-secondary)]")}
               >
-                <Icon className="size-4 shrink-0" aria-hidden="true" />{label === "Muro social" ? "Muro" : label === "Publicar contenido" ? "Publicar" : label === "Credi Chat" ? "Chat" : label === "Credi LIVE" ? "LIVE" : label}
+                <Icon className="size-4 shrink-0" aria-hidden="true" />{label}
               </Link>
             );
           })}
@@ -196,11 +212,14 @@ export default function CrediQuickAccess() {
         </nav>
         {moreOpen && (
           <div id="credi-mobile-more" className="absolute left-2 right-2 top-full z-[110] grid grid-cols-2 gap-2 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-3 shadow-[0_18px_55px_rgba(15,23,42,.2)] sm:left-4 sm:right-4 sm:grid-cols-4">
-            {sections.flatMap((section) => section.items).filter((item) => !mobilePrimary.some((primary) => primary.href === item.href)).map(({ label, href, icon: Icon }) => (
-              <Link key={href} href={href} aria-current={activePath(pathname, href) ? "page" : undefined} className="inline-flex min-h-10 items-center gap-2 rounded-xl px-3 text-xs font-bold text-[var(--foreground)] transition hover:bg-[var(--surface-secondary)]">
-                <Icon className="size-4 text-[var(--primary)]" />{label}
-              </Link>
-            ))}
+            {sections.flatMap((section) => section.items).filter((item) => !mobilePrimary.some((primary) => primary.href === item.href)).map((item) => {
+              const Icon = item.icon;
+              return (
+                <Link key={item.href} href={item.href} aria-current={activePath(pathname, item.href) ? "page" : undefined} className="inline-flex min-h-10 items-center gap-2 rounded-xl px-3 text-xs font-bold text-[var(--foreground)] transition hover:bg-[var(--surface-secondary)]">
+                  <Icon className="size-4 text-[var(--primary)]" />{item.label}
+                </Link>
+              );
+            })}
           </div>
         )}
       </div>
