@@ -119,6 +119,22 @@ begin
 end
 $$;
 
+
+-- Expose only a narrow authenticated entry point; the private implementation
+-- retains all actor, platform-owner, amount, idempotency and journal checks.
+create or replace function public.wallet_refund_order(
+  p_order_id uuid,
+  p_amount numeric,
+  p_reason text,
+  p_idempotency_key text
+) returns jsonb
+language sql
+security definer
+set search_path = ''
+as $function$
+  select private.wallet_refund_order($1,$2,$3,$4);
+$function$;
+
 revoke all on function private.wallet_refund_order(uuid,numeric,text,text) from public, anon, authenticated;
 revoke all on function public.wallet_refund_order(uuid,numeric,text,text) from public, anon;
 grant execute on function public.wallet_refund_order(uuid,numeric,text,text) to authenticated;
