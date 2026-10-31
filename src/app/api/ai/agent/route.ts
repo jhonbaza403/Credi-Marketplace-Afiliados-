@@ -161,7 +161,7 @@ export async function POST(request:Request){
    const targetPrice=body.target_unit_price==null||body.target_unit_price===''?null:Number(body.target_unit_price)
    const country=typeof body.delivery_country==='string'?body.delivery_country.trim().toUpperCase():null
    const neededBy=typeof body.needed_by==='string'&&body.needed_by.trim()?body.needed_by.trim():null
-   if(title.length<3||title.length>300||description.length<10||description.length>12000||!Number.isFinite(quantity)||quantity<=0||!/^[A-Z]{3}$/.test(currency)||(targetPrice!==null&&(!Number.isFinite(targetPrice)||targetPrice<0))||(country!==null&&!/^[A-Z]{2}$/.test(country))||(neededBy!==null&&!/^\\d{4}-\\d{2}-\\d{2}$/.test(neededBy)))return json({error:'INVALID_B2B_RFQ_INPUT',request_id:requestId},400)
+   if(title.length<3||title.length>300||description.length<10||description.length>12000||!Number.isFinite(quantity)||quantity<=0||!/^[A-Z]{3}$/.test(currency)||(targetPrice!==null&&(!Number.isFinite(targetPrice)||targetPrice<0))||(country!==null&&!/^[A-Z]{2}$/.test(country))||(neededBy!==null&&!/^\d{4}-\d{2}-\d{2}$/.test(neededBy)))return json({error:'INVALID_B2B_RFQ_INPUT',request_id:requestId},400)
    const {data:rfq,error}=await supabase.from('business_rfqs').insert({buyer_id:auth.user.id,title,description,quantity,currency,target_unit_price:targetPrice,delivery_country:country,needed_by:neededBy,status:'open',visibility:'network',metadata:{created_by:'credi-ai',request_id:requestId}}).select('id,title,description,quantity,currency,target_unit_price,delivery_country,needed_by,status,created_at').single()
    if(error||!rfq)throw error??new Error('B2B_RFQ_CREATE_FAILED')
    await markExecuted({rfq_id:rfq.id,status:rfq.status})
