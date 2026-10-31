@@ -193,7 +193,7 @@ export default function CrediAgentOperations() {
           </div>
 
           {needsResource && <label className={labelClass}>Identificador del recurso
-            <input className={inputClass} value={resourceId} onChange={(event) => setResourceId(event.target.value)} placeholder={action === 'send_commercial_message' ? 'ID de conversación' : action === 'create_payment' ? 'ID del pedido' : action === 'prepare_rfq_followup' ? 'ID de solicitud B2B' : 'ID de anuncio propio'} />
+            <input className={inputClass} value={resourceId} onChange={(event) => setResourceId(event.target.value)} placeholder={action === 'send_commercial_message' ? 'ID de conversación' : (action === 'create_payment' || action === 'pay_order_from_wallet') ? 'ID del pedido' : action === 'prepare_rfq_followup' ? 'ID de solicitud B2B' : 'ID de anuncio propio'} />
           </label>}
 
           {action === 'publish_offer' && <>
