@@ -137,6 +137,9 @@ export default function CrediQuickAccess() {
                   { label: "Pagos y cobros", href: "/pagos" },
                   { label: "Marketing", href: "/marketing" },
                   { label: "Credi Intelligence", href: "/intelligence" },
+                  { label: "Catálogo en vídeo", href: "/catalogo-video" },
+                  { label: "Centro B2B", href: "/dashboard/b2b" },
+                  { label: "Pagos y pedidos", href: "/orders" },
                 ].map((item) => (
                   <Link key={item.href} href={item.href} className="flex min-h-9 items-center rounded-lg px-3 pl-9 text-[11px] font-semibold text-slate-300 transition hover:bg-white/[.07] hover:text-white">
                     {item.label}<ArrowUpRight className="ml-auto size-3 text-slate-500" />
