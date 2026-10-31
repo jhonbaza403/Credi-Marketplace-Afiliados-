@@ -43,11 +43,11 @@ const sections: NavigationSection[] = [
     title: "Tu comunidad",
     items: [
       { label: "Inicio", href: "/", icon: Home },
-      { label: "Muro social", href: "/social", icon: Users },
+      { label: "Muro", href: "/social", icon: Users },
       { label: "Historias", href: "/historias", icon: Camera },
       { label: "Reels y vídeos", href: "/videos", icon: CirclePlay },
       { label: "Credi Chat", href: "/chat", icon: MessageCircle },
-      { label: "Credi LIVE", href: "/live", icon: Radio, live: true },
+      { label: "LIVE", href: "/live", icon: Radio, live: true },
     ],
   },
   {
@@ -58,7 +58,7 @@ const sections: NavigationSection[] = [
       { label: "Publicar contenido", href: "/publish", icon: Send },
       { label: "Afiliados", href: "/affiliate", icon: TrendingUp },
       { label: "B2B empresarial", href: "/b2b", icon: Building2 },
-      { label: "Credi Free", href: "/free", icon: Sparkles },
+      { label: "Free", href: "/free", icon: Sparkles },
     ],
   },
   {
@@ -83,8 +83,9 @@ function activePath(pathname: string, href: string) {
 export default function CrediQuickAccess() {
   const pathname = usePathname();
   const [moreOpen, setMoreOpen] = useState(false);
+  const [solutionsOpen, setSolutionsOpen] = useState(false);
 
-  useEffect(() => setMoreOpen(false), [pathname]);
+  useEffect(() => { setMoreOpen(false); setSolutionsOpen(false); }, [pathname]);
 
   useEffect(() => {
     if (!moreOpen) return;
@@ -107,7 +108,7 @@ export default function CrediQuickAccess() {
           <p className="mt-1 text-[11px] leading-5 text-slate-300/70">Personas, contenido y comercio en un mismo lugar.</p>
         </div>
 
-        <nav className="credi-sidebar-scroll min-h-0 flex-1 space-y-5 overflow-y-auto px-3 py-4" aria-label="Secciones principales">
+        <nav className="credi-sidebar-scroll min-h-0 flex-1 space-y-5 overflow-y-auto px-3 py-4" aria-label="Navegación principal">
           {sections.map((section) => (
             <section key={section.title} aria-label={section.title}>
               <h2 className="mb-2 px-3 text-[9px] font-black uppercase tracking-[.19em] text-slate-400/75">{section.title}</h2>
@@ -136,7 +137,49 @@ export default function CrediQuickAccess() {
           <div className="border-t border-white/10 pt-3">
             <button
               type="button"
-              onClick={() => setMoreOpen((value) => !value)}
+              onClick={() => setSolutionsOpen((value) => !value)}
+              aria-expanded={solutionsOpen}
+              aria-controls="credi-solutions-menu"
+              className="flex min-h-10 w-full items-center justify-between rounded-xl px-3 text-xs font-bold text-slate-300 transition hover:bg-white/[.07] hover:text-white focus-visible:outline-2 focus-visible:outline-cyan-300"
+            >
+              <span className="inline-flex items-center gap-2"><Compass className="size-4 text-cyan-200" /> Soluciones</span>
+              <ChevronDown className={"size-4 transition-transform " + (solutionsOpen ? "rotate-180" : "")} />
+            </button>
+            {solutionsOpen && (
+              <div id="credi-solutions-menu" className="mt-2 grid grid-cols-1 gap-1 rounded-xl border border-white/10 bg-white/[.04] p-2">
+                {[
+                  { label: "Historias", href: "/historias" },
+                  { label: "Vídeos", href: "/videos" },
+                  { label: "Credi Chat", href: "/chat" },
+                  { label: "Credi LIVE", href: "/live" },
+                  { label: "Marketplace", href: "/marketplace" },
+                  { label: "B2B", href: "/b2b" },
+                  { label: "Publicar", href: "/publish" },
+                  { label: "Servicios", href: "/services" },
+                  { label: "Afiliados", href: "/affiliate" },
+                  { label: "Proveedores verificados", href: "/proveedores-verificados" },
+                  { label: "Catálogo en vídeo", href: "/catalogo-video" },
+                  { label: "Centro B2B", href: "/dashboard/b2b" },
+                  { label: "Marketing", href: "/marketing" },
+                  { label: "Analytics", href: "/analytics" },
+                  { label: "Inventario", href: "/inventario" },
+                  { label: "Pagos y cobros", href: "/pagos" },
+                  { label: "Wallet", href: "/wallet" },
+                  { label: "Credi Intelligence", href: "/intelligence" },
+                  { label: "Seguridad", href: "/security" },
+                ].map((item) => (
+                  <Link key={item.href + item.label} href={item.href} className="flex min-h-8 items-center rounded-lg px-3 text-[11px] font-semibold text-slate-300 transition hover:bg-white/[.07] hover:text-white">
+                    {item.label}<ArrowUpRight className="ml-auto size-3 text-slate-500" />
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="border-t border-white/10 pt-3">
+            <button
+              type="button"
+              onClick={() => setMoreOpen((value) => !value)
               aria-expanded={moreOpen}
               aria-controls="credi-sidebar-more"
               className="flex min-h-10 w-full items-center justify-between rounded-xl px-3 text-xs font-bold text-slate-300 transition hover:bg-white/[.07] hover:text-white focus-visible:outline-2 focus-visible:outline-cyan-300"
