@@ -342,6 +342,7 @@ export default function CrediBusinessChat() {
                 </div>
                 {selected&&<div className="shrink-0"><CrediBusinessCall conversationId={selectedId} peerUserId={peerId} peerName={selected.display_name||'Contacto comercial'}/></div>}
               </div>
+              {selected&&<div className="relative mt-3 max-w-md"><Search className="absolute left-3 top-2.5 size-4 text-blue-200/50"/><input value={chatSearch} onChange={(e)=>setChatSearch(e.target.value)} placeholder="Buscar dentro de esta conversación…" aria-label="Buscar mensajes en la conversación" className="w-full rounded-xl border border-blue-200/15 bg-[#061332] py-2 pl-9 pr-3 text-xs text-white outline-none placeholder:text-blue-100/40 focus:border-cyan-300"/></div>}
               {selected&&context&&<div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 rounded-xl border border-cyan-300/15 bg-cyan-300/[.04] px-3 py-2 text-[11px] text-blue-100/80"><span><b className="text-cyan-200">Contexto:</b> {String(context.product_title||context.b2b_title||context.product_id||context.b2b_product_id||'Conversación directa')}</span><span><b className="text-cyan-200">Tienda:</b> {String(context.store_name||'—')}</span><span><b className="text-cyan-200">Pedido:</b> {String(context.order_id||'—')}</span></div>}
             </div>
 
