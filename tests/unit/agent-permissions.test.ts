@@ -37,6 +37,7 @@ describe('Credi AI governed operation permissions', () => {
       'create_b2b_rfq',
       'create_social_post',
       'create_marketing_campaign',
+      'pay_order_from_wallet',
     ]
     for (const action of writes) {
       expect(['propose', 'execute']).toContain(getAgentAuthorizationLevel(action))
