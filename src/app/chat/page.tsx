@@ -1,30 +1,30 @@
 import type { Metadata } from 'next'
-import DomainBridge from "@/components/portal/DomainBridge"
+import DomainBridge from '@/components/portal/DomainBridge'
 import CrediBusinessChat from '@/components/chat/CrediBusinessChat'
 import CrediContactDirectory from '@/components/chat/CrediContactDirectory'
 import CrediLiveChatPanel from '@/components/chat/CrediLiveChatPanel'
 import AIAssistant from '@/components/ai/AIAssistant'
 
 export const metadata: Metadata = {
-  title: 'Credi Business Chat | Credi Marketplace',
-  description: 'Canal oficial de mensajería comercial, negociación, multimedia, llamadas, Credi LIVE y copiloto IA de Credi Marketplace.',
+  title: 'Credi Chat | Mensajería instantánea',
+  description: 'Mensajería privada en tiempo real de Credi: conversaciones, grupos, canales, archivos, notas de voz y llamadas.',
   robots: { index: false, follow: false },
 }
 
 export default function ChatPage() {
   return (
-    <main className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
-      <div className="mx-auto max-w-[1600px] space-y-6 px-3 py-4 sm:px-6 sm:py-8">
-        <section className="marketplace-card overflow-hidden rounded-[2rem] p-6 shadow-marketplace-lg sm:p-8">
-          <p className="text-xs font-black uppercase tracking-[.18em] text-[var(--primary)]">Credi Commerce Network</p>
-          <h1 className="mt-2 text-3xl font-black tracking-tight text-[var(--foreground)] sm:text-5xl">Comunicación comercial inteligente</h1>
-          <p className="mt-3 max-w-4xl text-sm leading-7 text-[var(--muted)]">Conecta con vendedores y proveedores mediante Credi Business Chat, trabaja sobre operaciones reales y utiliza Credi AI como copiloto para preparar consultas, ofertas y estrategias comerciales.</p>
-        </section>
-        <DomainBridge context="chat" />
-        <CrediContactDirectory />
-        <CrediBusinessChat />
-        <CrediLiveChatPanel />
-        <AIAssistant />
+    <main className="min-h-screen bg-[#040b20] text-white">
+      <DomainBridge context="chat" />
+      <CrediBusinessChat />
+      <div className="mx-auto max-w-[1900px] space-y-3 px-3 pb-8 sm:px-5">
+        <details className="rounded-2xl border border-blue-300/15 bg-[#071332] p-4">
+          <summary className="cursor-pointer text-sm font-bold text-cyan-100">Directorio de contactos Credi</summary>
+          <div className="pt-4"><CrediContactDirectory /></div>
+        </details>
+        <details className="rounded-2xl border border-blue-300/15 bg-[#071332] p-4">
+          <summary className="cursor-pointer text-sm font-bold text-cyan-100">Herramientas Credi LIVE y asistente IA</summary>
+          <div className="space-y-4 pt-4"><CrediLiveChatPanel /><AIAssistant /></div>
+        </details>
       </div>
     </main>
   )
