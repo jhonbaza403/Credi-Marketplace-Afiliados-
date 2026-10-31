@@ -17,7 +17,13 @@ export interface ChatConversation {
   unread: number
 }
 
-export interface ChatReaction {\n  reaction: string\n  count: number\n  mine: boolean\n}\n\nexport interface ChatMessage {
+export interface ChatReaction {
+  reaction: string
+  count: number
+  mine: boolean
+}
+
+export interface ChatMessage {
   id: string
   conversation_id: string
   sender_id: string
@@ -28,6 +34,7 @@ export interface ChatReaction {\n  reaction: string\n  count: number\n  mine: bo
   deleted_at: string | null
   metadata: Record<string, unknown>
   created_at: string
+  reactions?: ChatReaction[]
 }
 
 export interface ChatAttachment {
