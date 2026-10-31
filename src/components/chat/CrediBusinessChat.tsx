@@ -317,7 +317,7 @@ export default function CrediBusinessChat() {
             <div className="border-b border-blue-200/10 px-4 pb-3 pt-4">
               <div className="mb-4 flex items-center justify-between"><h1 className="text-lg font-black text-white">Mensajes</h1><span className="rounded-full bg-violet-600/20 px-2.5 py-1 text-xs font-bold text-violet-200">{conversations.length}</span></div>
               <div className="flex gap-1 overflow-x-auto">
-                {(['Todos','Grupos','Canales','Contactos'] as const).map((tab)=><button key={tab} type="button" onClick={()=>setActiveTab(tab)} className={`shrink-0 rounded-lg px-2.5 py-2 text-[11px] font-bold transition ${activeTab===tab?'bg-violet-700 text-white shadow-[0_0_14px_rgba(139,92,246,.45)]':'text-blue-100/70 hover:bg-blue-900/70'}`}>{tab}{tab==='Todos'?<span className="ml-1 text-cyan-200">{conversations.length}</span>:tab==='Grupos'?<span className="ml-1">{groupCount}</span>:tab==='Canales'?<span className="ml-1">{channelCount}</span>:null}</button>)}
+                {(['Todos','Grupos','Canales','Contactos'] as const).map((tab)=><button key={tab} type="button" disabled={tab==='Canales'} title={tab==='Canales'?'Los canales públicos requieren habilitar su modelo de datos y permisos.':''} onClick={()=>setActiveTab(tab)} className={`shrink-0 rounded-lg px-2.5 py-2 text-[11px] font-bold transition disabled:cursor-not-allowed disabled:opacity-40 ${activeTab===tab?'bg-violet-700 text-white shadow-[0_0_14px_rgba(139,92,246,.45)]':'text-blue-100/70 hover:bg-blue-900/70'}`}>{tab}{tab==='Todos'?<span className="ml-1 text-cyan-200">{conversations.length}</span>:tab==='Grupos'?<span className="ml-1">{groupCount}</span>:tab==='Canales'?<span className="ml-1">{channelCount}</span>:null}</button>)}
               </div>
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto">
@@ -325,7 +325,7 @@ export default function CrediBusinessChat() {
                 const id=c.member_ids.find((memberId)=>memberId!==userId)
                 const person=id?profiles[id]:null
                 return <button key={c.id} type="button" onClick={()=>{setSelectedId(c.id);router.replace(`/chat?conversation=${encodeURIComponent(c.id)}`)}} className={`flex w-full items-center gap-3 border-b border-blue-100/[.06] px-4 py-3 text-left transition hover:bg-blue-900/50 ${selectedId===c.id?'bg-gradient-to-r from-violet-800/70 to-blue-900/50':''}`}>
-                  <div className="relative flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-cyan-300/70 bg-gradient-to-br from-blue-500 to-violet-700 text-sm font-black text-white">{person?.avatar_url?<img src={person.avatar_url} alt="" className="size-full object-cover"/>:c.display_name.slice(0,1).toUpperCase()}<span className="absolute bottom-0 right-0 size-3 rounded-full border-2 border-[#071332] bg-emerald-400"/></div>
+                  <div className="relative flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-cyan-300/70 bg-gradient-to-br from-blue-500 to-violet-700 text-sm font-black text-white">{person?.avatar_url?<img src={person.avatar_url} alt="" className="size-full object-cover"/>:c.display_name.slice(0,1).toUpperCase()}</div>
                   <span className="min-w-0 flex-1"><span className="flex items-center justify-between gap-2"><strong className="truncate text-sm text-white">{c.display_name}</strong><time className="shrink-0 text-[10px] text-blue-200/60">{new Date(c.updated_at).toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'})}</time></span><span className="mt-1 block truncate text-xs text-blue-100/65">{c.title||'Conversación Credi'}</span></span>
                 </button>
               }):<div className="p-5 text-sm leading-6 text-blue-100/60">{conversations.length?'No hay conversaciones en esta categoría.':'Todavía no tienes conversaciones. Contacta desde un producto o busca a una persona en Credi.'}</div>}
@@ -338,7 +338,7 @@ export default function CrediBusinessChat() {
               <div className="flex items-center justify-between gap-3">
                 <div className="flex min-w-0 items-center gap-3">
                   <div className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-cyan-300/70 bg-gradient-to-br from-cyan-500 to-violet-700 font-black text-white">{peer?.avatar_url?<img src={peer.avatar_url} alt="" className="size-full object-cover"/>:selected?.display_name.slice(0,1).toUpperCase()||'C'}</div>
-                  <div className="min-w-0"><p className="truncate text-base font-black text-white">{selected?.display_name||'Credi Chat'}</p><p className="text-xs text-emerald-300">{selected?'● En línea / canal privado':'Selecciona una conversación'}</p></div>
+                  <div className="min-w-0"><p className="truncate text-base font-black text-white">{selected?.display_name||'Credi Chat'}</p><p className="text-xs text-emerald-300">{selected?'Conversación privada · sincronización en tiempo real':'Selecciona una conversación'}</p></div>
                 </div>
                 {selected&&<div className="shrink-0"><CrediBusinessCall conversationId={selectedId} peerUserId={peerId} peerName={selected.display_name||'Contacto comercial'}/></div>}
               </div>
