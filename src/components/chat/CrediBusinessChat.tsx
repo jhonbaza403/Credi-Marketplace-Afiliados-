@@ -432,7 +432,7 @@ export default function CrediBusinessChat() {
   const shown = messages.filter((m) => !chatSearch.trim() || Boolean(m.body?.toLowerCase().includes(chatSearch.toLowerCase()))).slice(-500)
 
   return (
-    <main className="credi-business-chat credi-chat-page min-h-[calc(100vh-80px)]">
+    <section className="credi-business-chat credi-chat-page min-h-[calc(100vh-80px)]" aria-label="Mensajería de Credi">
       <div className="mx-auto max-w-[1680px] px-2 py-3 sm:px-4 sm:py-5">
         <header className="credi-chat-topbar mb-3 flex flex-wrap items-center justify-between gap-3 rounded-2xl border p-3 sm:px-5">
           <div className="flex min-w-0 items-center gap-3">
@@ -581,6 +581,6 @@ export default function CrediBusinessChat() {
           </form>
         </div>}
       </div>
-    </main>
+    </section>
   )
 }
