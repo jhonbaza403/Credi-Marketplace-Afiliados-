@@ -4,6 +4,9 @@ test.describe("API HTTP method and auth contracts", () => {
   test("health endpoint accepts GET/HEAD and rejects unsupported POST/PUT", async ({ request }) => {
     const getResponse = await request.get("/api/health");
     expect([200, 503]).toContain(getResponse.status());
+    const health = await getResponse.json();
+    expect(health.checks?.storage).toBe("unknown");
+    expect(health.checks?.notifications).toBe("unknown");
 
     const headResponse = await request.head("/api/health");
     expect([200, 503]).toContain(headResponse.status());
