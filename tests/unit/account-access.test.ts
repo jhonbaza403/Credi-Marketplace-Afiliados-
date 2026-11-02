@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { getAccountAccessState, nextRequiredSecurityStep, type AccountAccessState } from "@/lib/auth/account-access";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { requireApiAccountAccess } from "@/lib/auth/api-account-access";
 
 const base: AccountAccessState = {
   is_platform_owner: false,
@@ -20,6 +21,15 @@ describe("account access security gate", () => {
 
     await expect(getAccountAccessState(supabase, "00000000-0000-4000-8000-000000000001"))
       .rejects.toThrow("ACCOUNT_ACCESS_LOOKUP_FAILED");
+  });
+
+  it("returns 503 instead of inventing an MFA requirement when the access RPC fails", async () => {
+    const supabase = {
+      rpc: async () => ({ data: null, error: { message: "database unavailable" } }),
+    } as unknown as SupabaseClient;
+
+    await expect(requireApiAccountAccess(supabase, "00000000-0000-4000-8000-000000000001"))
+      .resolves.toEqual({ ok: false, status: 503, code: "ACCESS_CHECK_UNAVAILABLE" });
   });
 
   it("requires MFA before every other onboarding requirement", () => {
