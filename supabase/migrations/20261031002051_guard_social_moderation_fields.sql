@@ -17,6 +17,7 @@ DECLARE
     'affiliate_disclosure'
   ];
 BEGIN
+  -- Keep service_role independent from helper functions it cannot execute.
   IF coalesce(auth.role(), '') = 'service_role' THEN
     IF TG_TABLE_NAME = 'stories'
       AND OLD.moderation_status = 'pending'
@@ -45,6 +46,11 @@ BEGIN
   RETURN NEW;
 END;
 $function$;
+
+REVOKE ALL ON FUNCTION public.guard_social_moderation_fields() FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.guard_social_moderation_fields() FROM anon;
+REVOKE ALL ON FUNCTION public.guard_social_moderation_fields() FROM authenticated;
+GRANT EXECUTE ON FUNCTION public.guard_social_moderation_fields() TO service_role;
 
 DROP TRIGGER IF EXISTS advertisements_guard_moderation_fields ON public.advertisements;
 CREATE TRIGGER advertisements_guard_moderation_fields
