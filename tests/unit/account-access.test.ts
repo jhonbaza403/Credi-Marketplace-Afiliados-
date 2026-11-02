@@ -23,6 +23,15 @@ describe("account access security gate", () => {
       .rejects.toThrow("ACCOUNT_ACCESS_LOOKUP_FAILED");
   });
 
+  it("rejects a missing authorization row instead of treating it as a new MFA enrollment", async () => {
+    const supabase = {
+      rpc: async () => ({ data: null, error: null }),
+    } as unknown as SupabaseClient;
+
+    await expect(getAccountAccessState(supabase, "00000000-0000-4000-8000-000000000001"))
+      .rejects.toThrow("ACCOUNT_ACCESS_STATE_MISSING");
+  });
+
   it("returns 503 instead of inventing an MFA requirement when the access RPC fails", async () => {
     const supabase = {
       rpc: async () => ({ data: null, error: { message: "database unavailable" } }),
