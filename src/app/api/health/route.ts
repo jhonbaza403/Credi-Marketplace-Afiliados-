@@ -55,13 +55,15 @@ export async function GET(request: Request) {
   }
 
   const authentication: HealthState = configured(supabaseUrl, supabaseKey) ? "configured" : "unconfigured"
-  const storage: HealthState = configured(supabaseUrl, supabaseKey) ? "configured" : "unconfigured"
-  const messaging: HealthState = configured(supabaseUrl, supabaseKey) ? "configured" : "unconfigured"
-  const media: HealthState = configured(supabaseUrl, supabaseKey) ? "configured" : "unconfigured"
+  // Do not report integrations as configured merely because Supabase is configured.
+  // These checks report credential presence, not successful provider connectivity.
+  const storage: HealthState = "unknown"
+  const messaging: HealthState = providerState(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN)
+  const media: HealthState = providerState(process.env.CLOUDFLARE_ACCOUNT_ID, process.env.CLOUDFLARE_API_TOKEN)
   const payments: HealthState = providerState(process.env.STRIPE_SECRET_KEY, process.env.STRIPE_WEBHOOK_SECRET)
   const ai: HealthState = providerState(process.env.GEMINI_API_KEY)
   const webhooks: HealthState = providerState(process.env.STRIPE_WEBHOOK_SECRET)
-  const notifications: HealthState = configured(supabaseUrl, supabaseKey) ? "configured" : "unconfigured"
+  const notifications: HealthState = "unknown"
   const email: HealthState = "unknown"
   const backgroundJobs: HealthState = "unknown"
 
