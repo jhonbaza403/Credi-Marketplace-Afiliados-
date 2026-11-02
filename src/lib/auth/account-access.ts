@@ -10,16 +10,6 @@ export type AccountAccessState = {
   identity_approved: boolean;
 };
 
-const emptyState: AccountAccessState = {
-  is_platform_owner: false,
-  is_admin: false,
-  has_active_subscription: false,
-  has_mfa: false,
-  has_security_key: false,
-  has_profile_photos: false,
-  identity_approved: false,
-};
-
 export async function getAccountAccessState(
   supabase: SupabaseClient,
   userId: string,
@@ -36,7 +26,10 @@ export async function getAccountAccessState(
   }
 
   const row = Array.isArray(data) ? data[0] : data;
-  if (!row || typeof row !== "object") return emptyState;
+  if (!row || typeof row !== "object") {
+    // Missing authorization state is not proof that the account needs MFA.
+    throw new Error("ACCOUNT_ACCESS_STATE_MISSING");
+  }
 
   const value = row as Record<string, unknown>;
   return {
