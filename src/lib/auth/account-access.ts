@@ -29,8 +29,10 @@ export async function getAccountAccessState(
   });
 
   if (error) {
+    // A failed authorization lookup is not an empty account state.
+    // Callers must fail closed with a service error, never invent MFA/subscription requirements.
     console.error("[account-access] status lookup failed", error);
-    return emptyState;
+    throw new Error("ACCOUNT_ACCESS_LOOKUP_FAILED");
   }
 
   const row = Array.isArray(data) ? data[0] : data;
