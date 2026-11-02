@@ -164,4 +164,4 @@ Un módulo solo se considera terminado si:
 
 ## Restricción explícita de plataforma
 
-No desplegar Next.js/ Cred i Marketplace en Cloudflare Workers u OpenNext. Mantener Vercel + Supabase como arquitectura de aplicación. Cloudflare Stream puede seguir siendo un adaptador de medios para Credi LIVE sin convertirse en runtime de la aplicación.
+No desplegar Credi Marketplace en Cloudflare Workers u OpenNext. Mantener Vercel + Supabase como arquitectura de aplicación. Cloudflare Stream puede seguir siendo un adaptador de medios para Credi LIVE sin convertirse en runtime de la aplicación.
