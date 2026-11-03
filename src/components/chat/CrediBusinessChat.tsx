@@ -61,7 +61,15 @@ export default function CrediBusinessChat() {
   const [communityPins, setCommunityPins] = useState('')
   const [communityBusy, setCommunityBusy] = useState(false)
   const [loadingState, setLoadingState] = useState(true)
-  const [infoOpen, setInfoOpen] = useState(true)
+  const [infoOpen, setInfoOpen] = useState(false)
+
+  useEffect(() => {
+    const desktop = window.matchMedia('(min-width: 1280px)')
+    const syncPanel = () => setInfoOpen(desktop.matches)
+    syncPanel()
+    desktop.addEventListener('change', syncPanel)
+    return () => desktop.removeEventListener('change', syncPanel)
+  }, [])
 
   const refresh = useCallback(async () => {
     const { data: auth, error: authError } = await supabase.auth.getUser()
@@ -354,7 +362,7 @@ export default function CrediBusinessChat() {
     setError(null)
     try {
       const identifiers = communityPins.split(/[,;\r\n]+/).map((value) => value.trim()).filter(Boolean)
-      if (identifiers.length > 200) throw new Error('Puedes invitar hasta 200 participantes en este momento.')
+      if (identifiers.length > 20) throw new Error('Puedes invitar hasta 20 participantes por creación para respetar el límite de consultas de contactos.');
       const memberIds: string[] = []
       for (const identifier of identifiers) {
         const { data, error: contactError } = await supabase.rpc('get_credi_contact', { p_identifier: identifier })
@@ -568,6 +576,39 @@ export default function CrediBusinessChat() {
               <div className="mt-4"><p className="mb-2 text-[9px] font-black uppercase tracking-wider text-[var(--muted)]">Funciones disponibles</p><div className="grid grid-cols-2 gap-2">{[['Audio','🎙'],['Vídeo','🎬'],['Archivos','📎'],['Reacciones','❤️'],['Buscar','🔎'],['Citar','↩']].map(([label,emoji])=><div key={label} className="rounded-xl bg-[var(--surface-secondary)] p-2 text-center"><span className="text-lg">{emoji}</span><p className="mt-1 text-[9px] font-bold text-[var(--muted)]">{label}</p></div>)}</div></div>
             </> : <div className="py-10 text-center"><Users className="mx-auto size-8 text-[var(--muted)]"/><p className="mt-3 text-xs font-bold text-[var(--muted)]">Información del chat</p></div>}
           </aside>}
+
+          {infoOpen && selected && (
+            <div
+              className="fixed inset-0 z-[130] flex justify-end bg-slate-950/65 backdrop-blur-sm xl:hidden"
+              role="presentation"
+              onClick={() => setInfoOpen(false)}
+            >
+              <aside
+                className="credi-chat-info h-full w-[min(90vw,390px)] overflow-y-auto border-l bg-[var(--surface)] p-4 shadow-2xl"
+                role="dialog"
+                aria-modal="true"
+                aria-label="Información del chat"
+                onClick={(event) => event.stopPropagation()}
+              >
+                <div className="mb-4 flex items-center justify-between gap-3">
+                  <p className="text-sm font-black text-[var(--foreground)]">Info. del chat</p>
+                  <button type="button" onClick={() => setInfoOpen(false)} className="grid size-9 place-items-center rounded-xl border border-[var(--border)] text-[var(--muted)]" aria-label="Cerrar información del chat"><X size={17}/></button>
+                </div>
+                <div className="text-center">
+                  <span className="mx-auto grid size-16 place-items-center rounded-[1.5rem] bg-gradient-to-br from-violet-500/15 to-cyan-400/15 text-[var(--primary)]">{selected.kind==='channel'?<Megaphone size={25}/>:selected.kind==='group'?<Users size={25}/>:<Building2 size={25}/>}</span>
+                  <h2 className="mt-3 text-sm font-black text-[var(--foreground)]">{selected.display_name}</h2>
+                  <p className="mt-1 text-[10px] text-[var(--muted)]">{selected.kind==='channel'?'Canal privado':selected.kind==='group'?'Grupo privado':'Conversación comercial'}</p>
+                </div>
+                <div className="mt-5 space-y-3 border-y border-[var(--border)] py-4">
+                  <div><p className="text-[9px] font-black uppercase tracking-wider text-[var(--muted)]">Participantes</p><p className="mt-1 text-xs font-bold text-[var(--foreground)]">{selected.member_ids.length} personas</p></div>
+                  <div><p className="text-[9px] font-black uppercase tracking-wider text-[var(--muted)]">Mensajes cargados</p><p className="mt-1 text-xs font-bold text-[var(--foreground)]">{messages.length}</p></div>
+                  <div><p className="text-[9px] font-black uppercase tracking-wider text-[var(--muted)]">Archivos y multimedia</p><p className="mt-1 text-xs font-bold text-[var(--foreground)]">{sharedMediaCount} elementos</p></div>
+                  {selected.kind==='channel'&&<div className="rounded-xl bg-[var(--surface-secondary)] p-3 text-[10px] leading-5 text-[var(--muted)]">Canal de difusión: solo las cuentas administradoras pueden publicar mensajes.</div>}
+                </div>
+                <div className="mt-4"><p className="mb-2 text-[9px] font-black uppercase tracking-wider text-[var(--muted)]">Funciones disponibles</p><div className="grid grid-cols-2 gap-2">{[['Audio','🎙'],['Vídeo','🎬'],['Archivos','📎'],['Reacciones','❤️'],['Buscar','🔎'],['Citar','↩']].map(([label,emoji])=><div key={label} className="rounded-xl bg-[var(--surface-secondary)] p-3 text-center"><span className="text-lg">{emoji}</span><p className="mt-1 text-[9px] font-bold text-[var(--muted)]">{label}</p></div>)}</div></div>
+              </aside>
+            </div>
+          )}
         </div>
 
         {communityOpen && <div className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/70 p-3 backdrop-blur-md" role="dialog" aria-modal="true" aria-labelledby="credi-community-title">
@@ -579,7 +620,7 @@ export default function CrediBusinessChat() {
             </div>
             <label className="mt-4 block text-xs font-bold text-[var(--foreground)]">Nombre de la comunidad<input required minLength={2} maxLength={80} value={communityName} onChange={(event)=>setCommunityName(event.target.value)} placeholder={communityKind==='group'?'Ej. Equipo de ventas':'Ej. Novedades de mi tienda'} className="mt-2 min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-secondary)] px-3 text-sm outline-none focus:border-[var(--primary)]"/></label>
             <label className="mt-4 block text-xs font-bold text-[var(--foreground)]">Descripción <span className="font-normal text-[var(--muted)]">(opcional)</span><textarea maxLength={500} rows={2} value={communityDescription} onChange={(event)=>setCommunityDescription(event.target.value)} placeholder="¿De qué trata esta comunidad?" className="mt-2 w-full resize-y rounded-xl border border-[var(--border)] bg-[var(--surface-secondary)] p-3 text-sm outline-none focus:border-[var(--primary)]"/></label>
-            <label className="mt-4 block text-xs font-bold text-[var(--foreground)]">Invitar por PIN Credi o teléfono <span className="font-normal text-[var(--muted)]">(opcional)</span><textarea rows={2} value={communityPins} onChange={(event)=>setCommunityPins(event.target.value)} placeholder="Un PIN o número por línea; también puedes separarlos por comas." className="mt-2 w-full resize-y rounded-xl border border-[var(--border)] bg-[var(--surface-secondary)] p-3 text-sm outline-none focus:border-[var(--primary)]"/></label>
+            <label className="mt-4 block text-xs font-bold text-[var(--foreground)]">Invitar por PIN Credi o teléfono <span className="font-normal text-[var(--muted)]">(opcional)</span><textarea rows={2} value={communityPins} onChange={(event)=>setCommunityPins(event.target.value)} placeholder="Hasta 20 PIN o números, uno por línea o separados por comas." className="mt-2 w-full resize-y rounded-xl border border-[var(--border)] bg-[var(--surface-secondary)] p-3 text-sm outline-none focus:border-[var(--primary)]"/></label>
             <div className="mt-5 flex flex-wrap justify-end gap-2"><button type="button" onClick={()=>setCommunityOpen(false)} className="min-h-10 rounded-xl border border-[var(--border)] px-4 text-xs font-bold text-[var(--foreground)]">Cancelar</button><button type="submit" disabled={communityBusy||communityName.trim().length<2} className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-blue-500 px-5 text-xs font-black text-white disabled:opacity-50">{communityBusy?'Creando…':'Crear comunidad'}<ArrowRight size={14}/></button></div>
           </form>
         </div>}
