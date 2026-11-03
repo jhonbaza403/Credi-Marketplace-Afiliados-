@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { distributedRateLimit } from '@/lib/security/rate-limit'
 import { getRequestIp } from '@/lib/security/auth'
 import { isSameOrigin } from '@/lib/security/csrf'
-import { createLiveInput, isCloudflareConfigured, setLiveInputEnabled, syncLatestReplay } from '@/lib/cloudflare/stream'
+import { cloudflareStreamFailure, createLiveInput, isCloudflareConfigured, setLiveInputEnabled, syncLatestReplay } from '@/lib/cloudflare/stream'
 import { requireApiAccountAccess } from '@/lib/auth/api-account-access'
 
 export const runtime = 'nodejs'
@@ -100,7 +100,8 @@ export async function POST(request:Request) {
         return NextResponse.json({success:true,room:linked,transport},{status:201,headers:{'Cache-Control':'no-store'}})
       }catch(error){
         console.error('[live:'+requestId+'] cloudflare provisioning failed',error)
-        return errorResponse('La sala LIVE fue creada, pero no se pudo provisionar el transporte de producción. Revisa la configuración de Cloudflare Stream en Vercel.',503,'LIVE_TRANSPORT_PROVISION_FAILED')
+        const failure = cloudflareStreamFailure(error)
+        return errorResponse(failure.message,failure.status,failure.code)
       }
     }
     return NextResponse.json({success:true,room,transport},{status:201,headers:{'Cache-Control':'no-store'}})
