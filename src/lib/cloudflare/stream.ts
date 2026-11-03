@@ -6,6 +6,63 @@ type CloudflareResponse<T> = {
   result: T
 }
 
+export class CloudflareStreamApiError extends Error {
+  constructor(
+    readonly httpStatus: number,
+    readonly providerCode?: number,
+  ) {
+    super("CLOUDFLARE_STREAM_API_ERROR")
+    this.name = "CloudflareStreamApiError"
+  }
+}
+
+export function cloudflareStreamFailure(error: unknown) {
+  if (error instanceof CloudflareStreamApiError) {
+    if (error.httpStatus === 401) {
+      return {
+        status: 503,
+        code: "CLOUDFLARE_TOKEN_INVALID",
+        message: "Cloudflare no aceptó el token configurado. Comprueba en el entorno de prueba que siga activo y pertenezca a la cuenta Credi. No compartas el token en mensajes ni registros públicos.",
+      }
+    }
+    if (error.httpStatus === 403) {
+      return {
+        status: 503,
+        code: "CLOUDFLARE_STREAM_PERMISSION_DENIED",
+        message: "Cloudflare rechazó el acceso a Stream. El token necesita Stream Write para crear Live Inputs y Stream Read para consultar el estado y las grabaciones de la emisión.",
+      }
+    }
+    if (error.httpStatus === 429) {
+      return {
+        status: 429,
+        code: "CLOUDFLARE_RATE_LIMITED",
+        message: "Cloudflare limitó temporalmente las solicitudes LIVE. Espera antes de volver a intentarlo.",
+      }
+    }
+    if (error.httpStatus === 404) {
+      return {
+        status: 502,
+        code: "CLOUDFLARE_LIVE_INPUT_NOT_FOUND",
+        message: "Cloudflare no encontró el Live Input asociado a esta sala. Actualiza el diagnóstico y comprueba la vinculación del identificador.",
+      }
+    }
+  }
+
+  if (error instanceof Error && error.message === "CLOUDFLARE_STREAM_NOT_CONFIGURED") {
+    return {
+      status: 503,
+      code: "CLOUDFLARE_STREAM_NOT_CONFIGURED",
+      message: "El entorno de prueba todavía no tiene CLOUDFLARE_ACCOUNT_ID y CLOUDFLARE_API_TOKEN configurados.",
+    }
+  }
+
+  return {
+    status: 502,
+    code: "CLOUDFLARE_TRANSPORT_ERROR",
+    message: "No fue posible operar el transporte LIVE. Consulta el diagnóstico del proveedor e inténtalo de nuevo.",
+  }
+}
+
 export type LiveInput = {
   uid: string
   enabled: boolean
@@ -53,8 +110,7 @@ async function cf<T>(path: string, init: RequestInit = {}): Promise<T> {
   })
   const body = await response.json().catch(() => null) as CloudflareResponse<T> | null
   if (!response.ok || !body?.success) {
-    const detail = body?.errors?.[0]?.message || `Cloudflare HTTP ${response.status}`
-    throw new Error('CLOUDFLARE_API_ERROR:' + detail)
+    throw new CloudflareStreamApiError(response.status, body?.errors?.[0]?.code)
   }
   return body.result
 }
