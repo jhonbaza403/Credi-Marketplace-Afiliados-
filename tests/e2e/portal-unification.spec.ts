@@ -3,14 +3,9 @@ import { expect, test, type Locator } from "@playwright/test";
 async function expectReadableLightText(element: Locator) {
   await expect.poll(async () => element.evaluate((node) => {
     const color = getComputedStyle(node).color;
-    const srgb = color.match(/color\\(srgb\\s+([\\d.]+)\\s+([\\d.]+)\\s+([\\d.]+)/i);
-    const rgb = color.match(/rgba?\\(([^)]+)\\)/i);
-    const channels = srgb
-      ? srgb.slice(1, 4).map(Number)
-      : rgb
-        ? rgb[1].split(/[\\s,\\/]+/).filter(Boolean).slice(0, 3).map(Number).map((value) => value > 1 ? value / 255 : value)
-        : null;
-    if (!channels || channels.length !== 3 || channels.some((value) => !Number.isFinite(value))) return -1;
+    const values = color.match(/[\\d.]+/g)?.map(Number).filter(Number.isFinite) ?? [];
+    if (values.length < 3) return -1;
+    const channels = values.slice(0, 3).map((value) => value > 1 ? value / 255 : value);
     const luminance = channels.map((channel) => {
       const value = Math.min(1, Math.max(0, channel));
       return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
