@@ -225,8 +225,17 @@ export async function proxy(request: NextRequest) {
     response.headers.set("X-Request-ID", requestId);
     return response;
   } catch (error) {
-    console.error("[proxy] Access check failed", error);
-    return copySessionCookies(response, buildSecurityRedirect(request, "mfa"));
+    // Infrastructure/authorization lookup failures must not masquerade as MFA enrollment.
+    console.error("[proxy] Access check unavailable", error);
+    const unavailable = new NextResponse("El servicio de verificación de acceso no está disponible. Inténtalo nuevamente.", {
+      status: 503,
+      headers: {
+        "Cache-Control": "no-store",
+        "Retry-After": "30",
+        "X-Request-ID": requestId,
+      },
+    });
+    return copySessionCookies(response, unavailable);
   }
 }
 
