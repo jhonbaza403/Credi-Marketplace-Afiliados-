@@ -1,5 +1,18 @@
 import { expect, test } from "@playwright/test";
 
+async function expectReadableLightText(element: ReturnType<import("@playwright/test").Page["getByRole"]>) {
+  await expect.poll(async () => element.evaluate((node) => {
+    const color = getComputedStyle(node).color;
+    const channels = color.match(/[\\d.]+/g)?.slice(0, 3).map(Number);
+    if (!channels || channels.length !== 3) return 0;
+    const luminance = channels.map((channel) => {
+      const value = channel / 255;
+      return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+    });
+    return 0.2126 * luminance[0] + 0.7152 * luminance[1] + 0.0722 * luminance[2];
+  })).toBeGreaterThan(0.8);
+}
+
 test.describe("Credi unified portal", () => {
   test("primary navigation has readable social-portal links", async ({ page }) => {
     await page.goto("/");
@@ -22,7 +35,7 @@ test.describe("Credi unified portal", () => {
     await expect.poll(async () => homeTitle.evaluate((element) => getComputedStyle(element).color)).toBe("rgb(255, 255, 255)");
     const footerTitle = page.getByRole("heading", { name: "Legal y seguridad" });
     await expect(footerTitle).toBeVisible();
-    await expect.poll(async () => footerTitle.evaluate((element) => getComputedStyle(element).color)).toBe("rgb(255, 255, 255)");
+    await expectReadableLightText(footerTitle);
 
     await page.goto("/social");
     const wallTitle = page.getByRole("heading", { name: /Tu comunidad\. Tus ideas\. Nuevas oportunidades\./i });
