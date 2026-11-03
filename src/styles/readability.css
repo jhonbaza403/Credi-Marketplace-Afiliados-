@@ -1,15 +1,13 @@
-/* Credi Marketplace — global readability and visual hierarchy contract.
- * Decorative media must never compete with navigation, titles, plans, services,
- * forms, cards or commercial actions.
+/* Credi Marketplace — readability contract.
+ * Page components own their colors and surfaces. Global rules must not
+ * replace a dark hero, banner, header, or portal surface with a light card.
  */
-
 .app-readable-surface {
   position: relative;
   z-index: 0;
   isolation: isolate;
   min-height: 100%;
-  background: var(--background) !important;
-  color: var(--foreground) !important;
+  color: var(--foreground);
 }
 
 .app-readable-surface::before {
@@ -17,194 +15,83 @@
   position: absolute;
   inset: 0;
   z-index: -1;
-  background: var(--background) !important;
+  background: var(--background);
   pointer-events: none;
 }
 
-.app-readable-surface > * {
-  position: relative;
-  z-index: 10;
-}
+.app-readable-surface > * { position: relative; z-index: 1; }
 
-.app-readable-surface > main:not(.credi-business-chat) {
-  position: relative;
-  z-index: 12;
-  background: var(--background) !important;
-  color: var(--foreground) !important;
-}
-
-/* Heading readability is surface-aware. Explicit component utilities such as
- * text-white/text-cyan-100 on dark hero surfaces must remain authoritative.
- * The previous global !important rule forced dark text over dark hero imagery.
- */
 .app-readable-surface :where(h1,h2,h3,h4,h5,h6) {
   position: relative;
-  z-index: 30;
-  isolation: isolate;
+  z-index: 2;
   -webkit-font-smoothing: antialiased;
   text-rendering: geometricPrecision;
 }
 
-/* Social wall hero is intentionally dark; keep its title above inherited page-level colors. */
-.app-readable-surface .social-wall-hero h1 {
-  color: #ffffff !important;
-  -webkit-text-stroke: 0 !important;
-  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.55) !important;
-}
-
-/* Explicit dark/hero surfaces receive a local contrast contract. */
-
-/* The landing-page footer deliberately uses a near-black surface. Keep its
- * title explicitly white even when shared page-level readability rules apply. */
-.app-readable-surface .premium-portal-footer h2 {
-  color: #ffffff !important;
-  -webkit-text-stroke: 0 !important;
-  text-shadow: none !important;
-}
-
-.app-readable-surface :where(
-  .hero-stage,
-  .premium-portal-stage,
-  .affiliate-hero,
-  .dark-surface
-) :where(h1,h2,h3,h4,h5,h6) {
-  color: #fff !important;
-  -webkit-text-stroke: 0 !important;
-  text-shadow: 0 2px 14px rgba(0,0,0,.55) !important;
-}
-
-.app-readable-surface p,
-.app-readable-surface li,
-.app-readable-surface label,
-.app-readable-surface legend,
-.app-readable-surface dt,
-.app-readable-surface dd,
-.app-readable-surface small {
+.app-readable-surface :where(p,li,label,legend,dt,dd,small) {
   position: relative;
-  z-index: 15;
+  z-index: 1;
 }
 
+/* Inputs remain legible without changing the background of their containing portal. */
 .app-readable-surface input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]),
 .app-readable-surface textarea,
 .app-readable-surface select {
   position: relative;
-  z-index: 15;
-  background-color: var(--surface) !important;
-  background-image: none !important;
-  color: var(--foreground) !important;
-  border-color: var(--border-strong) !important;
-  opacity: 1 !important;
+  z-index: 2;
+  background-color: var(--surface);
+  color: var(--foreground);
+  border-color: var(--border-strong);
+  opacity: 1;
 }
 
 .app-readable-surface input::placeholder,
-.app-readable-surface textarea::placeholder {
-  color: var(--muted) !important;
-  opacity: 1 !important;
+.app-readable-surface textarea::placeholder { color: var(--muted); opacity: 1; }
+
+.app-readable-surface input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]):focus-visible,
+.app-readable-surface textarea:focus-visible,
+.app-readable-surface select:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4px var(--focus-ring);
 }
 
-.app-readable-surface input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]):focus,
-.app-readable-surface textarea:focus,
-.app-readable-surface select:focus {
-  outline: 2px solid var(--primary) !important;
-  outline-offset: 1px;
-  border-color: var(--primary) !important;
-  box-shadow: 0 0 0 4px var(--focus-ring) !important;
-}
+.app-readable-surface select option { background: var(--surface); color: var(--foreground); }
 
-.app-readable-surface select option {
-  background: var(--surface);
-  color: var(--foreground);
-}
-
-.app-readable-surface main:not(.credi-business-chat) > div > header,
-.app-readable-surface main:not(.credi-business-chat) section,
-.app-readable-surface main:not(.credi-business-chat) article,
-.app-readable-surface main:not(.credi-business-chat) aside,
-.app-readable-surface main:not(.credi-business-chat) form {
-  color: var(--foreground) !important;
-}
-
-.app-readable-surface main:not(.credi-business-chat) header[class*="bg-slate-950"],
-.app-readable-surface main:not(.credi-business-chat) section[class*="bg-slate-950"],
-.app-readable-surface main:not(.credi-business-chat) article[class*="bg-slate-950"],
-.app-readable-surface main:not(.credi-business-chat) form[class*="bg-slate-950"] {
-  background: var(--surface) !important;
-  border-color: var(--border) !important;
-  color: var(--foreground) !important;
-}
-
+/* Reusable cards are scoped; hero/header surfaces are never overridden. */
 .marketplace-card,
 .premium-surface,
 .premium-surface-soft {
   position: relative;
-  z-index: 15;
-  background: var(--surface) !important;
-  color: var(--foreground) !important;
-  border-color: var(--border) !important;
-  box-shadow: var(--shadow-marketplace) !important;
+  z-index: 1;
+  background: var(--surface);
+  color: var(--foreground);
+  border-color: var(--border);
+  box-shadow: var(--shadow-marketplace);
 }
-
-.marketplace-card:hover {
-  box-shadow: var(--shadow-marketplace-lg) !important;
-}
-
-.credi-business-chat {
-  position: relative;
-  z-index: 15;
-  isolation: isolate;
-  background: var(--background) !important;
-  color: var(--foreground) !important;
-}
-
-.credi-business-chat::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  background: var(--background) !important;
-  pointer-events: none;
-}
-
-.credi-business-chat .chat-shell,
-.credi-business-chat .chat-panel,
-.credi-business-chat > header,
-.credi-business-chat > aside,
-.credi-business-chat > section {
-  background: var(--surface) !important;
-  color: var(--foreground) !important;
-  border-color: var(--border) !important;
-}
-
-.credi-business-chat input:not([type=file]),
-.credi-business-chat textarea {
-  background: var(--surface-secondary) !important;
-  color: var(--foreground) !important;
-  border-color: var(--border-strong) !important;
-}
-
-.credi-business-chat input::placeholder,
-.credi-business-chat textarea::placeholder {
-  color: var(--muted) !important;
-  opacity: 1 !important;
-}
-
-.credi-business-chat h1,
-.credi-business-chat h2,
-.credi-business-chat h3 {
-  color: var(--foreground) !important;
-  -webkit-text-stroke: 0.45px var(--surface);
-  text-shadow:
-    0 0 1px var(--surface),
-    0 0 3px var(--surface),
-    0 3px 0 rgba(15, 23, 42, 0.22),
-    0 8px 18px rgba(15, 23, 42, 0.2) !important;
-}
+.marketplace-card:hover { box-shadow: var(--shadow-marketplace-lg); }
 
 button:disabled,
-.app-readable-surface button:disabled,
-.credi-business-chat button:disabled {
-  cursor: not-allowed !important;
+.app-readable-surface button:disabled { cursor: not-allowed; }
+
+/* Form shells use shared contrast tokens while preserving the portal hero. */
+.app-readable-surface .form-shell,
+.app-readable-surface .affiliate-form {
+  position: relative;
+  z-index: 2;
+  isolation: isolate;
+  background: var(--surface);
+  color: var(--foreground);
+  border-color: var(--border);
 }
+
+.app-readable-surface .affiliate-page { background: var(--background); color: var(--foreground); }
+.app-readable-surface .affiliate-page .affiliate-hero { background-color: #080d1d; color: #fff; }
+.app-readable-surface .affiliate-page .affiliate-form { background: var(--surface); color: var(--foreground); }
+.app-readable-surface .affiliate-page .affiliate-form label,
+.app-readable-surface .affiliate-page .affiliate-form p { color: var(--foreground); }
+.app-readable-surface .affiliate-page .affiliate-form input[type=checkbox] { accent-color: var(--primary); }
 
 @media (prefers-reduced-motion: reduce) {
   .app-readable-surface,
@@ -214,51 +101,3 @@ button:disabled,
     scroll-behavior: auto !important;
   }
 }
-
-/* Premium form heading contract: titles/subtitles stay readable without opaque blocks that hide fields. */
-.app-readable-surface form h1,
-.app-readable-surface form h2,
-.app-readable-surface form h3,
-.app-readable-surface form .form-title,
-.app-readable-surface form .form-subtitle,
-.app-readable-surface .form-shell h1,
-.app-readable-surface .form-shell h2,
-.app-readable-surface .form-shell h3,
-.app-readable-surface .form-shell p {
-  position: relative;
-  z-index: 40;
-  isolation: isolate;
-  color: var(--foreground) !important;
-  background: transparent !important;
-  background-image: none !important;
-  -webkit-text-stroke: 0 !important;
-  text-shadow: 0 1px 2px color-mix(in srgb, var(--background) 70%, transparent) !important;
-}
-
-/* Form shells own a readable surface; decorative media never sits above controls. */
-.app-readable-surface .form-shell,
-.app-readable-surface .affiliate-form {
-  position: relative;
-  z-index: 20;
-  isolation: isolate;
-  background: var(--surface) !important;
-  background-image: none !important;
-  color: var(--foreground) !important;
-  border-color: var(--border) !important;
-}
-.app-readable-surface .form-shell::before,
-.app-readable-surface .affiliate-form::before {
-  content: none !important;
-}
-
-/* Affiliate application: the page owns its hero contrast while form content uses the global readable surface. */
-.app-readable-surface .affiliate-page { background: var(--background) !important; color: var(--foreground) !important; }
-.app-readable-surface .affiliate-page .affiliate-hero { background-color: #080d1d !important; color: #fff !important; }
-.app-readable-surface .affiliate-page .affiliate-hero h1,
-.app-readable-surface .affiliate-page .affiliate-hero p,
-.app-readable-surface .affiliate-page .affiliate-hero a,
-.app-readable-surface .affiliate-page .affiliate-hero span { -webkit-text-stroke: 0 !important; text-shadow: none !important; }
-.app-readable-surface .affiliate-page .affiliate-form { background: var(--surface) !important; color: var(--foreground) !important; }
-.app-readable-surface .affiliate-page .affiliate-form label,
-.app-readable-surface .affiliate-page .affiliate-form p { color: var(--foreground) !important; }
-.app-readable-surface .affiliate-page .affiliate-form input[type=checkbox] { accent-color: var(--primary); }
