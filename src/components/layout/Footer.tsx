@@ -26,12 +26,12 @@ export default function Footer() {
         </div>
 
         <div className="md:min-w-[24rem]">
-          <h3 className="mb-4 font-semibold text-slate-950">Legal y seguridad</h3>
+          <h3 className="mb-4 font-semibold text-[var(--foreground)]">Legal y seguridad</h3>
           <nav aria-label="Legal y seguridad">
             <ul className="flex flex-wrap gap-x-6 gap-y-3">
               {legalLinks.map((link) => (
                 <li key={link.href}>
-                  <Link href={link.href} className="text-sm text-slate-600 transition hover:text-blue-600">
+                  <Link href={link.href} className="text-sm text-[var(--muted)] transition hover:text-[var(--primary)]">
                     {link.name}
                   </Link>
                 </li>
