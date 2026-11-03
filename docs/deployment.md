@@ -6,7 +6,7 @@
 
 | Componente | Estándar |
 |---|---|
-| Framework | Next.js 16.3.x + App Router |
+| Framework | Next.js 16.4.3 + App Router |
 | UI | React 19.x |
 | Runtime | Node.js 24.x LTS |
 | npm | 11.x |

@@ -26,7 +26,7 @@ Las integraciones externas deben encapsularse como adaptadores. Credi conserva l
 
 ## Stack canónico
 
-- Next.js 16.3.x App Router
+- Next.js 16.4.3 App Router
 - React 19
 - TypeScript
 - Tailwind CSS 4

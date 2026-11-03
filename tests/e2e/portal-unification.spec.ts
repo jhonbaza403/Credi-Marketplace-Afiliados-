@@ -3,7 +3,7 @@ import { expect, test, type Locator } from "@playwright/test";
 async function expectReadableLightText(element: Locator) {
   await expect.poll(async () => element.evaluate((node) => {
     const color = getComputedStyle(node).color;
-    const values = color.match(/[\\d.]+/g)?.map(Number).filter(Number.isFinite) ?? [];
+    const values = color.match(/[\d.]+/g)?.map(Number).filter(Number.isFinite) ?? [];
     if (values.length < 3) return -1;
     const channels = values.slice(0, 3).map((value) => value > 1 ? value / 255 : value);
     const luminance = channels.map((channel) => {

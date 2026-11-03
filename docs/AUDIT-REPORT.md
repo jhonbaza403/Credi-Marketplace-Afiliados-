@@ -4,7 +4,7 @@
 - **Repository status**: Normalización de runtime y arquitectura aplicada; verificación dinámica pendiente hasta completar CI.
 - **Runtime**: Node.js 24.x LTS
 - **Package manager**: npm 11.x
-- **Framework**: Next.js 16.3.4 / React 19.0.0
+- **Framework**: Next.js 16.4.3 / React 19.2.8
 - **Language**: TypeScript
 - **Styling**: Tailwind CSS 4
 - **Backend / Auth**: Supabase + `@supabase/ssr`

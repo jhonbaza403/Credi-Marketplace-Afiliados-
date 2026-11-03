@@ -1,4 +1,3 @@
-````markdown
 # Security Policy
 
 Credi Marketplace considera la seguridad una parte fundamental de la arquitectura de la plataforma.
@@ -783,31 +782,3 @@ Audit / logging
 ```
 
 Ninguna capa individual debe considerarse suficiente para proteger una operación crítica.
-
-````
-
-### Un cambio especialmente importante
-
-En tu política original tenías:
-
-> `CI must pass lint, typecheck, tests, build, and high-severity npm audit checks before release.`
-
-Lo amplié para que **E2E también forme parte de la validación**, porque ya incorporamos Playwright al proyecto:
-
-```text
-lint
-↓
-typecheck
-↓
-unit tests
-↓
-E2E
-↓
-audit
-↓
-build
-````
-
-Y mantuve explícitamente que **RLS + autorización server-side** son capas diferentes. Eso es importante para tu arquitectura con Supabase.
-
-Como siguiente paso, conviene revisar el **`tests/verify-structure.mjs`** que preparaste para que compruebe automáticamente que estos archivos de seguridad, configuración, Supabase y pruebas realmente existan antes de permitir el build.

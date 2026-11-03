@@ -54,7 +54,7 @@ El producto, catálogo, relación comercial, oferta, afiliación, reputación y 
 
 ## Stack canónico
 
-- **Next.js 16.3.x App Router**
+- **Next.js 16.4.3 App Router**
 - **React 19**
 - **TypeScript**
 - **Tailwind CSS 4**

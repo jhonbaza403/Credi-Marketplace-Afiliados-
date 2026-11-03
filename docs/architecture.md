@@ -6,7 +6,7 @@
 
 | Capa | Tecnología |
 |---|---|
-| Framework | Next.js 16.3.x — App Router |
+| Framework | Next.js 16.4.3 — App Router |
 | UI | React 19.x |
 | Lenguaje | TypeScript |
 | Runtime CI/producción | Node.js 24.x LTS |
