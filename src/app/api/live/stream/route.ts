@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { isSameOrigin } from '@/lib/security/csrf'
 import {
   classifyLiveInputStatus,
+  cloudflareStreamFailure,
   createLiveInput,
   getLiveInput,
   rotateLiveInputKeys,
@@ -182,10 +183,7 @@ export async function POST(request: Request) {
     const input = await setLiveInputEnabled(inputId, action === 'enable')
     return NextResponse.json({ success: true, ...credentials(input) }, { headers: { 'Cache-Control': 'no-store' } })
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'UNKNOWN'
-    if (message === 'CLOUDFLARE_STREAM_NOT_CONFIGURED') {
-      return errorResponse('El transporte de producción aún requiere las credenciales de Cloudflare Stream en Vercel.', 503, 'CLOUDFLARE_STREAM_NOT_CONFIGURED')
-    }
-    return errorResponse('No fue posible operar el transporte LIVE. Revisa la configuración y el estado del proveedor.', 502, 'CLOUDFLARE_TRANSPORT_ERROR')
+    const failure = cloudflareStreamFailure(error)
+    return errorResponse(failure.message, failure.status, failure.code)
   }
 }
