@@ -1,6 +1,6 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Locator } from "@playwright/test";
 
-async function expectReadableLightText(element: ReturnType<import("@playwright/test").Page["getByRole"]>) {
+async function expectReadableLightText(element: Locator) {
   await expect.poll(async () => element.evaluate((node) => {
     const color = getComputedStyle(node).color;
     const channels = color.match(/[\\d.]+/g)?.slice(0, 3).map(Number);
