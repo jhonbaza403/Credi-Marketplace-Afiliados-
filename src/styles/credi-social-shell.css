@@ -1,62 +1,68 @@
-/* Credi social-commerce shell: immersive, responsive and accessible. */
+/* Credi Marketplace — social-commerce visual shell. */
 :root {
-  --background: #f4f5fc;
-  --surface: #ffffff;
-  --surface-secondary: #f7f7ff;
-  --surface-tertiary: #eeeffa;
-  --border: #e4e5f0;
-  --border-strong: #cfd1e4;
-  --foreground: #17152b;
-  --muted: #62637d;
-  --muted-light: #8586a0;
-  --primary: #5944df;
-  --primary-hover: #4834c6;
-  --primary-active: #3928a8;
-  --focus-ring: color-mix(in srgb, #654ff0 30%, transparent);
+  color-scheme: dark;
+  --background: #070b1e;
+  --surface: #0c1430;
+  --surface-secondary: #111c3d;
+  --surface-tertiary: #182650;
+  --border: #293865;
+  --border-strong: #3a4e86;
+  --foreground: #f7f8ff;
+  --muted: #c0c8e6;
+  --muted-light: #929fc9;
+  --primary: #812cff;
+  --primary-hover: #9a53ff;
+  --primary-active: #6a1fe0;
+  --focus-ring: rgb(38 194 255 / 42%);
 }
 
-.dark {
-  --background: #101020;
-  --surface: #19192d;
-  --surface-secondary: #202039;
-  --surface-tertiary: #292944;
-  --border: #343451;
-  --border-strong: #484866;
-  --foreground: #f6f4ff;
-  --muted: #b5b2ce;
-  --muted-light: #8b89a8;
-  --primary: #a89aff;
-  --primary-hover: #c0b7ff;
-  --primary-active: #d7d1ff;
-  --focus-ring: rgb(168 154 255 / 35%);
+:root.credi-light-mode {
+  color-scheme: light;
+  --background: #f4f6fc;
+  --surface: #fff;
+  --surface-secondary: #f7f8ff;
+  --surface-tertiary: #edf0fa;
+  --border: #e0e4f2;
+  --border-strong: #cbd2e5;
+  --foreground: #171a30;
+  --muted: #555d79;
+  --muted-light: #747e9d;
+  --primary: #6240e8;
+  --primary-hover: #5033c9;
+  --primary-active: #4028a8;
+  --focus-ring: rgb(98 64 232 / 30%);
 }
 
 .credi-shell-body {
+  min-height: 100vh;
   background:
-    radial-gradient(circle at 82% 10%, rgb(126 92 255 / 8%), transparent 28rem),
-    radial-gradient(circle at 4% 50%, rgb(42 195 255 / 5%), transparent 24rem),
+    radial-gradient(circle at 82% 8%, rgb(105 55 255 / 12%), transparent 30rem),
+    radial-gradient(circle at 42% 88%, rgb(0 163 255 / 7%), transparent 32rem),
     var(--background);
+  color: var(--foreground);
 }
 
 .credi-global-header {
-  border-bottom: 1px solid rgb(226 225 244 / 85%);
-  background: rgb(255 255 255 / 88%);
-  box-shadow: 0 8px 30px rgb(31 26 77 / 7%);
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  width: 100%;
+  border-bottom: 1px solid rgb(75 91 153 / 48%);
+  background: rgb(7 13 38 / 94%);
+  color: #f7f8ff;
+  box-shadow: 0 8px 30px rgb(0 0 0 / 24%);
   backdrop-filter: blur(22px) saturate(145%);
 }
 
-.dark .credi-global-header {
-  border-bottom-color: rgb(80 76 118 / 55%);
-  background: rgb(22 21 42 / 90%);
-}
-
 .credi-app-sidebar {
+  top: 0 !important;
+  height: 100dvh;
   background:
-    radial-gradient(circle at 5% 0%, rgb(111 82 255 / 28%), transparent 17rem),
-    linear-gradient(180deg, #17142e 0%, #11152c 54%, #101b35 100%);
+    radial-gradient(circle at 7% 0%, rgb(112 48 255 / 26%), transparent 17rem),
+    linear-gradient(180deg, #111334 0%, #0a1230 56%, #07152c 100%);
   color: #f7f6ff;
-  border-right: 1px solid rgb(255 255 255 / 9%);
-  box-shadow: 16px 0 45px rgb(29 25 72 / 10%);
+  border-right: 1px solid rgb(120 135 220 / 28%);
+  box-shadow: 16px 0 45px rgb(0 0 0 / 28%);
 }
 
 .credi-sidebar-link {
@@ -67,32 +73,20 @@
   border: 1px solid transparent;
   border-radius: 13px;
   padding: 9px 12px;
-  color: rgb(230 229 248 / 83%);
+  color: rgb(230 233 255 / 87%);
   font-size: 12px;
   font-weight: 750;
   transition: background-color 180ms ease, color 180ms ease, border-color 180ms ease, transform 180ms ease;
 }
-
-.credi-sidebar-link:hover {
-  transform: translateX(2px);
-  background: rgb(255 255 255 / 8%);
-  color: #fff;
-}
-
+.credi-sidebar-link:hover { transform: translateX(2px); background: rgb(255 255 255 / 8%); color: #fff; }
 .credi-sidebar-link[aria-current="page"] {
-  border-color: rgb(175 157 255 / 28%);
-  background: linear-gradient(105deg, #6846ed 0%, #4935c6 100%);
+  border-color: rgb(180 152 255 / 35%);
+  background: linear-gradient(105deg, #7527ef 0%, #3d17bc 100%);
   color: #fff;
-  box-shadow: 0 8px 24px rgb(92 64 225 / 30%);
+  box-shadow: 0 8px 24px rgb(92 42 225 / 38%), 0 0 18px rgb(113 46 255 / 20%);
 }
-
-.credi-sidebar-link svg {
-  color: #bdb3ff;
-}
-
-.credi-sidebar-link[aria-current="page"] svg {
-  color: #fff;
-}
+.credi-sidebar-link svg { color: #c0b5ff; }
+.credi-sidebar-link[aria-current="page"] svg { color: #fff; }
 
 .credi-dashboard-hero {
   position: relative;
@@ -102,65 +96,32 @@
   background:
     radial-gradient(circle at 78% 30%, rgb(105 75 255 / 44%), transparent 28rem),
     radial-gradient(circle at 100% 110%, rgb(0 198 255 / 22%), transparent 28rem),
-    linear-gradient(112deg, #15123c 0%, #20145d 52%, #1d3479 100%);
-  box-shadow: 0 24px 70px rgb(43 34 115 / 17%);
+    linear-gradient(112deg, #101238 0%, #201052 52%, #102d68 100%);
+  box-shadow: 0 24px 70px rgb(0 0 0 / 28%);
 }
-
-.credi-dashboard-hero h1,
-.credi-dashboard-hero h2 { color: #fff; }
-
-.credi-app-sidebar h2 { color: rgb(148 163 184 / .78); }
-
-.credi-dashboard-hero::before,
-.credi-dashboard-hero::after {
-  position: absolute;
-  z-index: -1;
-  content: "";
-  pointer-events: none;
-  border-radius: 999px;
-}
-
-.credi-dashboard-hero::before {
-  width: 26rem;
-  height: 26rem;
-  right: 8%;
-  top: -15rem;
-  border: 1px solid rgb(180 166 255 / 20%);
-  box-shadow: 0 0 0 32px rgb(180 166 255 / 4%), 0 0 0 68px rgb(180 166 255 / 3%);
-  animation: credi-orbit 24s linear infinite;
-}
-
-.credi-dashboard-hero::after {
-  width: 22rem;
-  height: 22rem;
-  right: 22%;
-  bottom: -19rem;
-  background: rgb(22 193 255 / 19%);
-  filter: blur(48px);
-}
+.credi-dashboard-hero h1,.credi-dashboard-hero h2,.credi-dashboard-hero p { color: #fff; }
+.credi-app-sidebar h2 { color: rgb(170 180 215 / 84%); }
 
 .credi-dashboard-card {
   border: 1px solid var(--border);
-  background: color-mix(in srgb, var(--surface) 94%, #f0edff);
-  box-shadow: 0 8px 28px rgb(28 26 72 / 5%);
+  background: var(--surface);
+  box-shadow: 0 8px 28px rgb(0 0 0 / 18%);
   transition: transform 220ms ease, box-shadow 220ms ease, border-color 220ms ease;
 }
-
 .credi-dashboard-card:hover {
   transform: translateY(-3px);
-  border-color: color-mix(in srgb, var(--primary) 28%, var(--border));
-  box-shadow: 0 18px 42px rgb(48 37 116 / 12%);
+  border-color: color-mix(in srgb, var(--primary) 42%, var(--border));
+  box-shadow: 0 18px 42px rgb(0 0 0 / 25%);
 }
-
 .credi-module-card {
   position: relative;
   isolation: isolate;
   overflow: hidden;
   border: 1px solid var(--border);
   background: var(--surface);
+  color: var(--foreground);
   transition: transform 220ms ease, border-color 220ms ease, box-shadow 220ms ease;
 }
-
 .credi-module-card::after {
   position: absolute;
   z-index: -1;
@@ -174,53 +135,87 @@
   filter: blur(15px);
   transition: transform 260ms ease;
 }
-
 .credi-module-card:hover {
   transform: translateY(-4px);
-  border-color: color-mix(in srgb, var(--module-accent, #654ff0) 35%, var(--border));
-  box-shadow: 0 18px 40px rgb(37 33 91 / 10%);
+  border-color: color-mix(in srgb, var(--module-accent, #654ff0) 42%, var(--border));
+  box-shadow: 0 18px 40px rgb(0 0 0 / 22%);
 }
+.credi-module-card:hover::after { transform: scale(1.5); }
+.credi-module-icon { background: var(--module-tint, #f0edff); color: var(--module-accent, #654ff0); }
+.credi-live-pulse { animation: credi-live-pulse 2.1s ease-in-out infinite; }
+.credi-float { animation: credi-float 6s ease-in-out infinite; }
 
-.credi-module-card:hover::after {
-  transform: scale(1.5);
+.credi-topbar { width: 100%; min-height: 72px; padding-inline: 18px; }
+.credi-topbar-search {
+  min-width: 0;
+  min-height: 50px;
+  border: 1px solid rgb(93 119 205 / 66%);
+  border-radius: 999px;
+  background: rgb(8 25 72 / 82%);
+  color: #fff;
+  box-shadow: inset 0 1px 12px rgb(0 0 0 / 20%);
 }
-
-.credi-module-icon {
-  background: var(--module-tint, #f0edff);
-  color: var(--module-accent, #654ff0);
+.credi-topbar-search input {
+  min-width: 0;
+  width: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent !important;
+  color: #fff !important;
+  box-shadow: none !important;
 }
-
-.credi-live-pulse {
-  animation: credi-live-pulse 2.1s ease-in-out infinite;
+.credi-topbar-search input::placeholder { color: #c3ccec; opacity: 1; }
+.credi-topbar-action {
+  display: inline-flex;
+  width: 48px;
+  height: 48px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgb(104 125 208 / 55%);
+  border-radius: 999px;
+  background: rgb(12 22 59 / 84%);
+  color: #e9ecff;
+  transition: border-color 160ms ease, background 160ms ease, transform 160ms ease;
 }
-
-.credi-float {
-  animation: credi-float 6s ease-in-out infinite;
+.credi-topbar-action:hover { transform: translateY(-1px); border-color: rgb(32 198 255 / 78%); background: rgb(22 39 93 / 96%); }
+.credi-premium-link {
+  display: inline-flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  border: 1px solid rgb(183 133 255 / 55%);
+  border-radius: 999px;
+  background: linear-gradient(100deg, #8b1bff 0%, #5f00da 100%);
+  padding: 0 23px;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 900;
+  box-shadow: 0 0 24px rgb(119 24 255 / 32%);
 }
-
-@keyframes credi-orbit {
-  to { transform: rotate(360deg); }
-}
+.credi-premium-link:hover { filter: brightness(1.12); }
 
 @keyframes credi-live-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgb(244 63 94 / 30%); }
+  0%,100% { box-shadow: 0 0 0 0 rgb(244 63 94 / 30%); }
   50% { box-shadow: 0 0 0 8px rgb(244 63 94 / 0%); }
 }
-
 @keyframes credi-float {
-  0%, 100% { transform: translateY(0); }
+  0%,100% { transform: translateY(0); }
   50% { transform: translateY(-7px); }
 }
 
+@media (min-width: 1280px) {
+  .credi-global-header { width: calc(100% - 248px); margin-left: 248px; }
+}
+@media (max-width: 1279px) {
+  .credi-app-sidebar { display: none; }
+  .credi-topbar { min-height: 64px; padding-inline: 10px; }
+  .credi-topbar-action { width: 42px; height: 42px; }
+}
 @media (prefers-reduced-motion: reduce) {
-  .credi-dashboard-hero::before,
-  .credi-live-pulse,
-  .credi-float {
-    animation: none !important;
-  }
-  .credi-dashboard-card,
-  .credi-module-card,
-  .credi-sidebar-link {
+  .credi-dashboard-card,.credi-module-card,.credi-sidebar-link,.credi-topbar-action,.credi-live-pulse,.credi-float {
     transition: none !important;
+    animation: none !important;
   }
 }
