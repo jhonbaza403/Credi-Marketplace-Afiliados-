@@ -1,9 +1,3 @@
-
----
-
-# `supabase/tests/001_schema.sql`
-
-```sql
 -- ============================================================
 -- CREDI MARKETPLACE
 -- TEST 001 — SCHEMA
