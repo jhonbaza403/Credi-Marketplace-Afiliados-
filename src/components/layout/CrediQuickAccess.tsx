@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
 import {
   ArrowUpRight,
   BarChart3,
@@ -83,6 +84,11 @@ function activePath(pathname: string, href: string) {
 
 export default function CrediQuickAccess() {
   const pathname = usePathname();
+  const { user, profile } = useAuth();
+  const metadataName = typeof user?.user_metadata?.full_name === "string" ? user.user_metadata.full_name : "";
+  const displayName = profile?.fullName?.trim() || metadataName.trim() || user?.email?.split("@")[0] || "Mi cuenta";
+  const displayEmail = user?.email || "Inicia sesión para acceder";
+  const initials = displayName.trim().split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase() || "C";
   const [moreOpen, setMoreOpen] = useState(false);
   const [solutionsOpen, setSolutionsOpen] = useState(false);
 
@@ -223,9 +229,21 @@ export default function CrediQuickAccess() {
               Explorar Credi <ArrowUpRight className="size-3.5" />
             </Link>
           </div>
-          <Link href="/register" className="mt-3 flex min-h-10 items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/[.06] text-xs font-bold text-white transition hover:bg-white/[.11]">
-            Crear cuenta Credi
-          </Link>
+          {user ? (
+            <Link href="/account" aria-label={`Abrir cuenta de ${displayName}`} className="mt-3 flex min-h-[58px] items-center gap-3 rounded-2xl border border-white/10 bg-[#080f2b]/85 px-3 py-2.5 transition hover:border-cyan-300/35 hover:bg-white/[.07]">
+              <span aria-hidden="true" className="grid size-10 shrink-0 place-items-center rounded-full border border-cyan-200/40 bg-gradient-to-br from-violet-600 to-blue-700 text-sm font-black text-white shadow-[0_0_16px_rgba(34,211,238,.22)]">{initials}</span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-xs font-black text-white">{displayName}</span>
+                <span className="mt-0.5 block truncate text-[10px] text-slate-300">{displayEmail}</span>
+              </span>
+              <ArrowUpRight className="size-4 shrink-0 text-cyan-200" aria-hidden="true" />
+            </Link>
+          ) : (
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <Link href="/login" className="flex min-h-10 items-center justify-center rounded-xl border border-white/15 bg-white/[.06] px-2 text-xs font-bold text-white transition hover:bg-white/[.11]">Iniciar sesión</Link>
+              <Link href="/register" className="flex min-h-10 items-center justify-center rounded-xl bg-gradient-to-r from-violet-600 to-blue-500 px-2 text-xs font-black text-white transition hover:brightness-110">Crear cuenta</Link>
+            </div>
+          )}
         </div>
       </aside>
 
