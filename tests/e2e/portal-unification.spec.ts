@@ -17,10 +17,10 @@ test.describe("Credi unified portal", () => {
       await expect(nav.getByRole("link", { name: label, exact: true })).toHaveAttribute("href", href);
     }
 
-    const homeTitle = page.getByRole("heading", { name: /Personas, contenido y oportunidades/i });
+    const homeTitle = page.getByRole("heading", { name: /Todo lo que necesitas para conectar, compartir y crecer/i });
     await expect(homeTitle).toBeVisible();
     await expect.poll(async () => homeTitle.evaluate((element) => getComputedStyle(element).color)).toBe("rgb(255, 255, 255)");
-    const footerTitle = page.getByRole("heading", { name: "Confianza, comercio y conexión" });
+    const footerTitle = page.getByRole("heading", { name: "Legal y seguridad" });
     await expect(footerTitle).toBeVisible();
     await expect.poll(async () => footerTitle.evaluate((element) => getComputedStyle(element).color)).toBe("rgb(255, 255, 255)");
 
