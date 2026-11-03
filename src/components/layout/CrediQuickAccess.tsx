@@ -19,6 +19,7 @@ import {
   Send,
   ShieldCheck,
   ShoppingBag,
+  ShoppingCart,
   Sparkles,
   TrendingUp,
   Users,
@@ -55,7 +56,7 @@ const sections: NavigationSection[] = [
     items: [
       { label: "Marketplace", href: "/marketplace", icon: ShoppingBag },
       { label: "Servicios", href: "/services", icon: BadgeCheck },
-      { label: "Publicar contenido", href: "/publish", icon: Send },
+      { label: "Publicar", href: "/publish", icon: Send },
       { label: "Afiliados", href: "/affiliate", icon: TrendingUp },
       { label: "B2B empresarial", href: "/b2b", icon: Building2 },
       { label: "Free", href: "/free", icon: Sparkles },
@@ -99,14 +100,15 @@ export default function CrediQuickAccess() {
   return (
     <>
       <aside className="credi-app-sidebar fixed inset-y-[72px] left-0 z-30 hidden w-[248px] flex-col xl:flex" aria-label="Navegación del ecosistema Credi">
-        <div className="border-b border-white/10 px-5 py-5">
-          <p className="text-[10px] font-black uppercase tracking-[.2em] text-violet-200/80">Tu espacio</p>
-          <div className="mt-1 flex items-center gap-2">
-            <span className="text-lg font-black tracking-tight text-white">Credi</span>
-            <span className="rounded-full border border-cyan-300/20 bg-cyan-300/10 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-cyan-100">Connect</span>
-          </div>
-          <p className="mt-1 text-[11px] leading-5 text-slate-300/70">Personas, contenido y comercio en un mismo lugar.</p>
-        </div>
+        <Link href="/" aria-label="Credi Marketplace — Inicio" className="flex min-h-[104px] items-center gap-3 border-b border-white/10 px-5 py-4">
+          <span className="grid size-14 shrink-0 place-items-center rounded-2xl bg-[#ffca05]/10 text-[#ffca05] shadow-[0_0_22px_rgba(255,202,5,.13)]">
+            <ShoppingCart className="size-9" strokeWidth={2.4} />
+          </span>
+          <span className="min-w-0">
+            <span className="block text-[28px] font-black leading-none tracking-tight text-white">Credi</span>
+            <span className="mt-2 block text-[9px] font-bold tracking-wide text-slate-200">Compra · Vende · Conecta</span>
+          </span>
+        </Link>
 
         <nav className="credi-sidebar-scroll min-h-0 flex-1 space-y-5 overflow-y-auto px-3 py-4" aria-label="Navegación principal">
           {sections.map((section) => (
@@ -121,6 +123,7 @@ export default function CrediQuickAccess() {
                       key={entry.href}
                       href={entry.href}
                       aria-current={active ? "page" : undefined}
+                      aria-label={entry.label}
                       className="credi-sidebar-link"
                     >
                       <Icon className="size-[17px] shrink-0" aria-hidden="true" />
@@ -212,12 +215,12 @@ export default function CrediQuickAccess() {
             <div className="flex items-center gap-2">
               <span className="grid size-8 place-items-center rounded-xl bg-violet-400/20 text-violet-100"><Sparkles className="size-4" /></span>
               <div className="min-w-0">
-                <p className="text-xs font-black text-white">Crece con Credi</p>
-                <p className="text-[10px] text-slate-300">Activa tu espacio comercial</p>
+                <p className="text-xs font-black text-white">Comunidad Credi</p>
+                <p className="text-[10px] text-slate-300">Conecta, comparte y crece juntos</p>
               </div>
             </div>
             <Link href="/affiliate" className="mt-3 inline-flex min-h-9 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-300 to-blue-400 px-3 text-[11px] font-black text-slate-950 transition hover:brightness-110">
-              Conocer afiliados <ArrowUpRight className="size-3.5" />
+              Explorar Credi <ArrowUpRight className="size-3.5" />
             </Link>
           </div>
           <Link href="/register" className="mt-3 flex min-h-10 items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/[.06] text-xs font-bold text-white transition hover:bg-white/[.11]">
