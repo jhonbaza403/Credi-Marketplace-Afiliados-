@@ -749,11 +749,17 @@ No se deben divulgar públicamente credenciales, secretos, datos personales o in
 
 ---
 
-# Contact
+## Reportar una vulnerabilidad
 
-Para reportes privados de seguridad, utiliza el canal de contacto de seguridad designado por los mantenedores del proyecto.
+**Canal preferido: reporte privado de seguridad de GitHub.**
 
-No publiques vulnerabilidades sensibles en Issues o Pull Requests públicos.
+Abre la pestaña [Security del repositorio Credi Marketplace](https://github.com/jhonbaza403/Credi-Marketplace-Afiliados-/security), entra en **Advisories** y utiliza **Report a vulnerability** para enviar el informe de forma privada.
+
+Este formulario solo está disponible para investigadores cuando el propietario ha activado **Private vulnerability reporting** en la configuración del repositorio. Los mantenedores deben habilitarlo y mantenerlo activo en **Settings → Security → Advanced Security → Private vulnerability reporting**. No se debe considerar operativo este canal hasta verificar que el botón **Report a vulnerability** aparece en la pestaña Security. Documentación oficial: [configurar reportes privados para un repositorio](https://docs.github.com/en/code-security/how-tos/report-and-fix-vulnerabilities/configure-vulnerability-reporting/configure-for-a-repository).
+
+**Si el formulario privado no está disponible:** no publiques detalles técnicos, pruebas de concepto, secretos ni datos que permitan reproducir o explotar el problema. Crea únicamente una incidencia pública sin detalles, con el título **“Solicitud de canal privado de seguridad”**, y pide a los mantenedores un medio privado de contacto. Comparte los detalles sensibles solo después de recibir y verificar ese canal.
+
+No informes vulnerabilidades sensibles en Issues o Pull Requests públicos.
 
 ---
 
