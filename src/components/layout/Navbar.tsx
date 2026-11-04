@@ -42,7 +42,7 @@ const PRIMARY_LINKS = PRIMARY_DOMAINS.map((domain) => ({
 }));
 
 const COMMUNITY_KEYS = new Set(["chat", "live", "stories", "videos"]);
-const COMMERCE_KEYS = new Set(["marketplace", "b2b", "services", "content", "affiliate", "video_catalog", "verified_suppliers"]);
+const COMMERCE_KEYS = new Set(["marketplace", "b2b", "b2b_ops", "services", "content", "affiliate", "video_catalog", "verified_suppliers"]);
 const SECTION_DETAILS = {
   community: { title: "Comunidad", description: "Conecta y comparte" },
   commerce: { title: "Comercio", description: "Descubre y vende" },
