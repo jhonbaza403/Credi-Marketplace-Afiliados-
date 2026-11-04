@@ -26,6 +26,7 @@ export function LoginForm() {
   const [mfaFactorId, setMfaFactorId] = useState<string | null>(null);
   const [mfaChallengeId, setMfaChallengeId] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const isPreviewEnvironment = process.env.NEXT_PUBLIC_CREDI_ENV === 'preview';
 
   const handleChange = (field: keyof LoginFormState, value: string) => {
     setForm((current) => ({ ...current, [field]: value }));
@@ -160,6 +161,15 @@ export function LoginForm() {
         <h1 id="login-title" className="mt-2 text-3xl font-black tracking-tight text-foreground">Accede a tu cuenta</h1>
         <p className="mt-2 text-sm leading-6 text-muted-foreground">Ingresa tu correo electrónico y contraseña para entrar a tu espacio privado.</p>
       </div>
+
+      {isPreviewEnvironment && (
+        <div className="mb-5 rounded-xl border border-amber-500/25 bg-amber-500/5 p-4 text-sm text-foreground" role="status">
+          <p className="font-bold">Entorno de pruebas · Preview</p>
+          <p className="mt-1 leading-6 text-muted-foreground">
+            Las cuentas de este entorno son independientes de Producción. El correo y el acceso de las cuentas administrativas de Producción no se modifican ni se copian aquí. Para probar Preview, crea una cuenta de prueba desde «Crear cuenta».
+          </p>
+        </div>
+      )}
 
       {errorMsg && <div id="login-error" role="alert" aria-live="assertive" className="mb-5 rounded-xl border border-red-500/20 bg-red-500/5 p-3 text-sm text-red-600">{errorMsg}</div>}
 

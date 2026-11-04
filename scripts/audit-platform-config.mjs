@@ -95,6 +95,11 @@ assert(
 );
 assert(vercel.ignoreCommand === "node scripts/vercel-ignore-build.mjs", "Vercel ignoreCommand must reference the tracked ignore script");
 assert(ignoreBuild.includes('path.startsWith("scripts/")'), "Vercel should skip CI/tooling script-only changes instead of rebuilding the application");
+assert(
+  ignoreBuild.includes('const isPreviewDeployment = process.env.VERCEL_ENV === "preview"') &&
+    ignoreBuild.includes('if (isPreviewDeployment && path.startsWith("supabase/"))'),
+  "Vercel Preview must rebuild when Supabase branch migrations/configuration change so branch-scoped public credentials are refreshed",
+);
 
 for (const script of ["build", "audit:env", "audit:api", "audit:routes", "audit:platform", "security:audit", "test", "test:e2e"]) {
   assert(typeof pkg.scripts?.[script] === "string", `package.json must define npm script: ${script}`);

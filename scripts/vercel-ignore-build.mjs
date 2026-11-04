@@ -22,7 +22,14 @@ const changed = output
   .map((line) => line.trim())
   .filter(Boolean);
 
+// Supabase synchronizes branch-specific credentials when preview branches change.
+ // A Preview deployment must rebuild when its Supabase schema/config changes so
+ // the Next.js bundle consumes the branch-scoped NEXT_PUBLIC_SUPABASE_* values.
+const isPreviewDeployment = process.env.VERCEL_ENV === "preview";
 const runtimeRelevant = changed.filter((path) => {
+  if (isPreviewDeployment && path.startsWith("supabase/")) {
+    return true;
+  }
   return !(
     path.startsWith("supabase/") ||
     path.startsWith(".github/") ||
