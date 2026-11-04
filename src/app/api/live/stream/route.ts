@@ -133,6 +133,7 @@ export async function POST(request: Request) {
           inputId: metadata.cloudflare_replay_input_id || null,
           videoId: metadata.cloudflare_replay_video_id || null,
           createdAt: metadata.cloudflare_replay_created_at || null,
+          dashUrl: metadata.cloudflare_replay_dash_url || null,
           playbackUrl: room.status === 'ended' ? room.replay_url || null : null,
           checkedAt: metadata.cloudflare_replay_last_checked_at || null,
         },
@@ -154,6 +155,7 @@ export async function POST(request: Request) {
           ? {
               cloudflare_replay_input_id: replay.inputId,
               cloudflare_replay_created_at: replay.createdAt,
+              cloudflare_replay_dash_url: replay.dashUrl,
             }
           : {}),
       }
