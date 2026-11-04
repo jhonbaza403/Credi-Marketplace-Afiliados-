@@ -425,7 +425,7 @@ RESET ROLE;
 SET LOCAL ROLE service_role;
 SELECT set_config('request.jwt.claims', '{"role":"service_role"}', true);
 DO $$
-DECLARE v_count integer;
+DECLARE v_count integer; v_rows integer;
 BEGIN
   IF NOT (SELECT rolbypassrls FROM pg_roles WHERE rolname = 'service_role') THEN
     RAISE EXCEPTION 'service_role must retain its RLS bypass capability';
