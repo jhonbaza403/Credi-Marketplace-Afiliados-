@@ -164,6 +164,7 @@ export async function PATCH(request:Request) {
         }
         if(replay.state==='ready'){
           metadata.cloudflare_replay_created_at=replay.createdAt
+          metadata.cloudflare_replay_dash_url=replay.dashUrl
           updates.replay_url=replay.playbackUrl
         }
       }catch{
