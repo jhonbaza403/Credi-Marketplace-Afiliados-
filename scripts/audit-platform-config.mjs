@@ -48,12 +48,28 @@ const requiredWorkflowFiles = [
 for (const file of requiredWorkflowFiles) readRequired(file);
 
 assert(vercel.framework === "nextjs", "Vercel framework must remain nextjs");
-const vercelInstallCommand = String(vercel.installCommand ?? "").trim();
-const usesNpmCi = /(?:^|\\s)npm\\s+ci(?:\\s|$)/.test(vercelInstallCommand);
-const usesAlternativePackageInstaller = /(?:^|\\s)(?:npm\\s+install|pnpm|yarn)(?:\\s|$)/.test(vercelInstallCommand);
+const vercelInstallTokens = String(vercel.installCommand ?? "")
+  .trim()
+  .split(" ")
+  .filter(Boolean);
+const npmCiIndex = vercelInstallTokens.findIndex(
+  (token, index) => token === "npm" && vercelInstallTokens[index + 1] === "ci",
+);
+const installPrefix = npmCiIndex > 0
+  ? vercelInstallTokens.slice(0, npmCiIndex).join(" ")
+  : "";
+const installSuffix = npmCiIndex >= 0
+  ? vercelInstallTokens.slice(npmCiIndex).join(" ")
+  : "";
+const allowedInstallPrefixes = [
+  "",
+  "env -u NPM_CONFIG_CACHE_DIR -u npm_config_cache_dir",
+];
 assert(
-  usesNpmCi && !usesAlternativePackageInstaller,
-  "Vercel install command must use npm ci with the committed lockfile; safe environment cleanup prefixes are allowed",
+  npmCiIndex >= 0 &&
+    installSuffix === "npm ci" &&
+    allowedInstallPrefixes.includes(installPrefix),
+  "Vercel install command must use npm ci with the committed lockfile; only the reviewed npm environment cleanup prefix is allowed",
 );
 assert(vercel.buildCommand === "npm run build", "Vercel build command must call the canonical build script");
 assert(vercel.ignoreCommand === "node scripts/vercel-ignore-build.mjs", "Vercel ignoreCommand must reference the tracked ignore script");
