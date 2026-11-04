@@ -10,16 +10,6 @@ export type AccountAccessState = {
   identity_approved: boolean;
 };
 
-const emptyState: AccountAccessState = {
-  is_platform_owner: false,
-  is_admin: false,
-  has_active_subscription: false,
-  has_mfa: false,
-  has_security_key: false,
-  has_profile_photos: false,
-  identity_approved: false,
-};
-
 export async function getAccountAccessState(
   supabase: SupabaseClient,
   userId: string,
