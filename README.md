@@ -44,17 +44,17 @@ Credi Marketplace mantiene una arquitectura tecnológica propia. Las capacidades
 
 ### Regla de abastecimiento
 
-**CREDI-SUPPLY AI no depende de una marca concreta.** Debe admitir múltiples fuentes comerciales autorizadas, cada una mediante su propio adaptador, contrato, política de datos, condiciones de atribución y controles de cumplimiento.
+**CREDI-SUPPLY AI no depende de una marca concreta.** Debe admitir múltiples fuentes comerciales autorizadas, cada una mediante su propio adaptador, contrato, política de datos, condiciones de acceso y gobierno de la relación.
 
 `Dropshipping` es una **modalidad comercial soportada por CREDI-SUPPLY AI**, no el nombre principal del producto ni de la arquitectura.
 
 ### Regla de fuente de verdad
 
-El producto, catálogo, relación comercial, oferta, afiliación, reputación y estado transaccional pertenecen a Credi. Las integraciones externas son fuentes o canales autorizados; no sustituyen la identidad ni el modelo de dominio de Credi.
+El producto, catálogo, relación comercial, oferta, afiliación, reputación y estado transaccional pertenecen a Credi. Las integraciones externas son fuentes o canales autorizados; no sustituyen la fuente de verdad del dominio.
 
 ## Stack canónico
 
-- **Next.js 16.3.x App Router**
+- **Next.js 16.4.3 App Router**
 - **React 19**
 - **TypeScript**
 - **Tailwind CSS 4**
@@ -129,11 +129,11 @@ public.credi_intelligence_events
 public.credi_intelligence_decisions
 ```
 
-`credi_intelligence_modules` actúa como registro canónico de capacidades. `credi_intelligence_events` permite auditar señales y resultados. `credi_intelligence_decisions` conserva decisiones versionadas con puntuación, confianza, racional y estado.
+`credi_intelligence_modules` actúa como registro canónico de capacidades. `credi_intelligence_events` permite auditar señales y resultados. `credi_intelligence_decisions` conserva decisiones tomadas por la capa de inteligencia sin reemplazar el dominio.
 
 Las tablas tienen RLS habilitado y no deben recibir acceso público por defecto. Las operaciones privilegiadas deben ejecutarse server-side mediante los clientes y servicios canónicos.
 
-La capa transversal no reemplaza las tablas de dominio ya existentes, como `products`, `listings`, `inventory`, `inventory_forecasts`, `affiliate_attributions`, `reputation_profiles`, `orders`, `stores`, `business_workspaces` y demás componentes del marketplace. La función de CREDI Intelligence es coordinarlas y aportar inteligencia gobernada sobre ellas.
+La capa transversal no reemplaza las tablas de dominio ya existentes, como `products`, `listings`, `inventory`, `inventory_forecasts`, `affiliate_attributions`, `reputation_profiles`, `orders`, `payments`, `chat` y las entidades B2B.
 
 ## Supabase en Next.js
 
@@ -219,7 +219,7 @@ Una oferta es distinta de una publicación patrocinada o un anuncio.
 
 Credi Marketplace puede utilizar sus propias cuentas y programas de afiliación empresarial con proveedores externos. Eso es independiente de cualquier eventual programa interno de recompensas a vendedores o creadores.
 
-No asumir que una comisión externa de Amazon, SHEIN, AliExpress, Alibaba u otro proveedor se reparte automáticamente entre usuarios. Cada programa debe respetar sus contratos, disclosures, enlaces especiales y reglas de atribución.
+No asumir que una comisión externa de Amazon, SHEIN, AliExpress, Alibaba u otro proveedor se reparte automáticamente entre usuarios. Cada programa debe respetar sus contratos, disclosures, enlaces y condiciones.
 
 ## Publicación social
 
@@ -237,13 +237,13 @@ Adapter/API por plataforma
 Canales autorizados
 ```
 
-La infraestructura social no implica que todas las plataformas permitan publicación automática sin requisitos adicionales. Cada proveedor puede exigir OAuth, scopes, aplicaciones registradas, auditoría, límites, formatos o permisos comerciales específicos.
+La infraestructura social no implica que todas las plataformas permitan publicación automática sin requisitos adicionales. Cada proveedor puede exigir OAuth, scopes, aplicaciones registradas, revisión y limitaciones de uso.
 
 Nunca almacenar tokens OAuth en texto plano.
 
 ## Monetización freemium y planes comerciales
 
-Credi Marketplace utiliza un modelo de entrada gratuita: el acceso esencial al marketplace y a la presencia social no depende de una suscripción. La monetización se construye alrededor de capacidades opcionales para usuarios y negocios que necesiten mayor escala.
+Credi Marketplace utiliza un modelo de entrada gratuita: el acceso esencial al marketplace y a la presencia social no depende de una suscripción. La monetización se construye alrededor de capacidades premium, comercio, herramientas y automatización.
 
 El catálogo comercial está definido por la migración:
 
@@ -268,9 +268,9 @@ Planes iniciales:
 | **Business** | Suscripción opcional | $29/mes | Tiendas y negocios |
 | **Enterprise** | Suscripción opcional | $99/mes | Empresas, equipos, API y automatización |
 
-El precio y los límites viven en Supabase y pueden modificarse sin cambiar el código de la interfaz. Las suscripciones incluyen estado, período de facturación, proveedor, identificadores externos y bitácora de eventos para soportar integración futura con el proveedor de pagos elegido.
+El precio y los límites viven en Supabase y pueden modificarse sin cambiar el código de la interfaz. Las suscripciones incluyen estado, período de facturación, proveedor, identificadores externos, límites y eventos de auditoría.
 
-La plataforma no debe activar un plan de pago únicamente por una acción del navegador. La activación de suscripciones pagadas debe quedar condicionada a una confirmación server-side verificable del proveedor de pagos y a controles de idempotencia.
+La plataforma no debe activar un plan de pago únicamente por una acción del navegador. La activación de suscripciones pagadas debe quedar condicionada a una confirmación server-side verificable.
 
 La página pública de planes está disponible en:
 

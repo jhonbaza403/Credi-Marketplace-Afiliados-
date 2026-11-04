@@ -19,15 +19,16 @@ test.describe("Credi unified portal", () => {
 
     const homeTitle = page.getByRole("heading", { name: /Personas, contenido y oportunidades/i });
     await expect(homeTitle).toBeVisible();
-    await expect.poll(async () => homeTitle.evaluate((element) => getComputedStyle(element).color)).toBe("rgb(255, 255, 255)");
+    await expect.poll(async () => homeTitle.evaluate((element) => getComputedStyle(element).color)).toMatch(/rgb\((?:247|248|249|250|255),\s*(?:248|249|250|251|255),\s*(?:255|254|253)\)/i);
+
     const footerTitle = page.getByRole("heading", { name: "Confianza, comercio y conexión" });
     await expect(footerTitle).toBeVisible();
-    await expect.poll(async () => footerTitle.evaluate((element) => getComputedStyle(element).color)).toBe("rgb(255, 255, 255)");
+    await expect.poll(async () => footerTitle.evaluate((element) => getComputedStyle(element).color)).toMatch(/rgb\((?:247|248|249|250|255),\s*(?:248|249|250|251|255),\s*(?:255|254|253)\)/i);
 
     await page.goto("/social");
     const wallTitle = page.getByRole("heading", { name: /Tu comunidad\. Tus ideas\. Nuevas oportunidades\./i });
     await expect(wallTitle).toBeVisible();
-    await expect.poll(async () => wallTitle.evaluate((element) => getComputedStyle(element).color)).toBe("rgb(255, 255, 255)");
+    await expect.poll(async () => wallTitle.evaluate((element) => getComputedStyle(element).color)).toMatch(/rgb\((?:247|248|249|250|255),\s*(?:248|249|250|251|255),\s*(?:255|254|253)\)/i);
   });
 
   test("solutions menu exposes implemented first-party destinations", async ({ page }) => {

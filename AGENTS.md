@@ -26,7 +26,7 @@ Las integraciones externas deben encapsularse como adaptadores. Credi conserva l
 
 ## Stack canónico
 
-- Next.js 16.3.x App Router
+- Next.js 16.4.3 App Router
 - React 19
 - TypeScript
 - Tailwind CSS 4
@@ -74,7 +74,7 @@ Un usuario puede tener capacidades de comprador, vendedor, proveedor de servicio
 
 ## Afiliación
 
-La afiliación empresarial de Credi Marketplace es independiente de cualquier sistema interno de recompensas a vendedores o creadores. No asumir que una comisión externa de Amazon/SHEIN/AliExpress/Alibaba se reparte automáticamente entre usuarios.
+La afiliación empresarial de Credi Marketplace es independiente de cualquier sistema interno de recompensas a vendedores o creadores. No asumir que una comisión externa de Amazon/SHEIN/AliExpres u otro proveedor se reparte automáticamente entre usuarios.
 
 Los enlaces de programas externos deben respetar los términos del proveedor, disclosures y requisitos de cada programa.
 
@@ -94,7 +94,7 @@ Adapter/API por plataforma
 TikTok / TikTok Shop / YouTube / Instagram / Facebook / Threads / Pinterest / LinkedIn / otros
 ```
 
-Una publicación de Credi es la fuente original. Cada plataforma tiene sus propios OAuth scopes, APIs, formatos, límites y requisitos de revisión. No fingir compatibilidad automática si el proveedor no la autoriza.
+Una publicación de Credi es la fuente original. Cada plataforma tiene sus propios OAuth scopes, APIs, formatos, límites y requisitos de revisión. No fingir compatibilidad automática si el proveedor exige requisitos adicionales.
 
 Nunca almacenar tokens OAuth en texto plano en tablas o repositorio.
 
