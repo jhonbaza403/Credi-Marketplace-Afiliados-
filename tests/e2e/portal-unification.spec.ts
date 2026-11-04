@@ -1,90 +1,90 @@
 import { expect, test, type Locator } from "@playwright/test";
 
-type CssColor = { red: number; green: number; blue: number; alpha: number };
-
-function parseCssColors(value: string): CssColor[] {
-  const colors: CssColor[] = [];
-  for (const match of value.matchAll(/rgba?\\(([^)]+)\\)/g)) {
-    const parts = match[1].replace(/\\//g, " ").match(/[\\d.]+%?/g) ?? [];
-    if (parts.length < 3) continue;
-    const channel = (part: string) => {
-      const number = Number.parseFloat(part);
-      return part.endsWith("%") ? number * 2.55 : number;
-    };
-    const alphaPart = parts[3];
-    const alpha = alphaPart === undefined ? 1
-      : alphaPart.endsWith("%") ? Number.parseFloat(alphaPart) / 100
-      : Number.parseFloat(alphaPart);
-    colors.push({
-      red: Math.min(255, Math.max(0, channel(parts[0]))),
-      green: Math.min(255, Math.max(0, channel(parts[1]))),
-      blue: Math.min(255, Math.max(0, channel(parts[2]))),
-      alpha: Math.min(1, Math.max(0, alpha)),
-    });
-  }
-  return colors;
-}
-
-function parseHexColor(value: string): CssColor | null {
-  const match = value.trim().match(/^#([\\da-f]{3}|[\\da-f]{6})$/i);
-  if (!match) return null;
-  const hex = match[1].length === 3
-    ? match[1].split("").map((part) => part + part).join("")
-    : match[1];
-  return {
-    red: Number.parseInt(hex.slice(0, 2), 16),
-    green: Number.parseInt(hex.slice(2, 4), 16),
-    blue: Number.parseInt(hex.slice(4, 6), 16),
-    alpha: 1,
-  };
-}
-
-function composite(foreground: CssColor, background: CssColor): CssColor {
-  const alpha = foreground.alpha + background.alpha * (1 - foreground.alpha);
-  if (alpha === 0) return { red: 0, green: 0, blue: 0, alpha: 0 };
-  return {
-    red: (foreground.red * foreground.alpha + background.red * background.alpha * (1 - foreground.alpha)) / alpha,
-    green: (foreground.green * foreground.alpha + background.green * background.alpha * (1 - foreground.alpha)) / alpha,
-    blue: (foreground.blue * foreground.alpha + background.blue * background.alpha * (1 - foreground.alpha)) / alpha,
-    alpha,
-  };
-}
-
-function relativeLuminance(color: CssColor): number {
-  const linear = [color.red, color.green, color.blue].map((channel) => {
-    const normalized = channel / 255;
-    return normalized <= 0.04045
-      ? normalized / 12.92
-      : ((normalized + 0.055) / 1.055) ** 2.4;
-  });
-  return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2];
-}
-
 async function expectReadableContrast(element: Locator) {
   await expect.poll(async () => element.evaluate((node) => {
-    const foreground = parseCssColors(getComputedStyle(node).color)[0];
+    type Color = { red: number; green: number; blue: number; alpha: number };
+
+    const parseColors = (value: string): Color[] => {
+      const colors: Color[] = [];
+      for (const match of value.matchAll(/rgba?\(([^)]+)\)/g)) {
+        const parts = match[1].replace(/\//g, " ").match(/[\d.]+%?/g) ?? [];
+        if (parts.length < 3) continue;
+        const channel = (part: string) => {
+          const number = Number.parseFloat(part);
+          return part.endsWith("%") ? number * 2.55 : number;
+        };
+        const alphaPart = parts[3];
+        const alpha = alphaPart === undefined ? 1
+          : alphaPart.endsWith("%") ? Number.parseFloat(alphaPart) / 100
+          : Number.parseFloat(alphaPart);
+        colors.push({
+          red: Math.min(255, Math.max(0, channel(parts[0]))),
+          green: Math.min(255, Math.max(0, channel(parts[1]))),
+          blue: Math.min(255, Math.max(0, channel(parts[2]))),
+          alpha: Math.min(1, Math.max(0, alpha)),
+        });
+      }
+      return colors;
+    };
+
+    const parseHex = (value: string): Color | null => {
+      const match = value.trim().match(/^#([\da-f]{3}|[\da-f]{6})$/i);
+      if (!match) return null;
+      const hex = match[1].length === 3
+        ? match[1].split("").map((part) => part + part).join("")
+        : match[1];
+      return {
+        red: Number.parseInt(hex.slice(0, 2), 16),
+        green: Number.parseInt(hex.slice(2, 4), 16),
+        blue: Number.parseInt(hex.slice(4, 6), 16),
+        alpha: 1,
+      };
+    };
+
+    const composite = (foreground: Color, background: Color): Color => {
+      const alpha = foreground.alpha + background.alpha * (1 - foreground.alpha);
+      if (alpha === 0) return { red: 0, green: 0, blue: 0, alpha: 0 };
+      return {
+        red: (foreground.red * foreground.alpha + background.red * background.alpha * (1 - foreground.alpha)) / alpha,
+        green: (foreground.green * foreground.alpha + background.green * background.alpha * (1 - foreground.alpha)) / alpha,
+        blue: (foreground.blue * foreground.alpha + background.blue * background.alpha * (1 - foreground.alpha)) / alpha,
+        alpha,
+      };
+    };
+
+    const luminance = (color: Color) => {
+      const channels = [color.red, color.green, color.blue].map((channel) => {
+        const normalized = channel / 255;
+        return normalized <= 0.04045
+          ? normalized / 12.92
+          : ((normalized + 0.055) / 1.055) ** 2.4;
+      });
+      return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
+    };
+
+    const foreground = parseColors(getComputedStyle(node).color)[0];
     if (!foreground) return -1;
 
-    const root = getComputedStyle(document.documentElement);
-    const themeBackground = parseHexColor(root.getPropertyValue("--background"));
-    const layers: CssColor[] = themeBackground ? [themeBackground] : [];
-
+    const rootStyle = getComputedStyle(document.documentElement);
+    const themeBackground = parseHex(rootStyle.getPropertyValue("--background"));
+    const layers: Color[] = themeBackground ? [themeBackground] : [];
     const ancestors: HTMLElement[] = [];
+
     for (let current = node as HTMLElement | null; current; current = current.parentElement) {
       ancestors.push(current);
     }
 
     for (const current of ancestors.reverse()) {
       const style = getComputedStyle(current);
-      layers.push(...parseCssColors(style.backgroundColor));
-      layers.push(...parseCssColors(style.backgroundImage));
+      layers.push(...parseColors(style.backgroundColor));
+      layers.push(...parseColors(style.backgroundImage));
     }
 
     const opaqueBackgrounds = layers.filter((color) => color.alpha >= 0.999);
     if (opaqueBackgrounds.length === 0) return -1;
 
-    // Include translucent gradient stops composited over each opaque surface
-    // token/stop found on the element and its ancestors.
+    // Test every opaque surface/gradient stop plus translucent stops composited
+    // over each opaque stop, so the assertion measures foreground/background contrast.
     const backgrounds = [...opaqueBackgrounds];
     for (const layer of layers.filter((color) => color.alpha < 0.999)) {
       for (const base of opaqueBackgrounds) backgrounds.push(composite(layer, base));
@@ -94,8 +94,8 @@ async function expectReadableContrast(element: Locator) {
       const visibleForeground = foreground.alpha < 0.999
         ? composite(foreground, background)
         : foreground;
-      const foregroundLuminance = relativeLuminance(visibleForeground);
-      const backgroundLuminance = relativeLuminance(background);
+      const foregroundLuminance = luminance(visibleForeground);
+      const backgroundLuminance = luminance(background);
       const lighter = Math.max(foregroundLuminance, backgroundLuminance);
       const darker = Math.min(foregroundLuminance, backgroundLuminance);
       return (lighter + 0.05) / (darker + 0.05);
@@ -130,7 +130,7 @@ test.describe("Credi unified portal", () => {
     await expectReadableContrast(footerTitle);
 
     await page.goto("/social");
-    const wallTitle = page.getByRole("heading", { name: /Tu comunidad\\. Tus ideas\\. Nuevas oportunidades\\./i });
+    const wallTitle = page.getByRole("heading", { name: /Tu comunidad\. Tus ideas\. Nuevas oportunidades\./i });
     await expect(wallTitle).toBeVisible();
     await expectReadableContrast(wallTitle);
   });
@@ -151,7 +151,7 @@ test.describe("Credi unified portal", () => {
     const actualPaths = await menu.locator("a[href]").evaluateAll((links) =>
       links.map((link) => new URL((link as HTMLAnchorElement).href).pathname),
     );
-    for (const href of requiredPaths) expect(actualPaths, `Missing menu destination: ${href}`).toContain(href);
+    for (const href of requiredPaths) expect(actualPaths, \`Missing menu destination: \${href}\`).toContain(href);
   });
 
   test("home exposes the canonical portal navigation", async ({ page }) => {
@@ -164,7 +164,7 @@ test.describe("Credi unified portal", () => {
 
   test("free is a hub inside the same portal", async ({ page }) => {
     await page.goto("/free");
-    await expect(page).toHaveURL(/\\/free$/);
+    await expect(page).toHaveURL(/\/free$/);
     await expect(page.getByRole("heading", { name: /Un solo lugar para descubrir/i })).toBeVisible();
     await expect(page.getByRole("link", { name: /Entrar al Muro/i })).toBeVisible();
     await expect(page.getByRole("link", { name: /Explorar Marketplace/i })).toBeVisible();
@@ -201,7 +201,7 @@ test.describe("Credi unified portal", () => {
 
   test("wall keeps social and commerce navigation connected", async ({ page }) => {
     await page.goto("/social");
-    await expect(page.getByRole("heading", { name: /Tu comunidad\\. Tus ideas\\. Nuevas oportunidades\\./i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Tu comunidad\. Tus ideas\. Nuevas oportunidades\./i })).toBeVisible();
     const nav = page.getByRole("navigation", { name: "Navegación principal" });
     await expect(nav.getByRole("link", { name: "Marketplace", exact: true })).toBeVisible();
     await expect(nav.getByRole("link", { name: "Free", exact: true })).toBeVisible();
