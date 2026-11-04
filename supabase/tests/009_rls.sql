@@ -7,7 +7,7 @@ DO $$
 DECLARE
   v_expected text[] := ARRAY[
     'profiles', 'stores', 'products', 'orders', 'order_items',
-    'payment_methods', 'payment_orchestrations'
+    'payment_methods', 'payment_orchestrations', 'listing_offers'
   ];
   v_found integer;
   v_enabled integer;
@@ -66,6 +66,18 @@ VALUES
   ('40000000-0000-4000-8000-000000000002', '30000000-0000-4000-8000-000000000002', 'RLS Private Product B', 'rls-private-product-b', 12, 2, false),
   ('40000000-0000-4000-8000-000000000003', '30000000-0000-4000-8000-000000000002', 'RLS Public Product B', 'rls-public-product-b', 14, 4, true);
 
+INSERT INTO public.listings (id, seller_id, title, description, category_slug, status, moderation_status)
+VALUES
+  ('80000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000001', 'RLS Private Listing A', 'Synthetic RLS fixture', 'rls-fixture', 'draft', 'pending'),
+  ('80000000-0000-4000-8000-000000000002', '20000000-0000-4000-8000-000000000002', 'RLS Public Listing B', 'Synthetic RLS fixture', 'rls-fixture', 'published', 'approved');
+
+INSERT INTO public.listing_offers (
+  id, listing_id, seller_id, title, offer_price, currency, starts_at, ends_at, status
+)
+VALUES
+  ('81000000-0000-4000-8000-000000000001', '80000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000001', 'RLS Private Offer A', 9, 'USD', now(), now() + interval '1 day', 'paused'),
+  ('81000000-0000-4000-8000-000000000002', '80000000-0000-4000-8000-000000000002', '20000000-0000-4000-8000-000000000002', 'RLS Public Offer B', 11, 'USD', now() - interval '1 hour', now() + interval '1 day', 'active');
+
 INSERT INTO public.orders (id, buyer_id, total_amount)
 VALUES
   ('50000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000001', 10),
@@ -103,6 +115,11 @@ BEGIN
   SELECT count(*) INTO v_count FROM public.stores WHERE id = '30000000-0000-4000-8000-000000000001';
   IF v_count <> 0 THEN RAISE EXCEPTION 'anon must not read the unverified private store'; END IF;
 
+  SELECT count(*) INTO v_count FROM public.listing_offers WHERE id = '81000000-0000-4000-8000-000000000002';
+  IF v_count <> 1 THEN RAISE EXCEPTION 'anon must read the active public listing offer'; END IF;
+  SELECT count(*) INTO v_count FROM public.listing_offers WHERE id = '81000000-0000-4000-8000-000000000001';
+  IF v_count <> 0 THEN RAISE EXCEPTION 'anon must not read a paused private listing offer'; END IF;
+
   v_count := 0;
   BEGIN
     SELECT count(*) INTO v_count FROM public.profiles;
@@ -117,6 +134,13 @@ BEGIN
     RAISE EXCEPTION 'anon unexpectedly inserted a payment method';
   EXCEPTION WHEN insufficient_privilege THEN
     NULL;
+  END;
+
+  BEGIN
+    INSERT INTO public.listing_offers (listing_id, seller_id, title, offer_price, ends_at)
+    VALUES ('80000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000001', 'Anon must not insert', 8, now() + interval '1 day');
+    RAISE EXCEPTION 'anon unexpectedly inserted a listing offer';
+  EXCEPTION WHEN insufficient_privilege THEN NULL;
   END;
 END $$;
 RESET ROLE;
@@ -141,6 +165,39 @@ BEGIN
   IF v_count <> 1 THEN RAISE EXCEPTION 'user A must read their own inactive product'; END IF;
   SELECT count(*) INTO v_count FROM public.products WHERE id = '40000000-0000-4000-8000-000000000002';
   IF v_count <> 0 THEN RAISE EXCEPTION 'user A must not read user B private product'; END IF;
+
+  SELECT count(*) INTO v_count FROM public.listing_offers WHERE id = '81000000-0000-4000-8000-000000000001';
+  IF v_count <> 1 THEN RAISE EXCEPTION 'user A must read their own paused listing offer'; END IF;
+  SELECT count(*) INTO v_count FROM public.listing_offers WHERE id = '81000000-0000-4000-8000-000000000002';
+  IF v_count <> 1 THEN RAISE EXCEPTION 'user A must read the active public listing offer'; END IF;
+
+  UPDATE public.listing_offers SET offer_price = offer_price + 1
+  WHERE id = '81000000-0000-4000-8000-000000000001';
+  GET DIAGNOSTICS v_rows = ROW_COUNT;
+  IF v_rows <> 1 THEN RAISE EXCEPTION 'user A must update their own listing offer'; END IF;
+
+  UPDATE public.listing_offers SET offer_price = offer_price + 1
+  WHERE id = '81000000-0000-4000-8000-000000000002';
+  GET DIAGNOSTICS v_rows = ROW_COUNT;
+  IF v_rows <> 0 THEN RAISE EXCEPTION 'user A must not update user B listing offer'; END IF;
+
+  INSERT INTO public.listing_offers (id, listing_id, seller_id, title, offer_price, ends_at)
+  VALUES ('81000000-0000-4000-8000-000000000003', '80000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000001', 'RLS Owner Insert', 7, now() + interval '1 day');
+
+  BEGIN
+    INSERT INTO public.listing_offers (listing_id, seller_id, title, offer_price, ends_at)
+    VALUES ('80000000-0000-4000-8000-000000000002', '20000000-0000-4000-8000-000000000002', 'RLS Foreign Insert Denied', 7, now() + interval '1 day');
+    RAISE EXCEPTION 'user A unexpectedly inserted a listing offer for user B';
+  EXCEPTION WHEN insufficient_privilege THEN NULL;
+  END;
+
+  DELETE FROM public.listing_offers WHERE id = '81000000-0000-4000-8000-000000000003';
+  GET DIAGNOSTICS v_rows = ROW_COUNT;
+  IF v_rows <> 1 THEN RAISE EXCEPTION 'user A must delete their own listing offer'; END IF;
+
+  DELETE FROM public.listing_offers WHERE id = '81000000-0000-4000-8000-000000000002';
+  GET DIAGNOSTICS v_rows = ROW_COUNT;
+  IF v_rows <> 0 THEN RAISE EXCEPTION 'user A must not delete user B listing offer'; END IF;
 
   SELECT count(*) INTO v_count FROM public.orders WHERE id = '50000000-0000-4000-8000-000000000001';
   IF v_count <> 1 THEN RAISE EXCEPTION 'user A must read their own order'; END IF;
@@ -242,6 +299,23 @@ BEGIN
   SELECT count(*) INTO v_count FROM public.products WHERE id = '40000000-0000-4000-8000-000000000001';
   IF v_count <> 0 THEN RAISE EXCEPTION 'user B must not read user A private product'; END IF;
 
+  SELECT count(*) INTO v_count FROM public.listing_offers WHERE id = '81000000-0000-4000-8000-000000000001';
+  IF v_count <> 0 THEN RAISE EXCEPTION 'user B must not read user A paused listing offer'; END IF;
+  SELECT count(*) INTO v_count FROM public.listing_offers WHERE id = '81000000-0000-4000-8000-000000000002';
+  IF v_count <> 1 THEN RAISE EXCEPTION 'user B must read their active listing offer'; END IF;
+
+  UPDATE public.listing_offers SET offer_price = offer_price + 1
+  WHERE id = '81000000-0000-4000-8000-000000000001';
+  GET DIAGNOSTICS v_rows = ROW_COUNT;
+  IF v_rows <> 0 THEN RAISE EXCEPTION 'user B must not update user A listing offer'; END IF;
+
+  BEGIN
+    INSERT INTO public.listing_offers (listing_id, seller_id, title, offer_price, ends_at)
+    VALUES ('80000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000001', 'RLS Foreign Insert Denied B', 7, now() + interval '1 day');
+    RAISE EXCEPTION 'user B unexpectedly inserted a listing offer for user A';
+  EXCEPTION WHEN insufficient_privilege THEN NULL;
+  END;
+
   SELECT count(*) INTO v_count FROM public.orders WHERE id = '50000000-0000-4000-8000-000000000002';
   IF v_count <> 1 THEN RAISE EXCEPTION 'user B must read their own order'; END IF;
   SELECT count(*) INTO v_count FROM public.orders WHERE id = '50000000-0000-4000-8000-000000000001';
@@ -287,6 +361,11 @@ BEGIN
     '70000000-0000-4000-8000-000000000001', '70000000-0000-4000-8000-000000000002'
   );
   IF v_count <> 2 THEN RAISE EXCEPTION 'service_role must read both payment orchestrations'; END IF;
+
+  SELECT count(*) INTO v_count FROM public.listing_offers WHERE id IN (
+    '81000000-0000-4000-8000-000000000001', '81000000-0000-4000-8000-000000000002'
+  );
+  IF v_count <> 2 THEN RAISE EXCEPTION 'service_role must read both listing offers'; END IF;
 END $$;
 RESET ROLE;
 
