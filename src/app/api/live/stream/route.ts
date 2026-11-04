@@ -54,7 +54,7 @@ export async function POST(request: Request) {
   const { roomId, action } = parsed.data
   const { data: room } = await supabase
     .from('chat_live_rooms')
-    .select('id,title,status,host_user_id,metadata,started_at,ended_at')
+    .select('id,title,status,host_user_id,metadata,started_at,ended_at,replay_url')
     .eq('id', roomId)
     .eq('host_user_id', user.id)
     .maybeSingle()
@@ -133,12 +133,7 @@ export async function POST(request: Request) {
           inputId: metadata.cloudflare_replay_input_id || null,
           videoId: metadata.cloudflare_replay_video_id || null,
           createdAt: metadata.cloudflare_replay_created_at || null,
-          playbackUrl: room.status === 'ended' ? (await supabase
-            .from('chat_live_rooms')
-            .select('replay_url')
-            .eq('id', room.id)
-            .eq('host_user_id', user.id)
-            .maybeSingle()).data?.replay_url || null : null,
+          playbackUrl: room.status === 'ended' ? room.replay_url || null : null,
           checkedAt: metadata.cloudflare_replay_last_checked_at || null,
         },
       }, { headers: { 'Cache-Control': 'private, no-store' } })
