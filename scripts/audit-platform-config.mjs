@@ -48,7 +48,13 @@ const requiredWorkflowFiles = [
 for (const file of requiredWorkflowFiles) readRequired(file);
 
 assert(vercel.framework === "nextjs", "Vercel framework must remain nextjs");
-assert(vercel.installCommand === "npm ci", "Vercel install command must use the lockfile via npm ci");
+const vercelInstallCommand = String(vercel.installCommand ?? "").trim();
+const usesNpmCi = /(?:^|\\s)npm\\s+ci(?:\\s|$)/.test(vercelInstallCommand);
+const usesAlternativePackageInstaller = /(?:^|\\s)(?:npm\\s+install|pnpm|yarn)(?:\\s|$)/.test(vercelInstallCommand);
+assert(
+  usesNpmCi && !usesAlternativePackageInstaller,
+  "Vercel install command must use npm ci with the committed lockfile; safe environment cleanup prefixes are allowed",
+);
 assert(vercel.buildCommand === "npm run build", "Vercel build command must call the canonical build script");
 assert(vercel.ignoreCommand === "node scripts/vercel-ignore-build.mjs", "Vercel ignoreCommand must reference the tracked ignore script");
 assert(ignoreBuild.includes('path.startsWith("scripts/")'), "Vercel should skip CI/tooling script-only changes instead of rebuilding the application");
