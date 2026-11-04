@@ -160,7 +160,7 @@ export async function POST(request: Request) {
           : {}),
       }
       const updates: Record<string, unknown> = { metadata: nextMetadata }
-      if (replay.state === 'ready') updates.replay_url = replay.playbackUrl
+      updates.replay_url = replay.state === 'ready' ? replay.playbackUrl : null
       const { error } = await supabase.from('chat_live_rooms').update(updates).eq('id', room.id).eq('host_user_id', user.id)
       if (error) return errorResponse('La grabación se detectó, pero no se pudo sincronizar con la sala.', 500, 'LIVE_REPLAY_SYNC_FAILED')
 
