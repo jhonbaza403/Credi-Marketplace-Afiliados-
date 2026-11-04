@@ -65,12 +65,20 @@ function isDevelopmentHost(hostname: string): boolean {
   return hostname === "localhost" || hostname === "127.0.0.1";
 }
 
+function isVercelPreviewHost(hostname: string): boolean {
+  return process.env.VERCEL_ENV === "preview" && hostname.endsWith(".vercel.app");
+}
+
 function redirectToCanonicalHost(request: NextRequest): NextResponse | null {
   if (process.env.NODE_ENV !== "production") return null;
 
   const requestHost = request.nextUrl.hostname.toLowerCase();
   const canonicalHost = new URL(CANONICAL_APP_URL).hostname.toLowerCase();
-  if (isDevelopmentHost(requestHost) || requestHost === canonicalHost) return null;
+  if (
+    isDevelopmentHost(requestHost) ||
+    requestHost === canonicalHost ||
+    isVercelPreviewHost(requestHost)
+  ) return null;
 
   const canonicalUrl = new URL(CANONICAL_APP_URL);
   canonicalUrl.pathname = request.nextUrl.pathname;
