@@ -100,32 +100,37 @@ export default function RegisterPage() {
     }
 
     startTransition(async () => {
-      const supabase = createClient();
-      const { data, error: signUpError } = await supabase.auth.signUp({
-        email: normalizedEmail,
-        password,
-        options: { data: { full_name: name, requested_role: role, phone_e164: normalizedPhone } }
-      });
+      try {
+        const supabase = createClient();
+        const { data, error: signUpError } = await supabase.auth.signUp({
+          email: normalizedEmail,
+          password,
+          options: { data: { full_name: name, requested_role: role, phone_e164: normalizedPhone } }
+        });
 
-      if (signUpError) {
-        setError(getSignupErrorMessage(signUpError));
-        return;
+        if (signUpError) {
+          setError(getSignupErrorMessage(signUpError));
+          return;
+        }
+
+        if (!data.user) {
+          setError("No recibimos la confirmación de creación de la cuenta. No se inició sesión; inténtalo nuevamente.");
+          return;
+        }
+
+        // The auth.users trigger creates the profile and stores phone_e164 in the
+        // same transaction. Do not perform a second client-side profile write here.
+        if (!data.session) {
+          router.push(`/verify?email=${encodeURIComponent(normalizedEmail)}`);
+          return;
+        }
+
+        router.replace("/dashboard");
+        router.refresh();
+      } catch (caught: unknown) {
+        console.error("[register] Supabase sign-up request failed", caught);
+        setError(getSignupErrorMessage(caught));
       }
-
-      if (!data.user) {
-        setError("No recibimos la confirmación de creación de la cuenta. No se inició sesión; inténtalo nuevamente.");
-        return;
-      }
-
-      // The auth.users trigger creates the profile and stores phone_e164 in the
-      // same transaction. Do not perform a second client-side profile write here.
-      if (!data.session) {
-        router.push(`/verify?email=${encodeURIComponent(normalizedEmail)}`);
-        return;
-      }
-
-      router.replace("/dashboard");
-      router.refresh();
     });
   }
 
