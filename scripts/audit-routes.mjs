@@ -124,7 +124,18 @@ for (const file of source) {
       continue
     }
 
-    const entry = [...routes.entries()].find(([r]) => matches(route, r))
+    // Prefer the most specific matching route before a dynamic segment.
+    // Example: /api/jobs/profile must match the literal profile route, not
+    // /api/jobs/[jobId], which otherwise accepts any third path segment.
+    const entry = [...routes.entries()]
+      .filter(([candidate]) => matches(route, candidate))
+      .sort(([left], [right]) => {
+        const dynamicSegments = (candidate) =>
+          candidate.split('/').filter((segment) => segment.startsWith('[') && segment.endsWith(']')).length
+        const dynamicDifference = dynamicSegments(left) - dynamicSegments(right)
+        if (dynamicDifference !== 0) return dynamicDifference
+        return right.length - left.length
+      })[0]
     if (!entry) missing.push({ route, file: relativeFile })
     else if (!METHODS.has(method) || !entry[1].includes(method)) {
       mismatches.push({ route, method, allowed: entry[1], file: relativeFile })

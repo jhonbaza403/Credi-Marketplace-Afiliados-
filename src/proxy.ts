@@ -22,6 +22,7 @@ const PUBLIC_PREFIXES = [
   "/seller",
   "/search",
   "/social",
+  "/jobs",
   "/free",
   "/magazines",
   "/videos",
@@ -64,12 +65,20 @@ function isDevelopmentHost(hostname: string): boolean {
   return hostname === "localhost" || hostname === "127.0.0.1";
 }
 
+function isVercelPreviewHost(hostname: string): boolean {
+  return process.env.VERCEL_ENV === "preview" && hostname.endsWith(".vercel.app");
+}
+
 function redirectToCanonicalHost(request: NextRequest): NextResponse | null {
   if (process.env.NODE_ENV !== "production") return null;
 
   const requestHost = request.nextUrl.hostname.toLowerCase();
   const canonicalHost = new URL(CANONICAL_APP_URL).hostname.toLowerCase();
-  if (isDevelopmentHost(requestHost) || requestHost === canonicalHost) return null;
+  if (
+    isDevelopmentHost(requestHost) ||
+    requestHost === canonicalHost ||
+    isVercelPreviewHost(requestHost)
+  ) return null;
 
   const canonicalUrl = new URL(CANONICAL_APP_URL);
   canonicalUrl.pathname = request.nextUrl.pathname;
@@ -129,7 +138,6 @@ export async function proxy(request: NextRequest) {
   const canonicalAliases: Record<string, string> = {
     "/explorar": "/marketplace",
     "/servicios": "/services",
-    "/jobs": "/services",
     "/seller/b2b": "/b2b",
   };
   const aliasTarget = canonicalAliases[pathname];
@@ -225,8 +233,18 @@ export async function proxy(request: NextRequest) {
     response.headers.set("X-Request-ID", requestId);
     return response;
   } catch (error) {
-    console.error("[proxy] Access check failed", error);
-    return copySessionCookies(response, buildSecurityRedirect(request, "mfa"));
+    // An authorization service failure is not evidence that MFA is missing.
+    // Fail closed with a retryable infrastructure response instead of a misleading setup redirect.
+    console.error("[proxy] Access check unavailable", error);
+    const unavailable = new NextResponse("El servicio de verificación de acceso no está disponible. Inténtalo nuevamente.", {
+      status: 503,
+      headers: {
+        "Cache-Control": "no-store",
+        "Retry-After": "30",
+        "X-Request-ID": requestId,
+      },
+    });
+    return copySessionCookies(response, unavailable);
   }
 }
 

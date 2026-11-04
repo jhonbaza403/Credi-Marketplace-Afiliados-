@@ -13,6 +13,7 @@ import {
   Users,
 } from "lucide-react";
 import DomainBridge from "@/components/portal/DomainBridge";
+import CrediServicePortalNav from '@/components/portal/CrediServicePortalNav'
 import ProductCard from "@/features/marketplace/components/ProductCard";
 import { getProducts } from "@/lib/database/queries";
 import type { Product } from "@/types/product";
@@ -97,6 +98,7 @@ export default async function MarketplacePage() {
     <main className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
       <div className="mx-auto w-full max-w-[1600px] px-4 py-5 sm:px-6 lg:px-8 lg:py-8">
         <DomainBridge context="marketplace" />
+        <CrediServicePortalNav />
 
         <section className="relative isolate overflow-hidden rounded-[2rem] border border-cyan-300/15 bg-[linear-gradient(120deg,#071629_0%,#10284b_52%,#271447_100%)] px-5 py-8 text-white shadow-[0_28px_90px_rgba(2,8,28,.28)] sm:px-9 sm:py-11 lg:px-12">
           <div aria-hidden="true" className="pointer-events-none absolute -right-16 -top-24 size-80 rounded-full bg-cyan-300/15 blur-3xl" />

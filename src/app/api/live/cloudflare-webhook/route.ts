@@ -1,49 +1,118 @@
 import { NextResponse } from 'next/server'
-import crypto from 'node:crypto'
-import { createClient } from '@/lib/supabase/server'
-import { listInputVideos } from '@/lib/cloudflare/stream'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { syncLatestReplay } from '@/lib/cloudflare/stream'
+import { parseCloudflareLiveWebhook, verifyCloudflareWebhookSignature } from '@/lib/cloudflare/webhook'
 
-export const runtime='nodejs'
-export const dynamic='force-dynamic'
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
 
-function verify(body:string,header:string|null,secret:string){
-  if(!header)return false
-  const values=Object.fromEntries(header.split(',').map(part=>{const [key,value]=part.split('=',2);return [key,value]}))
-  const timestamp=Number(values.time)
-  const signature=values.sig1
-  if(!timestamp||!signature||Math.abs(Date.now()/1000-timestamp)>300)return false
-  const expected=crypto.createHmac('sha256',secret).update(`${timestamp}.${body}`,'utf8').digest('hex')
-  const a=Buffer.from(expected,'hex');const b=Buffer.from(signature,'hex')
-  return a.length===b.length&&crypto.timingSafeEqual(a,b)
+type RecordedEvent = {
+  type: 'live_input.connected' | 'live_input.disconnected' | 'live_input.errored'
+  inputId: string
+  occurredAt: string
 }
 
-export async function POST(request:Request){
-  const secret=process.env.CLOUDFLARE_STREAM_WEBHOOK_SECRET
-  if(!secret)return NextResponse.json({success:false,error:'Webhook no configurado.'},{status:503})
-  const body=await request.text()
-  if(!verify(body,request.headers.get('Webhook-Signature'),secret))return NextResponse.json({success:false,error:'Firma inválida.'},{status:403})
-  const payload=JSON.parse(body) as {data?:{input_id?:string;event_type?:string;updated_at?:string;live_input_errored?:{error?:{code?:string;message?:string}}}}
-  const inputId=payload.data?.input_id
-  const eventType=payload.data?.event_type
-  if(!inputId||!eventType)return NextResponse.json({success:true,ignored:true})
-  const supabase=await createClient()
-  const {data:rooms}=await supabase.from('chat_live_rooms').select('id,metadata,status').contains('metadata',{cloudflare_live_input_id:inputId}).limit(1)
-  const room=rooms?.[0]
-  if(!room)return NextResponse.json({success:true,ignored:true})
-  const metadata=(room.metadata&&typeof room.metadata==='object'?room.metadata:{}) as Record<string,unknown>
-  const next: Record<string, unknown> = {...metadata,cloudflare_last_event:eventType,cloudflare_last_event_at:payload.data?.updated_at||new Date().toISOString()}
-  const updates:{metadata:Record<string,unknown>;status?:string;ended_at?:string;replay_url?:string}={metadata:next}
-  if(eventType==='live_input.connected')updates.status='live'
-  if(eventType==='live_input.disconnected'){
-    updates.status='ended';updates.ended_at=payload.data?.updated_at||new Date().toISOString()
-    try{
-      const videos=await listInputVideos(inputId)
-      const ready=videos.filter(video=>video.readyToStream||video.status?.state==='ready').at(0)
-      if(ready){updates.replay_url=`https://videodelivery.net/${ready.uid}/manifest/video.m3u8`;next.cloudflare_replay_video_id=ready.uid}
-    }catch{ /* replay lookup is retried by the next synchronization */ }
+export async function POST(request: Request) {
+  const secret = process.env.CLOUDFLARE_STREAM_WEBHOOK_SECRET
+  if (!secret) return NextResponse.json({ success: false, error: 'Webhook no configurado.' }, { status: 503 })
+
+  const body = await request.text()
+  if (!verifyCloudflareWebhookSignature(body, request.headers, secret)) {
+    return NextResponse.json({ success: false, error: 'Firma inválida.' }, { status: 403 })
   }
-  if(eventType==='live_input.errored')next.cloudflare_last_error=payload.data?.live_input_errored?.error||null
-  const {error}=await supabase.from('chat_live_rooms').update(updates).eq('id',room.id)
-  if(error)return NextResponse.json({success:false,error:'No fue posible actualizar la sala.'},{status:500})
-  return NextResponse.json({success:true})
+
+  const event = parseCloudflareLiveWebhook(body)
+  if (!event) return NextResponse.json({ success: true, ignored: true, reason: 'unsupported_or_invalid_payload' })
+
+  const supabase = createAdminClient()
+  const { data: rooms, error: lookupError } = await supabase
+    .from('chat_live_rooms')
+    .select('id,metadata,status,started_at')
+    .contains('metadata', { cloudflare_live_input_id: event.inputId })
+    .limit(1)
+
+  if (lookupError) return NextResponse.json({ success: false, error: 'No fue posible localizar la sala LIVE.' }, { status: 500 })
+  const room = rooms?.[0]
+  if (!room) return NextResponse.json({ success: true, ignored: true, reason: 'input_not_linked' })
+
+  const metadata = (room.metadata && typeof room.metadata === 'object' ? room.metadata : {}) as Record<string, unknown>
+  const previousState = typeof metadata.transport_state === 'string' ? metadata.transport_state : 'unknown'
+  const history = Array.isArray(metadata.cloudflare_event_history)
+    ? metadata.cloudflare_event_history as RecordedEvent[]
+    : []
+
+  const duplicate = history.some((item) =>
+    item.type === event.eventType && item.inputId === event.inputId && item.occurredAt === event.occurredAt,
+  )
+  if (duplicate) return NextResponse.json({ success: true, duplicate: true })
+
+  const eventRecord: RecordedEvent = {
+    type: event.eventType,
+    inputId: event.inputId,
+    occurredAt: event.occurredAt,
+  }
+  const next: Record<string, unknown> = {
+    ...metadata,
+    cloudflare_last_event: event.eventType,
+    cloudflare_last_event_at: event.occurredAt,
+    cloudflare_event_history: [...history, eventRecord].slice(-40),
+  }
+  const updates: Record<string, unknown> = { metadata: next }
+
+  if (event.eventType === 'live_input.connected') {
+    const isReconnect = ['disconnected', 'error', 'recovering'].includes(previousState) || room.status === 'ended'
+    const broadcastStartedAt = isReconnect
+      ? event.occurredAt
+      : (typeof metadata.cloudflare_current_broadcast_started_at === 'string'
+          ? metadata.cloudflare_current_broadcast_started_at
+          : (room.started_at || event.occurredAt))
+
+    updates.status = 'live'
+    updates.started_at = room.started_at || event.occurredAt
+    updates.ended_at = null
+    next.transport_state = 'connected'
+    next.cloudflare_current_broadcast_started_at = broadcastStartedAt
+    next.cloudflare_last_error = null
+    next.cloudflare_replay_sync_state = 'pending'
+    next.cloudflare_replay_video_id = null
+    next.cloudflare_replay_input_id = null
+    next.cloudflare_replay_created_at = null
+    next.cloudflare_replay_dash_url = null
+    updates.replay_url = null
+  } else if (event.eventType === 'live_input.disconnected') {
+    const broadcastStartedAt = typeof metadata.cloudflare_current_broadcast_started_at === 'string'
+      ? metadata.cloudflare_current_broadcast_started_at
+      : (room.started_at || String(metadata.cloudflare_input_created_at || ''))
+
+    updates.status = 'ended'
+    updates.ended_at = event.occurredAt
+    next.transport_state = 'disconnected'
+    next.cloudflare_replay_sync_state = 'pending'
+    next.cloudflare_last_disconnected_at = event.occurredAt
+
+    try {
+      const replay = await syncLatestReplay(event.inputId, broadcastStartedAt, event.occurredAt)
+      next.cloudflare_replay_sync_state = replay.state
+      next.cloudflare_replay_last_checked_at = new Date().toISOString()
+      if (replay.videoId) {
+        next.cloudflare_replay_video_id = replay.videoId
+        next.cloudflare_replay_input_id = replay.inputId
+      }
+      if (replay.state === 'ready') {
+        next.cloudflare_replay_created_at = replay.createdAt
+        next.cloudflare_replay_dash_url = replay.dashUrl
+        updates.replay_url = replay.playbackUrl
+      }
+    } catch {
+      next.cloudflare_replay_sync_state = 'retry_required'
+      next.cloudflare_replay_last_checked_at = new Date().toISOString()
+    }
+  } else if (event.eventType === 'live_input.errored') {
+    next.transport_state = 'error'
+    next.cloudflare_last_error = event.error
+  }
+
+  const { error } = await supabase.from('chat_live_rooms').update(updates).eq('id', room.id)
+  if (error) return NextResponse.json({ success: false, error: 'No fue posible actualizar la sala.' }, { status: 500 })
+  return NextResponse.json({ success: true })
 }

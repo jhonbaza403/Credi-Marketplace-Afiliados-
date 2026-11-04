@@ -17,6 +17,25 @@ function walk(dir,out=[]){
 }
 function routeOf(file){return "/api/"+path.relative(APP,path.dirname(file)).replaceAll("\\","/");}
 
+const agentRoutePath=path.join(APP,"ai","agent","route.ts");
+const agentRouteSource=fs.readFileSync(agentRoutePath,"utf8");
+const approvalHelperPath=path.join(ROOT,"src","lib","ai","agent-approval.ts");
+const approvalHelperSource=fs.readFileSync(approvalHelperPath,"utf8");
+
+if(agentRouteSource.includes("body.approved") || agentRouteSource.includes("canAgentExecute(")) {
+  throw new Error("Credi AI must not use a client-controlled approved flag to authorize writes.");
+}
+if(!agentRouteSource.includes("verifyAgentApprovalToken(") ||
+   !agentRouteSource.includes(".eq('status','proposed')")) {
+  throw new Error("Credi AI write operations must validate a signed token against a pending server audit proposal.");
+}
+if(approvalHelperSource.includes("new Set(['approved'") || approvalHelperSource.includes('new Set(["approved"')) {
+  throw new Error("The reviewed payload hash must bind any legacy approved field instead of excluding it.");
+}
+if(!agentRouteSource.includes("isAgentPaymentWithinLimit(amount,AGENT_MAX_PAYMENT_AMOUNT)")) {
+  throw new Error("Credi AI payment creation must enforce the validated server-side amount limit.");
+}
+
 const rows=[];
 for(const file of walk(APP)){
   const body=fs.readFileSync(file,"utf8"), route=routeOf(file);

@@ -42,3 +42,60 @@ as $$ begin update public.conversations set updated_at = now() where id = new.co
 
 drop trigger if exists trg_touch_credichat_conversation_on_message on public.messages;
 create trigger trg_touch_credichat_conversation_on_message after insert on public.messages for each row execute function public.touch_credichat_conversation_updated_at();
+
+-- Authorize Credi LIVE private Realtime topics after the chat and room tables exist.
+drop policy if exists credichat_live_broadcast_read on realtime.messages;
+create policy credichat_live_broadcast_read on realtime.messages for select to authenticated using (
+  extension = 'broadcast' and exists (
+    select 1 from public.chat_live_rooms r
+    where r.id = ((regexp_match(realtime.topic(), '^credichat-live-([0-9a-f-]{36})$'))[1])::uuid
+      and r.status = 'live'
+  )
+);
+drop policy if exists credichat_live_broadcast_write on realtime.messages;
+create policy credichat_live_broadcast_write on realtime.messages for insert to authenticated with check (
+  extension = 'broadcast' and exists (
+    select 1 from public.chat_live_rooms r
+    where r.id = ((regexp_match(realtime.topic(), '^credichat-live-([0-9a-f-]{36})$'))[1])::uuid
+      and r.status = 'live'
+  )
+);
+drop policy if exists credichat_live_presence_read on realtime.messages;
+create policy credichat_live_presence_read on realtime.messages for select to authenticated using (
+  extension = 'presence' and exists (
+    select 1 from public.chat_live_rooms r
+    where r.id = ((regexp_match(realtime.topic(), '^credichat-live-([0-9a-f-]{36})$'))[1])::uuid
+      and r.status = 'live'
+  )
+);
+drop policy if exists credichat_live_presence_write on realtime.messages;
+create policy credichat_live_presence_write on realtime.messages for insert to authenticated with check (
+  extension = 'presence' and exists (
+    select 1 from public.chat_live_rooms r
+    where r.id = ((regexp_match(realtime.topic(), '^credichat-live-([0-9a-f-]{36})$'))[1])::uuid
+      and r.status = 'live'
+  )
+);
+
+create or replace function public.broadcast_credichat_live_message()
+returns trigger
+language plpgsql
+security invoker
+set search_path = public
+as $$
+begin
+  perform realtime.broadcast_changes(
+    'credichat-live-' || new.room_id::text,
+    'message',
+    'INSERT',
+    new,
+    null
+  );
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_broadcast_credichat_live_message on public.chat_live_messages;
+create trigger trg_broadcast_credichat_live_message
+after insert on public.chat_live_messages
+for each row execute function public.broadcast_credichat_live_message();

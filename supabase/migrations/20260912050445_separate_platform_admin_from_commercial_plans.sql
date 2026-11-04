@@ -1,3 +1,27 @@
+-- Keep the platform-owner flag independent from commercial plans.
+ALTER TABLE public.profiles
+  ADD COLUMN IF NOT EXISTS platform_owner boolean NOT NULL DEFAULT false;
+
+CREATE OR REPLACE FUNCTION public.prevent_platform_owner_client_change()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $function$
+begin
+  if coalesce(old.platform_owner,false) is distinct from coalesce(new.platform_owner,false)
+     and (select auth.uid()) is not null then
+    raise exception 'PLATFORM_OWNER_IMMUTABLE' using errcode='42501';
+  end if;
+  return new;
+end;
+$function$;
+
+DROP TRIGGER IF EXISTS trg_protect_platform_owner ON public.profiles;
+CREATE TRIGGER trg_protect_platform_owner
+BEFORE UPDATE ON public.profiles
+FOR EACH ROW EXECUTE FUNCTION public.prevent_platform_owner_client_change();
+
 CREATE OR REPLACE FUNCTION public.current_user_plan(p_user_id uuid DEFAULT auth.uid())
 RETURNS TABLE(plan_id uuid, plan_code text, plan_name text, status text, billing_interval text, limits jsonb)
 LANGUAGE sql

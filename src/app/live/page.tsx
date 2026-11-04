@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { BarChart3, CalendarClock, Camera, CircleStop, Eye, Heart, KeyRound, MessageCircle, Package, Play, Radio, ShieldCheck, Sparkles, Users, Video } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import DomainBridge from '@/components/portal/DomainBridge'
+import CrediServicePortalNav from '@/components/portal/CrediServicePortalNav'
 import { CrediLiveChat } from '@/components/live/CrediLiveChat'
 
 type Room={id:string;host_user_id:string;title:string;status:string;viewer_count:number;started_at:string|null;ended_at?:string|null;description:string;cover_media:unknown;scheduled_at:string|null;replay_url:string|null;playback_url:string|null;stream_provider:string;viewer_peak:number;likes_count:number;shares_count:number;settings:Record<string,unknown>}
@@ -153,6 +154,7 @@ export default function LivePage(){
   return <main className="min-h-screen bg-[var(--background)] px-4 py-8 text-[var(--foreground)] sm:px-6 lg:px-8">
     <div className="mx-auto max-w-7xl space-y-7">
       <DomainBridge context="live" />
+        <CrediServicePortalNav />
       <header className="overflow-hidden rounded-[2rem] border border-[var(--border)] bg-[var(--surface)] shadow-2xl">
         <div className="bg-gradient-to-br from-slate-950 via-brand-950 to-cyan-950 px-6 py-10 text-white sm:px-10 sm:py-12">
           <div className="flex flex-col gap-7 lg:flex-row lg:items-end lg:justify-between">

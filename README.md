@@ -1,6 +1,14 @@
 # Credi Marketplace
 
-Plataforma de marketplace orientada a producción para comercio electrónico, vendedores, afiliados empresariales, ofertas, servicios, operaciones B2B, pagos y distribución de publicaciones en redes sociales.
+Red social de comercio, comunidades y oportunidades profesionales: contenido social, mensajería, LIVE, Marketplace B2C/B2B, afiliación y empleo, con inteligencia transversal y accesibilidad gratuita.
+
+## Visión integral del producto
+
+Credi es una **red social de comercio, comunidades y oportunidades profesionales**. Su alcance incluye perfiles y muro social, historias y vídeo, descubrimiento personalizado y controlado por intereses, mensajería instantánea y llamadas, LIVE commerce, Marketplace B2C/B2B, afiliación, empleo y networking profesional, con una experiencia esencial gratuita y privacidad por diseño.
+
+Las fortalezas de plataformas como Facebook, Instagram, TikTok, Telegram, Amazon Business, Alibaba y LinkedIn sirven como referencias de capacidades, no como identidades o implementaciones que deban copiarse. Credi mantiene su propia experiencia, modelo de datos, reglas y arquitectura.
+
+La especificación completa de los pilares, los portales independientes, la evolución por fases y los criterios de terminado se encuentra en [docs/CREDI_PRODUCT_VISION.md](docs/CREDI_PRODUCT_VISION.md). Ningún módulo debe declararse terminado por tener solo una pantalla, una ruta, botones o un build exitoso; debe demostrar recorridos reales, autorización, persistencia, pruebas y verificación. El estado técnico verificable se mantiene en [docs/CREDI_GAP_REGISTER.md](docs/CREDI_GAP_REGISTER.md) y el inventario de rutas en [docs/ROUTE_REGISTRY.md](docs/ROUTE_REGISTRY.md).
 
 ## Identidad y arquitectura canónicas de Credi
 

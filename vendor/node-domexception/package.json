@@ -1,0 +1,9 @@
+{
+  "name": "node-domexception",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./index.js",
+  "exports": "./index.js",
+  "description": "Credi native DOMException compatibility shim for the transitive fetch-blob dependency"
+}
