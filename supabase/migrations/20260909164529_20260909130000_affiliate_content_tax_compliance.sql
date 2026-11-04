@@ -151,10 +151,117 @@ alter table public.advertisements
   add column if not exists moderation_status text not null default 'pending' check (moderation_status in ('pending','approved','rejected','blocked')),
   add column if not exists targeting_country char(2);
 
+-- Restore the base listing relation before its moderation/video extension.
+-- The repository had this ALTER TABLE but no creation migration; the DDL below
+-- is reconstructed from the production PostgreSQL catalog (read-only snapshot).
+CREATE TABLE IF NOT EXISTS public.listings (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  seller_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE RESTRICT,
+  listing_type text NOT NULL DEFAULT 'product',
+  status text NOT NULL DEFAULT 'draft',
+  title text NOT NULL,
+  description text NOT NULL,
+  category_slug text NOT NULL,
+  subcategory_slug text,
+  condition text NOT NULL DEFAULT 'new',
+  price_amount numeric(20,4),
+  currency char(3) NOT NULL DEFAULT 'USD',
+  quantity numeric(20,4) NOT NULL DEFAULT 1,
+  location_country char(2),
+  location_region text,
+  location_city text,
+  attributes jsonb NOT NULL DEFAULT '{}'::jsonb,
+  media jsonb NOT NULL DEFAULT '[]'::jsonb,
+  shipping_options jsonb NOT NULL DEFAULT '[]'::jsonb,
+  service_options jsonb NOT NULL DEFAULT '{}'::jsonb,
+  published_at timestamptz,
+  expires_at timestamptz,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT listings_condition_valid
+    CHECK (condition IN ('new','used','refurbished','open_box','not_applicable')),
+  CONSTRAINT listings_currency_valid
+    CHECK (currency ~ '^[A-Z]{3}
+create index if not exists feed_posts_moderation_idx on public.feed_posts(status, moderation_status, published_at desc);
+create index if not exists stories_moderation_idx on public.stories(visibility, moderation_status, expires_at desc);
+create index if not exists reels_moderation_idx on public.reels(status, moderation_status, published_at desc);
+create index if not exists advertisements_moderation_idx on public.advertisements(status, moderation_status, starts_at desc);
+create index if not exists listings_moderation_idx on public.listings(status, moderation_status, published_at desc);
+
+commit;
+),
+  CONSTRAINT listings_dates_valid
+    CHECK (expires_at IS NULL OR published_at IS NULL OR expires_at > published_at),
+  CONSTRAINT listings_price_valid
+    CHECK (price_amount IS NULL OR price_amount >= 0),
+  CONSTRAINT listings_quantity_valid
+    CHECK (quantity > 0),
+  CONSTRAINT listings_status_valid
+    CHECK (status IN ('draft','pending_review','published','paused','sold','expired','rejected','archived')),
+  CONSTRAINT listings_type_valid
+    CHECK (listing_type IN ('product','service','property','vehicle','classified'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_listings_category_status
+  ON public.listings(category_slug, status);
+CREATE INDEX IF NOT EXISTS idx_listings_published_at
+  ON public.listings(published_at DESC)
+  WHERE status = 'published';
+CREATE INDEX IF NOT EXISTS idx_listings_seller_status
+  ON public.listings(seller_id, status);
+
+CREATE OR REPLACE FUNCTION public.set_listings_updated_at()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path TO ''
+AS $
+BEGIN
+  NEW.updated_at = now();
+  RETURN NEW;
+END;
+$;
+
+DROP TRIGGER IF EXISTS trg_listings_updated_at ON public.listings;
+CREATE TRIGGER trg_listings_updated_at
+BEFORE UPDATE ON public.listings
+FOR EACH ROW EXECUTE FUNCTION public.set_listings_updated_at();
+
 alter table public.listings
   add column if not exists video_media jsonb not null default '[]'::jsonb,
   add column if not exists compliance_country char(2),
   add column if not exists moderation_status text not null default 'pending' check (moderation_status in ('pending','approved','rejected','blocked'));
+
+ALTER TABLE public.listings ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS listings_select_visible_or_own ON public.listings;
+CREATE POLICY listings_select_visible_or_own
+ON public.listings FOR SELECT TO anon, authenticated
+USING (
+  (status = 'published' AND moderation_status = 'approved')
+  OR seller_id = (SELECT auth.uid())
+  OR (SELECT is_admin())
+);
+
+DROP POLICY IF EXISTS listings_owner_insert ON public.listings;
+CREATE POLICY listings_owner_insert
+ON public.listings FOR INSERT TO authenticated
+WITH CHECK (seller_id = (SELECT auth.uid()) OR (SELECT is_admin()));
+
+DROP POLICY IF EXISTS listings_owner_update ON public.listings;
+CREATE POLICY listings_owner_update
+ON public.listings FOR UPDATE TO authenticated
+USING (seller_id = (SELECT auth.uid()) OR (SELECT is_admin()))
+WITH CHECK (seller_id = (SELECT auth.uid()) OR (SELECT is_admin()));
+
+DROP POLICY IF EXISTS listings_owner_delete ON public.listings;
+CREATE POLICY listings_owner_delete
+ON public.listings FOR DELETE TO authenticated
+USING (seller_id = (SELECT auth.uid()) OR (SELECT is_admin()));
+
+REVOKE ALL PRIVILEGES ON TABLE public.listings FROM anon;
+GRANT SELECT ON TABLE public.listings TO anon;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.listings TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.listings TO service_role;
 
 create index if not exists feed_posts_moderation_idx on public.feed_posts(status, moderation_status, published_at desc);
 create index if not exists stories_moderation_idx on public.stories(visibility, moderation_status, expires_at desc);
