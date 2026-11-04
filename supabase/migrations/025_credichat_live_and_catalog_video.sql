@@ -1,0 +1,4 @@
+-- Historical migration marker for the original Credi LIVE baseline (version 025).
+-- Its schema is superseded by 20260910214720_025_credichat_live_and_catalog_video.sql,
+-- which contains the canonical LIVE tables, policies, catalog video field and realtime setup.
+-- Keep this marker so already-deployed remote version 025 remains represented locally.
