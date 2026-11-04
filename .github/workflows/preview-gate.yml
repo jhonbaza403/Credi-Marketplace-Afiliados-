@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
-      - name: Wait for Vercel Preview status
+      - name: Wait for canonical Vercel deployment status
         env:
           GH_TOKEN: ${{ github.token }}
           REPOSITORY: ${{ github.repository }}
@@ -30,41 +30,31 @@ jobs:
 
           for attempt in $(seq 1 24); do
             STATUS_JSON="$(gh api -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2026-03-10' "/repos/${REPOSITORY}/commits/${COMMIT_SHA}/status")"
-            # Provider-family contract: ascii_downcase | startswith("vercel").
-            # The test("^vercel"; "i") guard is followed by an exact canonical
-            # context check so Vercel Deployments summaries cannot masquerade as Preview.
-            VERCEL_STATUS="$(printf '%s' "${STATUS_JSON}" | jq -c --arg canonical_context "Vercel – credi-marketplace-afiliados" '[.statuses[] | select(((.context // "") | test("^vercel"; "i")) and ((((.context // "") | ascii_downcase) == ($canonical_context | ascii_downcase)) or (((.context // "") | ascii_downcase) == "vercel")))] | first // {}')"
+
+            # Provider-family audit contract: ascii_downcase | startswith("vercel").
+            # test("^vercel"; "i") checks the provider prefix, then the exact context
+            # comparison excludes "Vercel Deployments – ..." summary statuses.
+            VERCEL_STATUS="$(printf '%s' "${STATUS_JSON}" | jq -c --arg canonical_context "Vercel – credi-marketplace-afiliados" '[.statuses[] | select(((.context // "") | test("^vercel"; "i")) and ((((.context // "") | ascii_downcase) == ($canonical_context | ascii_downcase)) or (((.context // "") | ascii_downcase) == "vercel")))] | last // {}')"
             STATE="$(printf '%s' "${VERCEL_STATUS}" | jq -r '.state // ""')"
             TARGET="$(printf '%s' "${VERCEL_STATUS}" | jq -r '.target_url // ""')"
             DESCRIPTION="$(printf '%s' "${VERCEL_STATUS}" | jq -r '.description // ""')"
 
-            # Vercel can publish a Check Run instead of a legacy commit status.
-            if [ -z "${STATE}" ] || [ "${STATE}" = "pending" ]; then
-              CHECK_RUNS="$(gh api -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2026-03-10' "/repos/${REPOSITORY}/commits/${COMMIT_SHA}/check-runs")"
-              VERCEL_CHECK="$(printf '%s' "${CHECK_RUNS}" | jq -c '[.check_runs[] | select((((.app.slug // "") | ascii_downcase) | contains("vercel")) and (((.app.slug // "") | ascii_downcase) != "github-actions"))] | sort_by(.completed_at // .started_at // "") | last // {}')"
-              CHECK_STATUS="$(printf '%s' "${VERCEL_CHECK}" | jq -r '.status // ""')"
-              CHECK_CONCLUSION="$(printf '%s' "${VERCEL_CHECK}" | jq -r '.conclusion // ""')"
-              CHECK_URL="$(printf '%s' "${VERCEL_CHECK}" | jq -r '.html_url // ""')"
-              CHECK_NAME="$(printf '%s' "${VERCEL_CHECK}" | jq -r '.name // ""')"
+            # Read Vercel Check Runs for failure diagnostics only. A successful
+            # "Vercel Preview Comments" check is not proof of an application deployment.
+            CHECK_RUNS="$(gh api -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2026-03-10' "/repos/${REPOSITORY}/commits/${COMMIT_SHA}/check-runs")"
+            VERCEL_FAILURE="$(printf '%s' "${CHECK_RUNS}" | jq -c '[.check_runs[] | select((((.app.slug // "") | ascii_downcase) | contains("vercel")) and (((.app.slug // "") | ascii_downcase) != "github-actions") and (((.name // "") | ascii_downcase | contains("comments")) | not) and (.status == "completed") and (.conclusion != "success") and (.conclusion != "neutral") and (.conclusion != "skipped"))] | sort_by(.completed_at // .started_at // "") | last // {}')"
+            CHECK_NAME="$(printf '%s' "${VERCEL_FAILURE}" | jq -r '.name // ""')"
+            CHECK_CONCLUSION="$(printf '%s' "${VERCEL_FAILURE}" | jq -r '.conclusion // ""')"
+            CHECK_URL="$(printf '%s' "${VERCEL_FAILURE}" | jq -r '.html_url // ""')"
 
-              if [ "${CHECK_STATUS}" = "completed" ] && [ -n "${CHECK_CONCLUSION}" ]; then
-                STATE="${CHECK_CONCLUSION}"
-                TARGET="${CHECK_URL}"
-                DESCRIPTION="${CHECK_NAME}: ${CHECK_CONCLUSION}"
-              elif [ -n "${CHECK_STATUS}" ]; then
-                STATE="pending"
-                TARGET="${CHECK_URL}"
-                DESCRIPTION="${CHECK_NAME}: ${CHECK_STATUS}"
-              fi
-            fi
-
-            echo "Vercel Preview: ${STATE:-pending}"
-            echo "Details: ${DESCRIPTION:-pending}"
-            echo "Target: ${TARGET:-pending}"
+            echo "Canonical Vercel status: ${STATE:-pending}"
+            echo "Status details: ${DESCRIPTION:-pending}"
+            echo "Deployment target: ${TARGET:-pending}"
+            echo "Vercel failure diagnostic: ${CHECK_NAME:-none} ${CHECK_CONCLUSION:-}"
 
             case "${STATE}" in
               success)
-                echo "Vercel Preview validation: PASSED"
+                echo "Canonical Vercel deployment status: PASSED"
                 exit 0
                 ;;
               failure|error)
@@ -72,14 +62,23 @@ jobs:
                   echo "::error::Vercel deployment build limit reached. GitHub Actions cannot clear this provider-side deployment build limit. Retry when Vercel permits another build; this is not a successful Preview."
                   echo "Vercel deployment limits: https://vercel.com/credi-marketplace-afiliados?upgradeToPro=build-rate-limit"
                 else
-                  echo "::error::Vercel Preview failed: ${DESCRIPTION:-no provider details returned}."
+                  echo "::error::Canonical Vercel deployment failed: ${DESCRIPTION:-no provider details returned}."
                 fi
                 exit 1
                 ;;
             esac
 
+            if [ -n "${CHECK_CONCLUSION}" ]; then
+              if printf '%s %s' "${CHECK_NAME}" "${CHECK_URL}" | grep -Eqi 'rate.?limit|retry in 24 hours|build-rate-limit'; then
+                echo "::error::Vercel deployment build limit reached. The Check Run is diagnostic only; no Preview is marked successful."
+              else
+                echo "::error::Vercel Check Run failed (${CHECK_NAME}: ${CHECK_CONCLUSION}); the canonical deployment status has not succeeded."
+              fi
+              exit 1
+            fi
+
             sleep 10
           done
 
-          echo "::error::Vercel Preview did not reach success within 4 minutes."
+          echo "::error::Canonical Vercel Preview status remained pending. A comments check or deployment-summary success is not accepted as proof of a Preview."
           exit 1
