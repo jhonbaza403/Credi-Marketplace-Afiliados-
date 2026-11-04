@@ -12,7 +12,7 @@ const schema=z.object({roomId:z.string().uuid(),action:z.enum(['provision','cred
 const errorResponse=(error:string,status:number,code:string)=>NextResponse.json({success:false,error,code},{status,headers:{'Cache-Control':'no-store'}})
 
 function credentials(input:Awaited<ReturnType<typeof getLiveInput>>){
-  return {inputId:input.uid,rtmps:input.rtmps||null,playback:input.playback||null,webRTC:input.webRTC||null,webRTCPlayback:input.webRTCPlayback||null,status:input.status||null,enabled:input.enabled}
+  return {inputId:input.uid,playback:input.playback||null,webRTC:input.webRTC||null,webRTCPlayback:input.webRTCPlayback||null,status:input.status||null,enabled:input.enabled}
 }
 
 export async function POST(request:Request){
