@@ -95,6 +95,8 @@ async function openIndependentViewer(browser: Browser, watchUrl: string) {
 test.describe('Credi LIVE release — real Preview transport and replay', () => {
   test.skip(!releaseEnabled, 'Manual release workflow only; requires a real Vercel Preview session and LIVE room.')
 
+  test.use({ storageState: process.env.E2E_STORAGE_STATE_PATH || undefined })
+
   test('proves connected → disconnected → reconnected → ended → replay ready with two independent viewers', async ({ page, browser }) => {
     test.setTimeout(300_000)
 
@@ -106,12 +108,26 @@ test.describe('Credi LIVE release — real Preview transport and replay', () => 
     expect(preview.hostname).toMatch(/^credi-marketplace-afiliados-.+\.vercel\.app$/)
     expect(preview.hostname).not.toBe('credi-marketplace-afiliados.vercel.app')
 
-    const evidenceResponse = await page.request.post('/api/live/stream', {
-      headers: { Origin: preview.origin },
-      data: { roomId, action: 'evidence' },
-    })
-    expect(evidenceResponse.status(), 'Preview must authenticate the owner and reach Cloudflare Stream').toBe(200)
-    const evidence = await evidenceResponse.json() as LiveEvidence
+    let evidence!: LiveEvidence
+    await expect.poll(async () => {
+      const syncResponse = await page.request.post('/api/live/stream', {
+        headers: { Origin: preview.origin },
+        data: { roomId, action: 'sync-replay' },
+      })
+      expect(syncResponse.status(), 'Preview must reach the authenticated Cloudflare replay endpoint').toBe(200)
+
+      const evidenceResponse = await page.request.post('/api/live/stream', {
+        headers: { Origin: preview.origin },
+        data: { roomId, action: 'evidence' },
+      })
+      expect(evidenceResponse.status(), 'Preview must return sanitized LIVE release evidence').toBe(200)
+      evidence = await evidenceResponse.json() as LiveEvidence
+      return evidence.replay.state
+    }, {
+      timeout: 180_000,
+      intervals: [5_000, 10_000, 15_000],
+      message: 'Cloudflare must finish the recording and publish the replay for this input/window',
+    }).toBe('ready')
     expect(evidence.success).toBe(true)
     expect(evidence.room.id).toBe(roomId)
     expect(evidence.room.status).toBe('ended')
@@ -173,7 +189,7 @@ test.describe('Credi LIVE release — real Preview transport and replay', () => 
       expect(viewerOneHls.status()).toBe(200)
       expect(viewerTwoDash.status()).toBe(200)
 
-      const evidence = {
+      const releaseEvidence = {
         verifiedAt: new Date().toISOString(),
         target: 'Vercel Preview',
         roomId: evidence.room.id,
@@ -195,7 +211,7 @@ test.describe('Credi LIVE release — real Preview transport and replay', () => 
       }
 
       fs.mkdirSync(path.dirname('test-results/live-release-evidence.json'), { recursive: true })
-      fs.writeFileSync('test-results/live-release-evidence.json', JSON.stringify(evidence, null, 2), { mode: 0o600 })
+      fs.writeFileSync('test-results/live-release-evidence.json', JSON.stringify(releaseEvidence, null, 2), { mode: 0o600 })
     } finally {
       await Promise.all([viewerOne.context.close(), viewerTwo.context.close()])
     }
