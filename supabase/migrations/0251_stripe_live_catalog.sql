@@ -1,0 +1,5 @@
+-- Historical migration marker for the original Stripe live catalog binding (version 0251).
+-- The canonical schema and plan bindings are maintained by
+-- 20260910190037_stripe_live_catalog_binding.sql.
+-- Keep this marker so already-deployed remote version 0251 remains represented locally.
+-- Do not replay historical live Stripe IDs on existing deployments.
