@@ -188,6 +188,20 @@ BEGIN
   GET DIAGNOSTICS v_rows = ROW_COUNT;
   IF v_rows <> 1 THEN RAISE EXCEPTION 'user A must update their own listing'; END IF;
 
+  BEGIN
+    UPDATE public.listings SET moderation_status = 'approved'
+    WHERE id = '80000000-0000-4000-8000-000000000001';
+    RAISE EXCEPTION 'user A unexpectedly self-approved a listing';
+  EXCEPTION WHEN insufficient_privilege THEN NULL;
+  END;
+
+  BEGIN
+    INSERT INTO public.listings (seller_id, title, description, category_slug, moderation_status)
+    VALUES ('10000000-0000-4000-8000-000000000001', 'RLS Self Approved Listing A', 'Must be denied', 'rls-fixture', 'approved');
+    RAISE EXCEPTION 'user A unexpectedly inserted an approved listing';
+  EXCEPTION WHEN insufficient_privilege THEN NULL;
+  END;
+
   UPDATE public.listings SET description = 'unauthorized by A'
   WHERE id = '80000000-0000-4000-8000-000000000002';
   GET DIAGNOSTICS v_rows = ROW_COUNT;
@@ -428,6 +442,12 @@ BEGIN
     '70000000-0000-4000-8000-000000000001', '70000000-0000-4000-8000-000000000002'
   );
   IF v_count <> 2 THEN RAISE EXCEPTION 'service_role must read both payment orchestrations'; END IF;
+
+  UPDATE public.listings
+  SET status = 'published', moderation_status = 'approved'
+  WHERE id = '80000000-0000-4000-8000-000000000001';
+  GET DIAGNOSTICS v_rows = ROW_COUNT;
+  IF v_rows <> 1 THEN RAISE EXCEPTION 'service_role must be able to approve a listing'; END IF;
 
   SELECT count(*) INTO v_count FROM public.listings WHERE id IN (
     '80000000-0000-4000-8000-000000000001', '80000000-0000-4000-8000-000000000002'
