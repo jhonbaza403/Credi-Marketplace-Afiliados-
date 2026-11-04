@@ -165,7 +165,23 @@ jobs:
               }
             }
           }
-          console.log("Committed package-lock.json metadata matches package.json");
+          const frameworkVersions = {
+            next: "16.4.3",
+            react: "19.2.8",
+            "react-dom": "19.2.8",
+          };
+          for (const [name, version] of Object.entries(frameworkVersions)) {
+            if (pkg.dependencies?.[name] !== version) {
+              throw new Error(`package.json must pin ${name}@${version}`);
+            }
+            if (root.dependencies?.[name] !== version) {
+              throw new Error(`package-lock.json root must pin ${name}@${version}`);
+            }
+            if (lock.packages[`node_modules/${name}`]?.version !== version) {
+              throw new Error(`package-lock.json resolved version must be ${name}@${version}`);
+            }
+          }
+          console.log("Framework versions match package.json and package-lock.json: Next.js 16.4.3, React 19.2.8");
           NODE
           npm ci --dry-run --ignore-scripts --no-audit --no-fund
 
