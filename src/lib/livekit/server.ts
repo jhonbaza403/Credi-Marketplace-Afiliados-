@@ -138,16 +138,16 @@ export function cloudflareRtmpsDestination(input: {
 export async function startCloudflareEgress(roomName: string, destination: string) {
   return twirp<LiveKitEgressResponse>(
     'Egress',
-    'StartRoomCompositeEgress',
+    'StartEgress',
     {
-      roomName,
-      layout: 'speaker',
-      audioOnly: false,
-      videoOnly: false,
-      stream: {
-        protocol: 'RTMP',
-        urls: [destination],
-      },
+      room_name: roomName,
+      template: { layout: 'speaker' },
+      outputs: [{
+        stream: {
+          protocol: 'RTMP',
+          urls: [destination],
+        },
+      }],
     },
     { roomRecord: true },
   )
