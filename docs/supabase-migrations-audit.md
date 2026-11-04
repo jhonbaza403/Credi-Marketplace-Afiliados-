@@ -42,7 +42,7 @@ Se corrigieron las referencias obsoletas de columnas/tablas en los tests raíz y
 
 Se añadió scripts/run-supabase-sql-tests.sh y un job separado de GitHub Actions que:
 
-1. Inicia únicamente el stack local de Supabase.
+1. Instala Supabase CLI 2.107.0 (anclado a la configuración local actual con [inbucket]; CLI 2.108.0+ y CLI v3 requieren [local_smtp]).
 2. Ejecuta supabase db reset --local --no-seed para recrear una base vacía y reproducir todas las migraciones de esta rama.
 3. Obtiene el DB_URL local desde supabase status --env --output-format text.
 4. Ejecuta todos los archivos SQL de primer nivel en supabase/tests/, ordenados por nombre, con ON_ERROR_STOP.
