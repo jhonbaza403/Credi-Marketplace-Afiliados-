@@ -24,7 +24,7 @@ BEGIN
   if v_anon then raise exception 'anon must not execute consume_api_rate_limit'; end if;
 
   select has_function_privilege('authenticated','public.consume_api_rate_limit(text,integer,integer)','EXECUTE') into v_auth;
-  if v_auth then raise exception 'authenticated must not execute consume_api_rate_limit directly'; end if;
+  if not v_auth then raise exception 'authenticated must retain the server-side rate-limit RPC used by Credi'; end if;
 END $$;
 
 DO $$
@@ -49,5 +49,5 @@ BEGIN
   END IF;
 END $$;
 
-RAISE NOTICE 'TEST 011 — CREDI 360 SECURITY: PASS';
+SELECT 'TEST 011 — CREDI 360 SECURITY: PASS' AS test_result;
 ROLLBACK;

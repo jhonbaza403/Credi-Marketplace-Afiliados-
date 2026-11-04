@@ -1,4 +1,4 @@
-export type ChatConversationKind = 'direct' | 'group' | 'business' | 'support'
+export type ChatConversationKind = 'direct' | 'group' | 'business' | 'support' | 'channel'
 export type ChatMessageType = 'text' | 'image' | 'video' | 'audio' | 'document' | 'file' | 'link' | 'system' | 'quote' | 'product' | 'order'
 
 export interface ChatConversation {
@@ -17,6 +17,12 @@ export interface ChatConversation {
   unread: number
 }
 
+export interface ChatReaction {
+  reaction: string
+  count: number
+  mine: boolean
+}
+
 export interface ChatMessage {
   id: string
   conversation_id: string
@@ -28,6 +34,7 @@ export interface ChatMessage {
   deleted_at: string | null
   metadata: Record<string, unknown>
   created_at: string
+  reactions?: ChatReaction[]
 }
 
 export interface ChatAttachment {

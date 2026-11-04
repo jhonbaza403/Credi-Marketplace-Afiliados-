@@ -40,8 +40,8 @@ BEGIN
     IF EXISTS (
         SELECT 1
         FROM webhook_events
-        WHERE processed = TRUE
-          AND event_hash IS NULL
+        WHERE processed_at IS NOT NULL
+          AND payload_hash IS NULL
     ) THEN
         RAISE EXCEPTION
             'FALLO: webhook procesado sin event_hash';
@@ -49,6 +49,6 @@ BEGIN
 END
 $$;
 
-RAISE NOTICE 'TEST 007 — WEBHOOKS: PASS';
+SELECT 'TEST 007 — WEBHOOKS: PASS' AS test_result;
 
 ROLLBACK;

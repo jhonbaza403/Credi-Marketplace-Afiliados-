@@ -3,7 +3,7 @@
 ## Normalización consolidada
 
 1. **Runtime**: Node.js 24.x LTS y npm 11.x alineados en `.nvmrc`, `package.json`, CI/CD y documentación.
-2. **Framework**: Next.js 16.3.4 con App Router y React 19.
+2. **Framework**: Next.js 16.4.3 con App Router y React 19.
 3. **Bundler**: Turbopack es el comportamiento predeterminado de Next.js 16; se eliminó el script redundante `dev:turbo` y Playwright usa `npm run dev`.
 4. **TypeScript**: proyecto configurado como TypeScript-only mediante `allowJs: false`.
 5. **ESLint**: configuración Flat Config compatible con ESLint 9.

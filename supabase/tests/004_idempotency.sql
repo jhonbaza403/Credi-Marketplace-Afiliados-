@@ -45,7 +45,7 @@ BEGIN
     IF EXISTS (
         SELECT 1
         FROM idempotency_keys
-        GROUP BY key
+        GROUP BY idempotency_key
         HAVING COUNT(*) > 1
     ) THEN
         RAISE EXCEPTION
@@ -54,6 +54,6 @@ BEGIN
 END
 $$;
 
-RAISE NOTICE 'TEST 004 — IDEMPOTENCY: PASS';
+SELECT 'TEST 004 — IDEMPOTENCY: PASS' AS test_result;
 
 ROLLBACK;

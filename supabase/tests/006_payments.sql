@@ -1,59 +1,23 @@
--- ============================================================
--- TEST 006 — PAYMENTS
--- ============================================================
-
+-- TEST 006 — PAYMENT ORCHESTRATIONS
 BEGIN;
-
--- Estados financieros válidos.
 DO $$
 BEGIN
-    IF EXISTS (
-        SELECT 1
-        FROM payments
-        WHERE status NOT IN (
-            'pending',
-            'paid',
-            'failed',
-            'cancelled',
-            'refunded'
-        )
-    THEN
-        RAISE EXCEPTION
-            'FALLO: payment con estado inválido';
-    END IF;
-END
-$$;
-
--- Importes positivos.
-DO $$
-BEGIN
-    IF EXISTS (
-        SELECT 1
-        FROM payments
-        WHERE amount <= 0
-    ) THEN
-        RAISE EXCEPTION
-            'FALLO: payment con amount inválido';
-    END IF;
-END
-$$;
-
--- Payment intent único.
-DO $$
-BEGIN
-    IF EXISTS (
-        SELECT payment_intent_id
-        FROM payments
-        WHERE payment_intent_id IS NOT NULL
-        GROUP BY payment_intent_id
-        HAVING COUNT(*) > 1
-    ) THEN
-        RAISE EXCEPTION
-            'FALLO CRÍTICO: payment_intent duplicado';
-    END IF;
-END
-$$;
-
-RAISE NOTICE 'TEST 006 — PAYMENTS: PASS';
-
+  IF EXISTS (
+    SELECT 1 FROM public.payment_orchestrations
+    WHERE status NOT IN ('created', 'pending', 'requires_action', 'succeeded', 'failed', 'cancelled', 'expired')
+  ) THEN
+    RAISE EXCEPTION 'Payment orchestration has an invalid status';
+  END IF;
+  IF EXISTS (SELECT 1 FROM public.payment_orchestrations WHERE amount <= 0) THEN
+    RAISE EXCEPTION 'Payment orchestration amount must be positive';
+  END IF;
+  IF EXISTS (
+    SELECT idempotency_key
+    FROM public.payment_orchestrations
+    GROUP BY idempotency_key HAVING count(*) > 1
+  ) THEN
+    RAISE EXCEPTION 'Payment orchestration idempotency key is duplicated';
+  END IF;
+END $$;
+SELECT 'TEST 006 — PAYMENT ORCHESTRATIONS: PASS' AS test_result;
 ROLLBACK;

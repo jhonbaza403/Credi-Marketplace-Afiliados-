@@ -1,48 +1,65 @@
 /*
- * Credi Marketplace — premium interaction surfaces
- *
- * Decorative backgrounds remain behind the application. Form controls
- * receive their own readable surface so premium imagery never reduces
- * contrast or makes controls blend into the page.
+ * Credi Marketplace — shared form interaction contract.
+ * Baseline targets WCAG 2.2 AA practices: visible instructions, readable
+ * controls, clear focus and textual error states.
  */
-
-input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
-textarea,
-select {
+:where(
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+  textarea,
+  select
+) {
+  min-width: 0;
+  min-height: 48px;
+  padding: 0.72rem 0.9rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 0.85rem;
   background: var(--surface);
   color: var(--foreground);
-  border-color: var(--border-strong);
   color-scheme: inherit;
-}
-
-input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"])::placeholder,
-textarea::placeholder {
-  color: var(--muted);
+  font: inherit;
+  line-height: 1.45;
   opacity: 1;
 }
 
-input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):focus,
-textarea:focus,
-select:focus {
+:where(textarea) { min-height: 132px; padding-block: 0.85rem; resize: vertical; }
+:where(select) { cursor: pointer; }
+
+:where(
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+  textarea
+)::placeholder { color: var(--muted); opacity: 1; }
+
+:where(
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+  textarea,
+  select
+):focus-visible {
   outline: 2px solid var(--primary);
-  outline-offset: 1px;
+  outline-offset: 2px;
   border-color: var(--primary);
   box-shadow: 0 0 0 4px var(--focus-ring);
 }
 
-select option {
-  background: var(--surface);
-  color: var(--foreground);
+:where(input[aria-invalid="true"],textarea[aria-invalid="true"],select[aria-invalid="true"],.is-invalid) {
+  border-color: var(--danger) !important;
 }
 
-/* Preserve intentionally transparent upload zones while keeping their
- * controls readable and keyboard-accessible. */
+:where(input:disabled,textarea:disabled,select:disabled) { cursor: not-allowed; opacity: 0.62; }
+:where(select option) { background: var(--surface); color: var(--foreground); }
 
-input[type="file"] {
-  color: var(--foreground);
+.credi-form-field { display: grid; min-width: 0; gap: 0.4rem; }
+.credi-form-label { color: var(--foreground); font-size: 0.875rem; font-weight: 700; line-height: 1.35; }
+.credi-form-help { color: var(--muted); font-size: 0.78rem; line-height: 1.5; }
+.credi-form-error { color: var(--danger); font-size: 0.78rem; font-weight: 650; line-height: 1.5; }
+.credi-form-error:empty,.credi-form-help:empty { display: none; }
+
+input[type="file"] { max-width: 100%; color: var(--foreground); }
+
+input:-webkit-autofill,input:-webkit-autofill:hover,input:-webkit-autofill:focus,
+textarea:-webkit-autofill,textarea:-webkit-autofill:hover,textarea:-webkit-autofill:focus,
+select:-webkit-autofill,select:-webkit-autofill:hover,select:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--foreground);
+  box-shadow: 0 0 0 1000px var(--surface) inset;
 }
 
-::selection {
-  background: var(--primary);
-  color: #fff;
-}
+::selection { background: var(--primary); color: #fff; }

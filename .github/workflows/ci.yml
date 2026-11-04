@@ -165,7 +165,23 @@ jobs:
               }
             }
           }
-          console.log("Committed package-lock.json metadata matches package.json");
+          const frameworkVersions = {
+            next: "16.4.3",
+            react: "19.2.8",
+            "react-dom": "19.2.8",
+          };
+          for (const [name, version] of Object.entries(frameworkVersions)) {
+            if (pkg.dependencies?.[name] !== version) {
+              throw new Error(`package.json must pin ${name}@${version}`);
+            }
+            if (root.dependencies?.[name] !== version) {
+              throw new Error(`package-lock.json root must pin ${name}@${version}`);
+            }
+            if (lock.packages[`node_modules/${name}`]?.version !== version) {
+              throw new Error(`package-lock.json resolved version must be ${name}@${version}`);
+            }
+          }
+          console.log("Framework versions match package.json and package-lock.json: Next.js 16.4.3, React 19.2.8");
           NODE
           npm ci --dry-run --ignore-scripts --no-audit --no-fund
 
@@ -222,3 +238,36 @@ jobs:
           echo "Credi Marketplace CI: PASSED"
           echo "Node.js: $(node --version)"
           echo "npm:     $(npm --version)"
+
+  database-core-sql:
+    name: Local Supabase reset + core SQL regressions
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v3
+        with:
+          version: 2.107.0
+
+      - name: Start isolated local Supabase stack
+        run: supabase start
+
+      - name: Rebuild a clean local database from committed migrations
+        run: supabase db reset --local --no-seed
+
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes postgresql-client
+
+      - name: Run root-level SQL regression suite
+        run: bash scripts/run-supabase-sql-tests.sh
+
+      - name: Stop local Supabase stack
+        if: always()
+        run: supabase stop --no-backup

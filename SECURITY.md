@@ -1,4 +1,3 @@
-````markdown
 # Security Policy
 
 Credi Marketplace considera la seguridad una parte fundamental de la arquitectura de la plataforma.
@@ -128,7 +127,7 @@ Las variables que contienen secretos nunca deben utilizar el prefijo:
 
 ```text
 NEXT_PUBLIC_
-````
+```
 
 Ejemplo incorrecto:
 
@@ -750,11 +749,15 @@ No se deben divulgar públicamente credenciales, secretos, datos personales o in
 
 ---
 
-# Contact
+## Reportar una vulnerabilidad
 
-Para reportes privados de seguridad, utiliza el canal de contacto de seguridad designado por los mantenedores del proyecto.
+**Canal privado preferido:** GitHub Private Vulnerability Reporting del repositorio Credi Marketplace.
 
-No publiques vulnerabilidades sensibles en Issues o Pull Requests públicos.
+**Estado operativo:** no está confirmado desde la inspección disponible que la función esté activada. Por tanto, no se debe anunciar el formulario como canal activo hasta que un mantenedor compruebe que aparece **Report a vulnerability** en [Security → Advisories](https://github.com/jhonbaza403/Credi-Marketplace-Afiliados-/security/advisories). La habilitación corresponde a un propietario o administrador del repositorio en **Settings → Security and quality → Advanced Security → Private vulnerability reporting**. Una vez habilitado, los mantenedores deben confirmar que reciben las notificaciones de Security Advisories. Guía oficial: [configurar el reporte privado para un repositorio](https://docs.github.com/en/code-security/how-tos/report-and-fix-vulnerabilities/configure-vulnerability-reporting/configure-for-a-repository).
+
+No se publica un correo alternativo porque no hay una dirección de seguridad verificada en el repositorio. **Hasta confirmar el formulario privado, no envíes detalles técnicos, secretos, pruebas de concepto ni datos personales mediante Issues, Pull Requests o comentarios públicos.** Como aviso provisional, abre una incidencia pública titulada **“Solicitud de canal privado de seguridad”** sin describir la vulnerabilidad y pide a los mantenedores un medio privado verificado. Comparte los detalles únicamente después de confirmar que el canal es privado y que lo atiende el equipo responsable.
+
+GitHub indica que el reporte privado es independiente de `SECURITY.md`: solo funciona cuando el repositorio ha activado la opción y el botón de reporte está disponible. [Guía oficial para reportar en privado](https://docs.github.com/en/code-security/how-tos/report-and-fix-vulnerabilities/report-privately).
 
 ---
 
@@ -783,31 +786,3 @@ Audit / logging
 ```
 
 Ninguna capa individual debe considerarse suficiente para proteger una operación crítica.
-
-````
-
-### Un cambio especialmente importante
-
-En tu política original tenías:
-
-> `CI must pass lint, typecheck, tests, build, and high-severity npm audit checks before release.`
-
-Lo amplié para que **E2E también forme parte de la validación**, porque ya incorporamos Playwright al proyecto:
-
-```text
-lint
-↓
-typecheck
-↓
-unit tests
-↓
-E2E
-↓
-audit
-↓
-build
-````
-
-Y mantuve explícitamente que **RLS + autorización server-side** son capas diferentes. Eso es importante para tu arquitectura con Supabase.
-
-Como siguiente paso, conviene revisar el **`tests/verify-structure.mjs`** que preparaste para que compruebe automáticamente que estos archivos de seguridad, configuración, Supabase y pruebas realmente existan antes de permitir el build.

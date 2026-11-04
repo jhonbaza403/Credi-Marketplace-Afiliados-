@@ -1,28 +1,30 @@
-'use client';
+"use client";
 
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import {
-  BadgeCheck,
   BarChart3,
+  BadgeCheck,
   Building2,
   Camera,
   ChevronDown,
+  Crown,
+  Menu,
   MessageCircle,
-  MoreHorizontal,
+  Moon,
   Radio,
   Search,
   ShieldCheck,
   ShoppingBag,
   Sparkles,
   Store,
+  Sun,
   TrendingUp,
   Users,
   Wallet,
   X,
-  Menu,
   Play,
 } from "lucide-react";
 
@@ -83,171 +85,106 @@ function isPathActive(pathname: string, href: string) {
 export default function Navbar() {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [solutionsOpen, setSolutionsOpen] = useState(false);
+  const [lightMode, setLightMode] = useState(false);
 
   useEffect(() => {
     setMobileOpen(false);
-    setSolutionsOpen(false);
   }, [pathname]);
 
   useEffect(() => {
-    if (!mobileOpen && !solutionsOpen) return;
+    setLightMode(document.documentElement.classList.contains("credi-light-mode"));
     const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setMobileOpen(false);
-        setSolutionsOpen(false);
-      }
+      if (event.key === "Escape") setMobileOpen(false);
     };
     window.addEventListener("keydown", closeOnEscape);
     return () => window.removeEventListener("keydown", closeOnEscape);
-  }, [mobileOpen, solutionsOpen]);
+  }, []);
 
-  const closeMenus = () => {
-    setMobileOpen(false);
-    setSolutionsOpen(false);
+  const closeMenus = () => setMobileOpen(false);
+  const toggleTheme = () => {
+    const next = !lightMode;
+    document.documentElement.classList.toggle("credi-light-mode", next);
+    setLightMode(next);
   };
 
   return (
-    <nav
-      aria-label="Navegación principal"
-      className="relative mx-auto flex min-h-[72px] max-w-[1600px] items-center gap-3 px-3 sm:px-5 lg:px-6"
-    >
+    <nav aria-label="Barra superior" className="credi-topbar relative flex items-center gap-3">
       <Link
         href="/"
         onClick={closeMenus}
-        className="group flex shrink-0 items-center gap-2.5 rounded-xl focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-600"
+        className="group flex shrink-0 items-center gap-2.5 xl:hidden"
         aria-label="Credi Marketplace — Inicio"
       >
-        <span className="relative flex size-10 items-center justify-center overflow-hidden rounded-[14px] bg-white shadow-[0_6px_22px_rgba(34,211,238,.2)] ring-1 ring-slate-200 transition group-hover:scale-[1.03]">
+        <span className="relative grid size-10 place-items-center overflow-hidden rounded-xl bg-white ring-1 ring-white/20">
           <Image src="/logo.png" alt="" fill sizes="40px" priority className="object-contain p-1" />
         </span>
-        <span className="flex flex-col leading-none">
-          <span className="text-[17px] font-black tracking-tight text-slate-950">Credi</span>
-          <span className="mt-1 text-[9px] font-bold tracking-[.19em] text-blue-700">COMERCIO EN RED</span>
+        <span className="hidden flex-col leading-none sm:flex">
+          <span className="text-lg font-black tracking-tight text-white">Credi</span>
+          <span className="mt-1 text-[9px] font-bold tracking-wide text-cyan-100">Compra · Vende · Conecta</span>
         </span>
       </Link>
 
-      <div className="ml-auto hidden min-w-0 flex-1 items-center justify-center gap-1 xl:flex">
-        {PRIMARY_LINKS.map((item) => {
-          const Icon = item.icon;
-          const active = isPathActive(pathname, item.href);
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              aria-current={active ? "page" : undefined}
-              className={
-                "inline-flex min-h-11 items-center gap-2 rounded-xl px-2 py-2 text-sm font-bold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 " +
-                (active
-                  ? "bg-[#e7f3ff] text-[#0866ff] shadow-sm ring-1 ring-[#0866ff]/10"
-                  : "text-slate-600 hover:bg-slate-100 hover:text-slate-950")
-              }
-            >
-              <Icon className="size-4" aria-hidden="true" />
-              {item.label}
-            </Link>
-          );
-        })}
+      <form action="/search" method="get" role="search" className="credi-topbar-search flex flex-1 items-center gap-3 px-4">
+        <Search className="size-5 shrink-0 text-cyan-100" aria-hidden="true" />
+        <input
+          type="search"
+          name="q"
+          aria-label="Buscar en Credi"
+          placeholder="Buscar en Credi Chat, productos y servicios…"
+          autoComplete="off"
+          className="h-full min-h-0 flex-1 border-0 bg-transparent px-0 py-0 text-sm text-white outline-none"
+        />
+      </form>
 
-        <div
-          className="relative"
-          onBlur={(event) => {
-            const next = event.relatedTarget as Node | null;
-            if (!next || !event.currentTarget.contains(next)) setSolutionsOpen(false);
-          }}
+      <div className="ml-auto flex shrink-0 items-center gap-2">
+        <Link href="/analytics" className="credi-topbar-action hidden sm:inline-flex" aria-label="Abrir Analytics" title="Analytics">
+          <BarChart3 className="size-5 text-cyan-200" aria-hidden="true" />
+        </Link>
+        <button
+          type="button"
+          onClick={toggleTheme}
+          className="credi-topbar-action"
+          aria-label={lightMode ? "Cambiar a tema oscuro" : "Cambiar a tema claro"}
+          aria-pressed={lightMode}
+          title={lightMode ? "Tema claro activo" : "Tema oscuro activo"}
         >
-          <button
-            type="button"
-            onClick={() => setSolutionsOpen((value) => !value)}
-            aria-expanded={solutionsOpen}
-            aria-controls="credi-solutions-menu"
-            className="inline-flex min-h-11 items-center gap-2 rounded-xl px-2 py-2 text-sm font-bold text-slate-700 transition hover:bg-slate-100 hover:text-slate-950 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
-          >
-            <MoreHorizontal className="size-4" aria-hidden="true" />
-            Soluciones
-            <ChevronDown className={"size-3.5 transition-transform " + (solutionsOpen ? "rotate-180" : "")} aria-hidden="true" />
-          </button>
-          {solutionsOpen && (
-            <div
-              id="credi-solutions-menu"
-              className="absolute right-0 top-full z-[100] mt-3 grid w-[min(850px,calc(100vw-2rem))] grid-cols-1 gap-4 rounded-3xl border border-slate-200 bg-white p-4 shadow-[0_24px_80px_rgba(0,0,0,.45)] backdrop-blur-2xl sm:grid-cols-3 sm:p-5"
-            >
-              {SOLUTION_GROUPS.map((group) => (
-                <section key={group.title} aria-labelledby={"solution-" + group.title.replace(/\s+/g, "-").toLowerCase()}>
-                  <h2 id={"solution-" + group.title.replace(/\s+/g, "-").toLowerCase()} className="px-2 text-xs font-black uppercase tracking-[.16em] text-blue-700">
-                    {group.title}
-                  </h2>
-                  <p className="px-2 pb-2 pt-1 text-xs text-slate-500">{group.description}</p>
-                  <div className="space-y-1">
-                    {group.items.map((item) => {
-                      const Icon = item.icon;
-                      const active = isPathActive(pathname, item.href);
-                      return (
-                        <Link
-                          key={item.href + item.label}
-                          href={item.href}
-                          onClick={closeMenus}
-                          aria-current={active ? "page" : undefined}
-                          className={"flex min-h-10 items-center gap-2.5 rounded-xl px-2.5 py-2 text-sm transition focus-visible:outline-2 focus-visible:outline-blue-600 " + (active ? "bg-blue-50 font-bold text-blue-700" : "text-slate-700 hover:bg-slate-50 hover:text-slate-950")}
-                        >
-                          <Icon className="size-4 shrink-0 text-blue-600" aria-hidden="true" />
-                          <span>{item.label}</span>
-                        </Link>
-                      );
-                    })}
-                  </div>
-                </section>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div className="hidden shrink-0 items-center gap-2 xl:flex">
-        <Link href="/search" aria-label="Buscar en Credi" title="Buscar" className="inline-flex size-11 items-center justify-center rounded-xl text-slate-700 transition hover:bg-slate-100 hover:text-slate-950 focus-visible:outline-2 focus-visible:outline-blue-600">
-          <Search className="size-[18px]" aria-hidden="true" />
+          {lightMode ? <Sun className="size-5" aria-hidden="true" /> : <Moon className="size-5" aria-hidden="true" />}
+        </button>
+        <Link href="/chat" className="credi-topbar-action hidden sm:inline-flex" aria-label="Abrir Credi Chat" title="Credi Chat">
+          <MessageCircle className="size-5" aria-hidden="true" />
         </Link>
-        <Link href="/publish" className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-300 to-blue-400 px-4 py-2.5 text-sm font-black text-slate-950 shadow-[0_8px_26px_rgba(34,211,238,.16)] transition hover:brightness-105 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">
-          <Sparkles className="size-4" aria-hidden="true" />
-          Publicar
+        <Link href="/security" className="credi-topbar-action hidden md:inline-flex" aria-label="Abrir Seguridad y configuración" title="Seguridad">
+          <ShieldCheck className="size-5" aria-hidden="true" />
         </Link>
-        <Link href="/chat" aria-label="Abrir Credi Chat" title="Credi Chat" className="inline-flex size-11 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-blue-600">
-          <MessageCircle className="size-[18px]" aria-hidden="true" />
-        </Link>
-        <Link href="/login" className="rounded-xl px-3 py-2.5 text-sm font-bold text-slate-700 transition hover:bg-slate-100 hover:text-slate-950 focus-visible:outline-2 focus-visible:outline-blue-600">
-          Entrar
-        </Link>
-      </div>
-
-      <div className="ml-auto flex items-center gap-1.5 xl:hidden">
-        <Link href="/search" aria-label="Buscar en Credi" title="Buscar" className="inline-flex size-10 items-center justify-center rounded-xl text-slate-700 transition hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-blue-600">
-          <Search className="size-5" aria-hidden="true" />
+        <Link href="/pricing" className="credi-premium-link hidden sm:inline-flex">
+          <Crown className="size-5 text-yellow-300" aria-hidden="true" />
+          Premium
         </Link>
         <button
           type="button"
           onClick={() => setMobileOpen((value) => !value)}
-          aria-label={mobileOpen ? "Cerrar menú de navegación" : "Abrir menú de navegación"}
+          aria-label={mobileOpen ? "Cerrar menú" : "Abrir menú"}
           aria-expanded={mobileOpen}
           aria-controls="credi-mobile-menu"
-          className="inline-flex size-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-800 transition hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
+          className="credi-topbar-action xl:hidden"
         >
           {mobileOpen ? <X className="size-5" aria-hidden="true" /> : <Menu className="size-5" aria-hidden="true" />}
         </button>
       </div>
 
       {mobileOpen && (
-        <div id="credi-mobile-menu" className="absolute left-0 right-0 top-full z-[100] max-h-[calc(100dvh-72px)] overflow-y-auto border-t border-slate-200 bg-white p-4 pb-6 shadow-[0_24px_80px_rgba(0,0,0,.45)] backdrop-blur-2xl xl:hidden sm:p-6">
+        <div id="credi-mobile-menu" className="absolute left-0 right-0 top-full z-[100] max-h-[calc(100dvh-64px)] overflow-y-auto border-t border-[var(--border)] bg-[var(--surface)] p-4 shadow-2xl xl:hidden sm:p-6">
           <div className="mb-5 flex items-center justify-between gap-3">
             <div>
-              <p className="text-sm font-black text-slate-950">¿Qué quieres hacer hoy?</p>
-              <p className="mt-1 text-xs text-slate-500">Todo Credi, organizado para ti.</p>
+              <p className="text-sm font-black text-[var(--foreground)]">¿Qué quieres hacer hoy?</p>
+              <p className="mt-1 text-xs text-[var(--muted)]">Todo Credi, organizado para ti.</p>
             </div>
-            <Link href="/register" onClick={closeMenus} className="rounded-xl bg-[#0866ff] px-3.5 py-2.5 text-xs font-black text-white transition hover:bg-[#075ce5] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600">
-              Crear cuenta
+            <Link href="/pricing" onClick={closeMenus} className="credi-premium-link">
+              <Crown className="size-4 text-yellow-300" aria-hidden="true" /> Premium
             </Link>
           </div>
 
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
             {PRIMARY_LINKS.map((item) => {
               const Icon = item.icon;
               const active = isPathActive(pathname, item.href);
@@ -257,11 +194,11 @@ export default function Navbar() {
                   href={item.href}
                   onClick={closeMenus}
                   aria-current={active ? "page" : undefined}
-                  className={"flex min-h-[88px] flex-col justify-between rounded-2xl border p-3 transition focus-visible:outline-2 focus-visible:outline-blue-600 " + (active ? "border-blue-200 bg-blue-50 text-blue-700" : "border-slate-200 bg-white text-slate-800 hover:bg-blue-50")}
+                  className={"flex min-h-[88px] flex-col justify-between rounded-2xl border p-3 transition focus-visible:outline-2 focus-visible:outline-[var(--primary)] " + (active ? "border-violet-400 bg-violet-500/15 text-[var(--foreground)]" : "border-[var(--border)] bg-[var(--surface-secondary)] text-[var(--foreground)]")}
                 >
-                  <Icon className="size-5 text-blue-700" aria-hidden="true" />
+                  <Icon className="size-5 text-cyan-300" aria-hidden="true" />
                   <span className="text-sm font-black">{item.label}</span>
-                  <span className="text-[11px] leading-4 text-slate-500">{item.description}</span>
+                  <span className="text-[11px] leading-4 text-[var(--muted)]">{item.description}</span>
                 </Link>
               );
             })}
@@ -269,18 +206,18 @@ export default function Navbar() {
 
           <div className="mt-5 space-y-2">
             {SOLUTION_GROUPS.map((group) => (
-              <details key={group.title} className="group rounded-2xl border border-slate-200 bg-white">
-                <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-bold text-slate-900 focus-visible:outline-2 focus-visible:outline-blue-600 [&::-webkit-details-marker]:hidden">
-                  <span>{group.title}<span className="ml-2 text-xs font-normal text-slate-500">{group.description}</span></span>
-                  <ChevronDown className="size-4 shrink-0 text-slate-400 transition-transform group-open:rotate-180" aria-hidden="true" />
+              <details key={group.title} className="group rounded-2xl border border-[var(--border)] bg-[var(--surface-secondary)]">
+                <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-bold text-[var(--foreground)] focus-visible:outline-2 focus-visible:outline-[var(--primary)] [&::-webkit-details-marker]:hidden">
+                  <span>{group.title}<span className="ml-2 text-xs font-normal text-[var(--muted)]">{group.description}</span></span>
+                  <ChevronDown className="size-4 shrink-0 text-[var(--muted)] transition-transform group-open:rotate-180" aria-hidden="true" />
                 </summary>
                 <div className="grid grid-cols-1 gap-1 px-2 pb-2 sm:grid-cols-2">
                   {group.items.map((item) => {
                     const Icon = item.icon;
                     const active = isPathActive(pathname, item.href);
                     return (
-                      <Link key={item.href + item.label} href={item.href} onClick={closeMenus} aria-current={active ? "page" : undefined} className={"flex min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition focus-visible:outline-2 focus-visible:outline-blue-600 " + (active ? "bg-white/10 font-bold text-white" : "text-slate-700 hover:bg-slate-50 hover:text-white")}>
-                        <Icon className="size-4 text-blue-600" aria-hidden="true" />
+                      <Link key={item.href + item.label} href={item.href} onClick={closeMenus} aria-current={active ? "page" : undefined} className={"flex min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition focus-visible:outline-2 focus-visible:outline-[var(--primary)] " + (active ? "bg-violet-500/15 font-bold text-[var(--foreground)]" : "text-[var(--foreground)] hover:bg-[var(--surface)]")}>
+                        <Icon className="size-4 text-cyan-300" aria-hidden="true" />
                         {item.label}
                       </Link>
                     );
@@ -291,17 +228,11 @@ export default function Navbar() {
           </div>
 
           <div className="mt-5 grid grid-cols-2 gap-2">
-            <Link href="/publish" onClick={closeMenus} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-300 to-blue-400 px-4 py-3 text-sm font-black text-slate-950 focus-visible:outline-2 focus-visible:outline-white">
-              <Sparkles className="size-4" aria-hidden="true" /> Publicar
+            <Link href="/security" onClick={closeMenus} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[var(--border)] px-3 text-sm font-bold text-[var(--foreground)]">
+              <ShieldCheck className="size-4" /> Seguridad
             </Link>
-            <Link href="/chat" onClick={closeMenus} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-800 focus-visible:outline-2 focus-visible:outline-blue-600">
-              <MessageCircle className="size-4" aria-hidden="true" /> Chat
-            </Link>
-            <Link href="/login" onClick={closeMenus} className="inline-flex min-h-11 items-center justify-center rounded-xl px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-blue-600">
-              Iniciar sesión
-            </Link>
-            <Link href="/free" onClick={closeMenus} className="inline-flex min-h-11 items-center justify-center rounded-xl px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-blue-600">
-              Explorar Credi Free
+            <Link href="/chat" onClick={closeMenus} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[var(--border)] px-3 text-sm font-bold text-[var(--foreground)]">
+              <MessageCircle className="size-4" /> Credi Chat
             </Link>
           </div>
         </div>

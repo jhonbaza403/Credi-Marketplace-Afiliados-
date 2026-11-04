@@ -27,6 +27,7 @@ export default function LivePage(){
   const streamRef=useRef<MediaStream|null>(null)
   const [transport,setTransport]=useState<{inputId:string;rtmps:{url:string;streamKey:string}|null;playback:{hls?:string;dash?:string}|null;webRTC:{url:string}|null;status?:string|null;enabled?:boolean}|null>(null)
   const [transportBusy,setTransportBusy]=useState(false)
+  const [transportIssue,setTransportIssue]=useState('')
   const supabase=useMemo(()=>createClient(),[])
 
   async function load(){
@@ -42,8 +43,17 @@ export default function LivePage(){
   async function loadTransport(roomId:string){
     const response=await fetch('/api/live/stream',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({roomId,action:'credentials'})})
     const data=await response.json().catch(()=>({}))
-    if(response.ok)setTransport(data)
-    else setTransport(null)
+    if(response.ok){setTransport(data);setTransportIssue('')}
+    else {
+      setTransport(null)
+      setTransportIssue(
+        response.status===401||response.status===403
+          ? 'Cloudflare Stream rechazó la autorización. La integración no está disponible para esta sesión; revisa los permisos del token de Stream en el entorno de prueba.'
+          : response.status===409
+            ? 'Todavía no existe un Live Input provisionado para esta sala.'
+            : 'No se pudo verificar el transporte de Cloudflare Stream. Consulta el diagnóstico e inténtalo de nuevo.'
+      )
+    }
   }
 
   async function loadProducts(roomId:string){
@@ -89,7 +99,7 @@ export default function LivePage(){
       if(previewRef.current){previewRef.current.srcObject=stream;await previewRef.current.play().catch(()=>{})}
       setCameraOn(true)
       setMediaReady(true)
-      setMessage('Fuente de captura y audio listos. Para producción, OBS puede tomar la señal de Elgato 4K Pro y enviarla por RTMPS a Credi LIVE.')
+      setMessage('Cámara y micrófono disponibles para vista previa local. Para emitir, conecta OBS o un codificador compatible al transporte de Credi LIVE; esta prueba local no transmite al público.')
     }catch(error){setMessage(error instanceof Error?error.message:'No fue posible activar cámara y micrófono.')}
   }
 
@@ -181,8 +191,8 @@ export default function LivePage(){
                 {cameraOn&&<video ref={previewRef} muted playsInline className="absolute inset-0 h-full w-full object-cover"/>}
                 <div className="relative z-10 max-w-md rounded-2xl bg-slate-950/75 px-5 py-4 backdrop-blur-md">
                   <Video className="mx-auto size-9 text-cyan-300"/>
-                  <p className="mt-2 font-black">{mediaReady?'Preflight listo':'Transporte LIVE de producción'}</p>
-                  <p className="mt-1 text-xs leading-5 text-slate-300">{mediaReady?'Cámara y micrófono verificados.':'La entrega multipunto requiere conectar el adaptador de streaming de producción; Credi ya conserva la sala, eventos, productos, chat y replay.'}</p>
+                  <p className="mt-2 font-black">{mediaReady?'Vista previa local disponible':transport?.rtmps?.url?'Transporte Cloudflare provisionado':'Transporte LIVE sin provisionar'}</p>
+                  <p className="mt-1 text-xs leading-5 text-slate-200">{mediaReady?'La cámara y el micrófono funcionan en este navegador. Esta vista previa es local y todavía no llega a espectadores.':transport?.rtmps?.url?'El Live Input RTMPS está provisionado. Conecta un codificador compatible para iniciar la emisión y comprobar espectadores, reconexión y replay.':transportIssue||'Provisiona un Live Input y conecta OBS u otro codificador compatible. La sala y sus datos no equivalen a una transmisión activa.'}</p>
                 </div>
               </div>}
           </div>
@@ -194,8 +204,8 @@ export default function LivePage(){
           </div>}
 
           {selected&&<section className="mt-6 rounded-2xl border border-cyan-500/20 bg-cyan-500/[.04] p-4">
-            <div className="flex items-start justify-between gap-3"><div><p className="text-[10px] font-black uppercase tracking-[.14em] text-cyan-700">Transporte de producción</p><h3 className="mt-1 font-black">Elgato 4K Pro → OBS → Credi LIVE</h3><p className="mt-1 text-xs leading-5 text-[var(--muted)]">Credi genera el Live Input de Cloudflare. La capturadora Elgato entra a OBS, y OBS publica la señal por RTMPS.</p></div><KeyRound className="size-5 text-cyan-700"/></div>
-            <div className="mt-4 flex flex-wrap gap-2"><button type="button" disabled={transportBusy} onClick={async()=>{setTransportBusy(true);try{const r=await fetch('/api/live/stream',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({roomId:selected.id,action:'provision'})});const d=await r.json();if(!r.ok)throw new Error(d.error||'No fue posible provisionar el transporte.');setTransport(d);setMessage('Transporte Cloudflare provisionado. Configura OBS con la URL y clave RTMPS mostradas.')}catch(e){setMessage(e instanceof Error?e.message:'No fue posible provisionar el transporte.')}finally{setTransportBusy(false)}}} className="rounded-xl bg-cyan-700 px-3 py-2 text-xs font-black text-white disabled:opacity-50">{transportBusy?'Provisionando…':'Provisionar transporte'}</button>{transport?.rtmps?.url&&<span className="inline-flex items-center gap-1 rounded-xl bg-emerald-500/10 px-3 py-2 text-[10px] font-black text-emerald-700"><Eye className="size-3"/> RTMPS listo</span>}</div>
+            <div className="flex items-start justify-between gap-3"><div><p className="text-[10px] font-black uppercase tracking-[.14em] text-cyan-700">Transporte de producción</p><h3 className="mt-1 font-black">OBS o codificador compatible → Credi LIVE</h3><p className="mt-1 text-xs leading-5 text-[var(--muted)]">Credi provisiona el Live Input del proveedor de vídeo. Conecta cualquier codificador compatible mediante el protocolo habilitado; no se exige una capturadora de una marca concreta.</p></div><KeyRound className="size-5 text-cyan-700"/></div>
+            <div className="mt-4 flex flex-wrap gap-2"><button type="button" disabled={transportBusy} onClick={async()=>{setTransportBusy(true);try{const r=await fetch('/api/live/stream',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({roomId:selected.id,action:'provision'})});const d=await r.json();if(!r.ok)throw new Error(d.error||'No fue posible provisionar el transporte.');setTransport(d);setTransportIssue('');setMessage('Live Input provisionado. La señal todavía no está en directo: configura el codificador y verifica la emisión desde un cliente espectador.')}catch(e){const issue=e instanceof Error?e.message:'No fue posible provisionar el transporte.';setTransportIssue(issue);setMessage(issue)}finally{setTransportBusy(false)}}} className="rounded-xl bg-cyan-700 px-3 py-2 text-xs font-black text-white disabled:opacity-50">{transportBusy?'Provisionando…':'Provisionar transporte'}</button>{transportIssue&&<p role="status" className="mt-3 w-full rounded-xl border border-amber-300/20 bg-amber-300/10 px-3 py-2 text-xs leading-5 text-amber-100">{transportIssue}</p>}{transport?.rtmps?.url&&<span className="inline-flex items-center gap-1 rounded-xl bg-emerald-500/10 px-3 py-2 text-[10px] font-black text-emerald-700"><Eye className="size-3"/> RTMPS listo</span>}</div>
             {transport?.rtmps&&<div className="mt-4 grid gap-3 sm:grid-cols-2"><label className="text-[10px] font-black uppercase tracking-wide text-[var(--muted)]">Servidor RTMPS<input readOnly value={transport.rtmps.url} className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs font-mono"/></label><label className="text-[10px] font-black uppercase tracking-wide text-[var(--muted)]">Stream Key<input readOnly value={transport.rtmps.streamKey} className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs font-mono"/></label></div>}
             <p className="mt-3 text-[10px] text-[var(--muted)]">La clave se obtiene del backend autenticado; no se almacena en Supabase ni se expone al cliente público. Si fue compartida accidentalmente, usa rotación de credenciales.</p>
           </section>}

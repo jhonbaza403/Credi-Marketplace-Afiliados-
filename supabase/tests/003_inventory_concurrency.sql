@@ -10,8 +10,8 @@ DO $$
 BEGIN
     IF EXISTS (
         SELECT 1
-        FROM inventory
-        WHERE quantity < 0
+        FROM public.inventory
+        WHERE available_quantity < 0
     ) THEN
         RAISE EXCEPTION
             'FALLO CRÍTICO: inventory.quantity < 0';
@@ -39,7 +39,7 @@ BEGIN
     IF EXISTS (
         SELECT 1
         FROM inventory
-        WHERE reserved_quantity > quantity
+        WHERE reserved_quantity > available_quantity
     ) THEN
         RAISE EXCEPTION
             'FALLO CRÍTICO: inventario reservado superior al stock';
@@ -61,6 +61,6 @@ BEGIN
 END
 $$;
 
-RAISE NOTICE 'TEST 003 — INVENTORY CONCURRENCY: PASS';
+SELECT 'TEST 003 — INVENTORY CONCURRENCY: PASS' AS test_result;
 
 ROLLBACK;

@@ -1,53 +1,21 @@
--- ============================================================
--- TEST 005 — AFFILIATES
--- ============================================================
-
+-- TEST 005 — AFFILIATE INTEGRITY
 BEGIN;
-
--- Los códigos de afiliado no deben estar vacíos.
 DO $$
 BEGIN
-    IF EXISTS (
-        SELECT 1
-        FROM affiliates
-        WHERE trim(ref_code) = ''
-    ) THEN
-        RAISE EXCEPTION
-            'FALLO: afiliado con ref_code vacío';
-    END IF;
-END
-$$;
-
--- No debe haber comisiones negativas.
-DO $$
-BEGIN
-    IF EXISTS (
-        SELECT 1
-        FROM affiliate_commissions
-        WHERE commission_amount < 0
-    ) THEN
-        RAISE EXCEPTION
-            'FALLO: comisión negativa';
-    END IF;
-END
-$$;
-
--- Protección contra auto-referidos.
-DO $$
-BEGIN
-    IF EXISTS (
-        SELECT 1
-        FROM affiliate_attributions
-        WHERE affiliate_user_id IS NOT NULL
-          AND customer_user_id IS NOT NULL
-          AND affiliate_user_id = customer_user_id
-    ) THEN
-        RAISE EXCEPTION
-            'FALLO CRÍTICO: autorreferido detectado';
-    END IF;
-END
-$$;
-
-RAISE NOTICE 'TEST 005 — AFFILIATES: PASS';
-
+  IF EXISTS (SELECT 1 FROM public.affiliates WHERE btrim(code) = '') THEN
+    RAISE EXCEPTION 'Affiliate code cannot be empty';
+  END IF;
+  IF EXISTS (SELECT 1 FROM public.affiliate_commission_ledger WHERE commission_amount < 0) THEN
+    RAISE EXCEPTION 'Affiliate commission cannot be negative';
+  END IF;
+  IF EXISTS (
+    SELECT 1
+    FROM public.affiliate_attributions aa
+    JOIN public.affiliates a ON a.id = aa.affiliate_id
+    WHERE aa.buyer_id IS NOT NULL AND a.user_id = aa.buyer_id
+  ) THEN
+    RAISE EXCEPTION 'Self-referral detected in affiliate attribution';
+  END IF;
+END $$;
+SELECT 'TEST 005 — AFFILIATES: PASS' AS test_result;
 ROLLBACK;

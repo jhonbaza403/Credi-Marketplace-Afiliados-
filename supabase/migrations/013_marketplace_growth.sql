@@ -15,13 +15,13 @@ CREATE TABLE IF NOT EXISTS public.affiliate_clicks (
     CONSTRAINT affiliate_clicks_provider_valid CHECK (
         provider IN ('amazon', 'shein', 'aliexpress', 'alibaba')
     )
-)
+);
 
 CREATE INDEX IF NOT EXISTS idx_affiliate_clicks_affiliate_created
-ON public.affiliate_clicks(affiliate_id, created_at DESC)
+ON public.affiliate_clicks(affiliate_id, created_at DESC);
 
 CREATE INDEX IF NOT EXISTS idx_affiliate_clicks_provider_created
-ON public.affiliate_clicks(provider, created_at DESC)
+ON public.affiliate_clicks(provider, created_at DESC);
 
 CREATE TABLE IF NOT EXISTS public.affiliate_commission_ledger (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -46,10 +46,10 @@ CREATE TABLE IF NOT EXISTS public.affiliate_commission_ledger (
         gross_amount >= 0 AND commission_rate >= 0 AND commission_rate <= 1
         AND commission_amount >= 0
     )
-)
+);
 
 CREATE INDEX IF NOT EXISTS idx_affiliate_ledger_affiliate_status
-ON public.affiliate_commission_ledger(affiliate_id, status)
+ON public.affiliate_commission_ledger(affiliate_id, status);
 
 CREATE TABLE IF NOT EXISTS public.b2b_crypto_payment_intents (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -70,14 +70,14 @@ CREATE TABLE IF NOT EXISTS public.b2b_crypto_payment_intents (
         status IN ('created', 'pending', 'succeeded', 'failed', 'cancelled', 'refunded', 'expired')
     ),
     CONSTRAINT b2b_crypto_amount_valid CHECK (amount_usd > 0)
-)
+);
 
 CREATE UNIQUE INDEX IF NOT EXISTS ux_b2b_crypto_provider_payment
 ON public.b2b_crypto_payment_intents(provider, provider_payment_id)
-WHERE provider_payment_id IS NOT NULL
+WHERE provider_payment_id IS NOT NULL;
 
 CREATE INDEX IF NOT EXISTS idx_b2b_crypto_order
-ON public.b2b_crypto_payment_intents(order_id)
+ON public.b2b_crypto_payment_intents(order_id);
 
 CREATE OR REPLACE FUNCTION public.set_b2b_crypto_payment_updated_at()
 RETURNS trigger
@@ -87,15 +87,15 @@ BEGIN
     NEW.updated_at = now();
     RETURN NEW;
 END;
-$$
+$$;
 
 DROP TRIGGER IF EXISTS trg_b2b_crypto_payment_updated_at
-ON public.b2b_crypto_payment_intents
+ON public.b2b_crypto_payment_intents;
 
 CREATE TRIGGER trg_b2b_crypto_payment_updated_at
 BEFORE UPDATE ON public.b2b_crypto_payment_intents
 FOR EACH ROW
-EXECUTE FUNCTION public.set_b2b_crypto_payment_updated_at()
+EXECUTE FUNCTION public.set_b2b_crypto_payment_updated_at();
 
 CREATE OR REPLACE FUNCTION public.create_affiliate_commission_ledger_entry()
 RETURNS trigger
@@ -154,13 +154,13 @@ BEGIN
 
     RETURN NEW;
 END;
-$$
+$$;
 
 DROP TRIGGER IF EXISTS trg_create_affiliate_commission_ledger
-ON public.orders
+ON public.orders;
 
 CREATE TRIGGER trg_create_affiliate_commission_ledger
 AFTER INSERT OR UPDATE OF payment_status, affiliate_id, affiliate_commission
 ON public.orders
 FOR EACH ROW
-EXECUTE FUNCTION public.create_affiliate_commission_ledger_entry()
+EXECUTE FUNCTION public.create_affiliate_commission_ledger_entry();

@@ -11,12 +11,7 @@ BEGIN
         SELECT 1
         FROM orders
         WHERE status NOT IN (
-            'pending',
-            'paid',
-            'failed',
-            'cancelled',
-            'refunded',
-            'expired'
+            'pending', 'paid', 'processing', 'shipped', 'delivered', 'cancelled', 'failed', 'refunded', 'expired'
         )
     ) THEN
         RAISE EXCEPTION
@@ -31,7 +26,7 @@ BEGIN
     IF EXISTS (
         SELECT 1
         FROM order_status_history
-        WHERE status IS NULL
+        WHERE to_status IS NULL
     ) THEN
         RAISE EXCEPTION
             'FALLO: historial sin estado';
@@ -53,6 +48,6 @@ BEGIN
 END
 $$;
 
-RAISE NOTICE 'TEST 008 — ORDER STATE MACHINE: PASS';
+SELECT 'TEST 008 — ORDER STATE MACHINE: PASS' AS test_result;
 
 ROLLBACK;
