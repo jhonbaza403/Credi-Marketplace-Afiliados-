@@ -42,7 +42,7 @@ La auditoría del árbol del repositorio encontró archivos `page.tsx` en las 22
 | Twilio | `/api/communications/webhooks/twilio` | No detectada | Implementación segura separada: SDK oficial para validar firma, autorización, consentimiento, rate limit y controles de coste |
 | Partner afiliado genérico | `/api/affiliate/webhook` | No detectada | Definir proveedor, esquema de firma, eventos e idempotencia antes de crear endpoint |
 
-No se crean endpoints de webhook ficticios ni handlers que acepten eventos sin validar su autenticidad. La ausencia de una integración opcional se reporta como pendiente, no como éxito.
+Los dos endpoints nuevos rechazan eventos sin firma válida y guardan eventos en bandejas privadas; no acreditan comisiones ni envían mensajes salientes. La ausencia de una integración opcional se reporta como pendiente, no como éxito.
 
 ## Redirecciones
 
