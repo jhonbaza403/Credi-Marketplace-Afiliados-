@@ -84,10 +84,33 @@ async function waitForDecodedPlayback(page: Page) {
   }).toBe(true)
 }
 
-async function openIndependentViewer(browser: Browser, watchUrl: string) {
+async function openIndependentHlsViewer(browser: Browser, watchUrl: string) {
   const context = await browser.newContext()
   const page = await context.newPage()
   await page.goto(watchUrl, { waitUntil: 'domcontentloaded', timeout: 90_000 })
+  await waitForDecodedPlayback(page)
+  return { context, page }
+}
+
+async function openIndependentDashViewer(browser: Browser, dashUrl: string) {
+  const context = await browser.newContext()
+  const page = await context.newPage()
+  await page.setContent('<!doctype html><html><body><video id="credi-dash-viewer" controls muted autoplay playsinline></video></body></html>')
+  await page.addScriptTag({ url: 'https://cdn.dashjs.org/v4.7.4/dash.all.min.js' })
+  await page.evaluate((manifestUrl) => {
+    type DashPlayer = {
+      initialize(element: HTMLVideoElement, source: string, autoplay: boolean): void
+    }
+    type DashFactory = {
+      create(): DashPlayer
+    }
+    const dashjs = (window as unknown as { dashjs?: { MediaPlayer(): DashFactory } }).dashjs
+    if (!dashjs) throw new Error('dash.js did not load')
+    const player = dashjs.MediaPlayer().create()
+    const video = document.querySelector<HTMLVideoElement>('#credi-dash-viewer')
+    if (!video) throw new Error('DASH viewer element is missing')
+    player.initialize(video, manifestUrl, true)
+  }, dashUrl)
   await waitForDecodedPlayback(page)
   return { context, page }
 }
@@ -175,19 +198,24 @@ test.describe('Credi LIVE release — real Preview transport and replay', () => 
     const hls = new URL(hlsUrl)
     const watchUrl = `${hls.origin}/${videoId}/watch`
     const [viewerOne, viewerTwo] = await Promise.all([
-      openIndependentViewer(browser, watchUrl),
-      openIndependentViewer(browser, watchUrl),
+      openIndependentHlsViewer(browser, watchUrl),
+      openIndependentDashViewer(browser, dashUrl),
     ])
 
     try {
-      // Confirm both independent browser contexts can also retrieve the same
-      // official HLS and DASH manifests without sharing a session or cookies.
+      // The first independent browser decodes HLS through Cloudflare's player;
+      // the second decodes DASH through dash.js. Both also fetch the source
+      // manifest through their own isolated browser context.
       const [viewerOneHls, viewerTwoDash] = await Promise.all([
         viewerOne.page.request.get(hlsUrl),
         viewerTwo.page.request.get(dashUrl),
       ])
       expect(viewerOneHls.status()).toBe(200)
       expect(viewerTwoDash.status()).toBe(200)
+      await expect.poll(async () => viewerTwo.page.locator('video').evaluate((element) => {
+        const player = element as HTMLVideoElement
+        return player.readyState >= 2 && player.currentTime > 0 && !player.error
+      }), { timeout: 90_000, message: 'Independent DASH viewer must decode and advance video frames' }).toBe(true)
 
       const releaseEvidence = {
         verifiedAt: new Date().toISOString(),
@@ -204,8 +232,8 @@ test.describe('Credi LIVE release — real Preview transport and replay', () => 
         hlsUrl,
         dashUrl,
         viewers: [
-          { id: 'viewer-1', decodedPlayback: true, hlsManifestStatus: viewerOneHls.status() },
-          { id: 'viewer-2', decodedPlayback: true, dashManifestStatus: viewerTwoDash.status() },
+          { id: 'viewer-1', protocol: 'HLS', decodedPlayback: true, manifestStatus: viewerOneHls.status() },
+          { id: 'viewer-2', protocol: 'DASH', decodedPlayback: true, manifestStatus: viewerTwoDash.status() },
         ],
         finalRoomStatus: evidence.room.status,
       }
