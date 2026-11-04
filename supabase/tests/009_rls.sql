@@ -7,7 +7,7 @@ DO $$
 DECLARE
   v_expected text[] := ARRAY[
     'profiles', 'stores', 'products', 'orders', 'order_items',
-    'payment_methods', 'payment_orchestrations', 'listing_offers'
+    'payment_methods', 'payment_orchestrations', 'listings', 'listing_offers'
   ];
   v_found integer;
   v_enabled integer;
@@ -115,6 +115,18 @@ BEGIN
   SELECT count(*) INTO v_count FROM public.stores WHERE id = '30000000-0000-4000-8000-000000000001';
   IF v_count <> 0 THEN RAISE EXCEPTION 'anon must not read the unverified private store'; END IF;
 
+  SELECT count(*) INTO v_count FROM public.listings WHERE id = '80000000-0000-4000-8000-000000000002';
+  IF v_count <> 1 THEN RAISE EXCEPTION 'anon must read a published approved listing'; END IF;
+  SELECT count(*) INTO v_count FROM public.listings WHERE id = '80000000-0000-4000-8000-000000000001';
+  IF v_count <> 0 THEN RAISE EXCEPTION 'anon must not read a draft private listing'; END IF;
+
+  BEGIN
+    INSERT INTO public.listings (seller_id, title, description, category_slug)
+    VALUES ('10000000-0000-4000-8000-000000000001', 'Anon Listing Insert', 'Must be denied', 'rls-fixture');
+    RAISE EXCEPTION 'anon unexpectedly inserted a listing';
+  EXCEPTION WHEN insufficient_privilege THEN NULL;
+  END;
+
   SELECT count(*) INTO v_count FROM public.listing_offers WHERE id = '81000000-0000-4000-8000-000000000002';
   IF v_count <> 1 THEN RAISE EXCEPTION 'anon must read the active public listing offer'; END IF;
   SELECT count(*) INTO v_count FROM public.listing_offers WHERE id = '81000000-0000-4000-8000-000000000001';
@@ -165,6 +177,39 @@ BEGIN
   IF v_count <> 1 THEN RAISE EXCEPTION 'user A must read their own inactive product'; END IF;
   SELECT count(*) INTO v_count FROM public.products WHERE id = '40000000-0000-4000-8000-000000000002';
   IF v_count <> 0 THEN RAISE EXCEPTION 'user A must not read user B private product'; END IF;
+
+  SELECT count(*) INTO v_count FROM public.listings WHERE id = '80000000-0000-4000-8000-000000000001';
+  IF v_count <> 1 THEN RAISE EXCEPTION 'user A must read their own draft listing'; END IF;
+  SELECT count(*) INTO v_count FROM public.listings WHERE id = '80000000-0000-4000-8000-000000000002';
+  IF v_count <> 1 THEN RAISE EXCEPTION 'user A must read the published public listing'; END IF;
+
+  UPDATE public.listings SET description = 'updated by owner A'
+  WHERE id = '80000000-0000-4000-8000-000000000001';
+  GET DIAGNOSTICS v_rows = ROW_COUNT;
+  IF v_rows <> 1 THEN RAISE EXCEPTION 'user A must update their own listing'; END IF;
+
+  UPDATE public.listings SET description = 'unauthorized by A'
+  WHERE id = '80000000-0000-4000-8000-000000000002';
+  GET DIAGNOSTICS v_rows = ROW_COUNT;
+  IF v_rows <> 0 THEN RAISE EXCEPTION 'user A must not update user B listing'; END IF;
+
+  INSERT INTO public.listings (id, seller_id, title, description, category_slug)
+  VALUES ('82000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000001', 'RLS Owner Listing A', 'Owner insert fixture', 'rls-fixture');
+
+  BEGIN
+    INSERT INTO public.listings (seller_id, title, description, category_slug)
+    VALUES ('20000000-0000-4000-8000-000000000002', 'RLS Foreign Listing A', 'Must be denied', 'rls-fixture');
+    RAISE EXCEPTION 'user A unexpectedly inserted a listing for user B';
+  EXCEPTION WHEN insufficient_privilege THEN NULL;
+  END;
+
+  DELETE FROM public.listings WHERE id = '82000000-0000-4000-8000-000000000001';
+  GET DIAGNOSTICS v_rows = ROW_COUNT;
+  IF v_rows <> 1 THEN RAISE EXCEPTION 'user A must delete their own listing'; END IF;
+
+  DELETE FROM public.listings WHERE id = '80000000-0000-4000-8000-000000000002';
+  GET DIAGNOSTICS v_rows = ROW_COUNT;
+  IF v_rows <> 0 THEN RAISE EXCEPTION 'user A must not delete user B listing'; END IF;
 
   SELECT count(*) INTO v_count FROM public.listing_offers WHERE id = '81000000-0000-4000-8000-000000000001';
   IF v_count <> 1 THEN RAISE EXCEPTION 'user A must read their own paused listing offer'; END IF;
@@ -299,6 +344,28 @@ BEGIN
   SELECT count(*) INTO v_count FROM public.products WHERE id = '40000000-0000-4000-8000-000000000001';
   IF v_count <> 0 THEN RAISE EXCEPTION 'user B must not read user A private product'; END IF;
 
+  SELECT count(*) INTO v_count FROM public.listings WHERE id = '80000000-0000-4000-8000-000000000001';
+  IF v_count <> 0 THEN RAISE EXCEPTION 'user B must not read user A draft listing'; END IF;
+  SELECT count(*) INTO v_count FROM public.listings WHERE id = '80000000-0000-4000-8000-000000000002';
+  IF v_count <> 1 THEN RAISE EXCEPTION 'user B must read their public listing'; END IF;
+
+  UPDATE public.listings SET description = 'unauthorized by B'
+  WHERE id = '80000000-0000-4000-8000-000000000001';
+  GET DIAGNOSTICS v_rows = ROW_COUNT;
+  IF v_rows <> 0 THEN RAISE EXCEPTION 'user B must not update user A draft listing'; END IF;
+
+  UPDATE public.listings SET description = 'updated by owner B'
+  WHERE id = '80000000-0000-4000-8000-000000000002';
+  GET DIAGNOSTICS v_rows = ROW_COUNT;
+  IF v_rows <> 1 THEN RAISE EXCEPTION 'user B must update their own listing'; END IF;
+
+  BEGIN
+    INSERT INTO public.listings (seller_id, title, description, category_slug)
+    VALUES ('10000000-0000-4000-8000-000000000001', 'RLS Foreign Listing B', 'Must be denied', 'rls-fixture');
+    RAISE EXCEPTION 'user B unexpectedly inserted a listing for user A';
+  EXCEPTION WHEN insufficient_privilege THEN NULL;
+  END;
+
   SELECT count(*) INTO v_count FROM public.listing_offers WHERE id = '81000000-0000-4000-8000-000000000001';
   IF v_count <> 0 THEN RAISE EXCEPTION 'user B must not read user A paused listing offer'; END IF;
   SELECT count(*) INTO v_count FROM public.listing_offers WHERE id = '81000000-0000-4000-8000-000000000002';
@@ -362,6 +429,10 @@ BEGIN
   );
   IF v_count <> 2 THEN RAISE EXCEPTION 'service_role must read both payment orchestrations'; END IF;
 
+  SELECT count(*) INTO v_count FROM public.listings WHERE id IN (
+    '80000000-0000-4000-8000-000000000001', '80000000-0000-4000-8000-000000000002'
+  );
+  IF v_count <> 2 THEN RAISE EXCEPTION 'service_role must read both listings'; END IF;
   SELECT count(*) INTO v_count FROM public.listing_offers WHERE id IN (
     '81000000-0000-4000-8000-000000000001', '81000000-0000-4000-8000-000000000002'
   );
