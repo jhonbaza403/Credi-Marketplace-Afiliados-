@@ -89,12 +89,20 @@ export function LoginForm() {
           ? error.code
           : null;
 
+      const normalizedMessage =
+        error instanceof Error ? error.message.toLowerCase() : '';
+      const invalidCredentials =
+        errorCode === 'invalid_credentials' ||
+        normalizedMessage.includes('invalid login credentials');
+
       setErrorMsg(
-        errorCode === 'invalid_credentials'
-          ? 'No pudimos validar el correo y la contraseña. Comprueba ambos datos. Si estás en localhost o Preview, utiliza una cuenta creada en ese entorno: las cuentas de Producción no se copian automáticamente. Para recuperar la contraseña de la cuenta del entorno actual, usa «¿Olvidaste tu contraseña?».'
-          : error instanceof Error
-            ? error.message
-            : 'No fue posible iniciar sesión. Verifica tus credenciales.',
+        invalidCredentials
+          ? 'El correo o la contraseña no corresponden a una cuenta de este proyecto. Comprueba que accedes al entorno correcto: las cuentas de Producción y Preview son independientes. Si la cuenta sí pertenece a este entorno, verifica los datos o utiliza «¿Olvidaste tu contraseña?».'
+          : errorCode === 'email_not_confirmed'
+            ? 'Tu correo todavía no está confirmado. Abre el enlace de verificación que recibiste antes de iniciar sesión.'
+            : error instanceof Error
+              ? error.message
+              : 'No fue posible iniciar sesión. Verifica tus credenciales.',
       );
     } finally {
       setLoading(false);
