@@ -61,3 +61,14 @@ Cloudflare también ofrece WebRTC mediante WHIP/WHEP para emisiones de latencia 
 - **Recuperar entrada:** vuelve a habilitar el Input deshabilitado; reinicia el Input si Cloudflare devuelve un estado terminal de conexión.
 - **Sincronizar replay:** vuelve a consultar la colección de vídeos del Input y enlaza el HLS oficial al registro de la sala cuando esté listo.
 - Ninguna de estas operaciones demuestra por sí sola una transmisión de extremo a extremo. Se requiere una prueba real con codificador, espectadores, cierre y replay.
+
+
+## Release y certificación de transporte
+
+El checklist obligatorio de release está en [`docs/CREDI_LIVE_RELEASE_CHECKLIST.md`](./CREDI_LIVE_RELEASE_CHECKLIST.md). La verificación real se ejecuta sólo de forma manual con el workflow **Credi LIVE Preview E2E**, contra un deployment Preview único.
+
+El workflow requiere el runner privado `credi-live-preview` y un archivo de sesión del propietario protegido localmente en ese runner. No se guardan sesiones ni secretos Cloudflare en GitHub. Los secretos del proveedor permanecen en las variables Preview de Vercel.
+
+**Estado de certificación:** NO VERIFICADO. En la última comprobación de la conexión disponible, Cloudflare aceptó la consulta de cuentas, pero rechazó la verificación del token (401) y la consulta de Live Inputs (403: Stream no habilitado para la cuenta). No se creó una entrada nueva ni se envió vídeo. No hay evidencia de espectadores ni de replay real.
+
+La implementación y las pruebas simuladas no sustituyen la emisión real. La integración sólo se considera cerrada cuando el checklist de release adjunta evidencia de una emisión RTMPS/SRT, la secuencia real de webhooks, dos espectadores independientes y un replay oficial asociado al mismo Input, videoId y ventana temporal.
