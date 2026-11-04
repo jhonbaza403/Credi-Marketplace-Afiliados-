@@ -73,6 +73,12 @@ export async function POST(request: Request) {
     next.transport_state = 'connected'
     next.cloudflare_current_broadcast_started_at = broadcastStartedAt
     next.cloudflare_last_error = null
+    next.cloudflare_replay_sync_state = 'pending'
+    next.cloudflare_replay_video_id = null
+    next.cloudflare_replay_input_id = null
+    next.cloudflare_replay_created_at = null
+    next.cloudflare_replay_dash_url = null
+    updates.replay_url = null
   } else if (event.eventType === 'live_input.disconnected') {
     const broadcastStartedAt = typeof metadata.cloudflare_current_broadcast_started_at === 'string'
       ? metadata.cloudflare_current_broadcast_started_at
