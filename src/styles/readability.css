@@ -116,22 +116,10 @@
   color: var(--foreground);
 }
 
-.app-readable-surface main:not(.credi-business-chat) > div > header,
-.app-readable-surface main:not(.credi-business-chat) section,
-.app-readable-surface main:not(.credi-business-chat) article,
-.app-readable-surface main:not(.credi-business-chat) aside,
-.app-readable-surface main:not(.credi-business-chat) form {
-  color: var(--foreground) !important;
-}
-
-.app-readable-surface main:not(.credi-business-chat) header[class*="bg-slate-950"],
-.app-readable-surface main:not(.credi-business-chat) section[class*="bg-slate-950"],
-.app-readable-surface main:not(.credi-business-chat) article[class*="bg-slate-950"],
-.app-readable-surface main:not(.credi-business-chat) form[class*="bg-slate-950"] {
-  background: var(--surface) !important;
-  border-color: var(--border) !important;
-  color: var(--foreground) !important;
-}
+/* Semantic containers keep their own utility-defined surface and text colors.
+ * The page shell already supplies the default foreground; forcing it on every
+ * section/card breaks white text over dark hero and directory backgrounds.
+ */
 
 .marketplace-card,
 .premium-surface,
