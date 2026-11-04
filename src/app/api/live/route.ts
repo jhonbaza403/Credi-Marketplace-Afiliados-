@@ -123,7 +123,7 @@ export async function PATCH(request:Request) {
   const parsed=patchSchema.safeParse(await request.json().catch(()=>null))
   if(!parsed.success) return errorResponse('La operación LIVE no es válida.',400,'INVALID_LIVE_OPERATION')
   const p=parsed.data
-  const {data:existing}=await supabase.from('chat_live_rooms').select('id,status,started_at,stream_provider,metadata').eq('id',p.roomId).eq('host_user_id',user.id).maybeSingle()
+  const {data:existing}=await supabase.from('chat_live_rooms').select('id,status,started_at,ended_at,stream_provider,metadata').eq('id',p.roomId).eq('host_user_id',user.id).maybeSingle()
   if(!existing) return errorResponse('Sesión LIVE no encontrada.',404,'LIVE_ROOM_NOT_FOUND')
 
   const updates:Record<string,unknown>={}
@@ -151,11 +151,21 @@ export async function PATCH(request:Request) {
         return errorResponse('No se pudo detener el transporte Cloudflare. La sala permanece en su estado actual hasta confirmar el cierre.',502,'LIVE_TRANSPORT_END_FAILED')
       }
       try{
-        const replay=await syncLatestReplay(inputId,existing.started_at||String(metadata.cloudflare_input_created_at||''))
+        const endedAt=new Date().toISOString()
+        const replayStartedAt=typeof metadata.cloudflare_current_broadcast_started_at==='string'
+          ? metadata.cloudflare_current_broadcast_started_at
+          : (existing.started_at||String(metadata.cloudflare_input_created_at||''))
+        const replay=await syncLatestReplay(inputId,replayStartedAt,endedAt)
         metadata.cloudflare_replay_sync_state=replay.state
-        metadata.cloudflare_replay_last_checked_at=new Date().toISOString()
-        if(replay.videoId)metadata.cloudflare_replay_video_id=replay.videoId
-        if(replay.state==='ready')updates.replay_url=replay.playbackUrl
+        metadata.cloudflare_replay_last_checked_at=endedAt
+        if(replay.videoId){
+          metadata.cloudflare_replay_video_id=replay.videoId
+          metadata.cloudflare_replay_input_id=replay.inputId
+        }
+        if(replay.state==='ready'){
+          metadata.cloudflare_replay_created_at=replay.createdAt
+          updates.replay_url=replay.playbackUrl
+        }
       }catch{
         metadata.cloudflare_replay_sync_state='retry_required'
         metadata.cloudflare_replay_last_checked_at=new Date().toISOString()
