@@ -8,6 +8,60 @@ import { createClient } from "@/lib/supabase/client";
 const MIN_PASSWORD_LENGTH = 8;
 type PublicRole = "customer" | "vendor";
 
+type SignupErrorDetails = {
+  code?: unknown;
+  message?: unknown;
+  status?: unknown;
+};
+
+function getSignupErrorMessage(error: unknown): string {
+  const details = (error && typeof error === "object"
+    ? error
+    : {}) as SignupErrorDetails;
+  const code = typeof details.code === "string" ? details.code.toLowerCase() : "";
+  const message = typeof details.message === "string" ? details.message.toLowerCase() : "";
+  const status = typeof details.status === "number" ? details.status : 0;
+
+  if (code === "weak_password" || message.includes("password should be")) {
+    return "La contraseña no cumple los requisitos de seguridad. Usa al menos 8 caracteres y vuelve a intentarlo.";
+  }
+
+  if (code === "email_address_invalid" || message.includes("email address") && message.includes("invalid")) {
+    return "El correo electrónico no es válido. Comprueba la dirección e inténtalo nuevamente.";
+  }
+
+  if (code === "signup_disabled") {
+    return "El registro está deshabilitado en este entorno. No se creó ninguna cuenta.";
+  }
+
+  if (
+    code === "over_email_send_rate_limit" ||
+    code === "over_request_rate_limit" ||
+    status === 429
+  ) {
+    return "Se alcanzó el límite temporal de registros o correos de confirmación. Espera un momento y vuelve a intentarlo.";
+  }
+
+  if (
+    code === "email_exists" ||
+    code === "user_already_exists" ||
+    message.includes("already registered") ||
+    message.includes("already exists")
+  ) {
+    return "No fue posible usar ese correo para crear una cuenta. Prueba iniciar sesión o recuperar la contraseña.";
+  }
+
+  if (
+    code === "unexpected_failure" ||
+    message.includes("database error saving new user") ||
+    message.includes("gen_random_bytes")
+  ) {
+    return "El servicio no pudo guardar el perfil de la cuenta. No se completó el registro. Inténtalo nuevamente; si persiste, contacta al Centro de Atención con el código AUTH_PROFILE_SETUP_FAILED.";
+  }
+
+  return "No se pudo completar el registro. Comprueba el correo, el teléfono y la contraseña e inténtalo nuevamente.";
+}
+
 export function normalizePhone(value: string) {
   const compact = value.trim().replace(/[\s().-]/g, "");
   if (!/^\+[1-9]\d{6,14}$/.test(compact)) return null;
@@ -54,20 +108,20 @@ export default function RegisterPage() {
       });
 
       if (signUpError) {
-        setError("No fue posible crear la cuenta. Verifica los datos e inténtalo nuevamente.");
+        setError(getSignupErrorMessage(signUpError));
         return;
       }
 
-      if (data.user && !data.session) {
+      if (!data.user) {
+        setError("No recibimos la confirmación de creación de la cuenta. No se inició sesión; inténtalo nuevamente.");
+        return;
+      }
+
+      // The auth.users trigger creates the profile and stores phone_e164 in the
+      // same transaction. Do not perform a second client-side profile write here.
+      if (!data.session) {
         router.push(`/verify?email=${encodeURIComponent(normalizedEmail)}`);
         return;
-      }
-
-      if (data.user) {
-        const { error: phoneError } = await supabase.rpc("set_my_credi_phone", { p_phone: normalizedPhone });
-        if (phoneError) {
-          setError("La cuenta se creó, pero no fue posible guardar el número para Credi Chat. Puedes configurarlo desde tu perfil.");
-        }
       }
 
       router.replace("/dashboard");
