@@ -84,10 +84,17 @@ export function LoginForm() {
       finishLogin();
     } catch (error: unknown) {
       console.error('[LoginForm] sign-in failed', error);
+      const errorCode =
+        typeof error === 'object' && error !== null && 'code' in error
+          ? error.code
+          : null;
+
       setErrorMsg(
-        error instanceof Error
-          ? error.message
-          : 'No fue posible iniciar sesión. Verifica tus credenciales.',
+        errorCode === 'invalid_credentials'
+          ? 'No pudimos validar el correo y la contraseña. Comprueba ambos datos. Si estás en localhost o Preview, utiliza una cuenta creada en ese entorno: las cuentas de Producción no se copian automáticamente. Para recuperar la contraseña de la cuenta del entorno actual, usa «¿Olvidaste tu contraseña?».'
+          : error instanceof Error
+            ? error.message
+            : 'No fue posible iniciar sesión. Verifica tus credenciales.',
       );
     } finally {
       setLoading(false);
