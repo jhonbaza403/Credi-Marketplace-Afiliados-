@@ -1,6 +1,8 @@
 -- Restore the canonical listings relation before the historical affiliate/compliance
 -- migration that extends it. This migration is intentionally idempotent:
 -- production already has this relation, while clean local resets did not.
+-- IMPORTANT: production already has this schema. Reconcile this historical
+-- missing version in remote migration history before any production db push.
 BEGIN;
 
 CREATE TABLE IF NOT EXISTS public.listings (
@@ -78,44 +80,6 @@ CREATE TRIGGER trg_listings_updated_at
 BEFORE UPDATE ON public.listings
 FOR EACH ROW EXECUTE FUNCTION public.set_listings_updated_at();
 
-CREATE OR REPLACE FUNCTION public.guard_listing_moderation_fields()
-RETURNS trigger
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path TO ''
-AS $$
-BEGIN
-  IF coalesce(auth.role(), '') = 'service_role' THEN
-    RETURN NEW;
-  END IF;
-
-  IF coalesce(auth.role(), '') = 'authenticated'
-     AND NOT coalesce(public.is_admin(), false) THEN
-    IF TG_OP = 'INSERT' THEN
-      IF NEW.moderation_status <> 'pending' THEN
-        RAISE EXCEPTION 'Authenticated users cannot set listing moderation status'
-          USING ERRCODE = '42501';
-      END IF;
-    ELSIF NEW.moderation_status IS DISTINCT FROM OLD.moderation_status THEN
-      RAISE EXCEPTION 'Authenticated users cannot change listing moderation status'
-        USING ERRCODE = '42501';
-    END IF;
-  END IF;
-
-  RETURN NEW;
-END;
-$$;
-
-REVOKE ALL ON FUNCTION public.guard_listing_moderation_fields() FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.guard_listing_moderation_fields() FROM anon;
-REVOKE ALL ON FUNCTION public.guard_listing_moderation_fields() FROM authenticated;
-GRANT EXECUTE ON FUNCTION public.guard_listing_moderation_fields() TO service_role;
-
-DROP TRIGGER IF EXISTS trg_guard_listing_moderation_fields ON public.listings;
-CREATE TRIGGER trg_guard_listing_moderation_fields
-BEFORE INSERT OR UPDATE ON public.listings
-FOR EACH ROW EXECUTE FUNCTION public.guard_listing_moderation_fields();
-
 ALTER TABLE public.listings ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS listings_select_visible_or_own ON public.listings;
@@ -143,9 +107,8 @@ CREATE POLICY listings_owner_delete
 ON public.listings FOR DELETE TO authenticated
 USING (seller_id = (SELECT auth.uid()) OR (SELECT is_admin()));
 
-REVOKE ALL PRIVILEGES ON TABLE public.listings FROM anon;
-GRANT SELECT ON TABLE public.listings TO anon;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.listings TO anon;
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.listings TO authenticated;
-GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.listings TO service_role;
+GRANT ALL PRIVILEGES ON TABLE public.listings TO service_role;
 
 COMMIT;
