@@ -3,7 +3,11 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { Menu, X, Sparkles, MessageCircle } from 'lucide-react';
-import { CAPABILITY_DOMAINS, PRIMARY_DOMAINS } from '@/config/portal';
+import { CAPABILITY_DOMAINS, PORTAL_DOMAINS, PRIMARY_DOMAINS } from '@/config/portal';
+
+function getPortalHref(key: string) {
+  return PORTAL_DOMAINS.find((domain) => domain.key === key)?.href ?? "/";
+}
 
 export default function MobileMenu() {
   const [open, setOpen] = useState(false);
@@ -35,7 +39,7 @@ export default function MobileMenu() {
             <div>
               <p className="px-1 pb-2 text-[10px] font-black uppercase tracking-[.18em] text-white/50">Capacidades</p>
               <div className="grid grid-cols-2 gap-2">
-                {CAPABILITY_DOMAINS.map(({ label, href }) => (
+                {CAPABILITY_DOMAINS.filter((domain) => !["search", "login", "register", "orders", "dashboard", "profile", "settings", "affiliate_dashboard", "affiliate_links", "seller_dashboard", "create_product", "publish_b2b", "admin", "admin_compliance"].includes(domain.key)).map(({ label, href }) => (
                   <Link key={href} href={href} onClick={close} className="rounded-xl bg-white/5 px-3 py-3 text-sm font-semibold text-white/80">
                     {label}
                   </Link>
@@ -44,10 +48,10 @@ export default function MobileMenu() {
             </div>
 
             <div className="grid grid-cols-2 gap-2">
-              <Link href="/publish" onClick={close} className="inline-flex items-center justify-center gap-2 rounded-xl bg-white/10 px-3 py-3 text-sm font-black text-white">
+              <Link href={getPortalHref("sell")} onClick={close} className="inline-flex items-center justify-center gap-2 rounded-xl bg-white/10 px-3 py-3 text-sm font-black text-white">
                 <Sparkles className="size-4" /> Publicar
               </Link>
-              <Link href="/chat" onClick={close} className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand-600 px-3 py-3 text-sm font-black text-white">
+              <Link href={getPortalHref("chat")} onClick={close} className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand-600 px-3 py-3 text-sm font-black text-white">
                 <MessageCircle className="size-4" /> Chat
               </Link>
             </div>
