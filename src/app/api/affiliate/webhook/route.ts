@@ -7,7 +7,7 @@ const EventSchema=z.object({
   id:z.string().min(1).max(160),
   type:z.string().regex(/^[a-z][a-z0-9_.-]{1,119}$/i),
   occurredAt:z.string().datetime().optional(),
-  data:z.record(z.unknown()).default({})
+  data:z.record(z.string(), z.unknown()).default({})
 }).strict();
 function equalHex(expected:string,supplied:string) {
   if(!/^[a-f0-9]{64}$/i.test(supplied)) return false;
