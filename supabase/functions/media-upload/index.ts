@@ -13,7 +13,12 @@ const ALLOWED = [
   'audio/aac', 'audio/flac', 'audio/m4a', 'audio/opus', 'audio/x-m4a',
   'application/pdf',
 ]
-const PRIVATE_CHAT_ALLOWED = new Set(ALLOWED)
+const PRIVATE_CHAT_ALLOWED = new Set([
+  'image/jpeg', 'image/png', 'image/webp', 'image/gif',
+  'video/mp4', 'video/webm', 'video/quicktime',
+  'audio/mp4', 'audio/mpeg', 'audio/ogg', 'audio/webm', 'audio/wav', 'audio/x-wav',
+  'application/pdf',
+])
 const PRIVATE_CHAT_MAX = 524288000
 const PUBLIC_MAX = 524288000
 const JSON_HEADERS: Record<string, string> = {
@@ -28,21 +33,13 @@ function allowedOrigin(origin: string | null) {
   try {
     const url = new URL(origin)
     if (url.origin !== origin) return null
-
     const host = url.hostname.toLowerCase()
-    const isProduction = host === 'credi-marketplace-afiliados.vercel.app'
-    const isProjectDeployment = /^credi-marketplace-afiliados-[a-z0-9-]+\.vercel\.app$/i.test(host)
-    const isBranchAlias = /^credi-marketplace-afilia-git-[a-z0-9-]+-credi-marketplace-afiliados\.vercel\.app$/i.test(host)
-    const isLegacyProjectPreview = /^credi-marketplace-afiliados-[a-z0-9-]+-bazwjhon-2554s-projects\.vercel\.app$/i.test(host)
-
-    if (url.protocol === 'https:' && (isProduction || isProjectDeployment || isBranchAlias || isLegacyProjectPreview)) {
-      return origin
-    }
-    if (
-      url.protocol === 'http:' &&
-      (host === 'localhost' || host === '127.0.0.1') &&
-      url.port === '3000'
-    ) return origin
+    const production = host === 'credi-marketplace-afiliados.vercel.app'
+    const deployment = /^credi-marketplace-afiliados-[a-z0-9-]+\.vercel\.app$/i.test(host)
+    const branchAlias = /^credi-marketplace-afilia-git-[a-z0-9-]+-credi-marketplace-afiliados\.vercel\.app$/i.test(host)
+    const legacyPreview = /^credi-marketplace-afiliados-[a-z0-9-]+-bazwjhon-2554s-projects\.vercel\.app$/i.test(host)
+    if (url.protocol === 'https:' && (production || deployment || branchAlias || legacyPreview)) return origin
+    if (url.protocol === 'http:' && (host === 'localhost' || host === '127.0.0.1') && url.port === '3000') return origin
   } catch {
     return null
   }
