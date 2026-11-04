@@ -50,8 +50,8 @@ const SECTION_DETAILS = {
 } as const;
 
 const SOLUTION_GROUPS = [
-  { ...SECTION_DETAILS.community, items: CAPABILITY_DOMAINS.filter((item) => COMMUNITY_KEYS.has(item.key)) },
-  { ...SECTION_DETAILS.commerce, items: CAPABILITY_DOMAINS.filter((item) => COMMERCE_KEYS.has(item.key)) },
+  { ...SECTION_DETAILS.community, items: PORTAL_DOMAINS.filter((item) => COMMUNITY_KEYS.has(item.key)) },
+  { ...SECTION_DETAILS.commerce, items: PORTAL_DOMAINS.filter((item) => COMMERCE_KEYS.has(item.key)) },
   { ...SECTION_DETAILS.business, items: CAPABILITY_DOMAINS.filter((item) => !item.href.startsWith("/dashboard") && !item.roles && !["search", "login", "register", "orders", "admin", "admin_compliance", "create_product", "publish_b2b"].includes(item.key) && !COMMUNITY_KEYS.has(item.key) && !COMMERCE_KEYS.has(item.key)) },
 ].map((group) => ({
   ...group,
