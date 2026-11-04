@@ -90,14 +90,14 @@ export async function POST(request:Request) {
     }).select('id,host_user_id,title,status,viewer_count,started_at,description,cover_media,scheduled_at,replay_url,playback_url,stream_provider,viewer_peak,likes_count,shares_count,settings,created_at').single()
 
     if(error||!room){console.error('[live:'+requestId+'] create failed',error);return errorResponse('No fue posible crear la sesión LIVE.',500,'LIVE_ROOM_CREATE_FAILED')}
-    let transport:null|{inputId:string;rtmps:{url:string;streamKey:string}|null;playback:{hls?:string;dash?:string}|null;webRTC:{url:string}|null}=null
+    let transport:null|{inputId:string;playback:{hls?:string;dash?:string}|null;webRTC:{url:string}|null}=null
     if(isCloudflareConfigured()){
       try{
         const input=await createLiveInput(room.id,room.title)
         const metadata={module:'CREDI-LIVE',version:'2.2',request_id:requestId,cloudflare_live_input_id:input.uid,cloudflare_hls_url:input.playback?.hls||null,cloudflare_dash_url:input.playback?.dash||null,cloudflare_whip_url:input.webRTC?.url||null,cloudflare_whep_url:input.webRTCPlayback?.url||null,transport:'cloudflare-stream-rtmps',transport_version:'2026-09'}
         const {data:linked,error:linkError}=await supabase.from('chat_live_rooms').update({metadata,playback_url:input.playback?.hls||null,stream_provider:'cloudflare_stream'}).eq('id',room.id).select('id,host_user_id,title,status,viewer_count,started_at,description,cover_media,scheduled_at,replay_url,playback_url,stream_provider,viewer_peak,likes_count,shares_count,settings,created_at').single()
         if(linkError||!linked) throw new Error('LIVE_TRANSPORT_LINK_FAILED')
-        transport={inputId:input.uid,rtmps:input.rtmps||null,playback:input.playback||null,webRTC:input.webRTC||null}
+        transport={inputId:input.uid,playback:input.playback||null,webRTC:input.webRTC||null}
         return NextResponse.json({success:true,room:linked,transport},{status:201,headers:{'Cache-Control':'no-store'}})
       }catch(error){
         console.error('[live:'+requestId+'] cloudflare provisioning failed',error)
