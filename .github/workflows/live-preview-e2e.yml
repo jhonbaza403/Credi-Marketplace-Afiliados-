@@ -22,7 +22,7 @@ concurrency:
 jobs:
   live-preview-e2e:
     name: Real RTMPS/SRT + webhooks + two viewers + replay
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, credi-live-preview]
     timeout-minutes: 35
 
     env:
@@ -31,24 +31,24 @@ jobs:
       NODE_ENV: test
       PLAYWRIGHT_BASE_URL: ${{ inputs.preview_url }}
       E2E_LIVE_ROOM_ID: ${{ inputs.live_room_id }}
-      E2E_STORAGE_STATE_PATH: /tmp/credi-live-preview-storage-state.json
+      E2E_STORAGE_STATE_PATH: ${{ vars.CREDI_LIVE_STORAGE_STATE_PATH }}
       CREDI_LIVE_RELEASE_E2E: "true"
 
     steps:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Validate Preview target and authenticated owner session
+      - name: Validate Preview target and private runner session
         shell: bash
-        env:
-          E2E_STORAGE_STATE_JSON: ${{ secrets.E2E_STORAGE_STATE_JSON }}
         run: |
           set -euo pipefail
           test -n "${PLAYWRIGHT_BASE_URL}" || { echo "::error::Missing Preview URL input"; exit 1; }
           test -n "${E2E_LIVE_ROOM_ID}" || { echo "::error::Missing LIVE room ID input"; exit 1; }
-          test -n "${E2E_STORAGE_STATE_JSON}" || { echo "::error::Missing E2E_STORAGE_STATE_JSON secret"; exit 1; }
+          test -n "${E2E_STORAGE_STATE_PATH}" || { echo "::error::Set the non-secret CREDI_LIVE_STORAGE_STATE_PATH repository variable"; exit 1; }
+          test -s "${E2E_STORAGE_STATE_PATH}" || { echo "::error::The private runner storage-state file is missing"; exit 1; }
 
           node <<'NODE'
+          const fs = require("node:fs");
           const url = new URL(process.env.PLAYWRIGHT_BASE_URL);
           const productionHost = "credi-marketplace-afiliados.vercel.app";
           if (url.protocol !== "https:") throw new Error("The LIVE release target must use HTTPS");
@@ -56,20 +56,15 @@ jobs:
           if (!/^credi-marketplace-afiliados-.+\.vercel\.app$/.test(url.hostname)) {
             throw new Error("The target must be a unique Credi Vercel Preview deployment URL");
           }
-          if (!/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(process.env.E2E_LIVE_ROOM_ID)) {
+          if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(process.env.E2E_LIVE_ROOM_ID)) {
             throw new Error("LIVE room ID must be a UUID");
           }
-          const state = JSON.parse(process.env.E2E_STORAGE_STATE_JSON);
+          const state = JSON.parse(fs.readFileSync(process.env.E2E_STORAGE_STATE_PATH, "utf8"));
           if (!Array.isArray(state.cookies) || !Array.isArray(state.origins)) {
-            throw new Error("E2E storage state is not a Playwright storage-state document");
+            throw new Error("Private runner storage state is not a Playwright storage-state document");
           }
-          console.log("Preview target shape and owner storage-state structure validated; values withheld.");
+          console.log("Preview target and local private session file validated; session contents withheld.");
           NODE
-
-          umask 077
-          printf '%s' "${E2E_STORAGE_STATE_JSON}" > "${E2E_STORAGE_STATE_PATH}"
-          chmod 600 "${E2E_STORAGE_STATE_PATH}"
-          unset E2E_STORAGE_STATE_JSON
 
       - name: Setup Node.js 24
         uses: actions/setup-node@v6
@@ -100,7 +95,3 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
-      - name: Remove temporary authenticated browser state
-        if: always()
-        shell: bash
-        run: rm -f "${E2E_STORAGE_STATE_PATH}"
