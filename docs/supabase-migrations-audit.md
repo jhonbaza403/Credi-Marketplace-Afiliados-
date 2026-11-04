@@ -35,7 +35,7 @@ Los dos archivos locales de moderación y publicación LIVE tienen nombres funci
 
 ## Procedimiento obligatorio de reconciliación
 
-1. Recuperar las cinco migraciones remotas que no tienen un archivo local equivalente identificado, desde el historial Git confiable, artefactos de despliegue o una copia segura. No reconstruirlas por inferencia a partir del nombre.
+1. Recuperar las siete migraciones remotas que no tienen un archivo local equivalente identificado, desde el historial Git confiable, artefactos de despliegue o una copia segura. No reconstruirlas por inferencia a partir del nombre.
 2. Comparar el contenido de las migraciones locales antiguas con las versiones remotas posteriores y establecer su correspondencia mediante revisión SQL y hashes.
 3. Conservar los identificadores que ya están registrados en Supabase. No renombrar ni borrar migraciones históricas aplicadas.
 4. Reconciliar el historial con `supabase migration list` desde un entorno autenticado y revisar cualquier diferencia antes de generar nuevas migraciones.
@@ -43,6 +43,8 @@ Los dos archivos locales de moderación y publicación LIVE tienen nombres funci
 6. Comparar el esquema local resultante con el remoto mediante introspección y asesores. No usar `db reset` sobre el proyecto remoto.
 
 ## Pruebas SQL
+
+La reconstrucción desde cero no se ejecutó en esta intervención: el entorno de validación no dispone de Docker, Supabase CLI ni PostgreSQL local. El proyecto Supabase conectado no se utilizó como sustituto de una base local y no se ejecutó ningún reset remoto.
 
 La suite contiene pruebas SQL de esquema, órdenes, inventario, idempotencia, afiliados, pagos, webhooks, máquina de estados, RLS y seguridad, además de escenarios de integración. El archivo `001_schema.sql` tenía envoltura Markdown que impedía ejecutarlo directamente como SQL; se ha limpiado esa envoltura. La suite completa todavía debe ejecutarse desde una base local recién creada y quedar incorporada a CI antes de certificar las migraciones.
 
