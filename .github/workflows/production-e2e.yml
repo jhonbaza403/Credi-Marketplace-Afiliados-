@@ -1,42 +1,71 @@
-name: Credi Production E2E
+name: Credi Preview E2E
 
 on:
   workflow_dispatch:
+    inputs:
+      preview_url:
+        description: "URL única del deployment Vercel Preview (no producción)"
+        required: true
+        type: string
+      operation_id:
+        description: "ID no secreto de la operación de prueba"
+        required: true
+        type: string
+      live_room_id:
+        description: "ID no secreto de la sala LIVE de prueba"
+        required: true
+        type: string
 
 permissions:
   contents: read
 
-env:
-  CI: "true"
-  NEXT_TELEMETRY_DISABLED: "1"
-  NODE_ENV: test
-  PLAYWRIGHT_BASE_URL: ${{ secrets.E2E_BASE_URL }}
-  E2E_STORAGE_STATE_PATH: /tmp/credi-e2e-storage-state.json
-  E2E_OPERATION_ID: ${{ secrets.E2E_OPERATION_ID }}
-  E2E_LIVE_ROOM_ID: ${{ secrets.E2E_LIVE_ROOM_ID }}
-
 jobs:
-  production-e2e:
-    name: Real LIVE + media + financial journey
-    runs-on: ubuntu-latest
-    timeout-minutes: 25
+  preview-e2e:
+    name: Manual Preview financial and LIVE metadata journey
+    runs-on: [self-hosted, linux, credi-live-preview]
+    timeout-minutes: 30
+
+    env:
+      CI: "true"
+      NEXT_TELEMETRY_DISABLED: "1"
+      NODE_ENV: test
+      PLAYWRIGHT_BASE_URL: ${{ inputs.preview_url }}
+      E2E_OPERATION_ID: ${{ inputs.operation_id }}
+      E2E_LIVE_ROOM_ID: ${{ inputs.live_room_id }}
+      E2E_STORAGE_STATE_PATH: ${{ vars.CREDI_LIVE_STORAGE_STATE_PATH }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Validate required production E2E secrets
+      - name: Validate Preview target and local authenticated session
         shell: bash
-        env:
-          E2E_STORAGE_STATE_JSON: ${{ secrets.E2E_STORAGE_STATE_JSON }}
         run: |
           set -euo pipefail
-          test -n "${PLAYWRIGHT_BASE_URL}" || { echo "::error::Missing E2E_BASE_URL"; exit 1; }
-          test -n "${E2E_OPERATION_ID}" || { echo "::error::Missing E2E_OPERATION_ID"; exit 1; }
-          test -n "${E2E_LIVE_ROOM_ID}" || { echo "::error::Missing E2E_LIVE_ROOM_ID"; exit 1; }
-          test -n "${E2E_STORAGE_STATE_JSON}" || { echo "::error::Missing E2E_STORAGE_STATE_JSON"; exit 1; }
-          printf '%s' "${E2E_STORAGE_STATE_JSON}" > "${E2E_STORAGE_STATE_PATH}"
-          node -e "JSON.parse(require('fs').readFileSync(process.env.E2E_STORAGE_STATE_PATH, 'utf8'));"
+          test -n "${PLAYWRIGHT_BASE_URL}" || { echo "::error::Missing Preview URL input"; exit 1; }
+          test -n "${E2E_OPERATION_ID}" || { echo "::error::Missing operation ID input"; exit 1; }
+          test -n "${E2E_LIVE_ROOM_ID}" || { echo "::error::Missing LIVE room ID input"; exit 1; }
+          test -n "${E2E_STORAGE_STATE_PATH}" || { echo "::error::Set the non-secret CREDI_LIVE_STORAGE_STATE_PATH repository variable"; exit 1; }
+          test -s "${E2E_STORAGE_STATE_PATH}" || { echo "::error::The private runner storage-state file is missing"; exit 1; }
+
+          node <<'NODE'
+          const fs = require("node:fs");
+          const url = new URL(process.env.PLAYWRIGHT_BASE_URL);
+          const productionHost = "credi-marketplace-afiliados.vercel.app";
+          if (url.protocol !== "https:") throw new Error("The E2E target must use HTTPS");
+          if (url.hostname === productionHost) throw new Error("Production is not an allowed target for this Preview-only workflow");
+          if (!/^credi-marketplace-afiliados-.+\.vercel\.app$/.test(url.hostname)) {
+            throw new Error("The target must be a unique Credi Vercel Preview deployment URL");
+          }
+          if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(process.env.E2E_LIVE_ROOM_ID)) {
+            throw new Error("LIVE room ID must be a UUID");
+          }
+          const state = JSON.parse(fs.readFileSync(process.env.E2E_STORAGE_STATE_PATH, "utf8"));
+          if (!Array.isArray(state.cookies) || !Array.isArray(state.origins)) {
+            throw new Error("Private runner storage state is not a Playwright storage-state document");
+          }
+          console.log("Preview target and private local session file validated; session contents withheld.");
+          NODE
 
       - name: Setup Node 24
         uses: actions/setup-node@v6
@@ -53,5 +82,5 @@ jobs:
       - name: Install Playwright
         run: npx playwright install --with-deps chromium
 
-      - name: Run real production journey
+      - name: Run authenticated Preview journey
         run: npx playwright test tests/e2e/production-journey.spec.ts --reporter=line
