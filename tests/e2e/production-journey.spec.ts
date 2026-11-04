@@ -56,7 +56,7 @@ test.describe("Credi production journey — real operation verification", () => 
     expect(body.data?.order_id).toBeTruthy();
   });
 
-  test("measures LIVE transport, replay/media metadata and real-time chat", async ({ request }) => {
+  test("checks LIVE room metadata and chat API only (not transport certification)", async ({ request }) => {
     const liveResponse = await request.get("/api/live");
     expect(liveResponse.status()).toBe(200);
 
@@ -67,8 +67,10 @@ test.describe("Credi production journey — real operation verification", () => 
     expect(room, "Configured E2E LIVE room was not returned by the authenticated LIVE API").toBeTruthy();
     if (!room) throw new Error("Configured E2E LIVE room was not returned.");
     expect(room.status).toMatch(/live|ended/);
-    expect(room.stream_provider).toBeTruthy();
-    expect(room.playback_url || room.replay_url, "LIVE has no playback/replay URL").toBeTruthy();
+    expect(room.stream_provider).toBe("cloudflare_stream");
+    // This general journey checks only the authenticated room/API contract.
+    // Real transport, two viewers, disconnect/reconnect and replay are gated
+    // exclusively by tests/e2e/live-release.spec.ts.
 
     const chatResponse = await request.get(`/api/live/chat?roomId=${liveRoomId}`);
     expect(chatResponse.status()).toBe(200);
