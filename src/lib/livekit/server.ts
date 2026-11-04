@@ -84,7 +84,7 @@ export function createLiveKitJoinToken(roomName: string, identity: string) {
   }, 15 * 60)
 }
 
-async function twirp<T>(
+async function twirp<T extends object>(
   service: 'RoomService' | 'Egress',
   method: string,
   body: Record<string, unknown>,
@@ -107,7 +107,7 @@ async function twirp<T>(
   )
   const payload = await response.json().catch(() => null) as T | { message?: string; code?: string } | null
   if (!response.ok) {
-    const detail = payload && 'message' in payload ? payload.message : null
+    const detail = payload && typeof payload === 'object' && 'message' in payload ? String(payload.message || '') : null
     throw new Error(`LIVEKIT_API_ERROR:${detail || response.status}`)
   }
   if (!payload) throw new Error('LIVEKIT_EMPTY_RESPONSE')
@@ -157,7 +157,7 @@ export async function stopLiveKitEgress(egressId: string) {
   return twirp<LiveKitEgressResponse>(
     'Egress',
     'StopEgress',
-    { egressId },
+    { egress_id: egressId },
     { roomRecord: true },
   )
 }
