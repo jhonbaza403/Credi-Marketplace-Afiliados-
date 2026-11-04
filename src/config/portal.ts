@@ -20,7 +20,7 @@ export const PORTAL_DOMAINS: readonly PortalDomain[] = [
   { key: "services", label: "Servicios", href: "/services", description: "Servicios profesionales y capacidades comerciales.", group: "primary" },
   { key: "free", label: "Free", href: "/free", description: "Acceso gratuito al mismo ecosistema Credi.", group: "primary" },
   { key: "chat", label: "Chat", href: "/chat", description: "Mensajería y comunicación comercial.", group: "capability" },
-  { key: "live", label: "LIVE", href: "/live", description: "Live Commerce, eventos y transmisiones.", group: "capability" },
+  { key: "live", label: "LIVE", href: "/live", description: "Live Commerce, eventos y transmisiones.", group: "primary" },
   { key: "marketing", label: "Marketing", href: "/marketing", description: "Campañas, audiencias, creatividades y analítica publicitaria.", group: "capability" },
   { key: "content", label: "Contenido", href: "/publish", description: "Publicaciones, historias, reels y publicidad.", group: "capability" },
   { key: "analytics", label: "Analytics", href: "/analytics", description: "Métricas y rendimiento de Credi.", group: "capability" },
