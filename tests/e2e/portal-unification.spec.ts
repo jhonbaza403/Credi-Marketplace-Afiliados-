@@ -1,110 +1,104 @@
 import { expect, test, type Locator } from "@playwright/test";
+import sharp from "sharp";
 
 async function expectReadableContrast(element: Locator) {
-  await expect.poll(async () => element.evaluate((node) => {
-    type Color = { red: number; green: number; blue: number; alpha: number };
+  const marker = "credi-contrast-probe";
+  const selector = `[data-credi-contrast-probe="${marker}"]`;
+  await element.scrollIntoViewIfNeeded();
+  await element.evaluate((node, value) => node.setAttribute("data-credi-contrast-probe", value), marker);
 
-    const parseColors = (value: string): Color[] => {
-      const colors: Color[] = [];
-      for (const match of value.matchAll(/rgba?\(([^)]+)\)/g)) {
-        const parts = match[1].replace(/\//g, " ").match(/[\d.]+%?/g) ?? [];
-        if (parts.length < 3) continue;
-        const channel = (part: string) => {
-          const number = Number.parseFloat(part);
-          return part.endsWith("%") ? number * 2.55 : number;
-        };
-        const alphaPart = parts[3];
-        const alpha = alphaPart === undefined ? 1
-          : alphaPart.endsWith("%") ? Number.parseFloat(alphaPart) / 100
-          : Number.parseFloat(alphaPart);
-        colors.push({
-          red: Math.min(255, Math.max(0, channel(parts[0]))),
-          green: Math.min(255, Math.max(0, channel(parts[1]))),
-          blue: Math.min(255, Math.max(0, channel(parts[2]))),
-          alpha: Math.min(1, Math.max(0, alpha)),
-        });
-      }
-      return colors;
-    };
+  try {
+    const actualPng = await element.screenshot({ animations: "disabled", scale: "css" });
+    const markerPng = await element.screenshot({
+      animations: "disabled",
+      scale: "css",
+      style: `${selector}, ${selector} * {
+        color: rgb(255 0 255) !important;
+        -webkit-text-fill-color: rgb(255 0 255) !important;
+        background-image: none !important;
+        text-shadow: none !important;
+        text-decoration-color: rgb(255 0 255) !important;
+      }`,
+    });
+    const backgroundPng = await element.screenshot({
+      animations: "disabled",
+      scale: "css",
+      style: `${selector}, ${selector} * {
+        color: transparent !important;
+        -webkit-text-fill-color: transparent !important;
+        background-image: none !important;
+        text-shadow: none !important;
+        text-decoration-color: transparent !important;
+      }`,
+    });
 
-    const parseHex = (value: string): Color | null => {
-      const match = value.trim().match(/^#([\da-f]{3}|[\da-f]{6})$/i);
-      if (!match) return null;
-      const hex = match[1].length === 3
-        ? match[1].split("").map((part) => part + part).join("")
-        : match[1];
-      return {
-        red: Number.parseInt(hex.slice(0, 2), 16),
-        green: Number.parseInt(hex.slice(2, 4), 16),
-        blue: Number.parseInt(hex.slice(4, 6), 16),
-        alpha: 1,
-      };
-    };
+    const decode = async (png: Buffer) => sharp(png).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+    const [actual, markerImage, background] = await Promise.all([
+      decode(actualPng),
+      decode(markerPng),
+      decode(backgroundPng),
+    ]);
 
-    const composite = (foreground: Color, background: Color): Color => {
-      const alpha = foreground.alpha + background.alpha * (1 - foreground.alpha);
-      if (alpha === 0) return { red: 0, green: 0, blue: 0, alpha: 0 };
-      return {
-        red: (foreground.red * foreground.alpha + background.red * background.alpha * (1 - foreground.alpha)) / alpha,
-        green: (foreground.green * foreground.alpha + background.green * background.alpha * (1 - foreground.alpha)) / alpha,
-        blue: (foreground.blue * foreground.alpha + background.blue * background.alpha * (1 - foreground.alpha)) / alpha,
-        alpha,
-      };
-    };
+    for (const image of [markerImage, background]) {
+      expect(image.info.width, "Contrast probe screenshot widths must match").toBe(actual.info.width);
+      expect(image.info.height, "Contrast probe screenshot heights must match").toBe(actual.info.height);
+    }
 
-    const luminance = (color: Color) => {
-      const channels = [color.red, color.green, color.blue].map((channel) => {
-        const normalized = channel / 255;
+    const relativeLuminance = (red: number, green: number, blue: number) => {
+      const channel = (value: number) => {
+        const normalized = value / 255;
         return normalized <= 0.04045
           ? normalized / 12.92
           : ((normalized + 0.055) / 1.055) ** 2.4;
-      });
-      return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
+      };
+      return 0.2126 * channel(red) + 0.7152 * channel(green) + 0.0722 * channel(blue);
     };
 
-    const foreground = parseColors(getComputedStyle(node).color)[0];
-    if (!foreground) return -1;
+    const ratios: number[] = [];
+    const actualPixels = actual.data;
+    const markerPixels = markerImage.data;
+    const backgroundPixels = background.data;
 
-    const rootStyle = getComputedStyle(document.documentElement);
-    const themeBackground = parseHex(rootStyle.getPropertyValue("--background"));
-    const layers: Color[] = themeBackground ? [themeBackground] : [];
-    const ancestors: HTMLElement[] = [];
+    for (let offset = 0; offset < actualPixels.length; offset += 4) {
+      const bg = [backgroundPixels[offset], backgroundPixels[offset + 1], backgroundPixels[offset + 2]];
+      const mark = [markerPixels[offset], markerPixels[offset + 1], markerPixels[offset + 2]];
+      const observed = [actualPixels[offset], actualPixels[offset + 1], actualPixels[offset + 2]];
+      const alphaCandidates: number[] = [];
 
-    for (let current = node as HTMLElement | null; current; current = current.parentElement) {
-      ancestors.push(current);
-    }
+      if (255 - bg[0] > 8) alphaCandidates.push((mark[0] - bg[0]) / (255 - bg[0]));
+      if (bg[1] > 8) alphaCandidates.push((bg[1] - mark[1]) / bg[1]);
+      if (255 - bg[2] > 8) alphaCandidates.push((mark[2] - bg[2]) / (255 - bg[2]));
 
-    for (const current of ancestors.reverse()) {
-      const style = getComputedStyle(current);
-      layers.push(...parseColors(style.backgroundColor));
-      layers.push(...parseColors(style.backgroundImage));
-    }
+      if (alphaCandidates.length === 0) continue;
+      const sortedAlpha = alphaCandidates
+        .map((value) => Math.min(1, Math.max(0, value)))
+        .sort((left, right) => left - right);
+      const alpha = sortedAlpha[Math.floor(sortedAlpha.length / 2)];
 
-    const opaqueBackgrounds = layers.filter((color) => color.alpha >= 0.999);
-    if (opaqueBackgrounds.length === 0) return -1;
+      // Ignore antialiased edge pixels: use the interior of the glyph mask to
+      // reconstruct the visible text color against the rendered background.
+      if (alpha < 0.65) continue;
 
-    // Test every opaque surface/gradient stop plus translucent stops composited
-    // over each opaque stop, so the assertion measures foreground/background contrast.
-    const backgrounds = [...opaqueBackgrounds];
-    for (const layer of layers.filter((color) => color.alpha < 0.999)) {
-      for (const base of opaqueBackgrounds) backgrounds.push(composite(layer, base));
-    }
-
-    const ratios = backgrounds.map((background) => {
-      const visibleForeground = foreground.alpha < 0.999
-        ? composite(foreground, background)
-        : foreground;
-      const foregroundLuminance = luminance(visibleForeground);
-      const backgroundLuminance = luminance(background);
+      const foreground = observed.map((value, channel) =>
+        Math.min(255, Math.max(0, (value - bg[channel] * (1 - alpha)) / alpha)),
+      );
+      const foregroundLuminance = relativeLuminance(foreground[0], foreground[1], foreground[2]);
+      const backgroundLuminance = relativeLuminance(bg[0], bg[1], bg[2]);
       const lighter = Math.max(foregroundLuminance, backgroundLuminance);
       const darker = Math.min(foregroundLuminance, backgroundLuminance);
-      return (lighter + 0.05) / (darker + 0.05);
-    });
+      ratios.push((lighter + 0.05) / (darker + 0.05));
+    }
 
-    return Math.min(...ratios);
-  })).toBeGreaterThanOrEqual(4.5);
+    expect(ratios.length, "The rendered heading must contain measurable text pixels").toBeGreaterThan(0);
+    const minimumContrast = Math.min(...ratios);
+    expect(
+      minimumContrast,
+      `Rendered text/background contrast must meet WCAG AA 4.5:1; measured minimum ${minimumContrast.toFixed(2)}:1`,
+    ).toBeGreaterThanOrEqual(4.5);
+  } finally {
+    await element.evaluate((node) => node.removeAttribute("data-credi-contrast-probe"));
+  }
 }
-
 test.describe("Credi unified portal", () => {
   test("primary navigation has readable social-portal links", async ({ page }) => {
     await page.goto("/");

@@ -238,3 +238,36 @@ jobs:
           echo "Credi Marketplace CI: PASSED"
           echo "Node.js: $(node --version)"
           echo "npm:     $(npm --version)"
+
+  database-core-sql:
+    name: Local Supabase reset + core SQL regressions
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Start isolated local Supabase stack
+        run: supabase start
+
+      - name: Rebuild a clean local database from committed migrations
+        run: supabase db reset --local --no-seed
+
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes postgresql-client
+
+      - name: Run root-level SQL regression suite
+        run: bash scripts/run-supabase-sql-tests.sh
+
+      - name: Stop local Supabase stack
+        if: always()
+        run: supabase stop --no-backup

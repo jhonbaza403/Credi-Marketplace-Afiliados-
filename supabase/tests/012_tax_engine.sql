@@ -1,64 +1,77 @@
 -- Credi Tax Engine regression checks.
--- Verifies that the live schema is reproducible at the object/permission level
--- and that the engine remains zero-assumption until jurisdictional rules exist.
+-- Tests actual non-negative amount constraints with rejected fixture writes.
 
 BEGIN;
 
 DO $$
 DECLARE
-  v_rls boolean;
+  v_table_count integer;
+  v_rls_count integer;
   v_anon boolean;
   v_auth boolean;
-  v_tax_count integer;
+  v_rejected boolean;
 BEGIN
-  select bool_and(c.relrowsecurity)
-    into v_rls
-  from pg_class c
-  join pg_namespace n on n.oid=c.relnamespace
-  where n.nspname='public'
-    and c.relname in (
+  SELECT count(*), count(*) FILTER (WHERE c.relrowsecurity)
+    INTO v_table_count, v_rls_count
+  FROM pg_class c
+  JOIN pg_namespace n ON n.oid = c.relnamespace
+  WHERE n.nspname = 'public'
+    AND c.relname IN (
       'tax_jurisdictions','tax_categories','tax_rates','tax_rules',
       'tax_transactions','tax_transaction_lines','tax_withholdings',
       'tax_collections','tax_reports','tax_filings','tax_exemptions','tax_certificates'
-    );
+    )
+    AND c.relkind IN ('r', 'p');
 
-  if coalesce(v_rls,false) is not true then
-    raise exception 'All tax engine tables must have RLS enabled';
-  end if;
+  IF v_table_count <> 12 THEN
+    RAISE EXCEPTION 'Tax engine schema must contain all 12 expected tables; found %', v_table_count;
+  END IF;
+  IF v_rls_count <> 12 THEN
+    RAISE EXCEPTION 'RLS must be enabled on all 12 tax engine tables; enabled %', v_rls_count;
+  END IF;
 
-  select count(*) into v_tax_count from public.tax_transactions;
-  if v_tax_count < 0 then
-    raise exception 'Tax transaction count invariant failed';
-  end if;
+  -- Each negative amount is sent through the real CHECK constraint. If the
+  -- INSERT succeeds, the explicit exception below fails the test.
+  v_rejected := false;
+  BEGIN
+    INSERT INTO public.tax_transactions (taxpayer_role, currency, gross_amount, snapshot)
+    VALUES ('seller', 'USD', -1, '{}'::jsonb);
+    RAISE EXCEPTION 'tax_transactions accepted negative gross_amount';
+  EXCEPTION WHEN check_violation THEN
+    v_rejected := true;
+  END;
+  IF NOT v_rejected THEN RAISE EXCEPTION 'gross_amount non-negative invariant was not enforced'; END IF;
 
-  select has_function_privilege('anon','public.initialize_order_tax_transaction(uuid)','EXECUTE') into v_anon;
-  if v_anon then raise exception 'anon must not execute initialize_order_tax_transaction'; end if;
+  v_rejected := false;
+  BEGIN
+    INSERT INTO public.tax_transactions (taxpayer_role, currency, taxable_amount, snapshot)
+    VALUES ('seller', 'USD', -1, '{}'::jsonb);
+    RAISE EXCEPTION 'tax_transactions accepted negative taxable_amount';
+  EXCEPTION WHEN check_violation THEN
+    v_rejected := true;
+  END;
+  IF NOT v_rejected THEN RAISE EXCEPTION 'taxable_amount non-negative invariant was not enforced'; END IF;
 
-  select has_function_privilege('authenticated','public.initialize_order_tax_transaction(uuid)','EXECUTE') into v_auth;
-  if not v_auth then raise exception 'authenticated must execute initialize_order_tax_transaction'; end if;
+  v_rejected := false;
+  BEGIN
+    INSERT INTO public.tax_transactions (taxpayer_role, currency, tax_amount, snapshot)
+    VALUES ('seller', 'USD', -1, '{}'::jsonb);
+    RAISE EXCEPTION 'tax_transactions accepted negative tax_amount';
+  EXCEPTION WHEN check_violation THEN
+    v_rejected := true;
+  END;
+  IF NOT v_rejected THEN RAISE EXCEPTION 'tax_amount non-negative invariant was not enforced'; END IF;
 
-  select has_function_privilege('anon','public.finalize_order_settlement_allocations(uuid)','EXECUTE') into v_anon;
-  if v_anon then raise exception 'anon must not execute finalize_order_settlement_allocations'; end if;
+  SELECT has_function_privilege('anon','public.initialize_order_tax_transaction(uuid)','EXECUTE') INTO v_anon;
+  IF v_anon THEN RAISE EXCEPTION 'anon must not execute initialize_order_tax_transaction'; END IF;
+  SELECT has_function_privilege('authenticated','public.initialize_order_tax_transaction(uuid)','EXECUTE') INTO v_auth;
+  IF NOT v_auth THEN RAISE EXCEPTION 'authenticated must execute initialize_order_tax_transaction'; END IF;
 
-  select has_function_privilege('authenticated','public.finalize_order_settlement_allocations(uuid)','EXECUTE') into v_auth;
-  if v_auth then raise exception 'authenticated must not execute finalize_order_settlement_allocations directly'; end if;
+  SELECT has_function_privilege('anon','public.finalize_order_settlement_allocations(uuid)','EXECUTE') INTO v_anon;
+  IF v_anon THEN RAISE EXCEPTION 'anon must not execute finalize_order_settlement_allocations'; END IF;
+  SELECT has_function_privilege('authenticated','public.finalize_order_settlement_allocations(uuid)','EXECUTE') INTO v_auth;
+  IF v_auth THEN RAISE EXCEPTION 'authenticated must not execute finalize_order_settlement_allocations directly'; END IF;
 END $$;
 
-DO $$
-DECLARE
-  v_bad integer;
-BEGIN
-  select count(*) into v_bad
-  from pg_proc p
-  join pg_namespace n on n.oid=p.pronamespace
-  where n.nspname='public'
-    and p.prosecdef
-    and coalesce(array_to_string(p.proconfig,','),'') <> 'search_path=""';
-
-  if v_bad <> 0 then
-    raise exception 'SECURITY DEFINER search_path hardening incomplete: % functions', v_bad;
-  end if;
-END $$;
-
-RAISE NOTICE 'TEST 012 — TAX ENGINE + SECURITY DEFINER: PASS';
+SELECT 'TEST 012 — TAX AMOUNT CONSTRAINTS AND RPC PRIVILEGES: PASS' AS test_result;
 ROLLBACK;

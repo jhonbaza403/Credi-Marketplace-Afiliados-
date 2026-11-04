@@ -1,59 +1,77 @@
-# Supabase migrations — auditoría de reconciliación
+# Supabase migrations — reconciliación y pruebas locales
 
-**Fecha de observación:** 2026-11-03  
-**Estado:** BLOQUEA LA CERTIFICACIÓN DE REPRODUCIBILIDAD; no autoriza cambios en producción.
+**Última inspección de solo lectura:** 2026-11-03  
+**Estado:** archivos remotos recuperados para revisión; certificación local pendiente. Este documento no autoriza cambios en producción.
 
-## Alcance y evidencia
+## Historial y archivos
 
-Se comparó el inventario de archivos SQL del repositorio con el historial de migraciones aplicado que devuelve el proyecto Supabase conectado. La inspección fue de solo lectura.
+El proyecto Supabase conectado (fusnmvmveqdzmzohhlzm) registró 219 versiones aplicadas en la inspección. La rama del PR #97 contenía originalmente 215 archivos de migración. Se recuperaron desde la rama de revisión del PR #101 los siete archivos exactos que faltaban, sin reconstruir SQL por nombre ni volver a aplicar migraciones en producción.
 
-| Fuente | Migraciones |
+| Fuente | Archivos/versiones |
 |---|---:|
-| Rama `main` | 214 |
-| Rama del PR #97 (`feat/credi-dynamic-social-commerce-shell`) | 215 |
-| Historial registrado en Supabase | 219 |
+| Rama main (inventario anterior) | 214 |
+| PR #97 antes de la recuperación | 215 |
+| Historial remoto registrado | 219 |
+| PR #97 después de añadir las siete migraciones | 222 |
 
-El PR #97 añade `20261031191500_credichat_groups_channels.sql`; esa migración aparece en la rama del PR y no en el historial remoto consultado. No debe aplicarse a producción hasta superar CI, revisión y autorización de despliegue.
+Las siete migraciones recuperadas son:
 
-## Versiones remotas sin archivo con el mismo identificador en la rama del PR
+- 20261027165845_credi_supply_sources_registry.sql
+- 20261027165904_support_fk_indexes.sql
+- 20261031002051_guard_social_moderation_fields.sql
+- 20261031002056_enable_live_realtime_publication.sql
+- 20261031183932_platform_owner_access_provisioning.sql
+- 20261102120853_harden_profile_privilege_columns.sql
+- 20261102121039_preserve_profile_suspension_on_auth_sync.sql
 
-- `20261027165845_credi_supply_sources_registry`
-- `20261027165904_support_fk_indexes`
-- `20261031002051_guard_social_moderation_fields`
-- `20261031002056_enable_live_realtime_publication`
-- `20261031183932_platform_owner_access_provisioning`
-- `20261102120853_harden_profile_privilege_columns`
-- `20261102121039_preserve_profile_suspension_on_auth_sync`
+Estas siete versiones ya constaban en el historial remoto. Añadir sus archivos al repositorio permite que una base local limpia reproduzca el historial; **no se deben ejecutar otra vez en producción**.
 
-## Archivos locales sin versión coincidente en el historial remoto consultado
+## Tres archivos locales sin versión remota coincidente
 
-- `20261012080000_guard_social_moderation_fields.sql`
-- `20261012150000_enable_live_realtime_publication.sql`
-- `20261031191500_credichat_groups_channels.sql` (solo rama del PR #97)
+Se conservan, sin renombrar ni borrar:
 
-Los dos archivos locales de moderación y publicación LIVE tienen nombres funcionalmente parecidos a dos versiones remotas posteriores. **No se asume que sean equivalentes byte a byte ni que se puedan renombrar sin consecuencias.**
+- 20261012080000_guard_social_moderation_fields.sql
+- 20261012150000_enable_live_realtime_publication.sql
+- 20261031191500_credichat_groups_channels.sql (migración nueva del PR #97; no aparece en el historial remoto observado).
 
-## Procedimiento obligatorio de reconciliación
+Las dos primeras son versiones históricas locales anteriores a las migraciones remotas de moderación y LIVE. No se declara equivalencia byte a byte. La migración de grupos/canales es una incorporación pendiente del PR #97 y no debe aplicarse a producción hasta completar revisión, CI y autorización de despliegue.
 
-1. Recuperar las siete migraciones remotas que no tienen un archivo local equivalente identificado, desde el historial Git confiable, artefactos de despliegue o una copia segura. No reconstruirlas por inferencia a partir del nombre.
-2. Comparar el contenido de las migraciones locales antiguas con las versiones remotas posteriores y establecer su correspondencia mediante revisión SQL y hashes.
-3. Conservar los identificadores que ya están registrados en Supabase. No renombrar ni borrar migraciones históricas aplicadas.
-4. Reconciliar el historial con `supabase migration list` desde un entorno autenticado y revisar cualquier diferencia antes de generar nuevas migraciones.
-5. En una base local vacía y aislada, ejecutar `supabase db reset` y las pruebas SQL de esquema, RLS, pagos, idempotencia, webhooks y concurrencia.
-6. Comparar el esquema local resultante con el remoto mediante introspección y asesores. No usar `db reset` sobre el proyecto remoto.
+## Pruebas SQL y ejecución reproducible
 
-## Pruebas SQL
+Se corrigieron las referencias obsoletas de columnas/tablas en los tests raíz y los RAISE NOTICE colocados fuera de bloques PL/pgSQL. Los tests raíz supabase/tests/001 a 012 se ejecutarán como scripts SQL normales mediante psql con ON_ERROR_STOP; no se presentarán como tests pgTAP.
 
-La reconstrucción desde cero no se ejecutó en esta intervención: el entorno de validación no dispone de Docker, Supabase CLI ni PostgreSQL local. El proyecto Supabase conectado no se utilizó como sustituto de una base local y no se ejecutó ningún reset remoto.
+Se añadió scripts/run-supabase-sql-tests.sh y un job separado de GitHub Actions que:
 
-La suite contiene pruebas SQL de esquema, órdenes, inventario, idempotencia, afiliados, pagos, webhooks, máquina de estados, RLS y seguridad, además de escenarios de integración. El archivo `001_schema.sql` tenía envoltura Markdown que impedía ejecutarlo directamente como SQL; se ha limpiado esa envoltura. La suite completa todavía debe ejecutarse desde una base local recién creada y quedar incorporada a CI antes de certificar las migraciones.
+1. Inicia únicamente el stack local de Supabase.
+2. Ejecuta supabase db reset --local --no-seed para recrear una base vacía y reproducir todas las migraciones de esta rama.
+3. Obtiene el DB_URL local desde supabase status --env --output-format text.
+4. Ejecuta todos los archivos SQL de primer nivel en supabase/tests/, ordenados por nombre, con ON_ERROR_STOP.
+5. Detiene el stack local incluso si una prueba falla.
 
-## Asesores Supabase observados
+Este job no enlaza el proyecto remoto ni recibe secretos de Supabase. La reconstrucción local no se ha ejecutado desde este entorno porque aquí no están disponibles Docker, Supabase CLI ni PostgreSQL; la certificación dependerá del resultado real de ese job en el SHA actualizado del PR.
 
-- `public.credi_supply_sources`: RLS está habilitado y no tiene políticas. Esto es un comportamiento fail-closed; no se añadirá una política pública para silenciar el aviso. Debe confirmarse si el acceso exclusivo de servidor es el diseño previsto.
-- Leaked Password Protection está deshabilitado en Auth. Es una configuración pendiente del proyecto, no una corrección que deba simularse con código.
-- Los asesores de rendimiento muestran índices no utilizados; no se eliminarán sin análisis de consultas, cardinalidad y carga real.
+### Límites de la carpeta de integración
 
-## Decisión de seguridad
+supabase/tests/integration/ no se incluye todavía en el runner automático. La inspección encontró un archivo llamado ' 001_checkout_atomicity.sql' cuyo contenido es Python para generar artefactos, varios archivos SQL envueltos en fences Markdown y un escenario de concurrencia que necesita dos sesiones coordinadas. Ejecutarlos como si fueran SQL convencional sería incorrecto. Se mantienen intactos y fuera de la puerta de CI hasta normalizar su formato y preparar un runner de integración real.
 
-No se han aplicado migraciones ni modificaciones SQL al proyecto Supabase conectado. La divergencia descrita permanece como bloqueo de certificación hasta recuperar y verificar los archivos exactos y superar la prueba de instalación limpia.
+## Verificación de RLS
+
+009_rls.sql deja de comprobar únicamente que RLS esté activado. Crea fixtures sintéticos dentro de una transacción y evalúa lecturas y escrituras como anon, dos identidades authenticated distintas y service_role. Comprueba aislamiento por propietario, acceso de catálogo público, edición permitida del perfil, denegación de campos privilegiados (role, platform_owner, is_active), denegación de escrituras entre usuarios y bypass esperado de service_role. Finaliza con ROLLBACK.
+
+La prueba de perfiles se basa también en la inspección de solo lectura del proyecto remoto: authenticated conserva UPDATE de full_name, avatar_url, phone y phone_e164, pero no de role, platform_owner ni is_active. La prueba automatizada aún debe pasar en la base local recreada.
+
+## Motor fiscal
+
+012_tax_engine.sql ya no compara count(*) con cero negativo. Inserta tres registros inválidos, uno por cada importe, y exige que las restricciones CHECK rechacen gross_amount < 0, taxable_amount < 0 y tax_amount < 0. También verifica el conjunto de tablas fiscales, RLS y permisos de las RPC relacionadas.
+
+Se eliminó una comprobación global que exigía search_path="" a todas las funciones SECURITY DEFINER del esquema público: mezclaba funciones de otros dominios y producía falsos positivos fuera del alcance del motor fiscal.
+
+## Hallazgos pendientes de configuración
+
+- public.credi_supply_sources tiene RLS habilitado y no concede acceso de tabla a anon ni authenticated; queda reservada a servicios. No se debe agregar una política pública para silenciar una alerta.
+- La protección de contraseñas filtradas de Supabase Auth figuró deshabilitada en el asesor de seguridad; su habilitación depende de las opciones disponibles en el proyecto/plan.
+- Los asesores mostraron índices sin uso observado; no se eliminan sin análisis de carga y consultas.
+
+## Seguridad de producción
+
+Todas las inspecciones de Supabase realizadas para esta reconciliación fueron de solo lectura. No se ejecutó db reset remoto, no se aplicó ninguna migración en producción y no se modificaron registros de usuarios. La única reconstrucción permitida para este proceso es la base local aislada del job de CI.
