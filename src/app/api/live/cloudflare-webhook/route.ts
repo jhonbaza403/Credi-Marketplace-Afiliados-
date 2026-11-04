@@ -94,6 +94,7 @@ export async function POST(request: Request) {
       }
       if (replay.state === 'ready') {
         next.cloudflare_replay_created_at = replay.createdAt
+        next.cloudflare_replay_dash_url = replay.dashUrl
         updates.replay_url = replay.playbackUrl
       }
     } catch {
