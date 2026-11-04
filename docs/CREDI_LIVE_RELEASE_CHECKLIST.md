@@ -40,7 +40,7 @@ Configurar exclusivamente en el entorno **Preview** del proyecto Vercel:
 - [ ] Mantener Production sin cambios durante esta certificación.
 - [ ] Re-deployar Preview después de cambiar variables; un deployment ya creado no demuestra que haya recibido la nueva configuración.
 
-La sesión E2E del propietario se entrega al workflow manual mediante el secreto `E2E_STORAGE_STATE_JSON`. Ese archivo de sesión es independiente de los secretos Cloudflare y nunca debe subirse como artefacto.
+La sesión E2E del propietario permanece como archivo local protegido en un runner privado registrado con las etiquetas `self-hosted`, `linux` y `credi-live-preview`. La variable de repositorio no secreta `CREDI_LIVE_STORAGE_STATE_PATH` sólo indica la ruta local. El JSON de sesión no se almacena en GitHub Secrets, inputs, commits ni artefactos. El runner debe estar bajo control del equipo y el archivo debe tener permisos de lectura restringidos.
 
 ## 3. Webhook de Cloudflare
 
@@ -143,7 +143,16 @@ El workflow manual `Credi LIVE Preview E2E` genera el artefacto `live-release-ev
 
 El artefacto no debe contener tokens, claves de emisión, passphrases, cabeceras de autenticación, cookies ni archivos de sesión. El archivo de sesión temporal se elimina al finalizar el workflow.
 
-## 10. Ejecución y criterio de cierre
+## 10. Runner privado para la prueba autenticada
+
+- [ ] Registrar un runner Linux privado de GitHub Actions con etiquetas `credi-live-preview`.
+- [ ] Configurar la variable no secreta `CREDI_LIVE_STORAGE_STATE_PATH` con una ruta local de ese runner.
+- [ ] Crear en esa ruta el archivo Playwright storage-state del propietario de prueba, con permisos restringidos al usuario del runner.
+- [ ] No almacenar el contenido del archivo en GitHub Secrets, variables, inputs, commits o artefactos.
+- [ ] Verificar que el runner sólo opera contra deployments Preview y que su disco está protegido.
+- [ ] Mantener los secretos Cloudflare exclusivamente en Vercel Preview; el workflow no recibe el token Cloudflare.
+
+## 11. Ejecución y criterio de cierre
 
 - [ ] Ejecutar manualmente **Actions → Credi LIVE Preview E2E → Run workflow**.
 - [ ] Seleccionar el deployment URL único de Vercel Preview; Production está rechazado por el workflow.
