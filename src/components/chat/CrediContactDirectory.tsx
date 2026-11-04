@@ -120,7 +120,7 @@ useEffect(() => {
   }
 
   return (
-    <section className="mb-4 rounded-[1.75rem] border border-cyan-300/10 bg-[#08101f] p-4 sm:p-5">
+    <section className="mb-4 rounded-[1.75rem] border border-cyan-300/10 bg-[#08101f] p-4 text-slate-100 sm:p-5">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div className="min-w-0">
           <p className="text-[10px] font-black uppercase tracking-[.2em] text-cyan-200">Directorio Credi</p>
