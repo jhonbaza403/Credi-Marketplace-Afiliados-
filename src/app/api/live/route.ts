@@ -4,7 +4,8 @@ import { createClient } from '@/lib/supabase/server'
 import { distributedRateLimit } from '@/lib/security/rate-limit'
 import { getRequestIp } from '@/lib/security/auth'
 import { isSameOrigin } from '@/lib/security/csrf'
-import { createLiveInput, isCloudflareConfigured } from '@/lib/cloudflare/stream'
+import { createLiveInput, getLiveInput, isCloudflareConfigured } from '@/lib/cloudflare/stream'
+import { cloudflareRtmpsDestination, isHostConnected, liveKitRoomName, startCloudflareEgress, stopLiveKitEgress } from '@/lib/livekit/server'
 import { requireApiAccountAccess } from '@/lib/auth/api-account-access'
 
 export const runtime = 'nodejs'
@@ -134,14 +135,72 @@ export async function PATCH(request:Request) {
     if(!p.scheduledAt||new Date(p.scheduledAt).getTime()<=Date.now()) return errorResponse('Programa el LIVE para una fecha futura.',400,'INVALID_SCHEDULE')
     updates.status='scheduled';updates.started_at=null;updates.ended_at=null
   } else if(p.action==='start'){
-    const {data:transportRoom}=await supabase.from('chat_live_rooms').select('stream_provider,metadata').eq('id',p.roomId).eq('host_user_id',user.id).maybeSingle()
+    const {data:transportRoom}=await supabase.from('chat_live_rooms')
+      .select('stream_provider,metadata')
+      .eq('id',p.roomId)
+      .eq('host_user_id',user.id)
+      .maybeSingle()
     const metadata=(transportRoom?.metadata&&typeof transportRoom.metadata==='object'?transportRoom.metadata:{}) as Record<string,unknown>
-    if(!isCloudflareConfigured() || transportRoom?.stream_provider!=='cloudflare_stream' || typeof metadata.cloudflare_live_input_id!=='string') {
-      return errorResponse('No se puede iniciar LIVE todavía: falta provisionar el transporte de transmisión. Configura Cloudflare Stream en Vercel y vuelve a preparar la sala.',503,'LIVE_TRANSPORT_NOT_READY')
+    const inputId=typeof metadata.cloudflare_live_input_id==='string'?metadata.cloudflare_live_input_id:null
+    if(!isCloudflareConfigured() || transportRoom?.stream_provider!=='cloudflare_stream' || !inputId) {
+      return errorResponse('Falta provisionar Cloudflare Stream para esta sala.',503,'LIVE_TRANSPORT_NOT_READY')
     }
-    return errorResponse('La sala está preparada. Inicia la señal desde OBS u otro codificador RTMPS; Credi marcará LIVE cuando Cloudflare confirme la conexión.',409,'LIVE_WAITING_FOR_ENCODER')
-  } else if(p.action==='end'){updates.status='ended';updates.ended_at=new Date().toISOString()
-  } else if(p.action==='cancel'){updates.status='cancelled';updates.ended_at=new Date().toISOString()}
+    if(typeof metadata.livekit_egress_id==='string') {
+      return NextResponse.json({success:true,alreadyStarting:true,egressId:metadata.livekit_egress_id},{headers:{'Cache-Control':'no-store'}})
+    }
+    try {
+      const roomName=liveKitRoomName(p.roomId)
+      if(!await isHostConnected(roomName,user.id)) {
+        return errorResponse('Conecta primero el estudio Credi LIVE a la sala WebRTC.',409,'LIVEKIT_HOST_NOT_CONNECTED')
+      }
+      const input=await getLiveInput(inputId)
+      const destination=cloudflareRtmpsDestination(input)
+      const egress=await startCloudflareEgress(roomName,destination)
+      const egressId=egress.egressId||egress.egress_id
+      if(!egressId) throw new Error('LIVEKIT_EGRESS_ID_MISSING')
+      const nextMetadata={
+        ...metadata,
+        transport:'livekit-webrtc-cloudflare-rtmps-hls',
+        livekit_room_name:roomName,
+        livekit_egress_id:egressId,
+        livekit_egress_state:egress.status||'starting',
+        livekit_egress_started_at:new Date().toISOString(),
+      }
+      const {error:updateError}=await supabase.from('chat_live_rooms')
+        .update({metadata:nextMetadata})
+        .eq('id',p.roomId)
+        .eq('host_user_id',user.id)
+      if(updateError) {
+        try { await stopLiveKitEgress(egressId) } catch { /* best-effort rollback */ }
+        throw new Error('LIVE_EGRESS_STATE_PERSIST_FAILED')
+      }
+      return NextResponse.json({success:true,starting:true,egressId},{headers:{'Cache-Control':'no-store'}})
+    } catch(error) {
+      const code=error instanceof Error?error.message:'LIVEKIT_START_FAILED'
+      console.error('[credi-live] LiveKit egress start failed',code)
+      if(code==='LIVEKIT_NOT_CONFIGURED') return errorResponse('Configura LIVEKIT_URL, LIVEKIT_API_KEY y LIVEKIT_API_SECRET en Vercel.',503,code)
+      if(code==='LIVEKIT_INVALID_URL') return errorResponse('LIVEKIT_URL debe ser una URL ws:// o wss:// válida.',503,code)
+      return errorResponse('No fue posible iniciar el transporte audiovisual LiveKit → Cloudflare.',502,'LIVEKIT_EGRESS_START_FAILED')
+    }
+  } else if(p.action==='end'||p.action==='cancel'){
+    const {data:transportRoom}=await supabase.from('chat_live_rooms')
+      .select('metadata')
+      .eq('id',p.roomId)
+      .eq('host_user_id',user.id)
+      .maybeSingle()
+    const metadata=(transportRoom?.metadata&&typeof transportRoom.metadata==='object'?transportRoom.metadata:{}) as Record<string,unknown>
+    if(typeof metadata.livekit_egress_id==='string') {
+      try {
+        await stopLiveKitEgress(metadata.livekit_egress_id)
+        updates.metadata={...metadata,livekit_egress_state:'stopping',livekit_egress_stopped_at:new Date().toISOString()}
+      } catch(error) {
+        console.error('[credi-live] LiveKit egress stop failed',error)
+        return errorResponse('No fue posible detener el transporte LiveKit. La sala no se ha cerrado.',502,'LIVEKIT_EGRESS_STOP_FAILED')
+      }
+    }
+    updates.status=p.action==='end'?'ended':'cancelled'
+    updates.ended_at=new Date().toISOString()
+  }
 
   const {data:room,error}=await supabase.from('chat_live_rooms').update(updates).eq('id',p.roomId).eq('host_user_id',user.id)
     .select('id,host_user_id,title,status,viewer_count,started_at,ended_at,description,cover_media,scheduled_at,replay_url,playback_url,stream_provider,viewer_peak,likes_count,shares_count,settings,created_at').single()
