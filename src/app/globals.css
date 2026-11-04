@@ -406,12 +406,54 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
-body,
-button,
-input,
-textarea,
-select {
-  font: inherit;
+/*
+ * Keep typography and color defaults in Tailwind's base layer.
+ * Utilities such as text-white, text-slate-300, text-sm and font-medium
+ * must be able to override these defaults on dark cards and hero sections.
+ */
+@layer base {
+  body,
+  button,
+  input,
+  textarea,
+  select {
+    font: inherit;
+  }
+
+  button,
+  input,
+  textarea,
+  select {
+    color: inherit;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  p,
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    color: inherit;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    color: var(--foreground);
+    font-weight: 700;
+    letter-spacing: -0.025em;
+  }
 }
 
 button,
@@ -422,13 +464,6 @@ button,
 button:disabled,
 [aria-disabled="true"] {
   cursor: not-allowed;
-}
-
-button,
-input,
-textarea,
-select {
-  color: inherit;
 }
 
 img,
@@ -447,38 +482,6 @@ video {
 
 svg {
   flex-shrink: 0;
-}
-
-a {
-  color: inherit;
-  text-decoration: none;
-}
-
-p,
-h1,
-h2,
-h3,
-h4,
-h5,
-h6 {
-  /*
-   * Component surfaces own their heading color. Do not override explicit
-   * utilities such as text-white on dark hero sections.
-   */
-  color: inherit;
-  font-weight: 700;
-  letter-spacing: -0.025em;
-}
-
-h1,
-h2,
-h3,
-h4,
-h5,
-h6 {
-  color: var(--foreground);
-  font-weight: 700;
-  letter-spacing: -0.025em;
 }
 
 ul,
