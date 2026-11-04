@@ -86,9 +86,9 @@ export type LiveRecording = {
 }
 
 export type ReplaySyncResult =
-  | { state: 'ready'; videoId: string; playbackUrl: string; dashUrl: string | null }
-  | { state: 'processing'; videoId: string | null }
-  | { state: 'not_found'; videoId: null }
+  | { state: 'ready'; inputId: string; videoId: string; createdAt: string; playbackUrl: string; dashUrl: string | null }
+  | { state: 'processing' | 'invalid_playback'; inputId: string; videoId: string; createdAt: string }
+  | { state: 'not_found'; inputId: string; videoId: null; createdAt: null }
 
 function config() {
   const accountId = process.env.CLOUDFLARE_ACCOUNT_ID
@@ -169,36 +169,92 @@ export function classifyLiveInputStatus(status?: string | null) {
 }
 
 /**
- * Select only recordings generated for the current broadcast window.
- * A small tolerance accounts for timestamp differences between systems.
+ * Cloudflare Stream playback URLs must point to the exact video UID returned
+ * by the Live Input videos endpoint. Reject custom/foreign hosts and URLs
+ * that reference a different recording.
  */
-export async function syncLatestReplay(inputId: string, startedAt?: string | null): Promise<ReplaySyncResult> {
-  const recordings = await listInputVideos(inputId)
+export function isOfficialCloudflareStreamManifestUrl(value: string | undefined, videoId: string, format: 'hls' | 'dash') {
+  if (!value || !videoId) return false
+  try {
+    const url = new URL(value)
+    const host = url.hostname.toLowerCase()
+    const officialHost = host === 'videodelivery.net' || host.endsWith('.cloudflarestream.com')
+    if (url.protocol !== 'https:' || !officialHost || url.username || url.password) return false
+    const segments = url.pathname.split('/').filter(Boolean)
+    const videoIndex = segments.indexOf(videoId)
+    if (videoIndex < 0) return false
+    const expectedManifest = format === 'hls' ? ['manifest', 'video.m3u8'] : ['manifest', 'video.mpd']
+    return segments.slice(videoIndex + 1).join('/') === expectedManifest.join('/')
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Select only recordings for this input and the exact broadcast window.
+ * Cloudflare's input-scoped videos endpoint is authoritative for input
+ * association; when the response also includes liveInput, it must match.
+ * A two-minute tolerance covers provider/event timestamp drift.
+ */
+export async function syncLatestReplay(
+  inputId: string,
+  startedAt?: string | null,
+  endedAt?: string | null,
+): Promise<ReplaySyncResult> {
   const start = startedAt ? Date.parse(startedAt) : Number.NaN
+  const end = endedAt ? Date.parse(endedAt) : Date.now()
+  const notFound: ReplaySyncResult = { state: 'not_found', inputId, videoId: null, createdAt: null }
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end < start) return notFound
+
+  const recordings = await listInputVideos(inputId)
+  const toleranceMs = 120_000
   const currentBroadcast = recordings
+    .filter((video) => typeof video.uid === 'string' && video.uid.length > 0)
     .filter((video) => !video.liveInput || video.liveInput === inputId)
     .filter((video) => {
-      if (!Number.isFinite(start) || !video.created) return true
+      if (!video.created) return false
       const created = Date.parse(video.created)
-      return Number.isFinite(created) && created >= start - 120_000
+      return Number.isFinite(created)
+        && created >= start - toleranceMs
+        && created <= end + toleranceMs
     })
-    .sort((a, b) => (Date.parse(b.created || '') || 0) - (Date.parse(a.created || '') || 0))
+    .map((video) => ({ video, createdMs: Date.parse(video.created!) }))
+    .sort((a, b) => b.createdMs - a.createdMs)
 
-  const ready = currentBroadcast.find((video) =>
-    video.readyToStream === true && video.status?.state === 'ready' && Boolean(video.playback?.hls),
-  )
-  if (ready?.playback?.hls) {
+  for (const { video } of currentBroadcast) {
+    const isReady = video.readyToStream === true && video.status?.state === 'ready'
+    if (!isReady) continue
+
+    const hls = video.playback?.hls
+    if (!isOfficialCloudflareStreamManifestUrl(hls, video.uid, 'hls')) {
+      return { state: 'invalid_playback', inputId, videoId: video.uid, createdAt: video.created! }
+    }
+
+    const dash = video.playback?.dash
+    if (dash && !isOfficialCloudflareStreamManifestUrl(dash, video.uid, 'dash')) {
+      return { state: 'invalid_playback', inputId, videoId: video.uid, createdAt: video.created! }
+    }
+
     return {
       state: 'ready',
-      videoId: ready.uid,
-      playbackUrl: ready.playback.hls,
-      dashUrl: ready.playback.dash || null,
+      inputId,
+      videoId: video.uid,
+      createdAt: video.created!,
+      playbackUrl: hls!,
+      dashUrl: dash || null,
     }
   }
 
   const processing = currentBroadcast[0]
-  if (processing) return { state: 'processing', videoId: processing.uid }
-  return { state: 'not_found', videoId: null }
+  if (processing) {
+    return {
+      state: 'processing',
+      inputId,
+      videoId: processing.video.uid,
+      createdAt: processing.video.created!,
+    }
+  }
+  return notFound
 }
 
 export function isCloudflareConfigured() {
