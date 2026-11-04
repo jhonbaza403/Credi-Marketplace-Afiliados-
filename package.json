@@ -45,7 +45,8 @@
     "zod": "4.6.7",
     "openai": "7.23.0",
     "@vercel/analytics": "2.0.1",
-    "@vercel/speed-insights": "2.0.0"
+    "@vercel/speed-insights": "2.0.0",
+    "node-domexception": "file:vendor/node-domexception"
   },
   "devDependencies": {
     "@next/eslint-plugin-next": "16.4.3",
