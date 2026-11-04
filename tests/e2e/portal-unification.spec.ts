@@ -151,7 +151,7 @@ test.describe("Credi unified portal", () => {
     const actualPaths = await menu.locator("a[href]").evaluateAll((links) =>
       links.map((link) => new URL((link as HTMLAnchorElement).href).pathname),
     );
-    for (const href of requiredPaths) expect(actualPaths, \`Missing menu destination: \${href}\`).toContain(href);
+    for (const href of requiredPaths) expect(actualPaths, "Missing menu destination: " + href).toContain(href);
   });
 
   test("home exposes the canonical portal navigation", async ({ page }) => {
