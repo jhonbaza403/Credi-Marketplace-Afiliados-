@@ -32,7 +32,7 @@ jobs:
             # Only inspect the deployment status named exactly "Vercel".
             # "Vercel Deployments – ..." may say "No required projects to validate";
             # that is not proof that a Preview deployment was built successfully.
-            VERCEL_STATUS="$(printf '%s' "${STATUS_JSON}" | jq -c '[.statuses[] | select((.context // "") == "Vercel")] | last // {}')"
+            VERCEL_STATUS="$(printf '%s' "${STATUS_JSON}" | jq -c --arg canonical_context "Vercel – credi-marketplace-afiliados" '[.statuses[] | select((((.context // "") | ascii_downcase) == ($canonical_context | ascii_downcase)) or (((.context // "") | ascii_downcase) == "vercel"))] | last // {}')"
             STATE="$(printf '%s' "${VERCEL_STATUS}" | jq -r '.state // ""')"
             TARGET="$(printf '%s' "${VERCEL_STATUS}" | jq -r '.target_url // ""')"
             DESCRIPTION="$(printf '%s' "${VERCEL_STATUS}" | jq -r '.description // ""')"
