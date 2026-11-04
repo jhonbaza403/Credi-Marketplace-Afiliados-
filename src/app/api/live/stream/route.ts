@@ -18,7 +18,7 @@ export const dynamic = 'force-dynamic'
 
 const schema = z.object({
   roomId: z.string().uuid(),
-  action: z.enum(['provision', 'credentials', 'diagnostics', 'rotate', 'enable', 'disable', 'recover', 'sync-replay']),
+  action: z.enum(['provision', 'credentials', 'diagnostics', 'evidence', 'rotate', 'enable', 'disable', 'recover', 'sync-replay']),
 })
 const errorResponse = (error: string, status: number, code: string) =>
   NextResponse.json({ success: false, error, code }, { status, headers: { 'Cache-Control': 'no-store' } })
@@ -54,7 +54,7 @@ export async function POST(request: Request) {
   const { roomId, action } = parsed.data
   const { data: room } = await supabase
     .from('chat_live_rooms')
-    .select('id,title,status,host_user_id,metadata,started_at')
+    .select('id,title,status,host_user_id,metadata,started_at,ended_at')
     .eq('id', roomId)
     .eq('host_user_id', user.id)
     .maybeSingle()
@@ -102,14 +102,65 @@ export async function POST(request: Request) {
 
     if (!inputId) return errorResponse('La sala todavía no tiene transporte Cloudflare provisionado.', 409, 'LIVE_TRANSPORT_NOT_PROVISIONED')
 
+    if (action === 'evidence') {
+      const input = await getLiveInput(inputId)
+      const history = Array.isArray(metadata.cloudflare_event_history)
+        ? metadata.cloudflare_event_history
+        : []
+      return NextResponse.json({
+        success: true,
+        room: {
+          id: room.id,
+          status: room.status,
+          startedAt: room.started_at,
+          endedAt: room.ended_at,
+          currentBroadcastStartedAt: metadata.cloudflare_current_broadcast_started_at || room.started_at,
+        },
+        input: {
+          inputId,
+          enabled: input.enabled,
+          providerStatus: input.status || 'unknown',
+          statusCategory: classifyLiveInputStatus(input.status),
+          recordingMode: input.recording?.mode || 'unknown',
+          playback: {
+            hls: input.playback?.hls || null,
+            dash: input.playback?.dash || null,
+          },
+        },
+        events: history,
+        replay: {
+          state: metadata.cloudflare_replay_sync_state || 'not_checked',
+          inputId: metadata.cloudflare_replay_input_id || null,
+          videoId: metadata.cloudflare_replay_video_id || null,
+          createdAt: metadata.cloudflare_replay_created_at || null,
+          playbackUrl: room.status === 'ended' ? (await supabase
+            .from('chat_live_rooms')
+            .select('replay_url')
+            .eq('id', room.id)
+            .eq('host_user_id', user.id)
+            .maybeSingle()).data?.replay_url || null : null,
+          checkedAt: metadata.cloudflare_replay_last_checked_at || null,
+        },
+      }, { headers: { 'Cache-Control': 'private, no-store' } })
+    }
+
     if (action === 'sync-replay') {
-      const replay = await syncLatestReplay(inputId, room.started_at || String(metadata.cloudflare_input_created_at || ''))
+      const replayStartedAt = typeof metadata.cloudflare_current_broadcast_started_at === 'string'
+        ? metadata.cloudflare_current_broadcast_started_at
+        : (room.started_at || String(metadata.cloudflare_input_created_at || ''))
+      const replay = await syncLatestReplay(inputId, replayStartedAt, room.ended_at || null)
       const checkedAt = new Date().toISOString()
       const nextMetadata = {
         ...metadata,
         cloudflare_replay_sync_state: replay.state,
         cloudflare_replay_last_checked_at: checkedAt,
         ...(replay.videoId ? { cloudflare_replay_video_id: replay.videoId } : {}),
+        ...(replay.state === 'ready'
+          ? {
+              cloudflare_replay_input_id: replay.inputId,
+              cloudflare_replay_created_at: replay.createdAt,
+            }
+          : {}),
       }
       const updates: Record<string, unknown> = { metadata: nextMetadata }
       if (replay.state === 'ready') updates.replay_url = replay.playbackUrl
