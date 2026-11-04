@@ -71,7 +71,28 @@ assert(
     allowedInstallPrefixes.includes(installPrefix),
   "Vercel install command must use npm ci with the committed lockfile; only the reviewed npm environment cleanup prefix is allowed",
 );
-assert(vercel.buildCommand === "npm run build", "Vercel build command must call the canonical build script");
+const vercelBuildTokens = String(vercel.buildCommand ?? "")
+  .trim()
+  .split(" ")
+  .filter(Boolean);
+const npmBuildIndex = vercelBuildTokens.findIndex(
+  (token, index) =>
+    token === "npm" &&
+    vercelBuildTokens[index + 1] === "run" &&
+    vercelBuildTokens[index + 2] === "build",
+);
+const buildPrefix = npmBuildIndex > 0
+  ? vercelBuildTokens.slice(0, npmBuildIndex).join(" ")
+  : "";
+const buildSuffix = npmBuildIndex >= 0
+  ? vercelBuildTokens.slice(npmBuildIndex).join(" ")
+  : "";
+assert(
+  npmBuildIndex >= 0 &&
+    buildSuffix === "npm run build" &&
+    allowedInstallPrefixes.includes(buildPrefix),
+  "Vercel build command must call the canonical npm run build script; only the reviewed npm environment cleanup prefix is allowed",
+);
 assert(vercel.ignoreCommand === "node scripts/vercel-ignore-build.mjs", "Vercel ignoreCommand must reference the tracked ignore script");
 assert(ignoreBuild.includes('path.startsWith("scripts/")'), "Vercel should skip CI/tooling script-only changes instead of rebuilding the application");
 
