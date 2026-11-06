@@ -190,3 +190,52 @@ begin
   return case_id;
 end;
 $function$;
+
+
+-- Preserve the production behavior of recording both order creation and status
+-- transitions, while writing to the actual shared order_status_history schema.
+-- The previous Production function referenced old_status/new_status/changed_at,
+-- columns that do not exist in either environment's table definition.
+create or replace function public.record_order_status_change()
+returns trigger
+language plpgsql
+set search_path = ''
+as $function$
+begin
+  if tg_op = 'INSERT' then
+    insert into public.order_status_history (
+      order_id, from_status, to_status, changed_by, reason, metadata
+    )
+    values (
+      new.id,
+      null,
+      new.status::text,
+      auth.uid(),
+      'Order created',
+      jsonb_build_object('source','trg_orders_status_history')
+    );
+    return new;
+  end if;
+
+  if tg_op = 'UPDATE' and new.status is distinct from old.status then
+    insert into public.order_status_history (
+      order_id, from_status, to_status, changed_by, reason, metadata
+    )
+    values (
+      new.id,
+      old.status::text,
+      new.status::text,
+      auth.uid(),
+      'Order status changed',
+      jsonb_build_object('source','trg_orders_status_history')
+    );
+  end if;
+
+  return new;
+end;
+$function$;
+
+drop trigger if exists trg_orders_status_history on public.orders;
+create trigger trg_orders_status_history
+after insert or update of status on public.orders
+for each row execute function public.record_order_status_change();
