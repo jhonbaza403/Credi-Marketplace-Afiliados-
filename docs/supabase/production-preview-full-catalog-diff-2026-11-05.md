@@ -191,3 +191,16 @@ The 20-version gap is not 20 missing Production features. Three migrations conta
 - Se amplían los tipos de evidencia KYC a las fotografías usadas por el Centro de Verificación y se restringe PDF a tipos documentales compatibles; fotos de perfil/laterales solo admiten imágenes. El límite se unifica en 10 MB.
 - El formulario del Centro de Compliance permite reintentar mientras el caso esté pendiente y registra el tipo de evidencia primaria como `id_front`.
 - El flujo de `/account/verificacion` conserva su ruta Edge Function + RPC privada, que también se corrige para usar el bucket privado. Ambos flujos comparten ahora el mismo bucket privado y los mismos límites/tipos permitidos.
+
+
+## Follow-up: internal-table RLS policy reconciliation — 2026-11-06
+
+Read-only recheck of the live security advisors and `pg_policies` confirmed:
+
+- Production has five policies across the six internal tables: explicit client-deny policies on `api_rate_limits`, `tax_exemptions`, `tax_filings`, and `tax_reports`, plus the authenticated-admin SELECT policy on `operation_events`.
+- Production's `credi_supply_sources` table has no client grants and no policies; its intended access path is backend/service-role only.
+- Preview had zero policies across those six tables. Its `get_credi_operation_timeline(uuid)` function also still had PUBLIC EXECUTE in its ACL, despite checking `auth.uid()` and admin status in its body.
+- The follow-up migration now adds restrictive `false` policies for `anon` and `authenticated` on `credi_supply_sources`, `api_rate_limits`, and the three tax tables. These policies deny client access and do not grant privileges. It restores the admin-only `operation_events` SELECT policy using the existing `public.is_admin()` helper.
+- The same migration revokes PUBLIC/anon execution from `get_credi_operation_timeline(uuid)`, pins its search path, and retains authenticated/service-role execution. It also retains the previously documented moderation-policy cleanup and private KYC bucket behavior.
+
+This is a source-code correction in PR #103 only. The migration has not been applied to either Supabase project. The live advisor findings therefore remain until an approved migration rollout and a fresh advisor recheck. The 18 authenticated SECURITY DEFINER advisor notices are not blindly revoked: each exposed RPC requires individual review of its caller contract, identity checks, ownership checks, and grants.
