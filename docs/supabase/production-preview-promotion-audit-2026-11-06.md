@@ -44,7 +44,7 @@ These are the clearest candidates for a Production feature rollout, but the comp
 1. Keep all 239 Preview migration source files in the shared catalog. Deleting a version already recorded in Preview recreates `Remote migration versions not found in local migrations directory.`
 2. Do not create a second set of duplicate SQL migrations with new timestamps. Supabase CLI uses one ordered migration catalog; a separate "production" filename is not automatically environment-scoped and may execute in Preview too.
 3. Do not run `supabase db push` against Production from the 239-file catalog. It could replay older migrations whose effects already exist out-of-band or apply Preview reconciliation changes.
-4. First complete exact schema comparison for the 18 non-inert migrations not covered by the two confirmed feature gaps. Then prepare a controlled promotion/ledger-reconciliation plan, preserving data and reviewing every policy/grant/function change.
+4. First complete exact schema comparison for the 16 remaining substantive migrations after excluding the two inert mappings and the two feature-gap migrations. Then prepare a controlled promotion/ledger-reconciliation plan, preserving data and reviewing every policy/grant/function change.
 5. No remote SQL, migration repair, Production schema change, deployment, merge, or PR closure was performed for this audit.
 
 ## Current GitHub work
