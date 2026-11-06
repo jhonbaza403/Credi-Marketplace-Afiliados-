@@ -133,3 +133,38 @@ The two historical mappings above intentionally contain comments only. They must
 ## 10. Decision
 
 The 20-version gap is not 20 missing Production features. Three migrations contain the confirmed missing application areas. Other migrations mostly describe objects already present, later canonical replacements, or policy/function differences that require semantic comparison. Several additional live catalog differences exist beyond the 20 versions; they are documented above and must be reviewed independently before declaring the databases functionally equivalent.
+
+
+## Segunda pasada de auditoría integral — 2026-11-06
+
+### Catálogo y metadatos
+- Los dos proyectos tienen los mismos 11 schemas de aplicación/servicio.
+- Funciones SQL: Preview 121, Production 118; cinco firmas solo en Preview y dos solo en Production. Las dos funciones de settlement exclusivas de Production se conservan.
+- Entre 116 firmas comunes, 47 cuerpos difieren. La comparación ampliada detectó 65 firmas con alguna diferencia de cuerpo, SECURITY DEFINER, search_path o ACL efectiva. No se copian en bloque.
+- Hallazgo crítico confirmado en Preview: `public.get_credi_operation_timeline(uuid)` es SECURITY DEFINER y concede EXECUTE a PUBLIC/anon. Su cuerpo exige `auth.uid()` y rol admin, por lo que la comprobación interna rechaza anon; aun así, el permiso anónimo es innecesario y amplía la superficie de ataque. La migración nueva revoca PUBLIC/anon y fija search_path vacío, conservando authenticated/service_role.
+- Políticas públicas: Preview 317, Production 303. Hay tres pares de políticas SELECT permisivas superpuestas en Preview para advertisements, feed_posts y reels. Las políticas antiguas no exigen moderación aprobada; al combinarse con OR pueden saltarse el control de moderación. La migración nueva elimina únicamente esas tres políticas antiguas.
+- Se conservan las siete políticas exclusivas de Production, incluidas las políticas deny para límites de API, eventos operativos y datos fiscales.
+- Índices públicos: Preview 630, Production 624. Se preservan las alternativas exclusivas de Production, el índice único del propietario de plataforma y el índice de wallet/ledger. No se eliminan índices por el mero indicador de no uso.
+- Restricciones públicas: Preview 932, Production 900. Hay restricciones exclusivas de ambos entornos y 15 definiciones compartidas diferentes; deben mantenerse bajo revisión semántica, especialmente unicidad de settlement allocations y constraints de listings/listing_offers.
+- Triggers públicos no internos: Preview 79, Production 76. Preview tiene tres triggers adicionales de updated_at para jobs. El trigger `trg_orders_status_history` existe en ambos, pero su función difiere: Production intentaba escribir `old_status/new_status/changed_at`, columnas que no existen. El esquema compartido utiliza `from_status/to_status/changed_by/reason/metadata`. La migración nueva corrige la función y mantiene el comportamiento de Production: registrar INSERT y cambios de status, sin borrar historial existente.
+- Realtime: ambos publican nueve tablas públicas en `supabase_realtime`. Production conserva además nueve particiones `realtime.messages_2026_11_01` a `_09` en `supabase_realtime_messages_publication`. No se eliminan.
+- Vistas: Preview 8, Production 10; las dos adicionales de Production pertenecen a `hypopg`/index_advisor. Extensiones: Preview 5, Production 7. Se conservan las extensiones de diagnóstico de Production.
+- Secuencias relevantes y 18 enums coinciden; no se encontraron dominios. Cron y relaciones pgmq no están presentes en ninguno de los dos proyectos.
+
+### Storage y Edge Functions
+- Buckets: Preview 2, Production 5. Production tiene `kyb-documents`, `kyc-documents` y `marketplace-media` adicionales; los dos primeros son privados y el último público. La migración nueva crea `kyc-documents` privado en Preview y aborta si encuentra configuración incompatible en lugar de cambiar silenciosamente un bucket existente.
+- `media-upload`: Preview versión 1 y Production versión 9, hashes distintos. La fuente del repositorio se alinea con el handler de Production que no reescribe configuración de buckets en cada carga; amplía CORS solo a dominios Credi/Vercel reconocidos.
+- `health`: solo listada en Production; el código fuente existe y solo devuelve estado estático, sin datos de usuario.
+- `kyc-upload`: solo listada en Production y no tenía fuente versionada en el repositorio. El handler desplegado usaba `credi-kyc-private`, mientras el RPC de KYC validaba objetos en `marketplace-media` (público); además aceptaba PDF en la carga pero el RPC lo rechazaba, y los límites de 20 MB no coincidían con los 15 MB del RPC/10 MB del bucket privado. Se añade fuente versionada que usa `kyc-documents` privado, 10 MB y PDF solo para frente/reverso de documento; el RPC valida bucket, propietario, prefijo de usuario y MIME.
+- No hay filas en `public.kyc_documents` en ninguno de los dos proyectos. Esto no prueba que no existan objetos huérfanos en Storage; no se borran ni se migran objetos automáticamente.
+
+### Cambios propuestos en esta rama
+- Añadida `20261105230000_harden_rls_timeline_and_private_kyc.sql`: limpieza de políticas de moderación, ACL/search_path de timeline, bucket KYC privado, RPC de KYC compatible con PDF controlado y trigger correcto de historial de pedidos.
+- Actualizada la fuente de `media-upload` para quitar la mutación de bucket por solicitud y aceptar orígenes Credi/Vercel permitidos.
+- Añadida fuente de `kyc-upload`, configuración explícita `verify_jwt = true` y ajuste del formulario a 10 MB con tipo documental explícito.
+- PR permanece draft. No se ejecutó SQL remoto, no se desplegaron Edge Functions y no se modificó Producción.
+
+### Validación que sigue pendiente
+- El CI de aplicación, seguridad, CodeQL, secret scan y Vercel Preview debe terminar en el commit más reciente.
+- Hace falta una rama Supabase aislada derivada de Production para ejecutar migraciones, comprobar DDL, políticas, triggers, KYC y flujos. Aún no se ha creado porque requiere cotizar el costo de la rama según el ID de organización y autorización del costo.
+- Las pruebas de integración reales de chat, invitaciones, empleos, LIVE, autenticación, Storage y flujos financieros siguen pendientes. Los tests unitarios/E2E del frontend no certifican por sí solos esas operaciones contra Postgres/Storage reales.
