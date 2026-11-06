@@ -1,4 +1,10 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2'
+import {
+  isAllowedKycDocumentType,
+  isAllowedKycMimeType,
+  isValidKycFileSize,
+  sanitizeKycFileName,
+} from '../_shared/kyc-upload-policy.ts'
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!
 const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -8,9 +14,6 @@ const supabase = createClient(supabaseUrl, serviceRoleKey, {
 
 const BUCKET = 'kyc-documents'
 const MAX_BYTES = 10 * 1024 * 1024
-const ID_DOCUMENT_TYPES = new Set(['id_front', 'id_back'])
-const IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp'])
-const ID_TYPES = new Set([...IMAGE_TYPES, 'application/pdf'])
 
 const HEADERS: Record<string, string> = {
   'content-type': 'application/json; charset=utf-8',
@@ -81,12 +84,11 @@ Deno.serve(async (request) => {
     const documentType = String(payload.documentType ?? '').trim()
 
     if (!fileName || fileName.length > 180) return json({ error: 'INVALID_FILE_NAME' }, 400, origin)
-    if (![...ID_DOCUMENT_TYPES, 'profile_photo', 'left_photo', 'right_photo'].includes(documentType)) {
+    if (!isAllowedKycDocumentType(documentType)) {
       return json({ error: 'INVALID_DOCUMENT_TYPE' }, 400, origin)
     }
-    const allowedTypes = ID_DOCUMENT_TYPES.has(documentType) ? ID_TYPES : IMAGE_TYPES
-    if (!allowedTypes.has(contentType)) return json({ error: 'UNSUPPORTED_MEDIA_TYPE' }, 415, origin)
-    if (!Number.isSafeInteger(fileSize) || fileSize <= 0 || fileSize > MAX_BYTES) {
+    if (!isAllowedKycMimeType(documentType, contentType)) return json({ error: 'UNSUPPORTED_MEDIA_TYPE' }, 415, origin)
+    if (!isValidKycFileSize(fileSize)) {
       return json({ error: 'INVALID_FILE_SIZE' }, 413, origin)
     }
 
@@ -96,7 +98,7 @@ Deno.serve(async (request) => {
       return json({ error: 'PRIVATE_BUCKET_UNAVAILABLE' }, 503, origin)
     }
 
-    const safeName = fileName.toLowerCase().replace(/[^a-z0-9._-]+/g, '-').replace(/-+/g, '-').slice(-100)
+    const safeName = sanitizeKycFileName(fileName)
     const path = `${authData.user.id}/${crypto.randomUUID()}-${safeName}`
     const { data: signed, error: signedError } = await supabase.storage.from(BUCKET).createSignedUploadUrl(path)
     if (signedError || !signed) {
