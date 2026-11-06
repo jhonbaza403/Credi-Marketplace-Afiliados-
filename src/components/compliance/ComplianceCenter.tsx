@@ -81,10 +81,10 @@ export default function ComplianceCenter() {
     });
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || "No fue posible crear el caso KYC");
-    setKyc(data.case);
     await upload("kyc", data.case.id, "id_front", kycPrimary);
     if (kycBack) await upload("kyc", data.case.id, "id_back", kycBack);
     if (kycSelfie) await upload("kyc", data.case.id, "selfie", kycSelfie);
+    setKyc({ ...data.case, status: "submitted" });
   }
 
   async function submitKyb() {
@@ -217,7 +217,7 @@ export default function ComplianceCenter() {
             {kyc && <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium">{statusLabels[kyc.status] ?? kyc.status}</span>}
           </div>
 
-          {!kyc || ["rejected", "expired"].includes(kyc.status) ? (
+          {!kyc || ["rejected", "expired", "pending", "additional_information", "not_started"].includes(kyc.status) ? (
             <div className="space-y-4">
               <label className="block text-sm font-medium">País<select className="mt-1 w-full rounded-md border p-2" value={kycCountry} onChange={(e) => setKycCountry(e.target.value)}><option value="VE">Venezuela</option><option value="US">Estados Unidos</option><option value="NL">Países Bajos</option></select></label>
               <label className="block text-sm font-medium">Tipo de documento<select className="mt-1 w-full rounded-md border p-2" value={kycDocumentType} onChange={(e) => setKycDocumentType(e.target.value)}><option value="id_card">Cédula / documento nacional</option><option value="passport">Pasaporte</option><option value="drivers_license">Licencia</option></select></label>
