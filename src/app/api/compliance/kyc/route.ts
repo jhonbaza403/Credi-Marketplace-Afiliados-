@@ -39,11 +39,11 @@ export async function POST(request: Request) {
     const { data: updated, error: updateError } = await supabase
       .from("kyc_cases")
       .update({
-        status: "submitted",
+        status: "pending",
         country: parsed.data.country,
         document_type: parsed.data.documentType,
         document_number: parsed.data.documentNumber,
-        submitted_at: new Date().toISOString(),
+        submitted_at: null,
         updated_at: new Date().toISOString(),
         rejection_reason: null,
       })
@@ -61,9 +61,9 @@ export async function POST(request: Request) {
       subject_type: "kyc",
       subject_id: updated.id,
       actor_id: auth.user.id,
-      event_type: "additional_information_submitted",
+      event_type: "case_reopened_for_documents",
       previous_status: existing.status,
-      new_status: "submitted",
+      new_status: "pending",
     });
     return NextResponse.json({ case: updated, reused: true }, { status: 200 });
   }
@@ -72,11 +72,11 @@ export async function POST(request: Request) {
     .from("kyc_cases")
     .insert({
       user_id: auth.user.id,
-      status: "submitted",
+      status: "pending",
       country: parsed.data.country,
       document_type: parsed.data.documentType,
       document_number: parsed.data.documentNumber,
-      submitted_at: new Date().toISOString(),
+      submitted_at: null,
     })
     .select("id,status,country,document_type,submitted_at,created_at,updated_at")
     .single();
@@ -99,9 +99,9 @@ export async function POST(request: Request) {
     subject_type: "kyc",
     subject_id: created.id,
     actor_id: auth.user.id,
-    event_type: "case_submitted",
+    event_type: "case_created",
     previous_status: "not_started",
-    new_status: "submitted",
+    new_status: "pending",
   });
 
   if (checksError || eventError) {
