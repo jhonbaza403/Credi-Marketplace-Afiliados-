@@ -1,0 +1,7 @@
+-- Historical version mapping for the isolated Preview migration history.
+-- The original SQL is preserved verbatim at:
+-- docs/supabase/migration-archive/20261012150000_enable_live_realtime_publication.sql.disabled
+-- Its behavior is superseded in Production by the already-applied migration
+-- 20261031002056_enable_live_realtime_publication.sql. Keep this file intentionally
+-- inert so this old version is not replayed against Production.
+-- Fresh databases receive the canonical publication configuration from the later migration.
