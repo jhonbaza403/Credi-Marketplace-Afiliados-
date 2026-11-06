@@ -1,0 +1,7 @@
+-- Historical version mapping for the isolated Preview migration history.
+-- The original SQL is preserved verbatim at:
+-- docs/supabase/migration-archive/20261012080000_guard_social_moderation_fields.sql.disabled
+-- Its behavior is superseded in Production by the already-applied migration
+-- 20261031002051_guard_social_moderation_fields.sql. Keep this file intentionally
+-- inert: replaying the older trigger definition on Production could regress it.
+-- Fresh databases receive the canonical definition from the later migration.
