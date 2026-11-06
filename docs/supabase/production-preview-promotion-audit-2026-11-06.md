@@ -191,3 +191,23 @@ One concrete LIVE schema difference was safely corrected in Production:
 - Verified migration source is recorded as `20261106131148_align_live_room_description_not_null.sql`.
 
 Remaining function/policy differences are not certified by matching object names or search_path alone. In particular, private helper bodies, financial trigger bodies/ACLs, marketing policies, and LIVE checks/indexes/publication membership still require the full definition diff.
+
+
+## Fifth pass — final live counts after LIVE correction
+
+The guarded LIVE description migration added one further Production record. Latest read-only migration listing now reports:
+
+- Production: **225** versions.
+- Preview: **242** versions.
+- Preview-only: **23** versions (the original 20 plus three Preview-timestamped idempotent reconciliation records).
+- Production-only: **6** versions (the four-table promotion, secure-group reconciliation, FK indexes, private-table policies, order-history trigger repair, and LIVE description correction).
+- Net count difference: **17**.
+
+The original 20 Preview-only versions remain the substantive historical review set. The environment-timestamped reconciliation records are separately represented by idempotent SQL source files in this branch; they are not substitutes for the old history.
+
+The latest security/performance advisor snapshot:
+- Production: 4 authenticated SECURITY DEFINER warnings and the Supabase Auth leaked-password-protection warning; no anon-executable SECURITY DEFINER, no RLS-enabled/no-policy, no unindexed-FK findings.
+- Preview: 18 authenticated SECURITY DEFINER warnings; no anon-executable SECURITY DEFINER, no RLS-enabled/no-policy, no unindexed-FK findings. The 19 permissive-policy overlaps and 2 duplicate-index pairs remain.
+- Unused-index INFO findings: 390 Production and 378 Preview. No indexes were dropped.
+
+The order-history trigger repair and LIVE nullability correction are applied in Production and have matching migration source files in this branch. Preview already has the corrected trigger and LIVE nullability; its source aliases are retained so both environments can recognize every remote version locally.
