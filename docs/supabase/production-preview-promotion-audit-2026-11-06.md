@@ -51,3 +51,14 @@ These are the clearest candidates for a Production feature rollout, but the comp
 
 - PR #102 remains open and draft on `fix/preview-migration-source-parity-20261105`.
 - This audit is documentation only; it does not authorize merge or remote database changes.
+
+
+## Follow-up: production feature migration prepared (2026-11-06)
+
+Added `supabase/migrations/20261106120000_production_professional_network_and_feed_preferences.sql` to the existing branch. It creates the four Production-missing tables (`jobs`, `job_applications`, `professional_profiles`, `social_feed_preferences`) with their indexes, timestamp trigger, RLS policies, and grants. The migration uses `IF NOT EXISTS` for table/index creation and recreates its named policies/triggers so it can also be applied after the original feature migrations in Preview.
+
+The migration source was verified on GitHub. It has **not** been executed against Preview or Production, and the migration ledger was not changed. Production remains at 219 recorded versions and Preview at 239.
+
+**Deployment blocker remains:** a normal Supabase CLI `db push` to Production would process the 20 earlier pending versions before this new migration. Do not run it until the intervening history has been reconciled and the remaining substantive migrations reviewed. The migration file alone does not bypass or repair that history gap.
+
+The jobs-application workflow intentionally has no client-side UPDATE policy for application decisions; a narrowly scoped server endpoint/RPC is still required before employers can change application status.
