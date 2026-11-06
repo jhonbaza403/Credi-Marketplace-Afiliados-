@@ -239,3 +239,25 @@ drop trigger if exists trg_orders_status_history on public.orders;
 create trigger trg_orders_status_history
 after insert or update of status on public.orders
 for each row execute function public.record_order_status_change();
+
+
+-- The public RPC is the authenticated entry point. Its previous INVOKER wrapper
+-- could not call the private implementation because authenticated has no EXECUTE
+-- on private.submit_kyc_identity. Run the wrapper as its trusted owner while the
+-- private implementation continues to enforce auth.uid(), rate limits and file ownership.
+create or replace function public.submit_kyc_identity(
+  p_country text,
+  p_document_type text,
+  p_document_number text,
+  p_documents jsonb
+)
+returns uuid
+language sql
+security definer
+set search_path = ''
+as $function$
+  select private.submit_kyc_identity($1,$2,$3,$4);
+$function$;
+
+revoke all on function public.submit_kyc_identity(text,text,text,jsonb) from public, anon;
+grant execute on function public.submit_kyc_identity(text,text,text,jsonb) to authenticated, service_role;
