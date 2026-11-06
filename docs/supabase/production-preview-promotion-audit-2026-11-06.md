@@ -2,10 +2,10 @@
 
 ## Current remote history (read-only)
 
-- Production project `fusnmvmveqdzmzohhlzm`: **219** recorded migration versions.
+- Production project `fusnmvmveqdzmzohhlzm`: **220** recorded migration versions (including the new professional-network/feed migration applied on 2026-11-06).
 - Preview project `yjxybhpubxhblfyfzlmk`: **239** recorded migration versions.
 - Production has no migration versions absent from Preview.
-- Preview has exactly **20** versions not recorded in Production.
+- Preview has exactly **19** historical versions not recorded in Production after the feature migration was applied directly to Production.
 - This is separate from PR #102's source-reconciliation scope: that PR restored 19 files that were missing from the previous `main` catalog (17 substantive files plus two inert historical mappings). Do not conflate "missing from main" with "not recorded in Production".
 
 ## Production schema spot-check (read-only)
@@ -55,10 +55,10 @@ These are the clearest candidates for a Production feature rollout, but the comp
 
 ## Follow-up: production feature migration prepared (2026-11-06)
 
-Added `supabase/migrations/20261106120000_production_professional_network_and_feed_preferences.sql` to the existing branch. It creates the four Production-missing tables (`jobs`, `job_applications`, `professional_profiles`, `social_feed_preferences`) with their indexes, timestamp trigger, RLS policies, and grants. The migration uses `IF NOT EXISTS` for table/index creation and recreates its named policies/triggers so it can also be applied after the original feature migrations in Preview.
+Added `supabase/migrations/20261106123959_production_professional_network_and_feed_preferences.sql` to the existing branch. It creates the four Production-missing tables (`jobs`, `job_applications`, `professional_profiles`, `social_feed_preferences`) with their indexes, timestamp trigger, RLS policies, and grants. The migration uses `IF NOT EXISTS` for table/index creation and recreates its named policies/triggers so it can also be applied after the original feature migrations in Preview.
 
-The migration source was verified on GitHub. It has **not** been executed against Preview or Production, and the migration ledger was not changed. Production remains at 219 recorded versions and Preview at 239.
+The migration source was verified on GitHub. It was applied successfully to Production through the Supabase migration API and recorded remotely as version `20261106123959`. The four tables were then verified in Production with RLS enabled and policies present. It has not yet been applied to Preview; because its definitions already exist there, the migration is idempotent and can be applied by the normal Preview workflow. Production is now at 220 recorded versions and Preview at 239.
 
-**Deployment blocker remains:** a normal Supabase CLI `db push` to Production would process the 20 earlier pending versions before this new migration. Do not run it until the intervening history has been reconciled and the remaining substantive migrations reviewed. The migration file alone does not bypass or repair that history gap.
+**Deployment blocker remains:** a normal Supabase CLI `db push` to Production would process the 19 earlier pending versions before any newer migration. Do not run it until the intervening history has been reconciled and the remaining substantive migrations reviewed. The feature migration was applied directly and recorded as `20261106123959`; this does not bypass or repair the 19-version historical gap.
 
 The jobs-application workflow intentionally has no client-side UPDATE policy for application decisions; a narrowly scoped server endpoint/RPC is still required before employers can change application status.
