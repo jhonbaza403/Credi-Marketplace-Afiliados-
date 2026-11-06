@@ -1,0 +1,9 @@
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM public.chat_live_rooms WHERE description IS NULL) THEN
+    RAISE EXCEPTION 'LIVE_ROOM_DESCRIPTION_NULLS_PRESENT';
+  END IF;
+END $$;
+ALTER TABLE public.chat_live_rooms
+  ALTER COLUMN description SET DEFAULT '',
+  ALTER COLUMN description SET NOT NULL;
