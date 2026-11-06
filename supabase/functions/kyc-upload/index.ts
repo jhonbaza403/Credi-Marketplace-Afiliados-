@@ -27,7 +27,7 @@ function allowedOrigin(origin: string | null) {
     if (url.origin !== origin) return null
     const host = url.hostname.toLowerCase()
     const production = host === 'credi-marketplace-afiliados.vercel.app'
-    const deployment = /^credi-marketplace-afiliados-[a-z0-9-]+\.vercel\.app$/i.test(host)
+    const deployment = host === 'credi-marketplace-afiliados-1owsvvxbn.vercel.app'
     const branchAlias = /^credi-marketplace-afilia-git-[a-z0-9-]+-credi-marketplace-afiliados\.vercel\.app$/i.test(host)
     const legacyPreview = /^credi-marketplace-afiliados-[a-z0-9-]+-bazwjhon-2554s-projects\.vercel\.app$/i.test(host)
     if (url.protocol === 'https:' && (production || deployment || branchAlias || legacyPreview)) return origin
