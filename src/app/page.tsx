@@ -52,7 +52,7 @@ export default async function HomePage() {
               <span className="hero-main-text">Personas, contenido y oportunidades.</span>{" "}
               <span className="hero-highlight">Todo conecta en Credi.</span>
             </h1>
-            <p className="mt-6 max-w-2xl text-base font-medium leading-8 text-slate-100 drop-shadow-[0_2px_12px_rgba(0,0,0,.8)] sm:text-lg">
+            <p className="hero-description mt-6 max-w-2xl text-base font-medium leading-8 text-slate-100 drop-shadow-[0_2px_12px_rgba(0,0,0,.8)] sm:text-lg">
               Una comunidad para descubrir, conversar, publicar, vender y crecer. Tu muro social y tu comercio viven en la misma experiencia.
             </p>
             <div className="hero-actions mt-8 flex flex-col gap-3 sm:flex-row">
