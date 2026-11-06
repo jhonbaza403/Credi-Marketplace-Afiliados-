@@ -107,8 +107,8 @@ begin
 
   foreach typ in array req loop
     select count(*) into cnt
-    from jsonb_array_elements(p_documents) item
-    where item->>'type' = typ;
+    from jsonb_array_elements(p_documents) as item(value)
+    where item.value->>'type' = typ;
     if cnt <> 1 then raise exception 'DUPLICATE_OR_MISSING_KYC_FILE'; end if;
   end loop;
 
