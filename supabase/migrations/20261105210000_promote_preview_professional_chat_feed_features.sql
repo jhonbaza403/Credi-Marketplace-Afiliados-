@@ -568,3 +568,19 @@ using (user_id = (select auth.uid()));
 
 revoke all on public.social_feed_preferences from public, anon, authenticated;
 grant select, insert, update, delete on public.social_feed_preferences to authenticated;
+
+-- Close the one shared-table column drift found in the live catalog comparison.
+-- Production currently has 11 rooms and none have NULL descriptions; Preview's
+-- canonical definition is NOT NULL DEFAULT ''. Abort rather than rewrite data if
+-- a NULL is introduced before rollout.
+do $$
+begin
+  if exists (select 1 from public.chat_live_rooms where description is null) then
+    raise exception 'chat_live_rooms.description contains NULL values; review before enforcing NOT NULL';
+  end if;
+end;
+$$;
+
+alter table public.chat_live_rooms
+  alter column description set default '',
+  alter column description set not null;
