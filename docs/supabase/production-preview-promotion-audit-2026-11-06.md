@@ -172,3 +172,22 @@ Current history after this repair:
 - Net count difference: **18**.
 
 This fixes one verified functional defect, but it does not certify all financial functions/triggers in `20261002040000_restore_financial_trigger_functions`. The remaining financial definitions and grants still require object-by-object comparison.
+
+
+## Fourth pass — certified shared definitions and LIVE nullability
+
+The following definitions were compared directly in both live projects and matched:
+- `public.generate_credi_pin()`: same function logic and empty search_path.
+- `public.prevent_platform_owner_client_change()`: same SECURITY DEFINER body, pinned `pg_catalog, public` search_path, and attached `trg_protect_platform_owner` trigger.
+- The four trigger-function search_path settings in `20261104040100_harden_trigger_function_search_paths` match between projects.
+- `profile_verification_photos`: same authorized SELECT policy, same updated-at trigger, private identity bucket and 15 MiB limit.
+- `ai_sessions`: same owner-only RLS policy.
+- Both projects have nine public tables in `supabase_realtime`.
+
+One concrete LIVE schema difference was safely corrected in Production:
+- Before: `chat_live_rooms.description` was nullable in Production but NOT NULL in Preview.
+- Production had 11 rooms and **zero** NULL descriptions at the time of the guarded check.
+- Applied a guard that aborts if a NULL exists, then set DEFAULT '' and NOT NULL.
+- Verified migration source is recorded as `20261106131148_align_live_room_description_not_null.sql`.
+
+Remaining function/policy differences are not certified by matching object names or search_path alone. In particular, private helper bodies, financial trigger bodies/ACLs, marketing policies, and LIVE checks/indexes/publication membership still require the full definition diff.
