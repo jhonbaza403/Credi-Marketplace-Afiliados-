@@ -115,3 +115,16 @@ Merged/obsolete branches that can be deleted after confirming their changes are 
 - #84 duplicate support-version PR (closed in this work session; #83 was already merged).
 
 The GitHub connector available in this session does not expose a branch-delete operation. Closing a PR is not deleting its branch. Therefore no GitHub branch refs were deleted by this audit. Production's Supabase default branch `main` is also not a cleanup candidate; it is the production project branch.
+
+
+## Supplemental live comparison — six additional tables
+
+A second read-only comparison covered `marketing_daily_metrics`, `marketing_events`, `social_accounts`, `social_publications`, `profile_verification_photos`, and `ai_sessions`.
+
+- `profile_verification_photos` and `ai_sessions`: inspected table definitions match.
+- `marketing_daily_metrics.spend` and `revenue`: Production `numeric(20,2)`; Preview `numeric`.
+- `marketing_events.value`: Production `numeric(20,8)`; Preview `numeric`.
+- `social_accounts_owner_all` and `social_publications_owner_all`: policy expressions differ only by an extra nested `SELECT` around `auth.uid()` in Production; both are restricted to authenticated owner/admin checks. Do not rewrite unless it is needed for a deliberate RLS performance cleanup.
+- The earlier grant comparison still shows Preview-only explicit `anon` table grants on both social tables. Remove those only in a reviewed forward migration after confirming the application uses authenticated access as intended.
+
+Together with the earlier marketing comparison, the following Preview columns remain wider/unconstrained than Production and require a data range/scale preflight before any narrowing: `marketing_ad_sets.daily_budget`, `marketing_campaigns.daily_budget`, `marketing_campaigns.lifetime_budget`, `marketing_conversion_events.event_value`, `marketing_experiment_variants.allocation_percent`, `marketing_daily_metrics.spend`, `marketing_daily_metrics.revenue`, and `marketing_events.value`.
