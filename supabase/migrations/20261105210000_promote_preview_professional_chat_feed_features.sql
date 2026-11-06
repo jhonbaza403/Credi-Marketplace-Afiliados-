@@ -170,8 +170,6 @@ grant select, insert, update on public.professional_profiles to authenticated;
 -- Authenticated clients cannot write conversation_members directly.
 -- All membership changes happen inside SECURITY DEFINER RPCs with auth.uid() checks.
 
-begin;
-
 create table if not exists public.conversation_invitations (
   id uuid primary key default gen_random_uuid(),
   conversation_id uuid not null references public.conversations(id) on delete cascade,
@@ -528,8 +526,6 @@ grant execute on function public.respond_credichat_group_invitation(uuid, boolea
 
 -- Explicit, user-controlled social-feed preferences.
 -- Store only topics selected by the user; never infer sensitive traits.
-
-begin;
 
 create table if not exists public.social_feed_preferences (
   user_id uuid primary key references auth.users(id) on delete cascade,
