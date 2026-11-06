@@ -151,3 +151,24 @@ No historical version was marked applied merely because an object with a matchin
 - PR #102 and PR #103 were not merged.
 - No existing business rows or Storage objects were deleted.
 - The remote functional/security changes above are applied, but **full schema parity and historical ledger reconciliation are not certified**.
+
+
+## Third pass — production order-history trigger repair
+
+A further live definition comparison found a concrete schema defect in Production's `public.record_order_status_change()`: it attempted to insert into legacy columns `old_status`, `new_status`, and `changed_at`, which are not columns in the current `order_status_history` table. The Production trigger also fired on INSERT, although checkout already records the initial event explicitly.
+
+Corrected Production to match the current schema and Preview's update-transition behavior:
+- Function now writes `from_status`, `to_status`, `changed_by`, `reason`, and `metadata`.
+- `search_path` is pinned to the empty path.
+- Trigger now fires only after UPDATE OF status, preventing duplicate order-creation history rows.
+- Verified the live function definition and trigger definition after application.
+- Source recorded in `supabase/migrations/20261106131032_fix_order_status_history_trigger_schema.sql`.
+
+Current history after this repair:
+- Production: **224** versions.
+- Preview: **242** versions.
+- Preview-only: **23** versions.
+- Production-only: **5** versions.
+- Net count difference: **18**.
+
+This fixes one verified functional defect, but it does not certify all financial functions/triggers in `20261002040000_restore_financial_trigger_functions`. The remaining financial definitions and grants still require object-by-object comparison.
