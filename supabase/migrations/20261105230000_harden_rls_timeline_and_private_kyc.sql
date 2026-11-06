@@ -261,3 +261,131 @@ $function$;
 
 revoke all on function public.submit_kyc_identity(text,text,text,jsonb) from public, anon;
 grant execute on function public.submit_kyc_identity(text,text,text,jsonb) to authenticated, service_role;
+
+
+-- Public RPC wrappers must be able to invoke their private SECURITY DEFINER
+-- implementations. Keep private EXECUTE grants closed; elevate only the reviewed
+-- public entry points. Their implementations independently enforce auth.uid(),
+-- ownership/party checks, rate limits and (for refunds) platform-owner authority.
+do $$
+declare
+  sig text;
+  signatures text[] := array[
+    'public.accept_negotiation(uuid,uuid)',
+    'public.create_b2b_award(uuid,uuid,uuid,uuid)',
+    'public.create_credichat_direct_conversation(uuid,uuid,uuid,uuid,uuid,text,jsonb)',
+    'public.get_credi_contact_by_pin(text)',
+    'public.get_credi_contact(text)',
+    'public.get_transaction_rating_targets(uuid)',
+    'public.initialize_order_tax_transaction(uuid)',
+    'public.submit_kyc_identity(text,text,text,jsonb)',
+    'public.submit_transaction_rating(uuid,uuid,smallint,text,jsonb)',
+    'public.wallet_pay_order(uuid,text)',
+    'public.wallet_refund_order(uuid,numeric,text,text)',
+    'public.wallet_transfer(uuid,numeric,text,text)'
+  ];
+begin
+  foreach sig in array signatures loop
+    if to_regprocedure(sig) is null then
+      raise exception 'EXPECTED_PUBLIC_RPC_MISSING: %', sig;
+    end if;
+    execute format('alter function %s security definer', to_regprocedure(sig));
+    execute format('alter function %s set search_path = %L', to_regprocedure(sig), '');
+    execute format('revoke all on function %s from public, anon', to_regprocedure(sig));
+    execute format('grant execute on function %s to authenticated, service_role', to_regprocedure(sig));
+  end loop;
+end;
+$$;
+
+-- Trigger-only functions do not need direct RPC EXECUTE grants. Production already
+-- keeps these closed; align Preview without changing their trigger attachments.
+revoke all on function public.create_affiliate_commission_ledger_entry() from public, anon, authenticated;
+alter function public.prevent_affiliate_self_referral() security definer;
+alter function public.prevent_affiliate_self_referral() set search_path = '';
+revoke all on function public.prevent_affiliate_self_referral() from public, anon, authenticated;
+
+-- Keep plan access self-scoped. Platform-owner/admin access is evaluated separately
+-- from commercial entitlements; do not expose another user's admin status through
+-- the plan-feature RPC. Service-role backend calls may explicitly request a user.
+create or replace function public.current_user_plan(p_user_id uuid default auth.uid())
+returns table(plan_id uuid, plan_code text, plan_name text, status text, billing_interval text, limits jsonb)
+language sql
+stable
+security invoker
+set search_path = ''
+as $function$
+with effective as (
+  select p.id, p.code, p.name, s.status, s.billing_interval, p.limits, s.created_at
+  from public.subscriptions s
+  join public.plans p on p.id = s.plan_id
+  where s.user_id = p_user_id
+    and p_user_id is not null
+    and (p_user_id = (select auth.uid()) or (select auth.role()) = 'service_role')
+    and s.status in ('trialing','active')
+    and (
+      s.status = 'trialing'
+      or s.cancel_at_period_end = false
+      or s.current_period_end is null
+      or s.current_period_end > now()
+    )
+  order by s.created_at desc
+  limit 1
+)
+select id, code, name, status, billing_interval, limits from effective
+union all
+select p.id, p.code, p.name, 'active'::text, 'free'::text, p.limits
+from public.plans p
+where p.code = 'free'
+  and p.is_active = true
+  and p_user_id is not null
+  and (p_user_id = (select auth.uid()) or (select auth.role()) = 'service_role')
+  and not exists (select 1 from effective)
+limit 1;
+$function$;
+
+create or replace function public.get_user_entitlement(
+  p_feature_key text,
+  p_user_id uuid default auth.uid()
+)
+returns table(enabled boolean, quota bigint, plan_code text)
+language sql
+stable
+security invoker
+set search_path = ''
+as $function$
+  select pf.enabled, pf.quota, c.plan_code
+  from public.current_user_plan(p_user_id) c
+  join public.plan_features pf on pf.plan_id = c.plan_id
+  where pf.feature_key = p_feature_key
+  limit 1;
+$function$;
+
+create or replace function public.user_has_plan_feature(
+  p_feature_key text,
+  p_user_id uuid default auth.uid()
+)
+returns boolean
+language sql
+stable
+security invoker
+set search_path = ''
+as $function$
+  select exists (
+    select 1
+    from public.get_user_entitlement(p_feature_key, p_user_id) e
+    where e.enabled = true
+  );
+$function$;
+
+revoke all on function public.current_user_plan(uuid) from public, anon;
+revoke all on function public.get_user_entitlement(text,uuid) from public, anon;
+revoke all on function public.user_has_plan_feature(text,uuid) from public, anon;
+grant execute on function public.current_user_plan(uuid) to authenticated, service_role;
+grant execute on function public.get_user_entitlement(text,uuid) to authenticated, service_role;
+grant execute on function public.user_has_plan_feature(text,uuid) to authenticated, service_role;
+
+-- Affiliate click tracking is intentionally service-role-only; the API route
+-- validates an active link and performs the counter update through its admin client.
+alter function public.record_affiliate_product_click(uuid) set search_path = '';
+revoke all on function public.record_affiliate_product_click(uuid) from public, anon, authenticated;
+grant execute on function public.record_affiliate_product_click(uuid) to service_role;
