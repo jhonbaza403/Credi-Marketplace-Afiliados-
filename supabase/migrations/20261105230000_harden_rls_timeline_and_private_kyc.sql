@@ -60,7 +60,7 @@ set search_path = ''
 as $function$
 declare
   u uuid := (select auth.uid());
-  case_id uuid;
+  v_case_id uuid;
   req text[] := array['id_front','id_back','profile_photo','left_photo','right_photo'];
   typ text;
   path text;
@@ -160,15 +160,15 @@ begin
   if v_case.id is null or v_case.status in ('rejected','expired') then
     insert into public.kyc_cases(user_id,status,country,document_type,document_number,submitted_at)
     values(u,'submitted',upper(trim(p_country)),p_document_type,trim(p_document_number),now())
-    returning id into case_id;
+    returning id into v_case_id;
   else
-    case_id := v_case.id;
+    v_case_id := v_case.id;
     update public.kyc_cases
     set status='submitted', country=upper(trim(p_country)), document_type=p_document_type,
         document_number=trim(p_document_number), submitted_at=now(), updated_at=now(),
         rejection_reason=null
-    where id=case_id and user_id=u;
-    delete from public.kyc_documents where kyc_documents.case_id=case_id;
+    where id=v_case_id and user_id=u;
+    delete from public.kyc_documents where kyc_documents.case_id=v_case_id;
   end if;
 
   for x in select value from jsonb_array_elements(p_documents) loop
@@ -184,10 +184,10 @@ begin
     mime := lower(coalesce(meta->>'mimetype',meta->>'mime_type',''));
     sz := (meta->>'size')::bigint;
     insert into public.kyc_documents(case_id,document_type,storage_path,mime_type,size_bytes)
-    values(case_id,typ,path,mime,sz);
+    values(v_case_id,typ,path,mime,sz);
   end loop;
 
-  return case_id;
+  return v_case_id;
 end;
 $function$;
 
