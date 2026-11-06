@@ -31,7 +31,8 @@ export default function ComplianceCenter() {
   const [kyc, setKyc] = useState<CaseSummary | null>(null);
   const [kyb, setKyb] = useState<CaseSummary | null>(null);
   const [kycCountry, setKycCountry] = useState("VE");
-  const [kycDocumentType, setKycDocumentType] = useState("id_front");
+  const [kycDocumentType, setKycDocumentType] = useState("id_card");
+  const [kycDocumentNumber, setKycDocumentNumber] = useState("");
   const [kycPrimary, setKycPrimary] = useState<File | null>(null);
   const [kycBack, setKycBack] = useState<File | null>(null);
   const [kycSelfie, setKycSelfie] = useState<File | null>(null);
@@ -72,15 +73,16 @@ export default function ComplianceCenter() {
 
   async function submitKyc() {
     if (!kycPrimary) throw new Error("Selecciona el documento principal");
+    if (kycDocumentNumber.trim().length < 3 || kycDocumentNumber.trim().length > 80) throw new Error("Introduce un número de documento válido (3 a 80 caracteres).");
     const response = await fetch("/api/compliance/kyc", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ country: kycCountry, documentType: kycDocumentType }),
+      body: JSON.stringify({ country: kycCountry, documentType: kycDocumentType, documentNumber: kycDocumentNumber.trim() }),
     });
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || "No fue posible crear el caso KYC");
     setKyc(data.case);
-    await upload("kyc", data.case.id, kycDocumentType, kycPrimary);
+    await upload("kyc", data.case.id, "id_front", kycPrimary);
     if (kycBack) await upload("kyc", data.case.id, "id_back", kycBack);
     if (kycSelfie) await upload("kyc", data.case.id, "selfie", kycSelfie);
   }
@@ -218,7 +220,8 @@ export default function ComplianceCenter() {
           {!kyc || ["rejected", "expired"].includes(kyc.status) ? (
             <div className="space-y-4">
               <label className="block text-sm font-medium">País<select className="mt-1 w-full rounded-md border p-2" value={kycCountry} onChange={(e) => setKycCountry(e.target.value)}><option value="VE">Venezuela</option><option value="US">Estados Unidos</option><option value="NL">Países Bajos</option></select></label>
-              <label className="block text-sm font-medium">Documento principal<select className="mt-1 w-full rounded-md border p-2" value={kycDocumentType} onChange={(e) => setKycDocumentType(e.target.value)}><option value="id_front">Cédula / documento nacional</option><option value="passport">Pasaporte</option><option value="drivers_license">Licencia</option></select></label>
+              <label className="block text-sm font-medium">Tipo de documento<select className="mt-1 w-full rounded-md border p-2" value={kycDocumentType} onChange={(e) => setKycDocumentType(e.target.value)}><option value="id_card">Cédula / documento nacional</option><option value="passport">Pasaporte</option><option value="drivers_license">Licencia</option></select></label>
+              <label className="block text-sm font-medium">Número de documento<input required minLength={3} maxLength={80} className="mt-1 w-full rounded-md border p-2" value={kycDocumentNumber} onChange={(e) => setKycDocumentNumber(e.target.value)} placeholder="Número exacto del documento" /></label>
               <label className="block text-sm font-medium">Documento principal<input className="mt-1 block w-full text-sm" type="file" accept="image/jpeg,image/png,image/webp,application/pdf" onChange={(e) => setKycPrimary(e.target.files?.[0] ?? null)} /></label>
               <label className="block text-sm font-medium">Reverso del documento<input className="mt-1 block w-full text-sm" type="file" accept="image/jpeg,image/png,image/webp,application/pdf" onChange={(e) => setKycBack(e.target.files?.[0] ?? null)} /></label>
               <label className="block text-sm font-medium">Selfie (opcional)<input className="mt-1 block w-full text-sm" type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => setKycSelfie(e.target.files?.[0] ?? null)} /></label>
