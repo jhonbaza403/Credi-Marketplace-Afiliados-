@@ -211,3 +211,15 @@ The latest security/performance advisor snapshot:
 - Unused-index INFO findings: 390 Production and 378 Preview. No indexes were dropped.
 
 The order-history trigger repair and LIVE nullability correction are applied in Production and have matching migration source files in this branch. Preview already has the corrected trigger and LIVE nullability; its source aliases are retained so both environments can recognize every remote version locally.
+
+
+## Sixth pass — exact parity of the five promoted feature tables
+
+A direct live catalog comparison of `jobs`, `job_applications`, `professional_profiles`, `social_feed_preferences`, and `conversation_invitations` now confirms identical definitions in Production and Preview for:
+- all columns, types, nullability and defaults;
+- all check, primary-key, unique and foreign-key constraints;
+- all indexes, including the invitation inviter index;
+- all RLS policy names, commands, roles, USING and WITH CHECK expressions;
+- all three timestamp triggers on jobs, applications and professional profiles.
+
+The comparison returned matching rows in both projects. The employer application-decision workflow is still intentionally not enabled by direct client UPDATE; a scoped server endpoint/RPC is needed before that user flow can be certified.
