@@ -389,3 +389,78 @@ grant execute on function public.user_has_plan_feature(text,uuid) to authenticat
 alter function public.record_affiliate_product_click(uuid) set search_path = '';
 revoke all on function public.record_affiliate_product_click(uuid) from public, anon, authenticated;
 grant execute on function public.record_affiliate_product_click(uuid) to service_role;
+
+
+-- Reconcile intentionally private operational tables across Production and Preview.
+-- The deny policies are restrictive: they cannot grant access and keep browser/API
+-- roles blocked even if a permissive policy is added later. service_role and postgres
+-- retain their existing backend access. operation_events remains admin-readable only.
+do $$
+begin
+  if not exists (
+    select 1 from pg_policies
+    where schemaname='public' and tablename='credi_supply_sources'
+      and policyname='credi_supply_sources_deny_clients'
+  ) then
+    create policy credi_supply_sources_deny_clients
+      on public.credi_supply_sources as restrictive
+      for all to anon, authenticated
+      using (false) with check (false);
+  end if;
+
+  if not exists (
+    select 1 from pg_policies
+    where schemaname='public' and tablename='api_rate_limits'
+      and policyname='api_rate_limits_deny_clients'
+  ) then
+    create policy api_rate_limits_deny_clients
+      on public.api_rate_limits as restrictive
+      for all to anon, authenticated
+      using (false) with check (false);
+  end if;
+
+  if not exists (
+    select 1 from pg_policies
+    where schemaname='public' and tablename='operation_events'
+      and policyname='operation_events_admin_select'
+  ) then
+    create policy operation_events_admin_select
+      on public.operation_events
+      for select to authenticated
+      using ((select public.is_admin()));
+  end if;
+
+  if not exists (
+    select 1 from pg_policies
+    where schemaname='public' and tablename='tax_exemptions'
+      and policyname='tax_exemptions_deny_clients'
+  ) then
+    create policy tax_exemptions_deny_clients
+      on public.tax_exemptions as restrictive
+      for all to anon, authenticated
+      using (false) with check (false);
+  end if;
+
+  if not exists (
+    select 1 from pg_policies
+    where schemaname='public' and tablename='tax_filings'
+      and policyname='tax_filings_deny_clients'
+  ) then
+    create policy tax_filings_deny_clients
+      on public.tax_filings as restrictive
+      for all to anon, authenticated
+      using (false) with check (false);
+  end if;
+
+  if not exists (
+    select 1 from pg_policies
+    where schemaname='public' and tablename='tax_reports'
+      and policyname='tax_reports_deny_clients'
+  ) then
+    create policy tax_reports_deny_clients
+      on public.tax_reports as restrictive
+      for all to anon, authenticated
+      using (false) with check (false);
+  end if;
+end;
+$$;
