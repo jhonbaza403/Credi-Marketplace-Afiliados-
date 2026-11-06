@@ -178,6 +178,9 @@ jobs:
       - name: Verify project structure
         run: npm run verify:structure
 
+      - name: Audit Supabase migration catalog
+        run: node scripts/audit-supabase-migrations.mjs
+
       - name: Audit route and HTTP method contracts
         run: npm run audit:routes
 
