@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { nextRequiredSecurityStep, type AccountAccessState } from "@/lib/auth/account-access";
+import { getAccountAccessState, nextRequiredSecurityStep, type AccountAccessState } from "@/lib/auth/account-access";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 const base: AccountAccessState = {
   is_platform_owner: false,
@@ -65,5 +66,57 @@ describe("account access security gate", () => {
         identity_approved: true,
       }),
     ).toBeNull();
+  });
+});
+
+
+describe("account access status lookup", () => {
+  it("throws when the security status RPC fails instead of treating the account as unenrolled", async () => {
+    const rpcError = { message: "database unavailable" };
+    const supabase = {
+      rpc: async () => ({ data: null, error: rpcError }),
+    } as unknown as SupabaseClient;
+
+    await expect(getAccountAccessState(supabase, "user-123")).rejects.toMatchObject({
+      message: "ACCOUNT_ACCESS_STATUS_UNAVAILABLE",
+      cause: rpcError,
+    });
+  });
+
+  it("throws when the security status RPC returns no usable row", async () => {
+    const supabase = {
+      rpc: async () => ({ data: null, error: null }),
+    } as unknown as SupabaseClient;
+
+    await expect(getAccountAccessState(supabase, "user-123")).rejects.toThrow(
+      "ACCOUNT_ACCESS_STATUS_INVALID",
+    );
+  });
+
+  it("maps a successful security status response to explicit boolean flags", async () => {
+    const supabase = {
+      rpc: async () => ({
+        data: {
+          is_platform_owner: false,
+          is_admin: true,
+          has_active_subscription: true,
+          has_mfa: true,
+          has_security_key: false,
+          has_profile_photos: true,
+          identity_approved: true,
+        },
+        error: null,
+      }),
+    } as unknown as SupabaseClient;
+
+    await expect(getAccountAccessState(supabase, "user-123")).resolves.toEqual({
+      is_platform_owner: false,
+      is_admin: true,
+      has_active_subscription: true,
+      has_mfa: true,
+      has_security_key: false,
+      has_profile_photos: true,
+      identity_approved: true,
+    });
   });
 });
