@@ -183,3 +183,11 @@ The 20-version gap is not 20 missing Production features. Three migrations conta
 - `record_affiliate_product_click` está intencionalmente limitado a service_role en ambos proyectos, pero el endpoint `/api/affiliate` lo llamaba usando el cliente de sesión (publishable key). Se modifica el endpoint para validar el enlace con el cliente de usuario y ejecutar el contador con el cliente admin exclusivamente del lado servidor.
 - La función de plan `user_has_plan_feature` en Preview incluía un bypass admin/platform-owner dentro de entitlement comercial, contradiciendo el contrato de separación entre administración y planes. La migración alinea el cálculo con el entitlement comercial, limita la consulta al propio usuario (o backend service_role), y agrega el fallback de plan Free que faltaba en Production.
 - Estas son correcciones de fuente/migración propuestas; su comportamiento real debe confirmarse en la rama Supabase aislada antes del rollout.
+
+
+### Flujo KYC de Compliance API
+- Se detectó una segunda ruta de KYC en `/api/compliance/kyc` y `/api/compliance/upload`, usada por `ComplianceCenter`. La ruta de creación omitía `document_number`, aunque la columna es NOT NULL, por lo que el caso podía fallar al crearse.
+- Se alinea la validación del tipo de documento con `id_card/passport/drivers_license`, se persiste el número de documento, y el caso queda `pending` hasta que se almacena la evidencia principal; entonces pasa a `submitted`.
+- Se amplían los tipos de evidencia KYC a las fotografías usadas por el Centro de Verificación y se restringe PDF a tipos documentales compatibles; fotos de perfil/laterales solo admiten imágenes. El límite se unifica en 10 MB.
+- El formulario del Centro de Compliance permite reintentar mientras el caso esté pendiente y registra el tipo de evidencia primaria como `id_front`.
+- El flujo de `/account/verificacion` conserva su ruta Edge Function + RPC privada, que también se corrige para usar el bucket privado. Ambos flujos comparten ahora el mismo bucket privado y los mismos límites/tipos permitidos.
