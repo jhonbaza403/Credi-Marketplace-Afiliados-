@@ -16,7 +16,7 @@ const versions = new Map();
 const invalidNames = [];
 
 for (const filename of files) {
-  const match = /^(\\d+)_([a-z0-9][a-z0-9_-]*)\\.sql$/i.exec(filename);
+  const match = /^(\d+)_([a-z0-9][a-z0-9_-]*)\.sql$/i.exec(filename);
   if (!match) {
     invalidNames.push(filename);
     continue;
@@ -34,7 +34,7 @@ for (const filename of files) {
 
 if (invalidNames.length > 0) {
   throw new Error(
-    `Invalid Supabase migration filenames:\\n${invalidNames.map((name) => `- ${name}`).join("\\n")}`,
+    `Invalid Supabase migration filenames:\n${invalidNames.map((name) => `- ${name}`).join("\n")}`,
   );
 }
 
