@@ -90,5 +90,30 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "No fue posible registrar el documento", details: dbError?.message }, { status: 500 });
   }
 
+  if (isKyc && meta.data.documentType === "id_front") {
+    const submittedAt = new Date().toISOString();
+    const { error: statusError } = await admin
+      .from("kyc_cases")
+      .update({ status: "submitted", submitted_at: submittedAt, updated_at: submittedAt })
+      .eq("id", meta.data.caseId)
+      .eq("user_id", auth.user.id)
+      .eq("status", "pending");
+
+    if (statusError) {
+      await admin.from("kyc_documents").delete().eq("id", document.id);
+      await admin.storage.from(bucket).remove([objectPath]);
+      return NextResponse.json({ error: "No fue posible enviar el caso KYC", details: statusError.message }, { status: 500 });
+    }
+
+    await admin.from("compliance_events").insert({
+      subject_type: "kyc",
+      subject_id: meta.data.caseId,
+      actor_id: auth.user.id,
+      event_type: "case_submitted",
+      previous_status: "pending",
+      new_status: "submitted",
+    });
+  }
+
   return NextResponse.json({ document }, { status: 201 });
 }
