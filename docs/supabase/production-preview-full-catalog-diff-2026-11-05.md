@@ -168,3 +168,9 @@ The 20-version gap is not 20 missing Production features. Three migrations conta
 - El CI de aplicación, seguridad, CodeQL, secret scan y Vercel Preview debe terminar en el commit más reciente.
 - Hace falta una rama Supabase aislada derivada de Production para ejecutar migraciones, comprobar DDL, políticas, triggers, KYC y flujos. Aún no se ha creado porque requiere cotizar el costo de la rama según el ID de organización y autorización del costo.
 - Las pruebas de integración reales de chat, invitaciones, empleos, LIVE, autenticación, Storage y flujos financieros siguen pendientes. Los tests unitarios/E2E del frontend no certifican por sí solos esas operaciones contra Postgres/Storage reales.
+
+
+### Hallazgo KYC adicional — permisos del RPC
+- En ambos proyectos, `public.submit_kyc_identity` era SECURITY INVOKER y concedía EXECUTE a authenticated, pero llamaba a `private.submit_kyc_identity`, cuyo EXECUTE estaba restringido a postgres/service_role. El usuario autenticado podía ejecutar el wrapper, pero el wrapper no podía ejecutar la implementación privada.
+- La migración nueva convierte el wrapper público en SECURITY DEFINER, fija search_path vacío y mantiene EXECUTE únicamente para authenticated/service_role. La implementación privada conserva la comprobación `auth.uid()`, rate limit y propiedad del objeto.
+- Esta corrección es código propuesto; aún no se ha aplicado ni probado en una rama de base de datos.
