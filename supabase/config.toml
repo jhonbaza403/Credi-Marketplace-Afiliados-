@@ -53,3 +53,7 @@ enabled = false
 # Health is a public liveness endpoint and does not require a user JWT.
 [functions.health]
 verify_jwt = false
+
+# KYC document uploads require an authenticated user JWT.
+[functions.kyc-upload]
+verify_jwt = true

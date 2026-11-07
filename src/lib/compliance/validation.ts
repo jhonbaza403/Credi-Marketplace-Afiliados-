@@ -14,12 +14,8 @@ export const complianceStatus = z.enum([
 
 export const kycInputSchema = z.object({
   country: z.string().trim().length(2).transform((value) => value.toUpperCase()),
-  documentType: z.enum([
-    "id_front",
-    "passport",
-    "drivers_license",
-    "address_proof",
-  ]),
+  documentType: z.enum(["id_card", "passport", "drivers_license"]),
+  documentNumber: z.string().trim().min(3).max(80),
 });
 
 export const kybInputSchema = z.object({

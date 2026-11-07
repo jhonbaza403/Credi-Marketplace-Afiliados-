@@ -4,6 +4,7 @@ import { isSameOrigin } from '@/lib/security/csrf'
 import { isUUID } from '@/lib/validation/common'
 import { writeAuditEvent } from '@/lib/security/audit'
 import { getDatabaseServerClient } from '@/lib/database/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -88,7 +89,8 @@ export async function POST(request: Request) {
 
       if (linkError || !link) return json({ success: false, error: 'Producto de afiliado no está activo.' }, 404)
 
-      const { error: clickError } = await supabase.rpc('record_affiliate_product_click', { p_link_id: link.id })
+      const admin = createAdminClient()
+      const { error: clickError } = await admin.rpc('record_affiliate_product_click', { p_link_id: link.id })
       if (clickError) {
         console.error(`[affiliate:${requestId}] click`, clickError)
         return json({ success: false, error: 'No fue posible registrar el clic.' }, 500)
