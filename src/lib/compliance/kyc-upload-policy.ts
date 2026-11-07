@@ -34,5 +34,13 @@ export function isAllowedComplianceUpload(
 }
 
 export function sanitizeKycFileName(fileName: string): string {
-  return fileName.toLowerCase().replace(/[^a-z0-9._-]+/g, '-').replace(/-+/g, '-').slice(-100)
+  const sanitized = fileName.toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/\.{2,}/g, '-')
+    .replace(/^[.-]+|[.-]+$/g, '')
+    .slice(-100)
+    .replace(/^[.-]+|[.-]+$/g, '')
+
+  return sanitized || 'document'
 }
