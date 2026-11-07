@@ -1,4 +1,9 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2'
+import {
+  getAllowedMediaUploadMimeTypes,
+  isAllowedMediaUploadMimeType,
+  MEDIA_UPLOAD_MAX_BYTES,
+} from '../_shared/media-upload-policy.ts'
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!
 const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -6,16 +11,6 @@ const supabase = createClient(supabaseUrl, serviceRoleKey, { auth: { autoRefresh
 
 const PUBLIC_BUCKET = 'marketplace-media'
 const PRIVATE_BUCKET = 'credichat-private'
-const ALLOWED = [
-  'image/jpeg', 'image/png', 'image/webp', 'image/gif',
-  'video/mp4', 'video/webm', 'video/quicktime',
-  'audio/mpeg', 'audio/mp4', 'audio/ogg', 'audio/webm', 'audio/wav', 'audio/x-wav',
-  'audio/aac', 'audio/flac', 'audio/m4a', 'audio/opus', 'audio/x-m4a',
-  'application/pdf',
-]
-const PRIVATE_CHAT_ALLOWED = new Set(ALLOWED)
-const PRIVATE_CHAT_MAX = 524288000
-const PUBLIC_MAX = 524288000
 const JSON_HEADERS: Record<string, string> = {
   'content-type': 'application/json; charset=utf-8',
   'cache-control': 'no-store',
@@ -112,14 +107,14 @@ Deno.serve(async (request) => {
   const contentType = String(payload.contentType ?? '').trim().toLowerCase()
   const fileSize = Number(payload.fileSize ?? 0)
   if (!fileName || fileName.length > 180) return response({error:'INVALID_FILE_NAME'},400,origin)
-  if (!ALLOWED.includes(contentType)) return response({error:'UNSUPPORTED_MEDIA_TYPE'},415,origin)
+  if (!isAllowedMediaUploadMimeType(context, contentType)) return response({error:'UNSUPPORTED_MEDIA_TYPE'},415,origin)
   if (!Number.isSafeInteger(fileSize) || fileSize <= 0) return response({error:'INVALID_FILE_SIZE'},400,origin)
   userId = userData.user.id
   const isPrivateChat = context === 'credibusiness-chat'
   const bucket = isPrivateChat ? PRIVATE_BUCKET : PUBLIC_BUCKET
-  const bucketLimit = isPrivateChat ? PRIVATE_CHAT_MAX : PUBLIC_MAX
-  const allowedForContext = isPrivateChat ? PRIVATE_CHAT_ALLOWED : new Set(['image/jpeg','image/png','image/webp','image/gif','video/mp4','video/webm','video/quicktime'])
-  if (!allowedForContext.has(contentType)) return response({error:'UNSUPPORTED_MEDIA_TYPE'},415,origin)
+  const bucketLimit = MEDIA_UPLOAD_MAX_BYTES
+  const allowedForContext = getAllowedMediaUploadMimeTypes(context)
+  if (!allowedForContext.includes(contentType)) return response({error:'UNSUPPORTED_MEDIA_TYPE'},415,origin)
   if (fileSize > bucketLimit) return response({error:'FILE_TOO_LARGE'},413,origin)
   if (isPrivateChat) {
     stage = 'plan_storage_limit'
