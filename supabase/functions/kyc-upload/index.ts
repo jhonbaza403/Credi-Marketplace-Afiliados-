@@ -13,7 +13,6 @@ const supabase = createClient(supabaseUrl, serviceRoleKey, {
 })
 
 const BUCKET = 'kyc-documents'
-const MAX_BYTES = 10 * 1024 * 1024
 
 const HEADERS: Record<string, string> = {
   'content-type': 'application/json; charset=utf-8',
