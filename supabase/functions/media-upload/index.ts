@@ -89,8 +89,8 @@ Deno.serve(async (request) => {
   let stage = 'request'
   let context = 'unknown'
   let userId = 'unknown'
-  try {
   const origin = request.headers.get('Origin')
+  try {
   if (request.method === 'OPTIONS') {
     const headers = new Headers(JSON_HEADERS)
     const safeOrigin = allowedOrigin(origin)
