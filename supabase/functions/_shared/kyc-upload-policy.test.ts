@@ -36,5 +36,12 @@ Deno.test('KYC enforces the 10 MB private bucket limit', () => {
 
 Deno.test('KYC filename sanitization removes unsafe path characters', () => {
   const actual = sanitizeKycFileName('../../My ID?.PDF')
-  if (actual.includes('/') || actual.includes('..') || actual.includes('?')) throw new Error(`unsafe filename returned: ${actual}`)
+  if (actual.includes('/') || actual.includes('..') || actual.includes('?') || actual.startsWith('.')) {
+    throw new Error(`unsafe filename returned: ${actual}`)
+  }
+
+  const fallback = sanitizeKycFileName('../../')
+  if (!fallback || fallback.includes('/') || fallback.includes('..') || fallback.startsWith('.')) {
+    throw new Error(`unsafe fallback filename returned: ${fallback}`)
+  }
 })
