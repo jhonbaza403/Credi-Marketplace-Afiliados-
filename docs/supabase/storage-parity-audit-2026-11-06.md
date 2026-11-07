@@ -52,3 +52,11 @@ The inspected `storage.objects` policy set contains the owner-scoped insert poli
 - Live bucket inventory was read from `storage.buckets` in both projects.
 - Application references were checked in `src/app/api/compliance/upload/route.ts`, `src/app/api/compliance/document/route.ts` and `src/lib/storage/marketplace-media.ts`.
 - The MIME mismatch was confirmed by comparing `supabase/functions/media-upload/index.ts` with the client uploader and Production's `marketplace-media` bucket MIME list.
+
+## Local CI diagnostic — Supabase CLI compatibility
+
+- First local-database workflow run `42328628933` failed at `supabase start` before Docker services or PostgreSQL migrations started. The exact CLI error was: `[inbucket] in supabase/config.toml is no longer supported. Use [local_smtp] instead.`
+- Because startup failed, `supabase db reset --local` and `supabase test db --local` were skipped. No migration SQL ran and no hosted project was contacted.
+- Kept the existing shared `supabase/config.toml` unchanged and pinned the CI-only Supabase CLI to `2.122.1` using `supabase/setup-cli@v3`, so this local test can run against the repository's current config without changing hosted project configuration.
+- Retry is running on PR head `7a7f3b58dcc1ddb9cfc6513e70fc773442e1667a`: [Credi Marketplace CI run 2752](https://github.com/jhonbaza403/Credi-Marketplace-Afiliados-/actions/runs/42328770322). The local migration job has started; no result is claimed yet.
+- References: [Supabase CLI v3 migration guide](https://supabase.com/docs/guides/local-development/cli/migrating-to-v3) and [Supabase CLI v2.122.1 release](https://github.com/supabase/cli/releases/tag/v2.122.1).
