@@ -1,7 +1,6 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 import {
   getAllowedMediaUploadMimeTypes,
-  isAllowedMediaUploadMimeType,
   MEDIA_UPLOAD_MAX_BYTES,
 } from '../_shared/media-upload-policy.ts'
 
@@ -107,14 +106,13 @@ Deno.serve(async (request) => {
   const contentType = String(payload.contentType ?? '').trim().toLowerCase()
   const fileSize = Number(payload.fileSize ?? 0)
   if (!fileName || fileName.length > 180) return response({error:'INVALID_FILE_NAME'},400,origin)
-  if (!isAllowedMediaUploadMimeType(context, contentType)) return response({error:'UNSUPPORTED_MEDIA_TYPE'},415,origin)
+  const allowedForContext = getAllowedMediaUploadMimeTypes(context)
+  if (!allowedForContext.includes(contentType)) return response({error:'UNSUPPORTED_MEDIA_TYPE'},415,origin)
   if (!Number.isSafeInteger(fileSize) || fileSize <= 0) return response({error:'INVALID_FILE_SIZE'},400,origin)
   userId = userData.user.id
   const isPrivateChat = context === 'credibusiness-chat'
   const bucket = isPrivateChat ? PRIVATE_BUCKET : PUBLIC_BUCKET
   const bucketLimit = MEDIA_UPLOAD_MAX_BYTES
-  const allowedForContext = getAllowedMediaUploadMimeTypes(context)
-  if (!allowedForContext.includes(contentType)) return response({error:'UNSUPPORTED_MEDIA_TYPE'},415,origin)
   if (fileSize > bucketLimit) return response({error:'FILE_TOO_LARGE'},413,origin)
   if (isPrivateChat) {
     stage = 'plan_storage_limit'
