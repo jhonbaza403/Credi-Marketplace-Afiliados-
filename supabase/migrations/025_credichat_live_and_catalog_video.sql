@@ -41,7 +41,6 @@ create policy chat_live_messages_insert_authenticated on public.chat_live_messag
 drop policy if exists chat_live_messages_update_own on public.chat_live_messages;
 create policy chat_live_messages_update_own on public.chat_live_messages for update to authenticated using (sender_id = auth.uid()) with check (sender_id = auth.uid());
 
-alter table public.business_catalogs add column if not exists video_media jsonb not null default '[]'::jsonb;
 
 create or replace function public.touch_credichat_conversation_updated_at()
 returns trigger language plpgsql security invoker set search_path = public
