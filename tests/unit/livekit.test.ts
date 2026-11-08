@@ -10,7 +10,7 @@ afterEach(() => vi.unstubAllEnvs())
 function signedWebhook(body: string, secret: string, apiKey: string) {
   const now = Math.floor(Date.now() / 1000)
   const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url')
-  const payload = Buffer.from(JSON.stringify({ iss: apiKey, nbf: now - 1, exp: now + 60, sha256: createHash('sha256').update(body).digest('hex') })).toString('base64url')
+  const payload = Buffer.from(JSON.stringify({ iss: apiKey, nbf: now - 1, exp: now + 60, sha256: createHash('sha256').update(body).digest('base64') })).toString('base64url')
   const unsigned = header + '.' + payload
   const signature = createHmac('sha256', secret).update(unsigned).digest('base64url')
   return 'Bearer ' + unsigned + '.' + signature
