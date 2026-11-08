@@ -53,7 +53,7 @@ export function verifyLiveKitWebhook(rawBody: string, authorization: string | nu
     const expectedBodyHash = createHash('sha256').update(rawBody, 'utf8').digest('hex')
     if (typeof payload.sha256 !== 'string') return false
     const expectedHash = Buffer.from(expectedBodyHash, 'hex')
-    const suppliedHash = Buffer.from(payload.sha256, 'hex')
+    const suppliedHash = Buffer.from(payload.sha256, 'base64')
     if (expectedHash.length !== suppliedHash.length || !timingSafeEqual(expectedHash, suppliedHash)) return false
     const expectedSignature = createHmac('sha256', apiSecret).update(`${headerPart}.${payloadPart}`).digest()
     const suppliedSignature = Buffer.from(signaturePart, 'base64url')
