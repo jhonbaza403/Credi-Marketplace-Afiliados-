@@ -23,7 +23,7 @@ export async function POST(request: Request) {
   if (!room) return NextResponse.json({ success: true, ignored: true })
 
   const metadata = room.metadata && typeof room.metadata === 'object' ? room.metadata as Record<string, unknown> : {}
-  const next = { ...metadata, livekit_last_event: event.event ?? 'unknown', livekit_last_event_id: event.id ?? null, livekit_last_event_at: event.createdAt ? new Date(event.createdAt * 1000).toISOString() : new Date().toISOString() }
+  const next: Record<string, unknown> = { ...metadata, livekit_last_event: event.event ?? 'unknown', livekit_last_event_id: event.id ?? null, livekit_last_event_at: event.createdAt ? new Date(event.createdAt * 1000).toISOString() : new Date().toISOString() }
   if (event.event === 'egress_started' && event.egressInfo?.egressId) {
     next.livekit_egress_state = 'active'
     next.livekit_egress_id = event.egressInfo.egressId
