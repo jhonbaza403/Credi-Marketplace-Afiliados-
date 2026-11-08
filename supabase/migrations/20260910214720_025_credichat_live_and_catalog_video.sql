@@ -11,7 +11,22 @@ create table if not exists public.chat_live_rooms (
   created_at timestamptz not null default now()
 );
 
--- The legacy numeric 025 migration creates the LIVE table before the core chat\n-- migration. Restore the conversation FK only after public.conversations exists.\nDO $\nBEGIN\n  IF NOT EXISTS (\n    SELECT 1 FROM pg_constraint\n     WHERE conrelid = 'public.chat_live_rooms'::regclass\n       AND conname = 'chat_live_rooms_conversation_id_fkey'\n  ) THEN\n    ALTER TABLE public.chat_live_rooms\n      ADD CONSTRAINT chat_live_rooms_conversation_id_fkey\n      FOREIGN KEY (conversation_id) REFERENCES public.conversations(id) ON DELETE SET NULL;\n  END IF;\nEND;\n$;\n\ncreate table if not exists public.chat_live_messages (
+-- The legacy numeric 025 migration creates the LIVE table before the core chat
+-- migration. Restore the conversation FK only after public.conversations exists.
+DO $
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+     WHERE conrelid = 'public.chat_live_rooms'::regclass
+       AND conname = 'chat_live_rooms_conversation_id_fkey'
+  ) THEN
+    ALTER TABLE public.chat_live_rooms
+      ADD CONSTRAINT chat_live_rooms_conversation_id_fkey
+      FOREIGN KEY (conversation_id) REFERENCES public.conversations(id) ON DELETE SET NULL;
+  END IF;
+END;
+$;
+\ncreate table if not exists public.chat_live_messages (
   id uuid primary key default gen_random_uuid(),
   room_id uuid not null references public.chat_live_rooms(id) on delete cascade,
   sender_id uuid not null references auth.users(id) on delete cascade,
