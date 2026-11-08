@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { liveKitRoomName, verifyLiveKitWebhook } from '@/lib/live/livekit'
+import { createLiveKitJwt, liveKitHttpUrl, liveKitRoomName, verifyLiveKitWebhook } from '@/lib/live/livekit'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -35,11 +35,21 @@ export async function POST(request: Request) {
   }
   const updates: Record<string, unknown> = { metadata: next }
   if (event.event === 'participant_joined' && event.participant?.identity === room.host_user_id) {
-    updates.status = 'live'
-    updates.started_at = new Date().toISOString()
+    next.livekit_host_joined_at = new Date().toISOString()
   }
-  if (event.event === 'participant_left' && event.participant?.identity === room.host_user_id && room.status === 'live') {
+  if (event.event === 'participant_left' && event.participant?.identity === room.host_user_id) {
     next.livekit_host_left_at = new Date().toISOString()
+    const egressId = typeof metadata.livekit_egress_id === 'string' ? metadata.livekit_egress_id : null
+    if (egressId) {
+      const token = createLiveKitJwt({ sub: 'credi-live-webhook', video: { roomRecord: true } }, 300)
+      const stop = await fetch(liveKitHttpUrl() + '/twirp/livekit.Egress/StopEgress', {
+        method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ egress_id: egressId }), cache: 'no-store', signal: AbortSignal.timeout(15000),
+      })
+      if (!stop.ok) throw new Error('LIVEKIT_EGRESS_STOP_FAILED')
+      next.livekit_egress_state = 'stopping'
+      next.livekit_egress_id = null
+    }
   }
   const { error } = await admin.from('chat_live_rooms').update(updates).eq('id', room.id)
   if (error) return NextResponse.json({ success: false, error: 'No fue posible sincronizar el evento.' }, { status: 500 })
