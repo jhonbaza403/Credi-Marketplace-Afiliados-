@@ -15,9 +15,9 @@ function cloudflarePlayerUrl(manifest?:string|null){
   try{
     const url=new URL(manifest)
     if(url.protocol!=='https:')return null
-    const match=url.pathname.match(/^\\/([^/]+)\\/manifest\\/(?:video\\.m3u8|video\\.mpd)$/)
-    if(!match)return null
-    url.pathname=\`/\${match[1]}/iframe\`
+    const segments=url.pathname.split('/').filter(Boolean)
+    if(segments.length!==3||segments[1]!=='manifest'||!['video.m3u8','video.mpd'].includes(segments[2]))return null
+    url.pathname='/'+segments[0]+'/iframe'
     url.search=''
     url.hash=''
     return url.toString()
