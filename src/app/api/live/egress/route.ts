@@ -5,6 +5,8 @@ import { isSameOrigin } from '@/lib/security/csrf'
 import { requireApiAccountAccess } from '@/lib/auth/api-account-access'
 import { createLiveKitJwt, liveKitHttpUrl, liveKitRoomName } from '@/lib/live/livekit'
 import { getLiveInput } from '@/lib/cloudflare/stream'
+import { distributedRateLimit } from '@/lib/security/rate-limit'
+import { getRequestIp } from '@/lib/security/auth'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -30,6 +32,8 @@ export async function POST(request: Request) {
   if (authError || !user) return json({ error: 'Debes iniciar sesión.', code: 'UNAUTHENTICATED' }, 401)
   const access = await requireApiAccountAccess(supabase, user.id)
   if (!access.ok) return json({ error: 'La cuenta no cumple los requisitos de seguridad.', code: access.code }, access.status)
+  const limit = await distributedRateLimit(supabase, 'livekit-egress:' + user.id + ':' + getRequestIp(request), { limit: 8, windowMs: 60_000 })
+  if (!limit.success) return json({ error: 'Demasiadas solicitudes para controlar la emisión.', code: 'RATE_LIMITED' }, 429)
   const parsed = schema.safeParse(await request.json().catch(() => null))
   if (!parsed.success) return json({ error: 'La operación de emisión no es válida.', code: 'INVALID_EGRESS_OPERATION' }, 400)
 
