@@ -152,13 +152,15 @@ export function LiveKitStudio({ roomId }: { roomId: string }) {
       await room?.localParticipant.setMicrophoneEnabled(false)
       setBroadcasting(false); setMessage('Distribución detenida. La sala WebRTC sigue conectada.')
       renderTracks()
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'No fue posible detener la distribución.')
     } finally { setBusy(false) }
   }
 
   return <section className="mt-6 rounded-2xl border border-violet-500/20 bg-violet-500/[.04] p-4">
     <div className="flex flex-wrap items-center justify-between gap-3">
       <div><p className="text-[10px] font-black uppercase tracking-[.14em] text-violet-700">LiveKit WebRTC</p><h3 className="mt-1 font-black">Estudio interactivo Credi</h3><p className="mt-1 text-xs text-[var(--muted)]">Audio/video de baja latencia y distribución mediante Cloudflare Stream</p></div>
-      <span className="rounded-full bg-violet-500/10 px-3 py-1 text-xs font-bold text-violet-700">{connected ? (broadcasting ? 'Emitiendo' : 'Conectado') : sdkReady ? 'Listo' : 'Cargando SDK'}</span>
+      <span className="rounded-full bg-violet-500/10 px-3 py-1 text-xs font-bold text-violet-700">{connected ? (broadcasting ? 'Distribución iniciada' : 'Conectado') : sdkReady ? 'Listo' : 'Cargando SDK'}</span>
     </div>
     <div ref={mediaRef} className="mt-4 grid min-h-32 grid-cols-1 gap-2 sm:grid-cols-2" aria-live="polite" />
     <p className="mt-2 text-xs text-[var(--muted)]">Participantes conectados: {participantCount}</p>
