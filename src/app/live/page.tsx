@@ -2,10 +2,12 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { BarChart3, CalendarClock, Camera, CircleStop, Eye, Heart, KeyRound, MessageCircle, Package, Play, Radio, ShieldCheck, Sparkles, Users, Video } from 'lucide-react'
+import { BarChart3, CalendarClock, Camera, CircleStop, Eye, Heart, KeyRound, MessageCircle, Package, Radio, ShieldCheck, Sparkles, Users, Video } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import DomainBridge from '@/components/portal/DomainBridge'
 import { CrediLiveChat } from '@/components/live/CrediLiveChat'
+import { LiveKitStudio } from '@/components/live/LiveKitStudio'
+import { cloudflarePlayerUrl } from '@/lib/live/cloudflare-player'
 
 type Room={id:string;host_user_id:string;title:string;status:string;viewer_count:number;started_at:string|null;ended_at?:string|null;description:string;cover_media:unknown;scheduled_at:string|null;replay_url:string|null;playback_url:string|null;stream_provider:string;viewer_peak:number;likes_count:number;shares_count:number;settings:Record<string,unknown>}
 type Product={room_id:string;product_id:string;position:number;is_pinned:boolean;pinned_at:string|null;products?:{id:string;title:string;price:number;image_url:string|null}|null}
@@ -25,9 +27,10 @@ export default function LivePage(){
   const [mediaReady,setMediaReady]=useState(false)
   const previewRef=useRef<HTMLVideoElement>(null)
   const streamRef=useRef<MediaStream|null>(null)
-  const [transport,setTransport]=useState<{inputId:string;rtmps:{url:string;streamKey:string}|null;playback:{hls?:string;dash?:string}|null;webRTC:{url:string}|null;status?:string|null;enabled?:boolean}|null>(null)
+  const [transport,setTransport]=useState<{inputId:string;rtmps:{url:string}|null;playback:{hls?:string;dash?:string}|null;webRTC:{url:string}|null;status?:string|null;enabled?:boolean}|null>(null)
   const [transportBusy,setTransportBusy]=useState(false)
   const supabase=useMemo(()=>createClient(),[])
+  const playerUrl=cloudflarePlayerUrl(transport?.playback?.hls||selected?.playback_url)
 
   async function load(){
     const response=await fetch('/api/live',{cache:'no-store'})
@@ -89,7 +92,7 @@ export default function LivePage(){
       if(previewRef.current){previewRef.current.srcObject=stream;await previewRef.current.play().catch(()=>{})}
       setCameraOn(true)
       setMediaReady(true)
-      setMessage('Fuente de captura y audio listos. Para producción, OBS puede tomar la señal de Elgato 4K Pro y enviarla por RTMPS a Credi LIVE.')
+      setMessage('Cámara y micrófono locales verificados. Esta previsualización no transmite todavía; Conecta el Estudio LiveKit para publicar audio y video mediante WebRTC.')
     }catch(error){setMessage(error instanceof Error?error.message:'No fue posible activar cámara y micrófono.')}
   }
 
@@ -106,9 +109,9 @@ export default function LivePage(){
       if(!response.ok)throw new Error(data.error||'No fue posible crear el LIVE.')
       setMessage(
         scheduledAt
-          ? 'LIVE programado. Antes de la hora de inicio, confirma que Cloudflare Stream esté configurado en Vercel y prepara OBS o un codificador RTMPS.'
+          ? 'LIVE programado. Antes de la hora de inicio, confirma que LiveKit y Cloudflare Stream estén configurados en el entorno Preview.'
           : data.transport
-            ? 'Sala preparada. Todavía no está transmitiendo: inicia OBS u otro codificador con los datos RTMPS; Credi marcará LIVE al confirmar la señal.'
+            ? 'Sala preparada. Conecta el Estudio LiveKit y pulsa Iniciar emisión; Credi marcará LIVE cuando Cloudflare confirme la señal.'
             : 'No hay transporte de transmisión disponible. Configura Cloudflare Stream en Vercel antes de intentar transmitir.'
       )
       setTitle('Nueva sesión Credi LIVE');setDescription('');setScheduledAt('')
@@ -117,7 +120,7 @@ export default function LivePage(){
     finally{setBusy(false)}
   }
 
-  async function updateRoom(roomId:string,action:'start'|'end'|'cancel'){
+  async function updateRoom(roomId:string,action:'end'|'cancel'){
     setBusy(true);setMessage('')
     try{
       const response=await fetch('/api/live',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({roomId,action})})
@@ -176,29 +179,30 @@ export default function LivePage(){
           <div className="flex items-center justify-between gap-3"><div><p className="text-xs font-black uppercase tracking-[.16em] text-[var(--primary)]">Control Room</p><h2 className="mt-1 text-2xl font-black">{selected?.title||'Selecciona o crea un LIVE'}</h2></div>{selected&&<span className="rounded-full bg-[var(--primary)]/10 px-3 py-1.5 text-xs font-black uppercase text-[var(--primary)]">{selected.status}</span>}</div>
 
           <div className="mt-5 aspect-video overflow-hidden rounded-[1.5rem] bg-slate-950">
-            {selected?.playback_url?<video src={selected.playback_url} controls playsInline className="h-full w-full object-cover"/>:
+            {playerUrl&&!cameraOn?<iframe src={playerUrl} title={`Credi LIVE: ${selected?.title || 'transmisión'}`} allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" className="h-full w-full border-0"/>:
               <div className="relative flex h-full flex-col items-center justify-center p-8 text-center text-white">
                 {cameraOn&&<video ref={previewRef} muted playsInline className="absolute inset-0 h-full w-full object-cover"/>}
                 <div className="relative z-10 max-w-md rounded-2xl bg-slate-950/75 px-5 py-4 backdrop-blur-md">
                   <Video className="mx-auto size-9 text-cyan-300"/>
-                  <p className="mt-2 font-black">{mediaReady?'Preflight listo':'Transporte LIVE de producción'}</p>
-                  <p className="mt-1 text-xs leading-5 text-slate-300">{mediaReady?'Cámara y micrófono verificados.':'La entrega multipunto requiere conectar el adaptador de streaming de producción; Credi ya conserva la sala, eventos, productos, chat y replay.'}</p>
+                  <p className="mt-2 font-black">{mediaReady?'Preflight listo':transport?.inputId?'Transporte provisionado · esperando señal':'Transporte LIVE disponible'}</p>
+                  <p className="mt-1 text-xs leading-5 text-slate-300">{mediaReady?'Cámara y micrófono verificados localmente; todavía no estás transmitiendo.':transport?.inputId?'Cloudflare Stream está vinculado a esta sala. Cuando el emisor conecte, el reproductor mostrará la señal automáticamente.':'La sala, los eventos, los productos y el chat están preparados. Provisiona la entrada Cloudflare para activar la entrega de vídeo.'}</p>
                 </div>
               </div>}
           </div>
 
           {selected&&<div className="mt-5 flex flex-wrap gap-2">
-            {selected.status==='scheduled'&&<button type="button" onClick={()=>void updateRoom(selected.id,'start')} disabled={busy} className="inline-flex items-center gap-2 rounded-xl bg-[var(--primary)] px-4 py-2.5 text-xs font-black text-white"><Play className="size-4"/> Iniciar LIVE</button>}
             {selected.status==='live'&&<button type="button" onClick={()=>void updateRoom(selected.id,'end')} disabled={busy} className="inline-flex items-center gap-2 rounded-xl bg-rose-600 px-4 py-2.5 text-xs font-black text-white"><CircleStop className="size-4"/> Finalizar LIVE</button>}
             {selected.status==='scheduled'&&<button type="button" onClick={()=>void updateRoom(selected.id,'cancel')} disabled={busy} className="inline-flex items-center gap-2 rounded-xl border border-[var(--border)] px-4 py-2.5 text-xs font-black">Cancelar</button>}
           </div>}
 
           {selected&&<section className="mt-6 rounded-2xl border border-cyan-500/20 bg-cyan-500/[.04] p-4">
-            <div className="flex items-start justify-between gap-3"><div><p className="text-[10px] font-black uppercase tracking-[.14em] text-cyan-700">Transporte de producción</p><h3 className="mt-1 font-black">Elgato 4K Pro → OBS → Credi LIVE</h3><p className="mt-1 text-xs leading-5 text-[var(--muted)]">Credi genera el Live Input de Cloudflare. La capturadora Elgato entra a OBS, y OBS publica la señal por RTMPS.</p></div><KeyRound className="size-5 text-cyan-700"/></div>
-            <div className="mt-4 flex flex-wrap gap-2"><button type="button" disabled={transportBusy} onClick={async()=>{setTransportBusy(true);try{const r=await fetch('/api/live/stream',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({roomId:selected.id,action:'provision'})});const d=await r.json();if(!r.ok)throw new Error(d.error||'No fue posible provisionar el transporte.');setTransport(d);setMessage('Transporte Cloudflare provisionado. Configura OBS con la URL y clave RTMPS mostradas.')}catch(e){setMessage(e instanceof Error?e.message:'No fue posible provisionar el transporte.')}finally{setTransportBusy(false)}}} className="rounded-xl bg-cyan-700 px-3 py-2 text-xs font-black text-white disabled:opacity-50">{transportBusy?'Provisionando…':'Provisionar transporte'}</button>{transport?.rtmps?.url&&<span className="inline-flex items-center gap-1 rounded-xl bg-emerald-500/10 px-3 py-2 text-[10px] font-black text-emerald-700"><Eye className="size-3"/> RTMPS listo</span>}</div>
-            {transport?.rtmps&&<div className="mt-4 grid gap-3 sm:grid-cols-2"><label className="text-[10px] font-black uppercase tracking-wide text-[var(--muted)]">Servidor RTMPS<input readOnly value={transport.rtmps.url} className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs font-mono"/></label><label className="text-[10px] font-black uppercase tracking-wide text-[var(--muted)]">Stream Key<input readOnly value={transport.rtmps.streamKey} className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs font-mono"/></label></div>}
-            <p className="mt-3 text-[10px] text-[var(--muted)]">La clave se obtiene del backend autenticado; no se almacena en Supabase ni se expone al cliente público. Si fue compartida accidentalmente, usa rotación de credenciales.</p>
+            <div className="flex items-start justify-between gap-3"><div><p className="text-[10px] font-black uppercase tracking-[.14em] text-cyan-700">Transporte de producción</p><h3 className="mt-1 font-black">LiveKit WebRTC → Egress RTMPS → Cloudflare Stream</h3><p className="mt-1 text-xs leading-5 text-[var(--muted)]">LiveKit conecta anfitrión y participantes en tiempo real. Egress envía la composición de la sala al Live Input de Cloudflare Stream.</p></div><KeyRound className="size-5 text-cyan-700"/></div>
+            <div className="mt-4 flex flex-wrap gap-2"><button type="button" disabled={transportBusy} onClick={async()=>{setTransportBusy(true);try{const r=await fetch('/api/live/stream',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({roomId:selected.id,action:'provision'})});const d=await r.json();if(!r.ok)throw new Error(d.error||'No fue posible provisionar el transporte.');setTransport(d);setMessage('Live Input de Cloudflare provisionado. LiveKit Egress usará estas credenciales desde el servidor; no se muestran claves al navegador.')}catch(e){setMessage(e instanceof Error?e.message:'No fue posible provisionar el transporte.')}finally{setTransportBusy(false)}}} className="rounded-xl bg-cyan-700 px-3 py-2 text-xs font-black text-white disabled:opacity-50">{transportBusy?'Provisionando…':'Provisionar transporte'}</button>{transport?.rtmps?.url&&<span className="inline-flex items-center gap-1 rounded-xl bg-emerald-500/10 px-3 py-2 text-[10px] font-black text-emerald-700"><Eye className="size-3"/> RTMPS listo</span>}</div>
+            {transport?.rtmps?.url&&<p className="mt-3 text-xs text-emerald-700">Endpoint RTMPS validado; la clave permanece en el servidor.</p>}
+            <p className="mt-3 text-[10px] text-[var(--muted)]">Las credenciales de distribución se recuperan en el backend y nunca se envían al navegador.</p>
           </section>}
+
+          {selected&&<LiveKitStudio roomId={selected.id}/>}
 
           {selected&&<div className="mt-6 grid gap-3 sm:grid-cols-4">{([
             [Users,selected.viewer_count,'Espectadores'],
