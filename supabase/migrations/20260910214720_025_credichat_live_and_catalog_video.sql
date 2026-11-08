@@ -11,7 +11,7 @@ create table if not exists public.chat_live_rooms (
   created_at timestamptz not null default now()
 );
 
-create table if not exists public.chat_live_messages (
+-- The legacy numeric 025 migration creates the LIVE table before the core chat\n-- migration. Restore the conversation FK only after public.conversations exists.\nDO $\nBEGIN\n  IF NOT EXISTS (\n    SELECT 1 FROM pg_constraint\n     WHERE conrelid = 'public.chat_live_rooms'::regclass\n       AND conname = 'chat_live_rooms_conversation_id_fkey'\n  ) THEN\n    ALTER TABLE public.chat_live_rooms\n      ADD CONSTRAINT chat_live_rooms_conversation_id_fkey\n      FOREIGN KEY (conversation_id) REFERENCES public.conversations(id) ON DELETE SET NULL;\n  END IF;\nEND;\n$;\n\ncreate table if not exists public.chat_live_messages (
   id uuid primary key default gen_random_uuid(),
   room_id uuid not null references public.chat_live_rooms(id) on delete cascade,
   sender_id uuid not null references auth.users(id) on delete cascade,
@@ -26,12 +26,18 @@ create index if not exists chat_live_messages_room_created_idx on public.chat_li
 alter table public.chat_live_rooms enable row level security;
 alter table public.chat_live_messages enable row level security;
 
+drop policy if exists chat_live_rooms_select_authenticated on public.chat_live_rooms;
 create policy chat_live_rooms_select_authenticated on public.chat_live_rooms for select to authenticated using (status = 'live' or host_user_id = auth.uid());
+drop policy if exists chat_live_rooms_insert_host on public.chat_live_rooms;
 create policy chat_live_rooms_insert_host on public.chat_live_rooms for insert to authenticated with check (host_user_id = auth.uid());
+drop policy if exists chat_live_rooms_update_host on public.chat_live_rooms;
 create policy chat_live_rooms_update_host on public.chat_live_rooms for update to authenticated using (host_user_id = auth.uid()) with check (host_user_id = auth.uid());
 
+drop policy if exists chat_live_messages_select_authenticated on public.chat_live_messages;
 create policy chat_live_messages_select_authenticated on public.chat_live_messages for select to authenticated using (exists (select 1 from public.chat_live_rooms r where r.id = room_id and (r.status = 'live' or r.host_user_id = auth.uid())));
+drop policy if exists chat_live_messages_insert_authenticated on public.chat_live_messages;
 create policy chat_live_messages_insert_authenticated on public.chat_live_messages for insert to authenticated with check (sender_id = auth.uid() and exists (select 1 from public.chat_live_rooms r where r.id = room_id and r.status = 'live'));
+drop policy if exists chat_live_messages_update_own on public.chat_live_messages;
 create policy chat_live_messages_update_own on public.chat_live_messages for update to authenticated using (sender_id = auth.uid()) with check (sender_id = auth.uid());
 
 alter table public.business_catalogs add column if not exists video_media jsonb not null default '[]'::jsonb;
