@@ -59,8 +59,10 @@ export async function POST(request: Request) {
     const endpoint = new URL(input.rtmps.url)
     if (endpoint.protocol !== 'rtmps:') return json({ error: 'El endpoint RTMPS de Cloudflare no es válido.', code: 'CLOUDFLARE_RTMP_URL_INVALID' }, 502)
     const streamUrl = endpoint.toString().replace(/\\/$/, '') + '/' + encodeURIComponent(input.rtmps.streamKey)
-    const result = await liveKitRequest('StartRoomCompositeEgress', {
-      room_name: liveKitRoomName(room.id), layout: 'speaker', stream: { urls: [streamUrl] },
+    const result = await liveKitRequest('StartEgress', {
+      room_name: liveKitRoomName(room.id),
+      template: { layout: 'speaker' },
+      outputs: [{ stream: { urls: [streamUrl] } }],
     })
     const egressId = typeof result.egress_id === 'string' ? result.egress_id : null
     if (!egressId) throw new Error('LIVEKIT_EGRESS_ID_MISSING')
