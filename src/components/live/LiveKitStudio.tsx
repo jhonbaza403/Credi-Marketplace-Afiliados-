@@ -6,6 +6,7 @@ type LiveKitTrack = { attach: () => HTMLMediaElement; detach: () => HTMLMediaEle
 type LiveKitPublication = { track?: LiveKitTrack | null }
 type LiveKitParticipant = {
   videoTrackPublications: Map<string, LiveKitPublication>
+  audioTrackPublications: Map<string, LiveKitPublication>
   setCameraEnabled: (enabled: boolean) => Promise<void>
   setMicrophoneEnabled: (enabled: boolean) => Promise<void>
 }
@@ -53,13 +54,26 @@ export function LiveKitStudio({ roomId }: { roomId: string }) {
     const root = mediaRef.current
     const room = roomRef.current
     if (!root || !room) return
-    root.replaceChildren()
     const participants = [room.localParticipant, ...room.remoteParticipants.values()]
+    for (const participant of participants) {
+      for (const publication of participant.videoTrackPublications.values()) publication.track?.detach()
+      for (const publication of participant.audioTrackPublications.values()) publication.track?.detach()
+    }
+    root.replaceChildren()
     for (const participant of participants) {
       for (const publication of participant.videoTrackPublications.values()) {
         if (!publication.track) continue
         const element = publication.track.attach()
         element.className = 'h-full min-h-40 w-full rounded-xl bg-black object-cover'
+        root.appendChild(element)
+      }
+    }
+    for (const participant of room.remoteParticipants.values()) {
+      for (const publication of participant.audioTrackPublications.values()) {
+        if (!publication.track) continue
+        const element = publication.track.attach()
+        element.autoplay = true
+        element.className = 'sr-only'
         root.appendChild(element)
       }
     }
@@ -91,6 +105,9 @@ export function LiveKitStudio({ roomId }: { roomId: string }) {
       const events = window.LivekitClient.RoomEvent
       room.on(events.TrackSubscribed || 'trackSubscribed', renderTracks)
       room.on(events.TrackUnsubscribed || 'trackUnsubscribed', renderTracks)
+      room.on(events.LocalTrackPublished || 'localTrackPublished', renderTracks)
+      room.on(events.LocalTrackUnpublished || 'localTrackUnpublished', renderTracks)
+      room.on(events.Disconnected || 'disconnected', () => { setConnected(false); setBroadcasting(false); setParticipantCount(0); mediaRef.current?.replaceChildren() })
       room.on(events.ParticipantConnected || 'participantConnected', renderTracks)
       room.on(events.ParticipantDisconnected || 'participantDisconnected', renderTracks)
       roomRef.current = room
@@ -118,6 +135,9 @@ export function LiveKitStudio({ roomId }: { roomId: string }) {
       setBroadcasting(true)
       setMessage('WebRTC activo y distribución hacia Cloudflare Stream solicitada.')
     } catch (error) {
+      await room.localParticipant.setCameraEnabled(false).catch(() => null)
+      await room.localParticipant.setMicrophoneEnabled(false).catch(() => null)
+      renderTracks()
       setMessage(error instanceof Error ? error.message : 'No fue posible iniciar la emisión.')
     } finally { setBusy(false) }
   }
@@ -126,7 +146,8 @@ export function LiveKitStudio({ roomId }: { roomId: string }) {
     const room = roomRef.current
     setBusy(true)
     try {
-      await fetch('/api/live/egress', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ roomId, action: 'stop' }) })
+      const response = await fetch('/api/live/egress', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ roomId, action: 'stop' }) })
+      if (!response.ok) throw new Error('No se pudo detener la distribución Cloudflare.')
       await room?.localParticipant.setCameraEnabled(false)
       await room?.localParticipant.setMicrophoneEnabled(false)
       setBroadcasting(false); setMessage('Distribución detenida. La sala WebRTC sigue conectada.')
