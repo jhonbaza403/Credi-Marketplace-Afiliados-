@@ -19,12 +19,12 @@ const contentSecurityPolicy = [
   "form-action 'self'",
   "frame-ancestors 'self'",
   "object-src 'none'",
-  `script-src 'self' 'unsafe-inline'${isDevelopment ? " 'unsafe-eval'" : ""}`,
+  `script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net${isDevelopment ? " 'unsafe-eval'" : ""}`,
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https://*.supabase.co https://images.unsplash.com",
   "font-src 'self' data: https://fonts.gstatic.com",
-  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://generativelanguage.googleapis.com https://api.stripe.com https://*.twilio.com https://business.coinbase.com",
-  "frame-src 'self' https://*.supabase.co",
+  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.livekit.cloud wss://*.livekit.cloud https://generativelanguage.googleapis.com https://api.stripe.com https://*.twilio.com https://business.coinbase.com",
+  "frame-src 'self' https://*.supabase.co https://*.cloudflarestream.com https://videodelivery.net",
   "upgrade-insecure-requests",
 ].join("; ");
 
