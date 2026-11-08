@@ -13,7 +13,7 @@ The browser never receives `LIVEKIT_API_SECRET`, the Cloudflare API token, or th
 
 Configure these variables in the intended Vercel environment (Preview first):
 
-- `LIVEKIT_URL` — the LiveKit project WebSocket URL, for example `wss://<project>.livekit.cloud`.
+- `LIVEKIT_URL` — `wss://credimarketplace-f8e677hx.livekit.cloud`. This endpoint is not secret.
 - `LIVEKIT_API_KEY` — the project API key.
 - `LIVEKIT_API_SECRET` — the project API secret.
 - `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN` — existing Stream API credentials.
@@ -36,7 +36,7 @@ Keep the existing Cloudflare Stream webhook pointed at:
 
 ## Preview verification sequence
 
-1. Set the server-only variables in Vercel Preview; do not copy secrets into GitHub.
+1. Set `LIVEKIT_URL` to the Credi project endpoint and add `LIVEKIT_API_KEY` and `LIVEKIT_API_SECRET` as encrypted server-only Vercel Preview variables. Never copy secrets into GitHub.
 2. Create a scheduled Credi LIVE room and provision its Cloudflare Live Input.
 3. Connect the host in the LiveKit Studio and grant camera/microphone access.
 4. Start the emission. Confirm LiveKit Egress reaches an active state and Cloudflare reports the Live Input connected.
