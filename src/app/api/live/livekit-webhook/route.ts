@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { createLiveKitJwt, liveKitHttpUrl, liveKitRoomName, verifyLiveKitWebhook } from '@/lib/live/livekit'
+import { createLiveKitJwt, liveKitHttpUrl, verifyLiveKitWebhook } from '@/lib/live/livekit'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
