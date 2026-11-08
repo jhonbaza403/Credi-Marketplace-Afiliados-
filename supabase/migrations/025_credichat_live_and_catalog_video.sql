@@ -47,8 +47,6 @@ create or replace function public.touch_credichat_conversation_updated_at()
 returns trigger language plpgsql security invoker set search_path = public
 as $$ begin update public.conversations set updated_at = now() where id = new.conversation_id; return new; end $$;
 
-drop trigger if exists trg_touch_credichat_conversation_on_message on public.messages;
-create trigger trg_touch_credichat_conversation_on_message after insert on public.messages for each row execute function public.touch_credichat_conversation_updated_at();
 
 -- Authorize Credi LIVE private Realtime topics.
 drop policy if exists credichat_live_broadcast_read on realtime.messages;
