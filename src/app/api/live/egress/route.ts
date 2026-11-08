@@ -58,7 +58,7 @@ export async function POST(request: Request) {
     if (!input.rtmps?.url || !input.rtmps.streamKey) return json({ error: 'Cloudflare no devolvió las credenciales RTMPS de la sala.', code: 'CLOUDFLARE_RTMP_CREDENTIALS_MISSING' }, 409)
     const endpoint = new URL(input.rtmps.url)
     if (endpoint.protocol !== 'rtmps:') return json({ error: 'El endpoint RTMPS de Cloudflare no es válido.', code: 'CLOUDFLARE_RTMP_URL_INVALID' }, 502)
-    const streamUrl = endpoint.toString().replace(/\\/$/, '') + '/' + encodeURIComponent(input.rtmps.streamKey)
+    const streamUrl = endpoint.toString().replace(/\/$/, '') + '/' + encodeURIComponent(input.rtmps.streamKey)
     const result = await liveKitRequest('StartEgress', {
       room_name: liveKitRoomName(room.id),
       template: { layout: 'speaker' },
