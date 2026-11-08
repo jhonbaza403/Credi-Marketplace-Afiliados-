@@ -6,23 +6,10 @@ import { BarChart3, CalendarClock, Camera, CircleStop, Eye, Heart, KeyRound, Mes
 import type { LucideIcon } from 'lucide-react'
 import DomainBridge from '@/components/portal/DomainBridge'
 import { CrediLiveChat } from '@/components/live/CrediLiveChat'
+import { cloudflarePlayerUrl } from '@/lib/live/cloudflare-player'
 
 type Room={id:string;host_user_id:string;title:string;status:string;viewer_count:number;started_at:string|null;ended_at?:string|null;description:string;cover_media:unknown;scheduled_at:string|null;replay_url:string|null;playback_url:string|null;stream_provider:string;viewer_peak:number;likes_count:number;shares_count:number;settings:Record<string,unknown>}
 type Product={room_id:string;product_id:string;position:number;is_pinned:boolean;pinned_at:string|null;products?:{id:string;title:string;price:number;image_url:string|null}|null}
-
-function cloudflarePlayerUrl(manifest?:string|null){
-  if(!manifest)return null
-  try{
-    const url=new URL(manifest)
-    if(url.protocol!=='https:')return null
-    const segments=url.pathname.split('/').filter(Boolean)
-    if(segments.length!==3||segments[1]!=='manifest'||!['video.m3u8','video.mpd'].includes(segments[2]))return null
-    url.pathname='/'+segments[0]+'/iframe'
-    url.search=''
-    url.hash=''
-    return url.toString()
-  }catch{return null}
-}
 
 export default function LivePage(){
   const [rooms,setRooms]=useState<Room[]>([])
