@@ -1,3 +1,6 @@
+ALTER TABLE public.profiles
+  ADD COLUMN IF NOT EXISTS platform_owner boolean NOT NULL DEFAULT false;
+
 CREATE OR REPLACE FUNCTION public.current_user_plan(p_user_id uuid DEFAULT auth.uid())
 RETURNS TABLE(plan_id uuid, plan_code text, plan_name text, status text, billing_interval text, limits jsonb)
 LANGUAGE sql
