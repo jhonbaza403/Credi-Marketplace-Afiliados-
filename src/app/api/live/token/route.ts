@@ -42,7 +42,7 @@ export async function POST(request: Request) {
     const token = createLiveKitJwt({
       sub: user.id,
       name: participantName,
-      video: { roomJoin: true, room: roomName, canPublish: isHost, canSubscribe: true, canPublishData: true },
+      video: { roomJoin: true, room: roomName, canPublish: isHost, canSubscribe: true, canPublishData: isHost },
       metadata: JSON.stringify({ product: 'CREDI-LIVE', roomId: room.id, role: isHost ? 'host' : 'viewer' }),
     }, 600)
     return json({ server_url: url, participant_token: token, role: isHost ? 'host' : 'viewer', room_name: roomName })
