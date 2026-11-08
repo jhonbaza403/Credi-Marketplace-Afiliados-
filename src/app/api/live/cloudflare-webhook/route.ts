@@ -67,7 +67,6 @@ export async function POST(request:Request){
 
     if(eventType==='live_input.connected'){
       updates.status='live'
-      updates.ended_at=undefined
     }
     if(eventType==='live_input.disconnected'){
       updates.status='ended'
