@@ -14,7 +14,7 @@ export function liveKitConfig() {
   if (parsed.protocol !== 'wss:' || !parsed.hostname || parsed.username || parsed.password) {
     throw new Error('LIVEKIT_URL_INVALID')
   }
-  return { url: parsed.toString().replace(/\\/$/, ''), apiKey, apiSecret }
+  return { url: parsed.toString().replace(/\/$/, ''), apiKey, apiSecret }
 }
 
 export function liveKitRoomName(roomId: string) {
