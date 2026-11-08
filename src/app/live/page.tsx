@@ -6,6 +6,8 @@ import { BarChart3, CalendarClock, Camera, CircleStop, Eye, Heart, KeyRound, Mes
 import type { LucideIcon } from 'lucide-react'
 import DomainBridge from '@/components/portal/DomainBridge'
 import { CrediLiveChat } from '@/components/live/CrediLiveChat'
+import { LiveKitStudio } from '@/components/live/LiveKitStudio'
+import { cloudflarePlayerUrl } from '@/lib/live/cloudflare-player'
 import { cloudflarePlayerUrl } from '@/lib/live/cloudflare-player'
 
 type Room={id:string;host_user_id:string;title:string;status:string;viewer_count:number;started_at:string|null;ended_at?:string|null;description:string;cover_media:unknown;scheduled_at:string|null;replay_url:string|null;playback_url:string|null;stream_provider:string;viewer_peak:number;likes_count:number;shares_count:number;settings:Record<string,unknown>}
@@ -183,7 +185,7 @@ export default function LivePage(){
                 {cameraOn&&<video ref={previewRef} muted playsInline className="absolute inset-0 h-full w-full object-cover"/>}
                 <div className="relative z-10 max-w-md rounded-2xl bg-slate-950/75 px-5 py-4 backdrop-blur-md">
                   <Video className="mx-auto size-9 text-cyan-300"/>
-                  <p className="mt-2 font-black">{mediaReady?'Preflight listo':transport?.inputId?'Transporte provisionado · esperando señal':'Transporte LIVE de producción'}</p>
+                  <p className="mt-2 font-black">{mediaReady?'Preflight listo':transport?.inputId?'Transporte provisionado · esperando señal':'Transporte LIVE disponible'}</p>
                   <p className="mt-1 text-xs leading-5 text-slate-300">{mediaReady?'Cámara y micrófono verificados localmente; todavía no estás transmitiendo.':transport?.inputId?'Cloudflare Stream está vinculado a esta sala. Cuando el emisor conecte, el reproductor mostrará la señal automáticamente.':'La sala, los eventos, los productos y el chat están preparados. Provisiona la entrada Cloudflare para activar la entrega de vídeo.'}</p>
                 </div>
               </div>}
@@ -201,6 +203,8 @@ export default function LivePage(){
             {transport?.rtmps&&<div className="mt-4 grid gap-3 sm:grid-cols-2"><label className="text-[10px] font-black uppercase tracking-wide text-[var(--muted)]">Servidor RTMPS<input readOnly value={transport.rtmps.url} className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs font-mono"/></label><label className="text-[10px] font-black uppercase tracking-wide text-[var(--muted)]">Stream Key<input readOnly value={transport.rtmps.streamKey} className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs font-mono"/></label></div>}
             <p className="mt-3 text-[10px] text-[var(--muted)]">La clave se obtiene del backend autenticado; no se almacena en Supabase ni se expone al cliente público. Si fue compartida accidentalmente, usa rotación de credenciales.</p>
           </section>}
+
+          {selected&&<LiveKitStudio roomId={selected.id}/>}
 
           {selected&&<div className="mt-6 grid gap-3 sm:grid-cols-4">{([
             [Users,selected.viewer_count,'Espectadores'],
