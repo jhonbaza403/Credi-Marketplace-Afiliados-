@@ -1,7 +1,7 @@
 create table if not exists public.chat_live_rooms (
   id uuid primary key default gen_random_uuid(),
   host_user_id uuid not null references auth.users(id) on delete cascade,
-  conversation_id uuid references public.conversations(id) on delete set null,
+  -- The conversations table is created by the later timestamped core-chat migration.\n  conversation_id uuid,
   title text not null default 'Credi Live',
   status text not null default 'live' check (status in ('live','ended')),
   viewer_count integer not null default 0 check (viewer_count >= 0),
