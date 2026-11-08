@@ -179,7 +179,7 @@ export default function LivePage(){
           <div className="flex items-center justify-between gap-3"><div><p className="text-xs font-black uppercase tracking-[.16em] text-[var(--primary)]">Control Room</p><h2 className="mt-1 text-2xl font-black">{selected?.title||'Selecciona o crea un LIVE'}</h2></div>{selected&&<span className="rounded-full bg-[var(--primary)]/10 px-3 py-1.5 text-xs font-black uppercase text-[var(--primary)]">{selected.status}</span>}</div>
 
           <div className="mt-5 aspect-video overflow-hidden rounded-[1.5rem] bg-slate-950">
-            {playerUrl&&!cameraOn?<iframe src={playerUrl} title={\`Credi LIVE: \${selected?.title||'transmisión'}\`} allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" className="h-full w-full border-0"/>:
+            {playerUrl&&!cameraOn?<iframe src={playerUrl} title={`Credi LIVE: ${selected?.title || 'transmisión'}`} allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" className="h-full w-full border-0"/>:
               <div className="relative flex h-full flex-col items-center justify-center p-8 text-center text-white">
                 {cameraOn&&<video ref={previewRef} muted playsInline className="absolute inset-0 h-full w-full object-cover"/>}
                 <div className="relative z-10 max-w-md rounded-2xl bg-slate-950/75 px-5 py-4 backdrop-blur-md">
