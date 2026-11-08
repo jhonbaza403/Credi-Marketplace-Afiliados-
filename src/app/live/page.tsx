@@ -92,7 +92,7 @@ export default function LivePage(){
       if(previewRef.current){previewRef.current.srcObject=stream;await previewRef.current.play().catch(()=>{})}
       setCameraOn(true)
       setMediaReady(true)
-      setMessage('Cámara y micrófono locales verificados. Esta previsualización no transmite todavía; Credi LIVE recibe la señal de un emisor compatible con RTMPS. No requiere una capturadora Elgato.')
+      setMessage('Cámara y micrófono locales verificados. Esta previsualización no transmite todavía; Conecta el Estudio LiveKit para publicar audio y video mediante WebRTC.')
     }catch(error){setMessage(error instanceof Error?error.message:'No fue posible activar cámara y micrófono.')}
   }
 
@@ -120,7 +120,7 @@ export default function LivePage(){
     finally{setBusy(false)}
   }
 
-  async function updateRoom(roomId:string,action:'start'|'end'|'cancel'){
+  async function updateRoom(roomId:string,action:'end'|'cancel'){
     setBusy(true);setMessage('')
     try{
       const response=await fetch('/api/live',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({roomId,action})})
@@ -191,13 +191,12 @@ export default function LivePage(){
           </div>
 
           {selected&&<div className="mt-5 flex flex-wrap gap-2">
-            {selected.status==='scheduled'&&<button type="button" onClick={()=>void updateRoom(selected.id,'start')} disabled={busy} className="inline-flex items-center gap-2 rounded-xl bg-[var(--primary)] px-4 py-2.5 text-xs font-black text-white"><Play className="size-4"/> Iniciar LIVE</button>}
             {selected.status==='live'&&<button type="button" onClick={()=>void updateRoom(selected.id,'end')} disabled={busy} className="inline-flex items-center gap-2 rounded-xl bg-rose-600 px-4 py-2.5 text-xs font-black text-white"><CircleStop className="size-4"/> Finalizar LIVE</button>}
             {selected.status==='scheduled'&&<button type="button" onClick={()=>void updateRoom(selected.id,'cancel')} disabled={busy} className="inline-flex items-center gap-2 rounded-xl border border-[var(--border)] px-4 py-2.5 text-xs font-black">Cancelar</button>}
           </div>}
 
           {selected&&<section className="mt-6 rounded-2xl border border-cyan-500/20 bg-cyan-500/[.04] p-4">
-            <div className="flex items-start justify-between gap-3"><div><p className="text-[10px] font-black uppercase tracking-[.14em] text-cyan-700">Transporte de producción</p><h3 className="mt-1 font-black">Fuente compatible → RTMPS → Cloudflare Stream → Credi</h3><p className="mt-1 text-xs leading-5 text-[var(--muted)]">Credi provisiona la entrada de producción y distribuye la señal. Puedes usar cualquier emisor compatible con RTMPS; no dependes de Elgato ni de una capturadora concreta.</p></div><KeyRound className="size-5 text-cyan-700"/></div>
+            <div className="flex items-start justify-between gap-3"><div><p className="text-[10px] font-black uppercase tracking-[.14em] text-cyan-700">Transporte de producción</p><h3 className="mt-1 font-black">LiveKit WebRTC → Egress RTMPS → Cloudflare Stream</h3><p className="mt-1 text-xs leading-5 text-[var(--muted)]">LiveKit conecta anfitrión y participantes en tiempo real. Egress envía la composición de la sala al Live Input de Cloudflare Stream.</p></div><KeyRound className="size-5 text-cyan-700"/></div>
             <div className="mt-4 flex flex-wrap gap-2"><button type="button" disabled={transportBusy} onClick={async()=>{setTransportBusy(true);try{const r=await fetch('/api/live/stream',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({roomId:selected.id,action:'provision'})});const d=await r.json();if(!r.ok)throw new Error(d.error||'No fue posible provisionar el transporte.');setTransport(d);setMessage('Live Input de Cloudflare provisionado. LiveKit Egress usará estas credenciales desde el servidor; no se muestran claves al navegador.')}catch(e){setMessage(e instanceof Error?e.message:'No fue posible provisionar el transporte.')}finally{setTransportBusy(false)}}} className="rounded-xl bg-cyan-700 px-3 py-2 text-xs font-black text-white disabled:opacity-50">{transportBusy?'Provisionando…':'Provisionar transporte'}</button>{transport?.rtmps?.url&&<span className="inline-flex items-center gap-1 rounded-xl bg-emerald-500/10 px-3 py-2 text-[10px] font-black text-emerald-700"><Eye className="size-3"/> RTMPS listo</span>}</div>
             {transport?.rtmps?.url&&<p className="mt-3 text-xs text-emerald-700">Endpoint RTMPS validado; la clave permanece en el servidor.</p>}
             <p className="mt-3 text-[10px] text-[var(--muted)]">Las credenciales de distribución se recuperan en el backend y nunca se envían al navegador.</p>
