@@ -53,7 +53,7 @@ if (!fs.existsSync(navPath)) {
   process.exit(1);
 }
 
-const source = fs.readFileSync(navPath, "utf8");
+const source = [navPath, path.join(root, "src", "config", "portal.ts"), path.join(root, "src", "components", "layout", "MobileMenu.tsx")].filter((file) => fs.existsSync(file)).map((file) => fs.readFileSync(file, "utf8")).join("\n");
 const candidates = new Set();
 for (const match of source.matchAll(/\bhref\s*:\s*["'](\/[^"']*)["']/g)) {
   candidates.add(normalizeRoute(match[1]));
