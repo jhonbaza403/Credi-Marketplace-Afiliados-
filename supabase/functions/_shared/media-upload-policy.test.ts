@@ -35,6 +35,10 @@ Deno.test('marketplace uploads reject PDF and unsupported MIME types', () => {
 Deno.test('private Credi Chat accepts configured media and PDF attachments', () => {
   const allowed = getAllowedMediaUploadMimeTypes('credibusiness-chat');
   if (!allowed.includes('application/pdf')) throw new Error('private chat must accept PDF');
+  if (!allowed.includes('application/vnd.openxmlformats-officedocument.wordprocessingml.document')) {
+    throw new Error('private chat must accept DOCX');
+  }
+  if (!allowed.includes('text/plain')) throw new Error('private chat must accept text files');
   if (!allowed.includes('audio/mpeg')) throw new Error('private chat must accept audio');
   if (!allowed.includes('video/mp4')) throw new Error('private chat must accept video');
 });
