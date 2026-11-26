@@ -25,6 +25,17 @@ describe("Credi four-pillar portal taxonomy", () => {
     expect(customerFacing.every((domain) => domain.pillar && validPillars.has(domain.pillar))).toBe(true);
   });
 
+  it("registers creator profiles and broadcast channels in their canonical pillars", () => {
+    expect(PORTAL_DOMAINS.find((domain) => domain.key === "creators")).toMatchObject({
+      href: "/creadores",
+      pillar: "social",
+    });
+    expect(PORTAL_DOMAINS.find((domain) => domain.key === "channels")).toMatchObject({
+      href: "/canales",
+      pillar: "messaging",
+    });
+  });
+
   it("keeps LIVE in primary navigation and in the social/video pillar", () => {
     const live = PORTAL_DOMAINS.find((domain) => domain.key === "live");
     expect(live).toMatchObject({

@@ -25,14 +25,14 @@ La navegación canónica se declara en `src/config/portal.ts`. La propiedad `pil
 
 | Capacidad | Alcance funcional | Evidencia localizada | Estado real |
 |---|---|---|---|
-| Identidad híbrida | Una sesión para perfil personal, creador y tienda/marca | Supabase Auth, `profiles`, `stores`, roles de usuario y paneles | **Parcial.** Existe identidad y tienda, pero el rol `creator` no forma parte del enum canónico actual ni se verificó un perfil de creador separado. |
+| Identidad híbrida | Una sesión para perfil personal, creador y tienda/marca | Supabase Auth, `profiles`, `stores`, roles de usuario y paneles | **Parcial.** Existe identidad y tienda. Ya se añadieron perfiles de creador como entidad vinculada a `profiles`, sin añadir un rol global `creator`; el feed propio, monetización y verificación de creador aún requieren integración. |
 | Feed social | Publicaciones, medios, historias, reels y anuncios | `/social`, `feed_posts`, `stories`, `reels`, `advertisements` | **Base implementada.** Moderación y comportamiento completo deben certificarse por rol y estado. |
 | Video vertical | Descubrimiento y reproducción vertical de videos | `/videos` consulta reels publicados y usa reproducción en viewport | **Parcial.** La UI existe; la interacción de comentarios no está conectada en esa página y el estado de “me gusta” observado allí es local. No afirmar un algoritmo de recomendación avanzado. |
 | Historias efímeras | Publicación y expiración | `/historias`, `PublishCenter`, lectura limitada por `expires_at` | **Base implementada.** Verificar creación, expiración y privacidad con sesiones reales. |
 | Grupos y comunidades | Grupos públicos/privados, miembros, invitaciones, moderación y eventos | Hay contratos/RPC de grupos e invitaciones en las migraciones y el catálogo de Supabase | **Parcial.** La integración completa de UI, descubrimiento, eventos y pruebas de autorización sigue pendiente. |
 | Credi LIVE | Emisión, espectadores, chat, producto vinculado y replay | `/live`, LiveKit Studio, `chat_live_rooms`, `chat_live_products`, webhooks LiveKit y Cloudflare Stream | **Base técnica presente; certificación de producción pendiente.** Solo marcar una sala como LIVE al verificar la fuente; no simular emisión ni replay. |
 
-**Objetivo funcional:** perfil personal, perfil de creador y tienda bajo una misma cuenta, con permisos y superficies públicas diferenciadas. Seguir, comentar, reaccionar, compartir y moderar debe persistir en el servidor y respetar privacidad y consentimiento.
+**Base añadida:** `creator_profiles` y `creator_follows` reutilizan `profiles` sin inventar un rol global `creator`. Las rutas `/creadores` y `/creadores/[handle]` permiten publicar un perfil, editarlo y seguir a otros creadores. Seguir, comentar, reaccionar, compartir y moderar todavía deben certificarse como flujos persistentes completos.
 
 ### Pilar 2 — Mensajería y automatización
 
@@ -43,8 +43,8 @@ La navegación canónica se declara en `src/config/portal.ts`. La propiedad `pil
 | Chat directo | Mensajes, contactos, conversaciones y sincronización en tiempo real | `/chat`, `CrediBusinessChat`, `CrediContactDirectory` y componentes de chat | **Base implementada;** pruebas de conversación real y permisos deben seguir siendo gates. |
 | Voz, video y multimedia | Llamadas y envío de contenido | Componentes `CrediCallManager`, `CrediBusinessCall`, `CrediLiveChatPanel` y almacenamiento de medios | **Parcial.** Deben certificarse carga, límites por plan, tamaño, acceso y retención. |
 | Grupos y supergrupos | Conversaciones grupales con roles, invitaciones y moderación | RPC y tablas de miembros/invitaciones identificadas en el catálogo | **Parcial.** No confundir los RPC existentes con canales masivos ya entregados al usuario. |
-| Canales de difusión | Canales de solo lectura o publicación controlada, suscriptores y analítica | No se localizó una experiencia canónica completa de canales | **Pendiente.** No mostrar una ruta falsa ni simular un canal. |
-| Bots y Mini-Apps | Registro, permisos, comandos, eventos, webhooks, instalación y revocación | `/apps`, `/developer`, `/automation`, APIs de apps, claves y reglas de automatización | **Fundación parcial.** Un catálogo de apps y una pantalla de automatización no prueban un runtime completo de bots ni un entorno de Mini-Apps aislado. |
+| Canales de difusión | Canales de solo lectura o publicación controlada, suscriptores y analítica | `broadcast_channels`, miembros, posts e invitaciones | **Parcial implementado.** Hay directorio, publicación de texto, Realtime, suscripción abierta/por aprobación, administración de solicitudes, moderación básica e invitaciones privadas de un solo uso. Falta multimedia, push y métricas. |
+| Bots y Mini-Apps | Registro, permisos, comandos, eventos, webhooks, instalación y revocación | `/apps`, `/developer`, `/automation`, APIs de apps, claves y reglas de automatización | **Parcial.** El runner ahora registra una propuesta antes de actuar y solo `notify_owner` crea una notificación persistente y deduplicada. Acciones no soportadas se marcan fallidas. Sigue pendiente el runtime aislado de bots, el sandbox Mini-App, scopes de ejecución, cuotas y revocación. |
 | Notificaciones | Alertas de mensajes y operaciones | Centro de notificaciones y servicios de notificación | **Base presente;** entrega push/multicanal y preferencias por dispositivo requieren pruebas y conexión completa. |
 
 **Objetivo funcional:** un centro de mensajes con chats directos, grupos, canales, llamadas, archivos, notificaciones y bots autorizados. Las automatizaciones deben tener scopes mínimos, cuotas, registro de auditoría y confirmación humana para acciones sensibles.
@@ -171,8 +171,9 @@ La hoja de ruta distingue capacidades que ya tienen código de capacidades que t
 2. Consolidar feed, historias, reels/video, seguimiento, comentarios y reacciones persistentes.
 3. Certificar grupos, invitaciones, membresía, moderación y privacidad.
 4. Completar chat directo/grupal, llamadas, multimedia y notificaciones.
-5. Diseñar canales de difusión y runtime de bots con permisos, cuotas y auditoría.
-6. Completar Mini-Apps como extensiones aisladas; el directorio de apps actual no se considerará suficiente por sí solo.
+5. Los canales de difusión tienen una primera versión con RLS, miembros, posts e invitaciones de un solo uso; completar aprobaciones, moderación, analítica y notificaciones.
+6. Ampliar el runtime de bots solo después de aprobar un sandbox aislado, scopes mínimos, cuotas, revocación y auditoría.
+7. Completar Mini-Apps como extensiones aisladas; el directorio de apps actual no se considerará suficiente por sí solo.
 
 **Salida de fase:** un usuario mantiene una identidad y puede pasar de contenido a conversación sin perder contexto ni abrir otra cuenta.
 

@@ -51,7 +51,7 @@ test.describe("Credi unified portal", () => {
       "/services", "/affiliate", "/proveedores-verificados", "/catalogo-video",
       "/dashboard/b2b", "/marketing", "/analytics", "/inventario", "/pagos",
       "/wallet", "/intelligence", "/security", "/apps", "/automation",
-      "/developer", "/abastecimiento", "/compras-mayoristas",
+      "/developer", "/abastecimiento", "/compras-mayoristas", "/creadores", "/canales",
     ];
     const actualPaths = await menu.locator("a[href]").evaluateAll((links) =>
       links.map((link) => new URL((link as HTMLAnchorElement).href).pathname),

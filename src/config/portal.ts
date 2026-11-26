@@ -13,13 +13,13 @@ export const PORTAL_PILLARS: readonly PortalPillar[] = [
   {
     key: "social",
     title: "Social, comunidad y video",
-    description: "Perfiles, feed, historias, video y Credi LIVE.",
+    description: "Perfiles personales y de creador, feed, historias, video y Credi LIVE.",
     order: 1,
   },
   {
     key: "messaging",
     title: "Mensajería y automatización",
-    description: "Chat, llamadas, apps, bots y automatizaciones.",
+    description: "Chat, llamadas, canales de difusión, apps y automatizaciones gobernadas.",
     order: 2,
   },
   {
@@ -54,8 +54,8 @@ export type PortalDomain = {
  *
  * The pillar is product taxonomy, not an authorization boundary. Protected
  * pages, Route Handlers and Supabase RLS must continue enforcing access.
- * Only real routes are listed here; planned channels/bot runtimes are tracked
- * in docs/FOUR-PILLARS-ARCHITECTURE.md until their pages and contracts exist.
+ * Only routes backed by an implemented page and server contract are listed here.
+ * Pillar metadata never replaces route authorization or Supabase RLS.
  */
 export const PORTAL_DOMAINS: readonly PortalDomain[] = [
   // Pillar 1 — Social, community and video
@@ -65,12 +65,14 @@ export const PORTAL_DOMAINS: readonly PortalDomain[] = [
   { key: "stories", label: "Historias", href: "/historias", description: "Contenido efímero y descubrimiento.", group: "capability", pillar: "social" },
   { key: "videos", label: "Vídeos", href: "/videos", description: "Vídeos verticales y contenido audiovisual de la comunidad.", group: "capability", pillar: "social" },
   { key: "video_catalog", label: "Catálogo Video", href: "/catalogo-video", description: "Catálogo comercial enriquecido con vídeo.", group: "capability", pillar: "social" },
+  { key: "creators", label: "Creadores", href: "/creadores", description: "Perfiles públicos de creador conectados a la identidad Credi.", group: "capability", pillar: "social" },
   { key: "free", label: "Free", href: "/free", description: "Acceso gratuito al mismo ecosistema Credi.", group: "primary", pillar: "social" },
   { key: "dashboard_profile", label: "Perfil", href: "/dashboard/profile", description: "Perfil y preferencias de la cuenta.", group: "capability", pillar: "social", requiresAuth: true },
   { key: "dashboard_settings", label: "Configuración", href: "/dashboard/settings", description: "Preferencias y configuración de la cuenta.", group: "capability", pillar: "social", requiresAuth: true },
 
   // Pillar 2 — Messaging and automation
   { key: "chat", label: "Chat", href: "/chat", description: "Mensajería comercial, contactos, llamadas y asistencia.", group: "capability", pillar: "messaging", requiresAuth: true },
+  { key: "channels", label: "Canales", href: "/canales", description: "Canales de difusión públicos, no listados y privados por invitación.", group: "capability", pillar: "messaging" },
   { key: "apps", label: "Mini-Apps", href: "/apps", description: "Catálogo de extensiones y aplicaciones de Credi.", group: "capability", pillar: "messaging" },
   { key: "automation", label: "Automatización", href: "/automation", description: "Reglas y ejecuciones automatizadas con auditoría.", group: "capability", pillar: "messaging", requiresAuth: true },
   { key: "developer", label: "Developer Platform", href: "/developer", description: "Aplicaciones, scopes, claves API y capacidades para integradores.", group: "capability", pillar: "messaging", requiresAuth: true },

@@ -8,6 +8,8 @@ Esta carpeta es la fuente documental única del proyecto. La documentación de a
 docs/
 ├── README.md
 ├── FOUR-PILLARS-ARCHITECTURE.md
+├── COMMERCE-SPINE-INTEGRATION.md
+├── CREATOR-CHANNELS-AUTOMATION.md
 ├── architecture.md
 ├── api.md
 ├── database.md
@@ -22,7 +24,9 @@ Los archivos `.svg` del directorio `docs/` son recursos documentales asociados a
 
 ## Arquitectura de producto
 
-- **Cuatro pilares:** consulta [FOUR-PILLARS-ARCHITECTURE.md](./FOUR-PILLARS-ARCHITECTURE.md) para la taxonomía funcional, el estado real de implementación, los contratos compartidos y la hoja de ruta.
+- **Cuatro pilares:** consulta [FOUR-PILLARS-ARCHITECTURE.md](./FOUR-PILLARS-ARCHITECTURE.md) para la taxonomía funcional, los estados y la hoja de ruta.
+- **Núcleo comercial:** consulta [COMMERCE-SPINE-INTEGRATION.md](./COMMERCE-SPINE-INTEGRATION.md) para el circuito de contenido, producto, inventario, pedido, pago, entrega y reputación.
+- **Creadores, canales y automatización:** consulta [CREATOR-CHANNELS-AUTOMATION.md](./CREATOR-CHANNELS-AUTOMATION.md) para contratos RLS y límites implementados.
 - El registro de navegación de producto está en `src/config/portal.ts`; clasifica rutas por pilar, pero no concede permisos.
 - Los cuatro pilares son dominios de producto dentro de una sola plataforma, no cuatro aplicaciones ni bases de datos separadas.
 

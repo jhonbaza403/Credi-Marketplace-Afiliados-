@@ -15,6 +15,7 @@ import {
   Factory,
   LayoutGrid,
   MessageCircle,
+  Megaphone,
   MoreHorizontal,
   Radio,
   Search,
@@ -41,6 +42,8 @@ const DOMAIN_ICONS = {
   payments: Wallet, escrow: ShieldCheck, security: ShieldCheck, videos: Play,
   apps: LayoutGrid, automation: Bot, developer: Code2, procurement: PackageSearch,
   wholesale: Factory,
+  creators: Users,
+  channels: Megaphone,
 } as const;
 
 const PRIMARY_LINKS = PRIMARY_DOMAINS

@@ -33,6 +33,10 @@ Los pilares Social, Mensajería, Comercio y Abastecimiento no deben crear copias
 - La lectura de pagos usa `payment_orchestrations`; se elimina el camino heredado de `payment_intents` / `payments` de este servicio.
 - Se añade `cancel_pending_order`: el comprador solo puede cancelar su pedido pendiente y sin intento de pago activo. La transición libera la reserva original una sola vez.
 - Los webhooks Twilio almacenan campos externos en `Map`, evitando asignar propiedades dinámicas de objetos a partir de claves no confiables.
+- Se añadieron perfiles de creador vinculados a `profiles` y canales con membresías, publicaciones relacionadas a `products`, Realtime e invitaciones privadas de un solo uso.
+- El runner de automatizaciones solo informa éxito cuando se ha persistido una notificación real; la auditoría se prepara antes del efecto y se finaliza después.
+- Se añadieron perfiles de creador vinculados a `profiles` y canales con membresías, publicaciones relacionadas a `products`, Realtime e invitaciones privadas de un solo uso.
+- El runner de automatizaciones ya no informa ejecuciones ficticias: solo `notify_owner` crea una notificación persistente; se registra una propuesta de auditoría antes de la acción y se finaliza después de persistirla.
 
 ## Abastecimiento sin duplicación de productos ni de inventario
 
@@ -48,10 +52,10 @@ La importación automática desde un proveedor externo y el dropshipping aún no
 |---|---|
 | Feed, historias y publicaciones | Base existente; falta certificar publicación, privacidad, moderación y atribución de producto end-to-end. |
 | Perfil personal y tienda | Parcial; identidad y tienda existen, falta cerrar experiencia híbrida y permisos. |
-| Perfil de creador | Pendiente de perfil público/privado, suscripciones/seguimiento y herramientas de creador con permisos. |
+| Perfil de creador | Parcial implementado: perfil público/privado y seguimiento ya tienen tabla, RLS, API y páginas. Feed de creador, estadísticas, monetización y certificación E2E siguen pendientes. |
 | Chat, llamadas y multimedia | Base existente; faltan pruebas de carga, cuotas, entrega y permisos por tipo de conversación. |
-| Canales de difusión | Pendiente de contrato de canales, suscriptores, roles, moderación y API de publicación. |
-| Runtime de bots y Mini-Apps | Parcial; registros de apps/agents existen, falta sandbox real aislado, ejecución, scopes, límites, revocación y auditoría. |
+| Canales de difusión | Parcial implementado: canales públicos/no listados/privados, posts, suscripciones, invitaciones de un solo uso, aprobación y moderación básica tienen contratos y UI inicial. Faltan media upload, push, analítica y E2E con usuarios reales. |
+| Runtime de bots y Mini-Apps | Parcial y deliberadamente limitado: el runner solo ejecuta `notify_owner` con auditoría; acciones no soportadas se marcan fallidas. Falta sandbox aislado, scopes, cuotas, revocación y ejecución segura de extensiones. |
 | Marketplace, pedidos y pagos | Base existente; los servicios heredados ahora se alinean al ciclo canónico. Falta certificación integrada en Preview con proveedores reales. |
 | Custodia efectiva de fondos | Pendiente. Un expediente de disputa no es custodia. Requiere proveedor de pagos/custodia habilitado por jurisdicción, cuentas conectadas, transferencias y pruebas de liquidación/devolución. |
 | Seguimiento logístico | Pendiente de adaptadores y credenciales de transportistas, etiquetas, tracking firmado, eventos y pruebas de entrega. |
