@@ -357,7 +357,7 @@ export async function POST(request: Request) {
     }
 
     const signature = request.headers.get('stripe-signature')
-    if (!verifyStripeWebhookSignature(rawBody, signature ?? '')) {
+    if (!verifyStripeWebhookSignature(rawBody, signature ?? '', process.env.STRIPE_BILLING_WEBHOOK_SECRET)) {
       logger.warn('Invalid Stripe billing webhook signature', {
         requestId,
         action: 'stripe_billing_webhook_invalid_signature',
