@@ -13,7 +13,7 @@ Proyectos: Producción `fusnmvmveqdzmzohhlzm`, Preview `yjxybhpubxhblfyfzlmk`
 | Exclusivas de Producción | 7 | — |
 | Exclusivas de Preview | — | 25 |
 
-La diferencia histórica original sigue siendo 6 versiones exclusivas de Producción y 23 de Preview. Se agregaron tres registros nuevos mediante la API de migraciones: dos versiones de la corrección de privilegios (una en cada proyecto) y una versión de provisión de buckets en Preview. Los esquemas/privilegios resultantes se verificaron, pero los registros generados por la API no tienen el mismo timestamp. Se añadieron sus archivos con los timestamps exactos para que el CLI oficial pueda comparar y completar la reconciliación sin volver a ejecutar efectos destructivos.
+La diferencia histórica original sigue siendo 6 versiones exclusivas de Producción y 23 de Preview. Se agregaron registros API para privilegios, Storage, RLS, wallet, checkout y KYC. Cada timestamp generado en ambos entornos está representado por un archivo local exacto. La diferencia original de 29 versiones sigue clasificada; el total remoto ahora refleja 12 exclusivas de Producción y 30 de Preview.
 
 **No editar directamente** `supabase_migrations.schema_migrations`. La reparación debe ejecutarse con el CLI oficial después de verificar cada efecto, usando `supabase migration repair` únicamente para versiones cuyo efecto ya exista.
 
@@ -80,3 +80,18 @@ La diferencia histórica original sigue siendo 6 versiones exclusivas de Producc
 ## Estado
 
 La matriz de clasificación está completa a nivel de fuente y evidencia observada. La reconciliación del ledger remoto **no está completada**: falta ejecutar el CLI oficial con acceso de enlace a ambos proyectos y finalizar la comparación de los RPC/funciones financieros y privados. No se modificó directamente la tabla de historial.
+
+
+## Versiones adicionales aplicadas el 2026-11-26
+
+| Operación | Producción | Preview | Resultado comprobado |
+|---|---:|---:|---|
+| Privilegios de tablas | `20261126224654` | `20261126224643` | Mismos grants; cero privilegios anon en tablas sociales y cero permisos cliente en tablas financieras privadas. |
+| Buckets Storage | Existentes | `20261126224746` | Preview dispone de los tres buckets de marketplace/compliance con configuración coincidente. |
+| RLS social/anuncios | `20261126225508` | `20261126225456` | Cero políticas públicas débiles; cuatro políticas de lectura aprobada, cuatro de administrador y cuatro de propietario. |
+| Wallet refund | `20261126225519` | `20261126225518` | Mismo hash, SECURITY DEFINER, search_path vacío y ACL. |
+| Checkout RPC | `20261126225548` | `20261126225547` | Ambos overloads con hashes idénticos y search_path vacío. |
+| KYC privado | `20261126225559` | `20261126225557` | Verificación de objetos en bucket privado. |
+| KYC case variable | `20261126225706` | `20261126225704` | Identificador de caso sin ambigüedad PL/pgSQL. |
+
+**Totales actuales:** 231 Producción / 249 Preview; 219 compartidas; 12 exclusivas de Producción; 30 exclusivas de Preview. El CLI oficial aún debe completar los timestamps faltantes en el entorno opuesto y confirmar el resultado con `supabase migration list` y `supabase db push --dry-run`.
