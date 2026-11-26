@@ -1,8 +1,31 @@
 import 'server-only'
-import { createHmac, createHash, timingSafeEqual } from 'node:crypto'
+import { createHash, timingSafeEqual, webcrypto } from 'node:crypto'
 
 function base64url(value: string | Buffer) {
   return Buffer.from(value).toString('base64url')
+}
+
+async function signHs256(message: string, secret: string): Promise<Buffer> {
+  const key = await webcrypto.subtle.importKey(
+    'raw',
+    Buffer.from(secret, 'utf8'),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign'],
+  )
+  const signature = await webcrypto.subtle.sign('HMAC', key, Buffer.from(message, 'utf8'))
+  return Buffer.from(signature)
+}
+
+async function verifyHs256(message: string, signature: Buffer, secret: string): Promise<boolean> {
+  const key = await webcrypto.subtle.importKey(
+    'raw',
+    Buffer.from(secret, 'utf8'),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['verify'],
+  )
+  return webcrypto.subtle.verify('HMAC', key, signature, Buffer.from(message, 'utf8'))
 }
 
 export function liveKitConfig() {
@@ -21,13 +44,16 @@ export function liveKitRoomName(roomId: string) {
   return `credi-live-${roomId.toLowerCase()}`
 }
 
-export function createLiveKitJwt(claims: Record<string, unknown>, ttlSeconds = 600) {
+export async function createLiveKitJwt(claims: Record<string, unknown>, ttlSeconds = 600): Promise<string> {
   const { apiKey, apiSecret } = liveKitConfig()
+  if (!Number.isSafeInteger(ttlSeconds) || ttlSeconds < 1 || ttlSeconds > 3600) {
+    throw new Error('LIVEKIT_TOKEN_TTL_INVALID')
+  }
+
   const now = Math.floor(Date.now() / 1000)
   const payload = { iss: apiKey, nbf: now - 5, iat: now, exp: now + ttlSeconds, ...claims }
   const unsigned = `${base64url(JSON.stringify({ alg: 'HS256', typ: 'JWT' }))}.${base64url(JSON.stringify(payload))}`
-  // lgtm[js/insufficient-password-hash] LiveKit requires HS256 JWT signing; this MAC is not a stored password hash.
-  const signature = createHmac('sha256', apiSecret).update(unsigned).digest()
+  const signature = await signHs256(unsigned, apiSecret)
   return `${unsigned}.${base64url(signature)}`
 }
 
@@ -38,7 +64,7 @@ export function liveKitHttpUrl() {
   return parsed.origin
 }
 
-export function verifyLiveKitWebhook(rawBody: string, authorization: string | null) {
+export async function verifyLiveKitWebhook(rawBody: string, authorization: string | null): Promise<boolean> {
   if (!authorization?.startsWith('Bearer ')) return false
   try {
     const { apiKey, apiSecret } = liveKitConfig()
@@ -49,17 +75,18 @@ export function verifyLiveKitWebhook(rawBody: string, authorization: string | nu
     const header = JSON.parse(Buffer.from(headerPart, 'base64url').toString('utf8')) as { alg?: string }
     const payload = JSON.parse(Buffer.from(payloadPart, 'base64url').toString('utf8')) as { iss?: string; exp?: number; nbf?: number; sha256?: string }
     if (header.alg !== 'HS256' || payload.iss !== apiKey) return false
+
     const now = Math.floor(Date.now() / 1000)
     if (typeof payload.exp !== 'number' || payload.exp < now || (typeof payload.nbf === 'number' && payload.nbf > now + 5)) return false
+
     const expectedBodyHash = createHash('sha256').update(rawBody, 'utf8').digest('hex')
     if (typeof payload.sha256 !== 'string') return false
     const expectedHash = Buffer.from(expectedBodyHash, 'hex')
     const suppliedHash = Buffer.from(payload.sha256, 'base64')
     if (expectedHash.length !== suppliedHash.length || !timingSafeEqual(expectedHash, suppliedHash)) return false
-    // lgtm[js/insufficient-password-hash] LiveKit webhook JWTs are protocol-signed with HS256; this is not password storage.
-    const expectedSignature = createHmac('sha256', apiSecret).update(`${headerPart}.${payloadPart}`).digest()
+
     const suppliedSignature = Buffer.from(signaturePart, 'base64url')
-    return expectedSignature.length === suppliedSignature.length && timingSafeEqual(expectedSignature, suppliedSignature)
+    return verifyHs256(`${headerPart}.${payloadPart}`, suppliedSignature, apiSecret)
   } catch {
     return false
   }

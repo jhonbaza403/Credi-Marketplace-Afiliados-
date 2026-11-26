@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic'
 
 export async function POST(request: Request) {
   const rawBody = await request.text()
-  if (!verifyLiveKitWebhook(rawBody, request.headers.get('Authorization'))) {
+  if (!(await verifyLiveKitWebhook(rawBody, request.headers.get('Authorization')))) {
     return NextResponse.json({ success: false, error: 'Firma LiveKit inválida.' }, { status: 401 })
   }
   let event: { event?: string; id?: string; createdAt?: number; room?: { name?: string }; participant?: { identity?: string }; egressInfo?: { egressId?: string; status?: string; error?: string } }
@@ -41,7 +41,7 @@ export async function POST(request: Request) {
     next.livekit_host_left_at = new Date().toISOString()
     const egressId = typeof metadata.livekit_egress_id === 'string' ? metadata.livekit_egress_id : null
     if (egressId) {
-      const token = createLiveKitJwt({ sub: 'credi-live-webhook', video: { roomRecord: true } }, 300)
+      const token = await createLiveKitJwt({ sub: 'credi-live-webhook', video: { roomRecord: true } }, 300)
       const stop = await fetch(liveKitHttpUrl() + '/twirp/livekit.Egress/StopEgress', {
         method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
         body: JSON.stringify({ egress_id: egressId }), cache: 'no-store', signal: AbortSignal.timeout(15000),

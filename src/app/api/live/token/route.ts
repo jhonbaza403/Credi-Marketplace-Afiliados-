@@ -39,7 +39,7 @@ export async function POST(request: Request) {
 
     const roomName = liveKitRoomName(room.id)
     const participantName = String(user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || 'Credi user').slice(0, 80)
-    const token = createLiveKitJwt({
+    const token = await createLiveKitJwt({
       sub: user.id,
       name: participantName,
       video: { roomJoin: true, room: roomName, canPublish: isHost, canSubscribe: true, canPublishData: isHost },
