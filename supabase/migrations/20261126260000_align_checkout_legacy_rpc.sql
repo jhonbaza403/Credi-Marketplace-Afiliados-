@@ -273,6 +273,10 @@ END;
 $function$
 
 
+-- The five-argument canonical RPC has the same body in both projects and is
+-- called only by the authenticated server path using service_role. Pin its path.
+ALTER FUNCTION public.create_pending_order_batch(uuid,jsonb,text,text,text) SET search_path = '';
+
 REVOKE ALL ON FUNCTION public.create_pending_order_batch(uuid,jsonb,text,text) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.create_pending_order_batch(uuid,jsonb,text,text) TO service_role;
 
@@ -292,6 +296,9 @@ BEGIN
      OR has_function_privilege('authenticated','public.create_pending_order_batch(uuid,jsonb,text,text)','EXECUTE')
      OR NOT has_function_privilege('service_role','public.create_pending_order_batch(uuid,jsonb,text,text)','EXECUTE') THEN
     RAISE EXCEPTION 'CHECKOUT_LEGACY_RPC_ACL_MISMATCH';
+  END IF;
+  IF NOT (SELECT coalesce(proconfig, ARRAY[]::text[]) @> ARRAY['search_path=""'] FROM pg_proc WHERE oid='public.create_pending_order_batch(uuid,jsonb,text,text,text)'::regprocedure) THEN
+    RAISE EXCEPTION 'CHECKOUT_CANONICAL_RPC_SEARCH_PATH_MISMATCH';
   END IF;
   IF position('invalid_product_price' in def)=0
      OR position('inventory_reservations' in def)=0
