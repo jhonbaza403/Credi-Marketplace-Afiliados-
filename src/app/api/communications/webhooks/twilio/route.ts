@@ -3,13 +3,17 @@ import { createAdminClient } from "@/lib/supabase/admin";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-function validSignature(url: string, params: Record<string,string[]>, signature: string, token: string) {
-  const canonical = url + Object.keys(params).sort().map((key) =>
-    params[key].slice().sort().map((value) => key + value).join("")
-  ).join("");
+function validSignature(url: string, params: Map<string, string[]>, signature: string, token: string) {
+  let canonical = url;
+  const keys = Array.from(params.keys()).sort();
+  for (const key of keys) {
+    const values = params.get(key) ?? [];
+    canonical += values.slice().sort().map((value) => key + value).join("");
+  }
   const expected = createHmac("sha1", token).update(canonical, "utf8").digest("base64");
-  const a = Buffer.from(expected), b = Buffer.from(signature);
-  return a.length === b.length && timingSafeEqual(a,b);
+  const actual = Buffer.from(signature);
+  const expectedBytes = Buffer.from(expected);
+  return actual.length === expectedBytes.length && timingSafeEqual(actual, expectedBytes);
 }
 function reply() {
   return new Response('<?xml version="1.0" encoding="UTF-8"?><Response><Message>Gracias. Hemos recibido tu mensaje.</Message></Response>', {
@@ -17,7 +21,7 @@ function reply() {
   });
 }
 export async function POST(request: Request) {
-  const token=process.env.TWILIO_AUTH_TOKEN, expectedUrl=process.env.TWILIO_WEBHOOK_URL;
+  const token=process.env.TWILIO_AUTH_TOKEN?.trim(), expectedUrl=process.env.TWILIO_WEBHOOK_URL?.trim();
   const signature=request.headers.get("x-twilio-signature");
   if (!token || !expectedUrl || !signature) return Response.json({error:"webhook_not_configured"},{status:503,headers:{"Cache-Control":"no-store"}});
   if (!(request.headers.get("content-type") ?? "").toLowerCase().includes("application/x-www-form-urlencoded")) {
@@ -29,16 +33,20 @@ export async function POST(request: Request) {
     return Response.json({ error: "payload_too_large" }, { status: 413 });
   }
   const form = new URLSearchParams(rawBody);
-  const params: Record<string,string[]> = {};
-  for (const [key,value] of form.entries()) (params[key] ??= []).push(value);
+  const params = new Map<string, string[]>();
+  for (const [key, value] of form.entries()) {
+    const values = params.get(key) ?? [];
+    values.push(value);
+    params.set(key, values);
+  }
   if (!validSignature(expectedUrl,params,signature,token)) return Response.json({error:"invalid_webhook_signature"},{status:401,headers:{"Cache-Control":"no-store"}});
-  const sid=(params.MessageSid ?? params.SmsSid)?.[0];
+  const sid=form.get("MessageSid") ?? form.get("SmsSid");
   if (!sid || !/^[A-Za-z0-9]{16,64}$/.test(sid)) return Response.json({error:"missing_message_id"},{status:400});
   try {
     const admin=createAdminClient();
     const {error}=await admin.from("communication_webhook_events").upsert({
       provider:"twilio",provider_event_id:sid,event_type:"message.inbound",status:"received",
-      payload:{messageSid:sid,messageStatus:params.MessageStatus?.[0] ?? null,numMedia:params.NumMedia?.[0] ?? "0"},
+      payload:{messageSid:sid,messageStatus:form.get("MessageStatus"),numMedia:form.get("NumMedia") ?? "0"},
       received_at:new Date().toISOString()
     },{onConflict:"provider,provider_event_id",ignoreDuplicates:true});
     if(error) throw error;

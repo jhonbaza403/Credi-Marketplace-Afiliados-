@@ -4,16 +4,16 @@ import { createAdminClient } from "@/lib/supabase/admin";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-function validSignature(url: string, params: Record<string, string[]>, signature: string, token: string) {
+function validSignature(url: string, params: Map<string, string[]>, signature: string, token: string) {
   let canonical = url;
-  for (const key of Object.keys(params).sort()) {
-    // Twilio signs each value as a separate key/value pair, including repeated form fields.
-    canonical += params[key].slice().sort().map((value) => key + value).join("");
+  for (const key of Array.from(params.keys()).sort()) {
+    const values = params.get(key) ?? [];
+    canonical += values.slice().sort().map((value) => key + value).join("");
   }
   const expected = createHmac("sha1", token).update(canonical, "utf8").digest("base64");
-  const a = Buffer.from(expected);
-  const b = Buffer.from(signature);
-  return a.length === b.length && timingSafeEqual(a, b);
+  const actual = Buffer.from(signature);
+  const expectedBytes = Buffer.from(expected);
+  return actual.length === expectedBytes.length && timingSafeEqual(actual, expectedBytes);
 }
 
 export async function POST(request: Request) {
@@ -34,15 +34,19 @@ export async function POST(request: Request) {
     return Response.json({ error: "payload_too_large" }, { status: 413 });
   }
   const form = new URLSearchParams(rawBody);
-  const params: Record<string, string[]> = {};
-  for (const [key, value] of form.entries()) (params[key] ??= []).push(value);
+  const params = new Map<string, string[]>();
+  for (const [key, value] of form.entries()) {
+    const values = params.get(key) ?? [];
+    values.push(value);
+    params.set(key, values);
+  }
   if (!validSignature(expectedUrl, params, signature, token)) {
     return Response.json({ error: "invalid_webhook_signature" }, { status: 401, headers: { "Cache-Control": "no-store" } });
   }
 
-  const sid = (params.MessageSid ?? params.SmsSid)?.[0];
-  const status = params.MessageStatus?.[0]?.toLowerCase();
-  const errorCode = params.ErrorCode?.[0] || null;
+  const sid = form.get("MessageSid") ?? form.get("SmsSid");
+  const status = form.get("MessageStatus")?.toLowerCase();
+  const errorCode = form.get("ErrorCode") || null;
   const allowed = new Set(["accepted", "queued", "sending", "sent", "delivered", "undelivered", "failed", "canceled"]);
   if (!sid || !/^[A-Za-z0-9]{16,64}$/.test(sid) || !status || !allowed.has(status)) {
     return Response.json({ error: "invalid_status_payload" }, { status: 400 });
@@ -59,8 +63,6 @@ export async function POST(request: Request) {
     }, { onConflict: "event_key", ignoreDuplicates: true });
     if (eventError) throw eventError;
 
-    // Status callbacks can be delayed or delivered out of order. Once a
-    // terminal state is stored, a later stale callback must not regress it.
     const { error: requestError } = await admin.from("twilio_sms_requests").update({
       status,
       error_code: errorCode,
