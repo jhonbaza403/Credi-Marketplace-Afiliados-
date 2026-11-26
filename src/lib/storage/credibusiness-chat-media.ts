@@ -75,7 +75,19 @@ export async function uploadCrediBusinessChatMedia(file: File) {
     cacheControl: '31536000',
     upsert: false,
   })
-  if (uploadError) throw new Error(uploadError.message || 'No fue posible completar la carga del archivo.')
+  if (uploadError) {
+    const code = uploadError.message.toLowerCase()
+    if (code.includes('plan_storage_limit_reached')) {
+      throw new Error('Alcanzaste el espacio disponible de tu plan. Libera espacio o consulta las opciones de tu cuenta.')
+    }
+    if (code.includes('media_upload_file_too_large')) {
+      throw new Error('El archivo supera el límite permitido para este tipo de contenido.')
+    }
+    if (code.includes('media_upload_mime_not_allowed')) {
+      throw new Error('El formato del archivo no está permitido.')
+    }
+    throw new Error(uploadError.message || 'No fue posible completar la carga del archivo.')
+  }
 
   const accessUrl = `/api/chat/media?path=${encodeURIComponent(path)}`
   return { kind, name: file.name, path, url: accessUrl, bucket, size: file.size, contentType: file.type || 'application/octet-stream' }
