@@ -7,6 +7,11 @@ import { createLiveKitJwt, liveKitHttpUrl, liveKitRoomName } from '@/lib/live/li
 import { getLiveInput } from '@/lib/cloudflare/stream'
 import { distributedRateLimit } from '@/lib/security/rate-limit'
 import { getRequestIp } from '@/lib/security/auth'
+import {
+  InvalidRequestBodyError,
+  readRequestBodyTextBounded,
+  RequestBodyTooLargeError,
+} from '@/lib/security/request-body'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -15,7 +20,7 @@ const schema = z.object({ roomId: z.string().uuid(), action: z.enum(['start', 's
 const json = (body: unknown, status = 200) => NextResponse.json(body, { status, headers: { 'Cache-Control': 'no-store' } })
 
 async function liveKitRequest(method: string, body: Record<string, unknown>) {
-  const token = createLiveKitJwt({ sub: 'credi-live-egress', video: { roomRecord: true } }, 300)
+  const token = await createLiveKitJwt({ sub: 'credi-live-egress', video: { roomRecord: true } }, 300)
   const response = await fetch(liveKitHttpUrl() + '/twirp/livekit.Egress/' + method, {
     method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
     body: JSON.stringify(body), cache: 'no-store', signal: AbortSignal.timeout(20_000),
@@ -34,7 +39,24 @@ export async function POST(request: Request) {
   if (!access.ok) return json({ error: 'La cuenta no cumple los requisitos de seguridad.', code: access.code }, access.status)
   const limit = await distributedRateLimit(supabase, 'livekit-egress:' + user.id + ':' + getRequestIp(request), { limit: 8, windowMs: 60_000 })
   if (!limit.success) return json({ error: 'Demasiadas solicitudes para controlar la emisión.', code: 'RATE_LIMITED' }, 429)
-  const parsed = schema.safeParse(await request.json().catch(() => null))
+  let rawBody: string
+  try {
+    rawBody = await readRequestBodyTextBounded(request.body, request.headers.get('content-length'), 16_384)
+  } catch (error) {
+    if (error instanceof RequestBodyTooLargeError) {
+      return json({ error: 'La solicitud supera el tamaño permitido.', code: 'PAYLOAD_TOO_LARGE' }, 413)
+    }
+    if (error instanceof InvalidRequestBodyError) {
+      return json({ error: 'El cuerpo de la solicitud no es válido.', code: 'INVALID_REQUEST_BODY' }, 400)
+    }
+    return json({ error: 'No fue posible leer la solicitud.', code: 'REQUEST_BODY_FAILED' }, 400)
+  }
+
+  let body: unknown
+  try { body = JSON.parse(rawBody) } catch {
+    return json({ error: 'El JSON de la solicitud no es válido.', code: 'INVALID_JSON' }, 400)
+  }
+  const parsed = schema.safeParse(body)
   if (!parsed.success) return json({ error: 'La operación de emisión no es válida.', code: 'INVALID_EGRESS_OPERATION' }, 400)
 
   const { data: room, error } = await supabase.from('chat_live_rooms')
