@@ -1,5 +1,5 @@
 BEGIN;
-SELECT plan(5);
+SELECT plan(6);
 
 SELECT ok(
   pg_get_functiondef('private.submit_kyc_identity(text,text,text,jsonb)'::regprocedure) LIKE '%bucket_id=''kyc-documents''%',
@@ -26,6 +26,12 @@ SELECT ok(
   AND NOT has_function_privilege('authenticated','private.submit_kyc_identity(text,text,text,jsonb)','EXECUTE')
   AND has_function_privilege('authenticated','public.submit_kyc_identity(text,text,text,jsonb)','EXECUTE'),
   'KYC private implementation is not client-callable; restricted public wrapper is available'
+);
+
+SELECT ok(
+  (SELECT prosecdef FROM pg_proc WHERE oid='public.submit_kyc_identity(text,text,text,jsonb)'::regprocedure)
+  AND (SELECT coalesce(proconfig, ARRAY[]::text[]) @> ARRAY['search_path=""'] FROM pg_proc WHERE oid='public.submit_kyc_identity(text,text,text,jsonb)'::regprocedure),
+  'public KYC wrapper uses a pinned SECURITY DEFINER context to invoke its private implementation'
 );
 
 SELECT * FROM finish();
