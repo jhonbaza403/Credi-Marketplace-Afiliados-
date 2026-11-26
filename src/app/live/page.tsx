@@ -173,6 +173,11 @@ export default function LivePage(){
   async function updateRoom(roomId:string,action:'end'|'cancel'){
     setBusy(true);setMessage('')
     try{
+      if(action==='end'){
+        const stopResponse=await fetch('/api/live/egress',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({roomId,action:'stop'})})
+        const stopData=await stopResponse.json().catch(()=>({}))
+        if(!stopResponse.ok)throw new Error(stopData.error||'No fue posible detener la distribución LIVE.')
+      }
       const response=await fetch('/api/live',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({roomId,action})})
       const data=await response.json().catch(()=>({}))
       if(!response.ok)throw new Error(data.error||'No fue posible actualizar el LIVE.')
