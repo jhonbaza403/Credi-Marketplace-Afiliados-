@@ -1,12 +1,33 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createLiveKitJwt, liveKitHttpUrl, verifyLiveKitWebhook } from '@/lib/live/livekit'
+import {
+  InvalidRequestBodyError,
+  readRequestBodyTextBounded,
+  RequestBodyTooLargeError,
+} from '@/lib/security/request-body'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 export async function POST(request: Request) {
-  const rawBody = await request.text()
+  if (!(request.headers.get('content-type') ?? '').toLowerCase().includes('application/json')) {
+    return NextResponse.json({ success: false, error: 'Webhook LiveKit debe utilizar JSON.' }, { status: 415 })
+  }
+
+  let rawBody: string
+  try {
+    rawBody = await readRequestBodyTextBounded(request.body, request.headers.get('content-length'), 512_000)
+  } catch (error) {
+    if (error instanceof RequestBodyTooLargeError) {
+      return NextResponse.json({ success: false, error: 'Webhook LiveKit demasiado grande.' }, { status: 413 })
+    }
+    if (error instanceof InvalidRequestBodyError) {
+      return NextResponse.json({ success: false, error: 'El cuerpo del webhook LiveKit no es válido.' }, { status: 400 })
+    }
+    throw error
+  }
+
   if (!(await verifyLiveKitWebhook(rawBody, request.headers.get('Authorization')))) {
     return NextResponse.json({ success: false, error: 'Firma LiveKit inválida.' }, { status: 401 })
   }

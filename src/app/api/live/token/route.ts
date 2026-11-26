@@ -6,6 +6,11 @@ import { requireApiAccountAccess } from '@/lib/auth/api-account-access'
 import { distributedRateLimit } from '@/lib/security/rate-limit'
 import { getRequestIp } from '@/lib/security/auth'
 import { createLiveKitJwt, liveKitConfig, liveKitRoomName } from '@/lib/live/livekit'
+import {
+  InvalidRequestBodyError,
+  readRequestBodyTextBounded,
+  RequestBodyTooLargeError,
+} from '@/lib/security/request-body'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -22,7 +27,24 @@ export async function POST(request: Request) {
   if (!access.ok) return json({ error: 'La cuenta no cumple los requisitos de seguridad.', code: access.code }, access.status)
   const limit = await distributedRateLimit(supabase, 'livekit-token:' + user.id + ':' + getRequestIp(request), { limit: 12, windowMs: 60_000 })
   if (!limit.success) return json({ error: 'Demasiadas solicitudes de conexión.', code: 'RATE_LIMITED' }, 429)
-  const parsed = schema.safeParse(await request.json().catch(() => null))
+  let rawBody: string
+  try {
+    rawBody = await readRequestBodyTextBounded(request.body, request.headers.get('content-length'), 16_384)
+  } catch (error) {
+    if (error instanceof RequestBodyTooLargeError) {
+      return json({ error: 'La solicitud supera el tamaño permitido.', code: 'PAYLOAD_TOO_LARGE' }, 413)
+    }
+    if (error instanceof InvalidRequestBodyError) {
+      return json({ error: 'El cuerpo de la solicitud no es válido.', code: 'INVALID_REQUEST_BODY' }, 400)
+    }
+    return json({ error: 'No fue posible leer la solicitud.', code: 'REQUEST_BODY_FAILED' }, 400)
+  }
+
+  let body: unknown
+  try { body = JSON.parse(rawBody) } catch {
+    return json({ error: 'El JSON de la solicitud no es válido.', code: 'INVALID_JSON' }, 400)
+  }
+  const parsed = schema.safeParse(body)
   if (!parsed.success) return json({ error: 'La sala LIVE no es válida.', code: 'INVALID_ROOM' }, 400)
 
   try {
