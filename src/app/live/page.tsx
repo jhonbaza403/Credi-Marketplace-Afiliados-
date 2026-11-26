@@ -31,7 +31,7 @@ export default function LivePage(){
   const [mediaReady,setMediaReady]=useState(false)
   const previewRef=useRef<HTMLVideoElement>(null)
   const streamRef=useRef<MediaStream|null>(null)
-  const [transport,setTransport]=useState<{inputId:string;rtmps:{url:string}|null;playback:{hls?:string;dash?:string}|null;webRTC:{url:string}|null;status?:string|null;enabled?:boolean}|null>(null)
+  const [transport,setTransport]=useState<{inputId:string;rtmps:{url:string}|null;srt?:{url:string}|null;playback:{hls?:string;dash?:string}|null;webRTC:{url:string}|null;status?:string|null;enabled?:boolean;diagnostics?:{state:string;status:string;enabled:boolean;ingest:{rtmps:boolean;srt:boolean};playback:{hls:boolean;dash:boolean};recording:string;checkedAt:string}}|null>(null)
   const [transportBusy,setTransportBusy]=useState(false)
   const supabase=useMemo(()=>createClient(),[])
   const playerUrl=cloudflarePlayerUrl(
@@ -55,10 +55,35 @@ export default function LivePage(){
   }
 
   async function loadTransport(roomId:string){
-    const response=await fetch('/api/live/stream',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({roomId,action:'credentials'})})
+    const response=await fetch('/api/live/stream',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({roomId,action:'diagnostics'})})
     const data=await response.json().catch(()=>({}))
     if(response.ok)setTransport(data)
     else setTransport(null)
+  }
+
+  async function operateTransport(action:'provision'|'diagnostics'|'recover'|'sync-replay'){
+    if(!selected || transportBusy)return
+    setTransportBusy(true)
+    try{
+      const response=await fetch('/api/live/stream',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({roomId:selected.id,action})
+      })
+      const data=await response.json().catch(()=>({}))
+      if(!response.ok)throw new Error(data.error||'No fue posible operar el transporte LIVE.')
+      if(action==='sync-replay'){
+        setMessage('Sincronización de replay: '+String(data.replaySync?.state||'unknown'))
+        await load()
+      }else{
+        setTransport(data)
+        if(action==='provision')setMessage('Live Input provisionado. Las claves permanecen en el servidor; LiveKit Egress puede iniciar el relay.')
+        if(action==='diagnostics')setMessage('Diagnóstico actualizado desde Cloudflare Stream.')
+        if(action==='recover')setMessage(data.recovered?'Entrada reactivada. Verifica el codificador y vuelve a diagnosticar.':'Cloudflare informa que la entrada ya estaba habilitada.')
+      }
+    }catch(error){
+      setMessage(error instanceof Error?error.message:'No fue posible operar el transporte LIVE.')
+    }finally{setTransportBusy(false)}
   }
 
   async function loadProducts(roomId:string){
@@ -252,9 +277,22 @@ export default function LivePage(){
 
           {selected&&<section className="mt-6 rounded-2xl border border-cyan-500/20 bg-cyan-500/[.04] p-4">
             <div className="flex items-start justify-between gap-3"><div><p className="text-[10px] font-black uppercase tracking-[.14em] text-cyan-700">Transporte de producción</p><h3 className="mt-1 font-black">LiveKit WebRTC → Egress RTMPS → Cloudflare Stream</h3><p className="mt-1 text-xs leading-5 text-[var(--muted)]">LiveKit conecta anfitrión y participantes en tiempo real. Egress envía la composición de la sala al Live Input de Cloudflare Stream.</p></div><KeyRound className="size-5 text-cyan-700"/></div>
-            <div className="mt-4 flex flex-wrap gap-2"><button type="button" disabled={transportBusy} onClick={async()=>{setTransportBusy(true);try{const r=await fetch('/api/live/stream',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({roomId:selected.id,action:'provision'})});const d=await r.json();if(!r.ok)throw new Error(d.error||'No fue posible provisionar el transporte.');setTransport(d);setMessage('Live Input de Cloudflare provisionado. LiveKit Egress usará estas credenciales desde el servidor; no se muestran claves al navegador.')}catch(e){setMessage(e instanceof Error?e.message:'No fue posible provisionar el transporte.')}finally{setTransportBusy(false)}}} className="rounded-xl bg-cyan-700 px-3 py-2 text-xs font-black text-white disabled:opacity-50">{transportBusy?'Provisionando…':'Provisionar transporte'}</button>{transport?.rtmps?.url&&<span className="inline-flex items-center gap-1 rounded-xl bg-emerald-500/10 px-3 py-2 text-[10px] font-black text-emerald-700"><Eye className="size-3"/> RTMPS listo</span>}</div>
-            {transport?.rtmps?.url&&<p className="mt-3 text-xs text-emerald-700">Endpoint RTMPS validado; la clave permanece en el servidor.</p>}
-            <p className="mt-3 text-[10px] text-[var(--muted)]">Las credenciales de distribución se recuperan en el backend y nunca se envían al navegador.</p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <button type="button" disabled={transportBusy} onClick={()=>void operateTransport('provision')} className="rounded-xl bg-cyan-700 px-3 py-2 text-xs font-black text-white disabled:opacity-50">{transportBusy?'Procesando…':'Provisionar transporte'}</button>
+              {transport?.inputId&&<>
+                <button type="button" disabled={transportBusy} onClick={()=>void operateTransport('diagnostics')} className="rounded-xl border border-[var(--border)] px-3 py-2 text-xs font-black disabled:opacity-50">Diagnosticar conexión</button>
+                <button type="button" disabled={transportBusy} onClick={()=>void operateTransport('recover')} className="rounded-xl border border-[var(--border)] px-3 py-2 text-xs font-black disabled:opacity-50">Recuperar entrada</button>
+                {selected.status==='ended'&&<button type="button" disabled={transportBusy} onClick={()=>void operateTransport('sync-replay')} className="rounded-xl border border-[var(--border)] px-3 py-2 text-xs font-black disabled:opacity-50">Sincronizar replay</button>}
+              </>}
+              {transport?.rtmps?.url&&<span className="inline-flex items-center gap-1 rounded-xl bg-emerald-500/10 px-3 py-2 text-[10px] font-black text-emerald-700"><Eye className="size-3"/> RTMPS listo</span>}
+              {transport?.srt?.url&&<span className="inline-flex items-center gap-1 rounded-xl bg-emerald-500/10 px-3 py-2 text-[10px] font-black text-emerald-700">SRT listo</span>}
+            </div>
+            {transport?.diagnostics&&<div className="mt-3 space-y-1 text-xs text-[var(--muted)]">
+              <p>Cloudflare: {transport.diagnostics.status} · Estado: {transport.diagnostics.state} · Grabación: {transport.diagnostics.recording}</p>
+              <p>RTMPS: {transport.diagnostics.ingest.rtmps?'disponible':'no disponible'} · SRT: {transport.diagnostics.ingest.srt?'disponible':'no disponible'} · HLS/DASH: {transport.diagnostics.playback.hls&&transport.diagnostics.playback.dash?'disponibles':'pendientes'}</p>
+              <p className="text-[10px]">Última comprobación: {new Date(transport.diagnostics.checkedAt).toLocaleString()}</p>
+            </div>}
+            <p className="mt-3 text-[10px] text-[var(--muted)]">Las claves RTMPS/SRT y passphrases nunca se envían al navegador.</p>
           </section>}
 
           {selected && !['ended','cancelled'].includes(selected.status) && <LiveKitStudio roomId={selected.id}/>}
