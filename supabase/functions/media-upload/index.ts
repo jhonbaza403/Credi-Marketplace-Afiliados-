@@ -3,7 +3,7 @@ import {
   getAllowedMediaUploadMimeTypes,
   getMaxMediaUploadBytes,
   MEDIA_UPLOAD_MAX_BYTES,
-} from '../_shared/media-upload-policy.ts'
+} from './media-upload-policy.ts'
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!
 const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
