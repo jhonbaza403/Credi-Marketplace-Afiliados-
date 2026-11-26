@@ -7,6 +7,7 @@ Esta carpeta es la fuente documental única del proyecto. La documentación de a
 ```text
 docs/
 ├── README.md
+├── FOUR-PILLARS-ARCHITECTURE.md
 ├── architecture.md
 ├── api.md
 ├── database.md
@@ -18,6 +19,12 @@ docs/
 ```
 
 Los archivos `.svg` del directorio `docs/` son recursos documentales asociados a esos documentos y no forman parte de los assets públicos de la aplicación.
+
+## Arquitectura de producto
+
+- **Cuatro pilares:** consulta [FOUR-PILLARS-ARCHITECTURE.md](./FOUR-PILLARS-ARCHITECTURE.md) para la taxonomía funcional, el estado real de implementación, los contratos compartidos y la hoja de ruta.
+- El registro de navegación de producto está en `src/config/portal.ts`; clasifica rutas por pilar, pero no concede permisos.
+- Los cuatro pilares son dominios de producto dentro de una sola plataforma, no cuatro aplicaciones ni bases de datos separadas.
 
 ## Fuente de verdad
 
