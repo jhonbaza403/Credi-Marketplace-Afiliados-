@@ -93,3 +93,29 @@ Use the pinned Supabase CLI version and `supabase migration repair` only after a
 - Vercel status on the new head is green; this is not evidence that the new SQL has passed CI or been applied.
 - No hosted SQL migration, ledger repair, Storage mutation, Edge Function deployment, Auth setting change, Production deployment or data deletion was performed in this audit.
 - PR #103 remains Draft and unmerged.
+
+
+## Follow-up implementation status — 2026-11-26
+
+### Applied to hosted projects
+- The client-table privilege migration was applied to both projects. Post-apply verification confirmed identical role grants: no direct `anon` privileges on `social_accounts`/`social_publications`; no direct `anon`/`authenticated` privileges on wallet journals, refund records or settlement/audit tables.
+- The three Production Storage buckets `marketplace-media`, `kyc-documents`, `kyb-documents` were provisioned in Preview. Bucket privacy, limits and MIME allow-lists were verified against Production.
+- The API-generated migration versions were preserved in local source as `20261126224643`, `20261126224654`, and `20261126224746`; do not create alternate timestamps for these same operations.
+
+### Prepared, not yet applied to hosted databases
+- `20261126230000_align_social_advertising_rls_contract.sql`: removes legacy unmoderated public SELECT policies, consolidates owner write policies, and separates admin reads into authenticated-only policies.
+- `20261126240000_fix_wallet_refund_rpc_security_parity.sql`: makes the public refund wrapper SECURITY DEFINER with empty search_path, preserves authenticated/service_role RPC execution, and aligns private helper's service_role ACL.
+- `20261126250000_fix_kyc_private_storage_contract.sql`: moves KYC object verification to the private `kyc-documents` bucket, validates actual stored metadata/size and keeps the private helper behind a pinned SECURITY DEFINER wrapper.
+- `20261126260000_align_checkout_legacy_rpc.sql`: aligns the four-argument legacy checkout overload to the Preview implementation (price validation, inventory reservation, idempotency, empty search_path) and pins the canonical five-argument RPC search_path.
+- Added pgTAP contracts for RLS, wallet refunds, KYC private storage and both checkout RPC overloads.
+
+### Validation snapshot
+- Deno typecheck and KYC/media policy tests passed on the workflow run for the source revision containing the KYC Edge Function fix.
+- That run's local Supabase migration job was cancelled before local reset/pgTAP, and the main quality job was cancelled before unit/E2E/build. It is **not** a complete CI pass for the current branch head.
+- The KYC Edge Function source in the repository is self-contained and targets the private `kyc-documents` bucket. It has not yet been deployed because the matching database RPC migration still needs successful local pgTAP and Preview verification.
+- The RLS, wallet, KYC and checkout migrations above have not been applied to either hosted project.
+- `media-upload` remains Production v10 / Preview v2 and still trusts client-declared `fileSize` for plan quota prechecks. No deployment is approved until server-side actual-object quota enforcement is implemented.
+- Supabase Auth leaked-password protection is a Pro-plan-and-above feature according to current Supabase documentation. The existing Free-plan configuration cannot enable it; no Auth setting was changed.
+
+### Current migration ledger
+The latest observed hosted counts remain Production 226 / Preview 244. The 29 original exclusive versions have been classified in `migration-exclusive-classification-2026-11-26.md`; the ledger still requires the official CLI and per-version effect verification. No direct SQL ledger edits were made.
