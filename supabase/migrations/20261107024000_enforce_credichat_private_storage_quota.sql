@@ -1,5 +1,47 @@
 -- Enforce per-MIME object limits and Credi Chat plan quotas at the
 -- Storage database boundary. Client fileSize values are only preflight hints.
+-- Expand only the private chat bucket's approved document MIME set.
+-- It remains private with the existing 500 MiB object ceiling; the trigger below
+-- applies narrower, server-enforced per-MIME limits.
+UPDATE storage.buckets
+   SET allowed_mime_types = ARRAY[
+     'image/jpeg','image/png','image/webp','image/gif',
+     'video/mp4','video/webm','video/quicktime',
+     'audio/mpeg','audio/mp4','audio/ogg','audio/webm','audio/wav','audio/x-wav',
+     'application/pdf','application/msword',
+     'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+     'application/vnd.ms-excel',
+     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+     'application/vnd.ms-powerpoint',
+     'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+     'text/plain','text/csv'
+   ]::text[]
+ WHERE id='credichat-private'
+   AND name='credichat-private'
+   AND public=false
+   AND file_size_limit=524288000;
+
+DO $bucket_contract$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM storage.buckets
+    WHERE id='credichat-private'
+      AND name='credichat-private'
+      AND public=false
+      AND file_size_limit=524288000
+      AND allowed_mime_types @> ARRAY[
+        'application/pdf',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+        'text/plain','text/csv'
+      ]::text[]
+  ) THEN
+    RAISE EXCEPTION 'STORAGE_BUCKET_CONFIGURATION_MISMATCH: credichat-private';
+  END IF;
+END
+$bucket_contract$;
+
 CREATE OR REPLACE FUNCTION private.enforce_credichat_private_storage_quota()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -58,7 +100,17 @@ BEGIN
       WHEN NEW.bucket_id = 'credichat-private' THEN 50 * 1024 * 1024
       ELSE 500 * 1024 * 1024
     END;
-  ELSIF NEW.bucket_id = 'credichat-private' AND v_mime = 'application/pdf' THEN
+  ELSIF NEW.bucket_id = 'credichat-private' AND v_mime IN (
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/vnd.ms-powerpoint',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    'text/plain',
+    'text/csv'
+  ) THEN
     v_max_file_bytes := 100 * 1024 * 1024;
   ELSE
     RAISE EXCEPTION 'MEDIA_MIME_NOT_ALLOWED_FOR_BUCKET'
