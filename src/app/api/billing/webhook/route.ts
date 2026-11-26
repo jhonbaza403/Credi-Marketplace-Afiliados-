@@ -213,52 +213,13 @@ async function syncSubscription(event: StripeEvent, override?: StripeSubscriptio
   return local
 }
 
-async function orderEvent(event: StripeEvent) {
-  const object = event.data.object as BillingEventObject
-  const metadata = meta(object)
-  const orderId = metadata.order_id
-  if (!orderId) return false
-
-  const admin = createAdminClient()
-  const success =
-    event.type === 'checkout.session.completed' ||
-    event.type === 'checkout.session.async_payment_succeeded'
-
-  if (success) {
-    if (!object.id || !metadata.user_id || object.amount_total == null || !object.currency) {
-      throw new Error('checkout_session_financial_fields_missing')
-    }
-
-    const { error } = await admin.rpc('process_stripe_checkout_session', {
-      p_order_id: orderId,
-      p_session_id: object.id,
-      p_event_id: event.id,
-      p_amount_total: object.amount_total,
-      p_currency: object.currency,
-      p_buyer_id: metadata.user_id,
-    })
-    if (error) throw new Error(error.message || 'stripe_checkout_processing_failed')
-    return true
-  }
-
-  if (!object.id) return false
-
-  const { error } = await admin.rpc('process_stripe_checkout_failure', {
-    p_order_id: orderId,
-    p_session_id: object.id,
-  })
-  if (error) throw new Error(error.message || 'stripe_checkout_failure_processing_failed')
-  return true
-}
-
 async function checkoutEvent(event: StripeEvent, status: 'completed' | 'failed') {
   const object = event.data.object as BillingEventObject
   const metadata = meta(object)
 
-  if (metadata.order_id) {
-    await orderEvent(event)
-    return
-  }
+  // Order payments belong exclusively to /api/payments/webhook.
+  // Billing only acknowledges checkout intents and subscriptions.
+  if (metadata.order_id) return
 
   const checkoutId = String(object.id ?? '')
   if (!checkoutId || !metadata.user_id) return
