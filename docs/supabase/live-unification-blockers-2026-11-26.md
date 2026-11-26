@@ -112,10 +112,20 @@ Use the pinned Supabase CLI version and `supabase migration repair` only after a
 ### Validation snapshot
 - Deno typecheck and KYC/media policy tests passed on the workflow run for the source revision containing the KYC Edge Function fix.
 - That run's local Supabase migration job was cancelled before local reset/pgTAP, and the main quality job was cancelled before unit/E2E/build. It is **not** a complete CI pass for the current branch head.
-- The KYC Edge Function source in the repository is self-contained and targets the private `kyc-documents` bucket. It has not yet been deployed because the matching database RPC migration still needs successful local pgTAP and Preview verification.
-- The RLS, wallet, KYC and checkout migrations above have not been applied to either hosted project.
+- The KYC Edge Function is deployed to both projects with the same source SHA-256 `30075c4758a225c358226623299220c51286a6dd8b1d5e75f2f192c235f11cb2` (Production v3, Preview v2). Both now target private `kyc-documents`.
+- The RLS, wallet, checkout, KYC private-storage and KYC variable-correction migrations have been applied to both hosted projects. Post-apply SQL verification confirmed matching RLS policy counts (4 approved-read, 4 admin-read, 4 owner-write; zero legacy weak public policies), matching wallet/checkout/KYC function hashes, and pinned empty search_path.
 - `media-upload` remains Production v10 / Preview v2 and still trusts client-declared `fileSize` for plan quota prechecks. No deployment is approved until server-side actual-object quota enforcement is implemented.
 - Supabase Auth leaked-password protection is a Pro-plan-and-above feature according to current Supabase documentation. The existing Free-plan configuration cannot enable it; no Auth setting was changed.
 
 ### Current migration ledger
-The latest observed hosted counts remain Production 226 / Preview 244. The 29 original exclusive versions have been classified in `migration-exclusive-classification-2026-11-26.md`; the ledger still requires the official CLI and per-version effect verification. No direct SQL ledger edits were made.
+The latest observed hosted counts are Production 231 / Preview 249, with 219 shared, 12 Production-only and 30 Preview-only records. The original 29 exclusive versions plus the new API-generated timestamps have been classified in `migration-exclusive-classification-2026-11-26.md`; the ledger still requires the official CLI and per-version effect verification. No direct SQL ledger edits were made.
+
+
+### Additional verified promotion — after this audit snapshot
+- Social/ad RLS migration is applied in both environments: zero legacy weak public policies; four moderation-approved public read policies; four authenticated admin read policies; four consolidated owner-write policies.
+- Wallet refund wrapper is identical in both environments: SECURITY DEFINER, empty search_path, authenticated + service_role execute on the public RPC, no anon execute; private helper has service_role execute.
+- Both checkout overloads are now identical in both environments. Four-argument legacy overload is service_role-only and pins empty search_path; canonical five-argument overload also pins empty search_path.
+- KYC RPC is identical in both environments and validates actual object metadata in private `kyc-documents`, with a 10 MiB limit and private SECURITY DEFINER implementation. Its case identifier variable was renamed to avoid PL/pgSQL name ambiguity.
+- `kyc-upload` is active in both projects with matching source hash. The KYC Edge Function is not claimed as end-to-end verified: a real authenticated upload/review flow still needs a controlled Preview smoke test.
+- Media Upload is still not unified: Production v10 and Preview v2 have different code hashes. The branch now packages the shared MIME policy with the function, but no media-upload deployment was performed. The client-declared `fileSize` precheck is not proof of actual uploaded size; an actual-size/quota finalization flow remains a blocker. No Storage-schema triggers were added.
+- The eight marketing numeric fields passed a no-incompatible-values preflight; the precision migration has not been applied.
