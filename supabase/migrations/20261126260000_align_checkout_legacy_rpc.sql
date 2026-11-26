@@ -270,7 +270,7 @@ BEGIN
     status := 'pending';
     RETURN NEXT;
 END;
-$function$
+$function$;
 
 
 -- The five-argument canonical RPC has the same body in both projects and is
