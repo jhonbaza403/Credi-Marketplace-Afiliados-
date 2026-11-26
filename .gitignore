@@ -1,7 +1,7 @@
 # Dependencies
 /node_modules/
 /.pnp/
-.pnp.js
+/.pnp.js
 /.pnpm-store/
 
 # Next.js build output
@@ -52,3 +52,7 @@ Thumbs.db
 *.pem
 *.key
 *.crt
+
+# Local database backups (never commit customer or production data)
+/backups/
+/supabase/backups/
