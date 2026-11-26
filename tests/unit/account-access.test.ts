@@ -1,5 +1,6 @@
-import { describe, expect, it } from "vitest";
-import { nextRequiredSecurityStep, type AccountAccessState } from "@/lib/auth/account-access";
+import { describe, expect, it, vi } from "vitest";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { getAccountAccessState, nextRequiredSecurityStep, type AccountAccessState } from "@/lib/auth/account-access";
 
 const base: AccountAccessState = {
   is_platform_owner: false,
@@ -66,4 +67,25 @@ describe("account access security gate", () => {
       }),
     ).toBeNull();
   });
+  it("does not fabricate missing security requirements when the status lookup fails", async () => {
+    const supabase = {
+      rpc: vi.fn().mockResolvedValue({
+        data: null,
+        error: { code: "PGRST000", message: "database unavailable" },
+      }),
+    } as unknown as SupabaseClient;
+
+    await expect(getAccountAccessState(supabase, "user-123"))
+      .rejects.toThrow("ACCOUNT_ACCESS_LOOKUP_FAILED");
+  });
+
+  it("treats a missing access-status row as an unavailable security decision", async () => {
+    const supabase = {
+      rpc: vi.fn().mockResolvedValue({ data: null, error: null }),
+    } as unknown as SupabaseClient;
+
+    await expect(getAccountAccessState(supabase, "user-123"))
+      .rejects.toThrow("ACCOUNT_ACCESS_STATUS_MISSING");
+  });
+
 });
