@@ -26,8 +26,8 @@ export function createLiveKitJwt(claims: Record<string, unknown>, ttlSeconds = 6
   const now = Math.floor(Date.now() / 1000)
   const payload = { iss: apiKey, nbf: now - 5, iat: now, exp: now + ttlSeconds, ...claims }
   const unsigned = `${base64url(JSON.stringify({ alg: 'HS256', typ: 'JWT' }))}.${base64url(JSON.stringify(payload))}`
-  const signature = createHmac('sha256', apiSecret).update(unsigned).digest()
   // lgtm[js/insufficient-password-hash] LiveKit requires HS256 JWT signing; this MAC is not a stored password hash.
+  const signature = createHmac('sha256', apiSecret).update(unsigned).digest()
   return `${unsigned}.${base64url(signature)}`
 }
 
@@ -56,9 +56,9 @@ export function verifyLiveKitWebhook(rawBody: string, authorization: string | nu
     const expectedHash = Buffer.from(expectedBodyHash, 'hex')
     const suppliedHash = Buffer.from(payload.sha256, 'base64')
     if (expectedHash.length !== suppliedHash.length || !timingSafeEqual(expectedHash, suppliedHash)) return false
+    // lgtm[js/insufficient-password-hash] LiveKit webhook JWTs are protocol-signed with HS256; this is not password storage.
     const expectedSignature = createHmac('sha256', apiSecret).update(`${headerPart}.${payloadPart}`).digest()
     const suppliedSignature = Buffer.from(signaturePart, 'base64url')
-    // lgtm[js/insufficient-password-hash] LiveKit webhook JWTs are protocol-signed with HS256; this is not password storage.
     return expectedSignature.length === suppliedSignature.length && timingSafeEqual(expectedSignature, suppliedSignature)
   } catch {
     return false
