@@ -163,7 +163,8 @@ SUPABASE_SERVICE_ROLE_KEY
 DATABASE_URL
 GEMINI_API_KEY
 STRIPE_SECRET_KEY
-STRIPE_PAYMENTS_WEBHOOK_SECRET y STRIPE_BILLING_WEBHOOK_SECRET
+STRIPE_PAYMENTS_WEBHOOK_SECRET
+STRIPE_BILLING_WEBHOOK_SECRET
 ```
 
 Nunca incluir valores secretos en el repositorio, README, logs o código cliente. Las claves privilegiadas y tokens OAuth deben permanecer exclusivamente del lado servidor.
