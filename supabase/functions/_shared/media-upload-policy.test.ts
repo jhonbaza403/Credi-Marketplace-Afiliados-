@@ -1,7 +1,11 @@
 import {
   getAllowedMediaUploadMimeTypes,
+  getMaxMediaUploadBytes,
   isAllowedMediaUploadMimeType,
   MEDIA_UPLOAD_MAX_BYTES,
+  MEDIA_IMAGE_MAX_BYTES,
+  PRIVATE_CHAT_AUDIO_MAX_BYTES,
+  PRIVATE_CHAT_DOCUMENT_MAX_BYTES,
 } from './media-upload-policy.ts';
 
 Deno.test('marketplace uploads accept configured image, video and audio MIME types', () => {
@@ -38,5 +42,23 @@ Deno.test('private Credi Chat accepts configured media and PDF attachments', () 
 Deno.test('both upload contexts share the configured 500 MiB Storage ceiling', () => {
   if (MEDIA_UPLOAD_MAX_BYTES !== 524288000) {
     throw new Error(`unexpected media bucket limit: ${MEDIA_UPLOAD_MAX_BYTES}`);
+  }
+});
+
+Deno.test('upload limits are enforced per MIME type and context', () => {
+  if (getMaxMediaUploadBytes('marketplace', 'image/jpeg') !== MEDIA_IMAGE_MAX_BYTES) {
+    throw new Error('marketplace image limit must be 20 MiB');
+  }
+  if (getMaxMediaUploadBytes('marketplace', 'video/mp4') !== MEDIA_UPLOAD_MAX_BYTES) {
+    throw new Error('marketplace video limit must remain 500 MiB');
+  }
+  if (getMaxMediaUploadBytes('credibusiness-chat', 'audio/mpeg') !== PRIVATE_CHAT_AUDIO_MAX_BYTES) {
+    throw new Error('private chat audio limit must be 50 MiB');
+  }
+  if (getMaxMediaUploadBytes('credibusiness-chat', 'application/pdf') !== PRIVATE_CHAT_DOCUMENT_MAX_BYTES) {
+    throw new Error('private chat PDF limit must be 100 MiB');
+  }
+  if (getMaxMediaUploadBytes('marketplace', 'application/pdf') !== 0) {
+    throw new Error('public marketplace must reject PDF');
   }
 });
