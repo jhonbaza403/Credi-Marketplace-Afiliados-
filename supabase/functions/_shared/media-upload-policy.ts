@@ -24,9 +24,21 @@ const MARKETPLACE_ALLOWED_MIME_TYPES: readonly string[] = [
   'audio/x-wav',
 ];
 
+const PRIVATE_CHAT_DOCUMENT_MIME_TYPES: readonly string[] = [
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.ms-powerpoint',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  'text/plain',
+  'text/csv',
+];
+
 const PRIVATE_CHAT_ALLOWED_MIME_TYPES: readonly string[] = [
   ...MARKETPLACE_ALLOWED_MIME_TYPES,
-  'application/pdf',
+  ...PRIVATE_CHAT_DOCUMENT_MIME_TYPES,
 ];
 
 export function getAllowedMediaUploadMimeTypes(context: string): readonly string[] {
@@ -45,7 +57,7 @@ export function getMaxMediaUploadBytes(context: string, contentType: string): nu
   if (contentType.startsWith('audio/')) {
     return context === 'credibusiness-chat' ? PRIVATE_CHAT_AUDIO_MAX_BYTES : MEDIA_UPLOAD_MAX_BYTES;
   }
-  if (context === 'credibusiness-chat' && contentType === 'application/pdf') {
+  if (context === 'credibusiness-chat' && PRIVATE_CHAT_DOCUMENT_MIME_TYPES.includes(contentType)) {
     return PRIVATE_CHAT_DOCUMENT_MAX_BYTES;
   }
   return 0;
