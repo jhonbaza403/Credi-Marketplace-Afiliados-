@@ -213,6 +213,53 @@ BEGIN
 END
 $$;
 
+
+-- Credi Chat RPC and policy privilege parity.
+DO $
+DECLARE
+  v_public_helper oid := to_regprocedure('public.credichat_member_profile_ids(uuid[])');
+  v_private_helper oid := to_regprocedure('private.credichat_member_profile_ids(uuid[])');
+  v_qual text;
+BEGIN
+  IF v_public_helper IS NULL OR v_private_helper IS NULL THEN
+    RAISE EXCEPTION 'CREDICHAT CONTRACT: expected public compatibility and private helpers';
+  END IF;
+
+  IF has_function_privilege('authenticated', v_public_helper, 'EXECUTE')
+     OR NOT has_function_privilege('authenticated', v_private_helper, 'EXECUTE') THEN
+    RAISE EXCEPTION 'CREDICHAT CONTRACT: profile member lookup must execute only through private helper';
+  END IF;
+
+  SELECT qual INTO v_qual
+  FROM pg_policies
+  WHERE schemaname='public' AND tablename='profiles'
+    AND policyname='profiles_select_credichat_members';
+  IF v_qual IS NULL OR position('private.credichat_member_profile_ids' in v_qual)=0 THEN
+    RAISE EXCEPTION 'CREDICHAT CONTRACT: profiles member policy must use the private helper';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1 FROM pg_proc p
+    WHERE p.oid IN (
+      to_regprocedure('public.credichat_mark_call_seen(uuid)'),
+      to_regprocedure('public.credichat_record_call_status(uuid,text,text)'),
+      to_regprocedure('public.ensure_my_credi_pin()'),
+      to_regprocedure('public.set_my_credi_phone(text)')
+    )
+    AND p.prosecdef
+  ) THEN
+    RAISE EXCEPTION 'CREDICHAT CONTRACT: user-scoped call/profile RPCs must use SECURITY INVOKER';
+  END IF;
+
+  IF has_function_privilege('anon','public.credichat_mark_call_seen(uuid)','EXECUTE')
+     OR has_function_privilege('anon','public.credichat_record_call_status(uuid,text,text)','EXECUTE')
+     OR has_function_privilege('anon','public.ensure_my_credi_pin()','EXECUTE')
+     OR has_function_privilege('anon','public.set_my_credi_phone(text)','EXECUTE') THEN
+    RAISE EXCEPTION 'CREDICHAT CONTRACT: anon must not execute call/profile RPCs';
+  END IF;
+END
+$;
+
 RAISE NOTICE 'TEST 010 — SECURITY: PASS';
 
 ROLLBACK;
