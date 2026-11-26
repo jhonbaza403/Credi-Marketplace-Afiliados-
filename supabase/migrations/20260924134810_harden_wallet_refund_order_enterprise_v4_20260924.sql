@@ -119,14 +119,11 @@ begin
 end
 $$;
 
--- Keep the accounting implementation private and expose only a narrow,
--- SECURITY INVOKER RPC wrapper in the API-exposed public schema.
+-- Keep the accounting implementation private and expose one restricted RPC
+-- entry point. SECURITY DEFINER is required here because the authenticated role
+-- must not receive direct EXECUTE on private.wallet_refund_order.
 REVOKE ALL ON FUNCTION private.wallet_refund_order(uuid,numeric,text,text)
   FROM PUBLIC, anon, authenticated;
-
-GRANT USAGE ON SCHEMA private TO authenticated;
-GRANT EXECUTE ON FUNCTION private.wallet_refund_order(uuid,numeric,text,text)
-  TO authenticated;
 
 CREATE OR REPLACE FUNCTION public.wallet_refund_order(
   p_order_id uuid,
@@ -135,7 +132,7 @@ CREATE OR REPLACE FUNCTION public.wallet_refund_order(
   p_idempotency_key text
 ) RETURNS jsonb
 LANGUAGE sql
-SECURITY INVOKER
+SECURITY DEFINER
 SET search_path = ''
 AS $function$
   SELECT private.wallet_refund_order(
