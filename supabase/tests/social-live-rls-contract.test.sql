@@ -1,5 +1,5 @@
 BEGIN;
-SELECT plan(20);
+SELECT plan(22);
 
 SELECT ok(
   NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='feed_posts' AND policyname='feed_posts_select_public_or_own'),
@@ -101,6 +101,21 @@ SELECT ok(
   NOT has_table_privilege('anon','public.settlement_payout_audit','SELECT')
   AND NOT has_table_privilege('authenticated','public.settlement_payout_audit','SELECT'),
   'settlement payout audit is not client-readable'
+);
+
+SELECT ok(
+  NOT has_table_privilege('anon','public.social_accounts','SELECT')
+  AND NOT has_table_privilege('anon','public.social_accounts','INSERT')
+  AND NOT has_table_privilege('anon','public.social_accounts','UPDATE')
+  AND NOT has_table_privilege('anon','public.social_accounts','DELETE'),
+  'anonymous users have no direct privileges on connected social accounts'
+);
+SELECT ok(
+  NOT has_table_privilege('anon','public.social_publications','SELECT')
+  AND NOT has_table_privilege('anon','public.social_publications','INSERT')
+  AND NOT has_table_privilege('anon','public.social_publications','UPDATE')
+  AND NOT has_table_privilege('anon','public.social_publications','DELETE'),
+  'anonymous users have no direct privileges on social publication records'
 );
 
 SELECT * FROM finish();
