@@ -28,7 +28,6 @@ TO anon, authenticated
 USING (
   (visibility = 'public' AND status = 'published' AND moderation_status = 'approved')
   OR owner_id = (SELECT auth.uid())
-  OR (SELECT is_admin())
 );
 
 DROP POLICY IF EXISTS reels_select_visible_or_own ON public.reels;
@@ -39,7 +38,6 @@ TO anon, authenticated
 USING (
   (visibility = 'public' AND status = 'published' AND moderation_status = 'approved')
   OR owner_id = (SELECT auth.uid())
-  OR (SELECT is_admin())
 );
 
 DROP POLICY IF EXISTS stories_select_public_or_own ON public.stories;
@@ -50,7 +48,6 @@ TO anon, authenticated
 USING (
   (visibility = 'public' AND moderation_status = 'approved' AND expires_at > now())
   OR owner_id = (SELECT auth.uid())
-  OR (SELECT is_admin())
 );
 
 DROP POLICY IF EXISTS advertisements_admin_select ON public.advertisements;
