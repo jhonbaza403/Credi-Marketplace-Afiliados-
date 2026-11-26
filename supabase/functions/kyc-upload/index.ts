@@ -114,14 +114,14 @@ Deno.serve(async (request) => {
     }
 
     const { data: bucket, error: bucketError } = await supabase.storage.getBucket(BUCKET)
+    const allowedMimeTypes = Array.isArray(bucket?.allowed_mime_types) ? bucket.allowed_mime_types : []
     if (
       bucketError ||
       !bucket ||
       bucket.public !== false ||
       bucket.file_size_limit !== KYC_MAX_BYTES ||
-      !Array.isArray(bucket.allowed_mime_types) ||
-      bucket.allowed_mime_types.length !== 4 ||
-      !['image/jpeg', 'image/png', 'image/webp', 'application/pdf'].every((mime) => bucket.allowed_mime_types.includes(mime))
+      allowedMimeTypes.length !== 4 ||
+      !['image/jpeg', 'image/png', 'image/webp', 'application/pdf'].every((mime) => allowedMimeTypes.includes(mime))
     ) {
       console.error('[kyc-upload] private bucket unavailable or public', bucketError?.message ?? 'bucket not private')
       return json({ error: 'PRIVATE_BUCKET_UNAVAILABLE' }, 503, origin)
