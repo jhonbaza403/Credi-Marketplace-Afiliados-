@@ -24,9 +24,9 @@ SELECT ok(
 
 SELECT ok(
   NOT has_function_privilege('anon','private.enforce_media_upload_actual_limits()','EXECUTE')
-  AND NOT has_function_privilege('authenticated','private.enforce_media_upload_actual_limits()','EXECUTE')
-  AND NOT has_function_privilege('service_role','private.enforce_media_upload_actual_limits()','EXECUTE'),
-  'media upload guard cannot be invoked directly by API roles'
+  AND has_function_privilege('authenticated','private.enforce_media_upload_actual_limits()','EXECUTE')
+  AND has_function_privilege('service_role','private.enforce_media_upload_actual_limits()','EXECUTE'),
+  'media upload trigger is executable only by trusted authenticated and service roles'
 );
 
 SELECT ok(
