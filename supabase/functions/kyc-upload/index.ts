@@ -1,11 +1,4 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2'
-import {
-  isAllowedKycDocumentType,
-  isAllowedKycMimeType,
-  isValidKycFileSize,
-  sanitizeKycFileName,
-} from '../_shared/kyc-upload-policy.ts'
-
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!
 const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const supabase = createClient(supabaseUrl, serviceRoleKey, {
@@ -13,6 +6,35 @@ const supabase = createClient(supabaseUrl, serviceRoleKey, {
 })
 
 const BUCKET = 'kyc-documents'
+
+const KYC_MAX_BYTES = 10 * 1024 * 1024
+const KYC_DOCUMENT_TYPES = new Set([
+  'id_front', 'id_back', 'profile_photo', 'left_photo', 'right_photo',
+])
+const KYC_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp'])
+const KYC_PDF_TYPES = new Set(['id_front', 'id_back'])
+
+function isAllowedKycDocumentType(value: string) {
+  return KYC_DOCUMENT_TYPES.has(value)
+}
+function isAllowedKycMimeType(documentType: string, contentType: string) {
+  if (!isAllowedKycDocumentType(documentType)) return false
+  if (KYC_IMAGE_TYPES.has(contentType)) return true
+  return KYC_PDF_TYPES.has(documentType) && contentType === 'application/pdf'
+}
+function isValidKycFileSize(size: number) {
+  return Number.isSafeInteger(size) && size > 0 && size <= KYC_MAX_BYTES
+}
+function sanitizeKycFileName(fileName: string) {
+  const sanitized = fileName.toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/\.{2,}/g, '-')
+    .replace(/^[.-]+|[.-]+$/g, '')
+    .slice(-100)
+    .replace(/^[.-]+|[.-]+$/g, '')
+  return sanitized || 'document'
+}
 
 const HEADERS: Record<string, string> = {
   'content-type': 'application/json; charset=utf-8',
@@ -92,7 +114,15 @@ Deno.serve(async (request) => {
     }
 
     const { data: bucket, error: bucketError } = await supabase.storage.getBucket(BUCKET)
-    if (bucketError || !bucket || bucket.public !== false) {
+    if (
+      bucketError ||
+      !bucket ||
+      bucket.public !== false ||
+      bucket.file_size_limit !== KYC_MAX_BYTES ||
+      !Array.isArray(bucket.allowed_mime_types) ||
+      bucket.allowed_mime_types.length !== 4 ||
+      !['image/jpeg', 'image/png', 'image/webp', 'application/pdf'].every((mime) => bucket.allowed_mime_types.includes(mime))
+    ) {
       console.error('[kyc-upload] private bucket unavailable or public', bucketError?.message ?? 'bucket not private')
       return json({ error: 'PRIVATE_BUCKET_UNAVAILABLE' }, 503, origin)
     }
