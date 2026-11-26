@@ -33,3 +33,14 @@ jobs:
         uses: github/codeql-action/analyze@v4
         with:
           category: "/language:${{ matrix.language }}"
+      - name: Summarize SARIF findings and data flows
+        if: always()
+        run: node scripts/inspect-codeql-sarif.mjs results/javascript.sarif
+      - name: Archive SARIF for auditable review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: codeql-sarif-${{ matrix.language }}
+          path: results/javascript.sarif
+          if-no-files-found: warn
+          retention-days: 7
