@@ -554,3 +554,55 @@ CREATE POLICY chat_live_products_host_update_delete
         AND s.is_active = true
     )
   );
+
+
+-- Match the Production Credi Chat profile policy: resolve conversation members
+-- through the private helper, not the API-exposed compatibility function.
+REVOKE ALL ON FUNCTION public.credichat_member_profile_ids(uuid[])
+  FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.credichat_member_profile_ids(uuid[])
+  TO service_role;
+
+REVOKE ALL ON FUNCTION private.credichat_member_profile_ids(uuid[])
+  FROM PUBLIC, anon, authenticated, service_role;
+GRANT EXECUTE ON FUNCTION private.credichat_member_profile_ids(uuid[])
+  TO authenticated;
+
+DROP POLICY IF EXISTS profiles_select_credichat_members ON public.profiles;
+CREATE POLICY profiles_select_credichat_members
+  ON public.profiles
+  FOR SELECT TO authenticated
+  USING (
+    id = (SELECT auth.uid())
+    OR id IN (
+      SELECT private.credichat_member_profile_ids(
+        ARRAY(
+          SELECT cm.conversation_id
+          FROM public.conversation_members cm
+          WHERE cm.user_id = (SELECT auth.uid())
+        )
+      )
+    )
+  );
+
+-- These four RPCs are user-scoped. Their bodies already constrain writes to
+-- auth.uid() or verify call participation; use SECURITY INVOKER like Production.
+ALTER FUNCTION public.credichat_mark_call_seen(uuid) SECURITY INVOKER;
+ALTER FUNCTION public.credichat_mark_call_seen(uuid) SET search_path = '';
+REVOKE ALL ON FUNCTION public.credichat_mark_call_seen(uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.credichat_mark_call_seen(uuid) TO authenticated, service_role;
+
+ALTER FUNCTION public.credichat_record_call_status(uuid,text,text) SECURITY INVOKER;
+ALTER FUNCTION public.credichat_record_call_status(uuid,text,text) SET search_path = '';
+REVOKE ALL ON FUNCTION public.credichat_record_call_status(uuid,text,text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.credichat_record_call_status(uuid,text,text) TO authenticated, service_role;
+
+ALTER FUNCTION public.ensure_my_credi_pin() SECURITY INVOKER;
+ALTER FUNCTION public.ensure_my_credi_pin() SET search_path = '';
+REVOKE ALL ON FUNCTION public.ensure_my_credi_pin() FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.ensure_my_credi_pin() TO authenticated, service_role;
+
+ALTER FUNCTION public.set_my_credi_phone(text) SECURITY INVOKER;
+ALTER FUNCTION public.set_my_credi_phone(text) SET search_path = '';
+REVOKE ALL ON FUNCTION public.set_my_credi_phone(text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.set_my_credi_phone(text) TO authenticated, service_role;
