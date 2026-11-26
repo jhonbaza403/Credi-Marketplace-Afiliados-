@@ -85,7 +85,7 @@ export default function LivePage(){
 
     let active = true
     let attempts = 0
-    let timer: ReturnType<typeof window.setTimeout> | undefined
+    let timer: number | undefined
 
     const syncReplay = async () => {
       if (!active || attempts >= 8) return
