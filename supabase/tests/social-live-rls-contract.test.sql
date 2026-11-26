@@ -1,5 +1,19 @@
 BEGIN;
-SELECT plan(22);
+SELECT plan(25);
+
+SELECT ok(
+  NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='advertisements' AND policyname='advertisements_select_active_or_own'),
+  'weak unmoderated advertisement public policy is absent'
+);
+SELECT ok(
+  EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='advertisements' AND policyname='advertisements_select_visible_or_own' AND qual LIKE '%moderation_status%' AND qual LIKE '%approved%'),
+  'public advertisements require moderation approval'
+);
+SELECT ok(
+  EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='advertisements' AND policyname='advertisements_owner_write' AND cmd='ALL')
+  AND NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='advertisements' AND policyname IN ('advertisements_owner_delete','advertisements_owner_insert','advertisements_owner_update')),
+  'advertisement owner operations use one consolidated policy'
+);
 
 SELECT ok(
   NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='feed_posts' AND policyname='feed_posts_select_public_or_own'),
