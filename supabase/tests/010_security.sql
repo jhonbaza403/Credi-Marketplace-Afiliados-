@@ -133,8 +133,8 @@ BEGIN
         RAISE EXCEPTION 'WALLET REFUND RPC CONTRACT: private accounting implementation must remain SECURITY DEFINER';
     END IF;
 
-    IF v_public_definer IS DISTINCT FROM false THEN
-        RAISE EXCEPTION 'WALLET REFUND RPC CONTRACT: public wrapper must remain SECURITY INVOKER';
+    IF v_public_definer IS DISTINCT FROM true THEN
+        RAISE EXCEPTION 'WALLET REFUND RPC CONTRACT: public wrapper must be SECURITY DEFINER';
     END IF;
 
     IF has_function_privilege('anon', v_private_oid, 'EXECUTE')
@@ -142,13 +142,21 @@ BEGIN
         RAISE EXCEPTION 'WALLET REFUND RPC CONTRACT: anon must not execute refund functions';
     END IF;
 
-    IF NOT has_function_privilege('authenticated', v_private_oid, 'EXECUTE')
+    IF has_function_privilege('authenticated', v_private_oid, 'EXECUTE')
        OR NOT has_function_privilege('authenticated', v_public_oid, 'EXECUTE') THEN
-        RAISE EXCEPTION 'WALLET REFUND RPC CONTRACT: authenticated execution grants are incomplete';
+        RAISE EXCEPTION 'WALLET REFUND RPC CONTRACT: only the public wrapper may be executed by authenticated';
     END IF;
 
     IF has_schema_privilege('anon', 'private', 'USAGE') THEN
         RAISE EXCEPTION 'WALLET REFUND RPC CONTRACT: anon must not have private schema usage';
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_proc
+        WHERE oid = v_public_oid
+          AND coalesce(array_to_string(proconfig, ','), '') LIKE '%search_path=%'
+    ) THEN
+        RAISE EXCEPTION 'WALLET REFUND RPC CONTRACT: public wrapper search_path must be pinned';
     END IF;
 END
 $;
