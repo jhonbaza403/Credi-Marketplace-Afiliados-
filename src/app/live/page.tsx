@@ -30,16 +30,24 @@ export default function LivePage(){
   const [transport,setTransport]=useState<{inputId:string;rtmps:{url:string}|null;playback:{hls?:string;dash?:string}|null;webRTC:{url:string}|null;status?:string|null;enabled?:boolean}|null>(null)
   const [transportBusy,setTransportBusy]=useState(false)
   const supabase=useMemo(()=>createClient(),[])
-  const playerUrl=cloudflarePlayerUrl(transport?.playback?.hls||selected?.playback_url)
+  const playerUrl=cloudflarePlayerUrl(
+    selected?.status === 'ended'
+      ? selected.replay_url || selected.playback_url
+      : transport?.playback?.hls || selected?.playback_url
+  )
 
   async function load(){
     const response=await fetch('/api/live',{cache:'no-store'})
     if(response.status===401){window.location.assign('/login?next=%2Flive');return}
     const data=await response.json().catch(()=>({}))
     if(!response.ok)throw new Error(data.error||'No fue posible cargar Credi LIVE.')
-    setRooms(data.rooms||[])
-    setDiscovery(data.discovery||[])
-    setSelected((current)=>current||data.rooms?.[0]||null)
+    const nextRooms = (data.rooms || []) as Room[]
+    setRooms(nextRooms)
+    setDiscovery(data.discovery || [])
+    setSelected((current) => {
+      if (!current) return nextRooms[0] || null
+      return nextRooms.find((room) => room.id === current.id) || current
+    })
   }
 
   async function loadTransport(roomId:string){
@@ -72,6 +80,44 @@ export default function LivePage(){
     return()=>{active=false;void supabase.removeChannel(channel)}
   },[supabase,selected?.id])
   useEffect(()=>{if(selected){void loadProducts(selected.id);void loadTransport(selected.id)}},[selected?.id])
+  useEffect(() => {
+    if (!selected || selected.status !== 'ended' || selected.replay_url || selected.stream_provider !== 'cloudflare_stream') return
+
+    let active = true
+    let attempts = 0
+    let timer: ReturnType<typeof window.setTimeout> | undefined
+
+    const syncReplay = async () => {
+      if (!active || attempts >= 8) return
+      attempts += 1
+      try {
+        const response = await fetch('/api/live/replay-sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ roomId: selected.id }),
+          cache: 'no-store',
+        })
+        const data = await response.json().catch(() => ({})) as { status?: string; replay_url?: string; error?: string }
+        if (response.ok && data.status === 'ready' && data.replay_url) {
+          setSelected((current) => current?.id === selected.id ? { ...current, replay_url: data.replay_url! } : current)
+          setRooms((current) => current.map((room) => room.id === selected.id ? { ...room, replay_url: data.replay_url! } : room))
+          return
+        }
+        if (!response.ok && response.status >= 500) {
+          setMessage(data.error || 'La repetición sigue procesándose; Credi volverá a comprobarla.')
+        }
+      } catch {
+        // Retry a transient network/provider error; never mark the replay ready locally.
+      }
+      if (active && attempts < 8) timer = window.setTimeout(() => void syncReplay(), 15_000)
+    }
+
+    void syncReplay()
+    return () => {
+      active = false
+      if (timer) window.clearTimeout(timer)
+    }
+  }, [selected?.id, selected?.status, selected?.replay_url, selected?.stream_provider])
 
   async function preflight(){
     if(cameraOn){
