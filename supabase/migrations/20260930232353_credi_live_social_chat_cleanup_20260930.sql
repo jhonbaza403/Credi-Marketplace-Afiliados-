@@ -1,3 +1,4 @@
-drop index if exists public.idx_chat_live_messages_room_created;
-drop index if exists public.idx_chat_live_reactions_room_created;
-drop policy if exists chat_live_reactions_select_live on public.chat_live_reactions;
+-- The message/reaction indexes are transitional and may not yet exist.
+-- The reactions table/policy is installed later by the LIVE commerce schema migration.
+DROP INDEX IF EXISTS public.idx_chat_live_messages_room_created;
+DROP INDEX IF EXISTS public.idx_chat_live_reactions_room_created;
