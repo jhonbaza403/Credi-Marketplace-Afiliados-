@@ -4,6 +4,17 @@ export type ChatUploadKind = 'image' | 'video' | 'audio' | 'document' | 'file'
 
 const IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
 const VIDEO_TYPES = new Set(['video/mp4', 'video/webm', 'video/quicktime'])
+const DOCUMENT_TYPES = new Set([
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.ms-powerpoint',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  'text/plain',
+  'text/csv',
+])
 const AUDIO_TYPES = new Set([
   'audio/aac',
   'audio/flac',
@@ -26,7 +37,7 @@ function kindFor(file: File): ChatUploadKind {
   if (file.type.startsWith('image/')) return 'image'
   if (file.type.startsWith('video/')) return 'video'
   if (file.type.startsWith('audio/')) return 'audio'
-  if (file.type === 'application/pdf' || file.type.includes('document') || file.type.includes('spreadsheet') || file.type.includes('presentation')) return 'document'
+  if (DOCUMENT_TYPES.has(file.type)) return 'document'
   return 'file'
 }
 
@@ -34,6 +45,8 @@ function validate(file: File, kind: ChatUploadKind) {
   if (kind === 'image' && !IMAGE_TYPES.has(file.type)) throw new Error('Formato de imagen no compatible.')
   if (kind === 'video' && !VIDEO_TYPES.has(file.type)) throw new Error('Formato de vídeo no compatible.')
   if (kind === 'audio' && !AUDIO_TYPES.has(file.type)) throw new Error(`Formato de audio no compatible: ${file.type || 'desconocido'}.`)
+  if (kind === 'document' && !DOCUMENT_TYPES.has(file.type)) throw new Error('Formato de documento no compatible. Usa PDF, DOC/DOCX, XLS/XLSX, PPT/PPTX, TXT o CSV.')
+  if (kind === 'file') throw new Error('Tipo de archivo no permitido. Usa imágenes, vídeo, audio o documentos admitidos.')
   const max = kind === 'image' ? MAX_IMAGE : kind === 'video' ? MAX_VIDEO : kind === 'audio' ? MAX_AUDIO : MAX_FILE
   if (file.size > max) throw new Error(`El archivo supera el máximo permitido de ${Math.round(max / 1024 / 1024)} MB.`)
 }
