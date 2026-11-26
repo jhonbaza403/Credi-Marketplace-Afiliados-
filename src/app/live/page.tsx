@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { BarChart3, CalendarClock, Camera, CircleStop, Eye, Heart, KeyRound, MessageCircle, Package, Radio, ShieldCheck, Sparkles, Users, Video } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
@@ -9,10 +10,12 @@ import { CrediLiveChat } from '@/components/live/CrediLiveChat'
 import { LiveKitStudio } from '@/components/live/LiveKitStudio'
 import { cloudflarePlayerUrl } from '@/lib/live/cloudflare-player'
 
-type Room={id:string;host_user_id:string;title:string;status:string;viewer_count:number;started_at:string|null;ended_at?:string|null;description:string;cover_media:unknown;scheduled_at:string|null;replay_url:string|null;playback_url:string|null;stream_provider:string;viewer_peak:number;likes_count:number;shares_count:number;settings:Record<string,unknown>}
+type Room={id:string;host_user_id:string;conversation_id?:string|null;title:string;status:string;viewer_count:number;started_at:string|null;ended_at?:string|null;description:string;cover_media:unknown;scheduled_at:string|null;replay_url:string|null;playback_url:string|null;stream_provider:string;viewer_peak:number;likes_count:number;shares_count:number;settings:Record<string,unknown>}
 type Product={room_id:string;product_id:string;position:number;is_pinned:boolean;pinned_at:string|null;products?:{id:string;title:string;price:number;image_url:string|null}|null}
 
 export default function LivePage(){
+  const searchParams = useSearchParams()
+  const conversationId = searchParams.get('conversation')
   const [rooms,setRooms]=useState<Room[]>([])
   const [discovery,setDiscovery]=useState<Room[]>([])
   const [title,setTitle]=useState('Nueva sesión Credi LIVE')
@@ -147,7 +150,7 @@ export default function LivePage(){
     setBusy(true);setMessage('')
     try{
       const response=await fetch('/api/live',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
-        title,description,scheduledAt:scheduledAt?new Date(scheduledAt).toISOString():null,coverMedia:[]
+        title,description,scheduledAt:scheduledAt?new Date(scheduledAt).toISOString():null,coverMedia:[],conversationId
       })})
       const data=await response.json().catch(()=>({}))
       if(data.transport)setTransport(data.transport)
