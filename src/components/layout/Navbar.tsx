@@ -31,7 +31,7 @@ const DOMAIN_ICONS = {
   home: Store, wall: Users, marketplace: ShoppingBag, sell: Sparkles, b2b: Building2,
   services: BadgeCheck, free: Sparkles, chat: MessageCircle, live: Radio, marketing: TrendingUp,
   content: Sparkles, analytics: BarChart3, video_catalog: Play, stories: Camera, verified_suppliers: BadgeCheck,
-  b2b_ops: Building2, affiliate: TrendingUp, wallet: Wallet, business: Building2,
+  b2b_operations: Building2, affiliate: TrendingUp, wallet: Wallet, business: Building2,
   intelligence: Sparkles, commerce_studio: Store, inventory: Store, negotiations: Building2,
   payments: Wallet, escrow: ShieldCheck, security: ShieldCheck, videos: Play,
 } as const;
@@ -42,7 +42,7 @@ const PRIMARY_LINKS = PRIMARY_DOMAINS.map((domain) => ({
 }));
 
 const COMMUNITY_KEYS = new Set(["chat", "live", "stories", "videos"]);
-const COMMERCE_KEYS = new Set(["marketplace", "b2b", "b2b_ops", "services", "content", "affiliate", "video_catalog", "verified_suppliers"]);
+const COMMERCE_KEYS = new Set(["marketplace", "b2b", "b2b_operations", "services", "content", "affiliate", "video_catalog", "verified_suppliers"]);
 const SECTION_DETAILS = {
   community: { title: "Comunidad", description: "Conecta y comparte" },
   commerce: { title: "Comercio", description: "Descubre y vende" },
