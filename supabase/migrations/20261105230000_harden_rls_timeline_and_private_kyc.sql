@@ -464,3 +464,93 @@ begin
   end if;
 end;
 $$;
+
+
+-- Reconcile known Production/Preview policy differences without broad grants.
+DROP POLICY IF EXISTS advertisements_owner_write ON public.advertisements;
+DROP POLICY IF EXISTS feed_posts_owner_write ON public.feed_posts;
+DROP POLICY IF EXISTS reels_owner_write ON public.reels;
+DROP POLICY IF EXISTS stories_owner_write ON public.stories;
+
+-- Public stories must be approved by moderation before they are readable.
+DROP POLICY IF EXISTS stories_select_public_or_own ON public.stories;
+CREATE POLICY stories_select_public_or_own
+  ON public.stories FOR SELECT TO anon, authenticated
+  USING (
+    (visibility = 'public' AND moderation_status = 'approved' AND expires_at > now())
+    OR owner_id = (SELECT auth.uid())
+    OR (SELECT public.is_admin())
+  );
+
+DROP POLICY IF EXISTS affiliate_clicks_select_own ON public.affiliate_clicks;
+CREATE POLICY affiliate_clicks_select_own
+  ON public.affiliate_clicks FOR SELECT TO authenticated
+  USING (user_id = (SELECT auth.uid()) OR (SELECT public.is_admin()));
+
+DROP POLICY IF EXISTS b2b_crypto_payment_select_own ON public.b2b_crypto_payment_intents;
+CREATE POLICY b2b_crypto_payment_select_own
+  ON public.b2b_crypto_payment_intents FOR SELECT TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.orders o
+      WHERE o.id = b2b_crypto_payment_intents.order_id
+        AND (o.buyer_id = (SELECT auth.uid()) OR (SELECT public.is_admin()))
+    )
+  );
+
+DROP POLICY IF EXISTS tax_collections_deny_clients ON public.tax_collections;
+CREATE POLICY tax_collections_deny_clients
+  ON public.tax_collections AS RESTRICTIVE
+  FOR ALL TO anon, authenticated
+  USING (false)
+  WITH CHECK (false);
+
+-- LIVE hosts may attach only available products from their own active store.
+DROP POLICY IF EXISTS chat_live_products_host_write ON public.chat_live_products;
+CREATE POLICY chat_live_products_host_write
+  ON public.chat_live_products FOR INSERT TO authenticated
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.chat_live_rooms r
+      WHERE r.id = chat_live_products.room_id
+        AND r.host_user_id = (SELECT auth.uid())
+    )
+    AND EXISTS (
+      SELECT 1
+      FROM public.products p
+      JOIN public.stores s ON s.id = p.store_id
+      WHERE p.id = chat_live_products.product_id
+        AND p.is_active = true
+        AND p.stock > 0
+        AND s.vendor_id = (SELECT auth.uid())
+        AND s.is_active = true
+    )
+  );
+
+DROP POLICY IF EXISTS chat_live_products_host_update_delete ON public.chat_live_products;
+CREATE POLICY chat_live_products_host_update_delete
+  ON public.chat_live_products FOR UPDATE TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.chat_live_rooms r
+      WHERE r.id = chat_live_products.room_id
+        AND r.host_user_id = (SELECT auth.uid())
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.chat_live_rooms r
+      WHERE r.id = chat_live_products.room_id
+        AND r.host_user_id = (SELECT auth.uid())
+    )
+    AND EXISTS (
+      SELECT 1
+      FROM public.products p
+      JOIN public.stores s ON s.id = p.store_id
+      WHERE p.id = chat_live_products.product_id
+        AND p.is_active = true
+        AND p.stock > 0
+        AND s.vendor_id = (SELECT auth.uid())
+        AND s.is_active = true
+    )
+  );
