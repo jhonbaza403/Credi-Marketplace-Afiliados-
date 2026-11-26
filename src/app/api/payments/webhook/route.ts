@@ -186,7 +186,7 @@ export async function POST(request: Request) {
       const orderId = session?.metadata?.order_id
       const userId = session?.metadata?.user_id
 
-      if (event.type === 'checkout.session.completed') {
+      if (event.type === 'checkout.session.completed' || event.type === 'checkout.session.async_payment_succeeded') {
         if (!session?.id || !orderId || !userId || session.payment_status !== 'paid') {
           throw new Error('checkout_session_not_payable')
         }
