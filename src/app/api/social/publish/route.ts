@@ -3,6 +3,7 @@ import { z } from 'zod'
 
 import { createClient } from '@/lib/supabase/server'
 import { isSameOrigin } from '@/lib/security/csrf'
+import { validateSocialMediaLimit } from '@/lib/social/publishing-limits'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -84,6 +85,11 @@ export async function POST(request: Request) {
     }
 
     const payload = parsed.data
+    const mediaLimit = validateSocialMediaLimit(payload.type, payload.media)
+    if (!mediaLimit.ok) {
+      return jsonError(mediaLimit.message, 400, mediaLimit.code, requestId)
+    }
+
     const operationContext = {
       product_id: payload.operationContext.productId || null,
       catalog_id: payload.operationContext.catalogId || null,
