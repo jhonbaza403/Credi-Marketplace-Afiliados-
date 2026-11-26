@@ -115,7 +115,7 @@ $$;
 -- WALLET REFUND RPC CONTRACT
 -- ============================================================
 
-DO $
+DO $$
 DECLARE
     v_private_oid oid := to_regprocedure('private.wallet_refund_order(uuid,numeric,text,text)');
     v_public_oid oid := to_regprocedure('public.wallet_refund_order(uuid,numeric,text,text)');
@@ -129,12 +129,8 @@ BEGIN
     SELECT prosecdef INTO v_private_definer FROM pg_proc WHERE oid = v_private_oid;
     SELECT prosecdef INTO v_public_definer FROM pg_proc WHERE oid = v_public_oid;
 
-    IF v_private_definer IS DISTINCT FROM true THEN
-        RAISE EXCEPTION 'WALLET REFUND RPC CONTRACT: private accounting implementation must remain SECURITY DEFINER';
-    END IF;
-
-    IF v_public_definer IS DISTINCT FROM true THEN
-        RAISE EXCEPTION 'WALLET REFUND RPC CONTRACT: public wrapper must be SECURITY DEFINER';
+    IF v_private_definer IS DISTINCT FROM true OR v_public_definer IS DISTINCT FROM true THEN
+        RAISE EXCEPTION 'WALLET REFUND RPC CONTRACT: private implementation and public wrapper must be SECURITY DEFINER';
     END IF;
 
     IF has_function_privilege('anon', v_private_oid, 'EXECUTE')
@@ -159,7 +155,63 @@ BEGIN
         RAISE EXCEPTION 'WALLET REFUND RPC CONTRACT: public wrapper search_path must be pinned';
     END IF;
 END
-$;
+$$;
+
+-- PRODUCTION / PREVIEW POLICY PARITY CONTRACT
+DO $$
+DECLARE
+  v_qual text;
+  v_check text;
+BEGIN
+  SELECT qual INTO v_qual FROM pg_policies
+  WHERE schemaname='public' AND tablename='stories'
+    AND policyname='stories_select_public_or_own';
+  IF v_qual IS NULL OR position('moderation_status' in v_qual)=0
+     OR position('approved' in v_qual)=0 THEN
+    RAISE EXCEPTION 'RLS CONTRACT: public stories must require approved moderation';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname='public'
+      AND policyname IN ('advertisements_owner_write','feed_posts_owner_write','reels_owner_write','stories_owner_write')
+  ) THEN
+    RAISE EXCEPTION 'RLS CONTRACT: redundant owner_write ALL policies remain';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname='public' AND tablename='tax_collections'
+      AND policyname='tax_collections_deny_clients'
+      AND permissive='RESTRICTIVE' AND qual='false' AND with_check='false'
+  ) THEN
+    RAISE EXCEPTION 'RLS CONTRACT: tax_collections client access must be denied restrictively';
+  END IF;
+
+  SELECT with_check INTO v_check FROM pg_policies
+  WHERE schemaname='public' AND tablename='chat_live_products'
+    AND policyname='chat_live_products_host_write';
+  IF v_check IS NULL OR position('stock' in v_check)=0 OR position('vendor_id' in v_check)=0 THEN
+    RAISE EXCEPTION 'RLS CONTRACT: LIVE products must be active/in-stock and owned by host store';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname='public' AND tablename='affiliate_clicks'
+      AND policyname='affiliate_clicks_select_own' AND position('is_admin' in qual)>0
+  ) THEN
+    RAISE EXCEPTION 'RLS CONTRACT: affiliate click admin read parity is missing';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname='public' AND tablename='b2b_crypto_payment_intents'
+      AND policyname='b2b_crypto_payment_select_own' AND position('is_admin' in qual)>0
+  ) THEN
+    RAISE EXCEPTION 'RLS CONTRACT: B2B payment admin read parity is missing';
+  END IF;
+END
+$$;
 
 RAISE NOTICE 'TEST 010 — SECURITY: PASS';
 
