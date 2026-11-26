@@ -7,9 +7,13 @@ import { usePathname } from "next/navigation";
 import {
   BadgeCheck,
   BarChart3,
+  Bot,
   Building2,
   Camera,
   ChevronDown,
+  Code2,
+  Factory,
+  LayoutGrid,
   MessageCircle,
   MoreHorizontal,
   Radio,
@@ -24,8 +28,9 @@ import {
   X,
   Menu,
   Play,
+  PackageSearch,
 } from "lucide-react";
-import { CAPABILITY_DOMAINS, PORTAL_DOMAINS, PRIMARY_DOMAINS } from "@/config/portal";
+import { PORTAL_DOMAINS, PORTAL_PILLARS, PRIMARY_DOMAINS } from "@/config/portal";
 
 const DOMAIN_ICONS = {
   home: Store, wall: Users, marketplace: ShoppingBag, sell: Sparkles, b2b: Building2,
@@ -34,30 +39,26 @@ const DOMAIN_ICONS = {
   b2b_operations: Building2, affiliate: TrendingUp, wallet: Wallet, business: Building2,
   intelligence: Sparkles, commerce_studio: Store, inventory: Store, negotiations: Building2,
   payments: Wallet, escrow: ShieldCheck, security: ShieldCheck, videos: Play,
+  apps: LayoutGrid, automation: Bot, developer: Code2, procurement: PackageSearch,
+  wholesale: Factory,
 } as const;
 
-const PRIMARY_LINKS = PRIMARY_DOMAINS.map((domain) => ({
-  ...domain,
-  icon: DOMAIN_ICONS[domain.key as keyof typeof DOMAIN_ICONS] ?? Store,
+const PRIMARY_LINKS = PRIMARY_DOMAINS
+  .filter((domain) => domain.key !== "sell")
+  .map((domain) => ({
+    ...domain,
+    icon: DOMAIN_ICONS[domain.key as keyof typeof DOMAIN_ICONS] ?? Store,
+  }));
+
+const SOLUTION_GROUPS = PORTAL_PILLARS.map((pillar) => ({
+  ...pillar,
+  items: PORTAL_DOMAINS
+    .filter((item) => item.pillar === pillar.key)
+    .map((item) => ({
+      ...item,
+      icon: DOMAIN_ICONS[item.key as keyof typeof DOMAIN_ICONS] ?? Store,
+    })),
 }));
-
-const COMMUNITY_KEYS = new Set(["chat", "live", "stories", "videos"]);
-const COMMERCE_KEYS = new Set(["marketplace", "b2b", "b2b_operations", "services", "content", "affiliate", "video_catalog", "verified_suppliers"]);
-const SECTION_DETAILS = {
-  community: { title: "Comunidad", description: "Conecta y comparte" },
-  commerce: { title: "Comercio", description: "Descubre y vende" },
-  business: { title: "Tu negocio", description: "Administra y crece" },
-} as const;
-
-const SOLUTION_GROUPS = [
-  { ...SECTION_DETAILS.community, items: PORTAL_DOMAINS.filter((item) => COMMUNITY_KEYS.has(item.key)) },
-  { ...SECTION_DETAILS.commerce, items: PORTAL_DOMAINS.filter((item) => COMMERCE_KEYS.has(item.key)) },
-  { ...SECTION_DETAILS.business, items: CAPABILITY_DOMAINS.filter((item) => !item.href.startsWith("/dashboard") && !item.roles && !["search", "login", "register", "orders", "admin", "admin_compliance", "create_product", "publish_b2b"].includes(item.key) && !COMMUNITY_KEYS.has(item.key) && !COMMERCE_KEYS.has(item.key)) },
-].map((group) => ({
-  ...group,
-  items: group.items.map((item) => ({ ...item, icon: DOMAIN_ICONS[item.key as keyof typeof DOMAIN_ICONS] ?? Store })),
-}));
-
 function getPortalHref(key: string) {
   return PORTAL_DOMAINS.find((domain) => domain.key === key)?.href ?? "/";
 }
@@ -156,7 +157,7 @@ export default function Navbar() {
           {solutionsOpen && (
             <div
               id="credi-solutions-menu"
-              className="absolute right-0 top-full z-[100] mt-3 grid w-[min(850px,calc(100vw-2rem))] grid-cols-1 gap-4 rounded-3xl border border-slate-200 bg-white p-4 shadow-[0_24px_80px_rgba(0,0,0,.45)] backdrop-blur-2xl sm:grid-cols-3 sm:p-5"
+              className="absolute right-0 top-full z-[100] mt-3 grid w-[min(1100px,calc(100vw-2rem))] grid-cols-1 gap-4 rounded-3xl border border-slate-200 bg-white p-4 shadow-[0_24px_80px_rgba(0,0,0,.45)] backdrop-blur-2xl sm:grid-cols-2 sm:p-5 xl:grid-cols-4"
             >
               {SOLUTION_GROUPS.map((group) => (
                 <section key={group.title} aria-labelledby={"solution-" + group.title.replace(/\s+/g, "-").toLowerCase()}>
