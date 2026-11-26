@@ -37,11 +37,21 @@ test.describe("Credi unified portal", () => {
     const menu = page.locator("#credi-solutions-menu");
     await expect(menu).toBeVisible();
 
+    for (const pillar of [
+      "Social, comunidad y video",
+      "Mensajería y automatización",
+      "Marketplace y social commerce",
+      "Abastecimiento B2B y dropshipping",
+    ]) {
+      await expect(menu.getByRole("heading", { name: pillar, exact: true })).toBeVisible();
+    }
+
     const requiredPaths = [
       "/historias", "/videos", "/chat", "/live", "/marketplace", "/b2b", "/publish",
       "/services", "/affiliate", "/proveedores-verificados", "/catalogo-video",
       "/dashboard/b2b", "/marketing", "/analytics", "/inventario", "/pagos",
-      "/wallet", "/intelligence", "/security",
+      "/wallet", "/intelligence", "/security", "/apps", "/automation",
+      "/developer", "/abastecimiento", "/compras-mayoristas",
     ];
     const actualPaths = await menu.locator("a[href]").evaluateAll((links) =>
       links.map((link) => new URL((link as HTMLAnchorElement).href).pathname),
