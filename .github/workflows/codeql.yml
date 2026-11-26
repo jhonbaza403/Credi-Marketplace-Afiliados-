@@ -30,17 +30,20 @@ jobs:
       - name: Autobuild
         uses: github/codeql-action/autobuild@v4
       - name: Analyze
+        id: analyze
         uses: github/codeql-action/analyze@v4
         with:
           category: "/language:${{ matrix.language }}"
+          output: codeql-results
+          post-processed-sarif-path: codeql-postprocessed
       - name: Summarize SARIF findings and data flows
         if: always()
-        run: node scripts/inspect-codeql-sarif.mjs results/javascript.sarif
+        run: node scripts/inspect-codeql-sarif.mjs codeql-postprocessed
       - name: Archive SARIF for auditable review
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: codeql-sarif-${{ matrix.language }}
-          path: results/javascript.sarif
-          if-no-files-found: warn
+          path: codeql-postprocessed/
+          if-no-files-found: error
           retention-days: 7
