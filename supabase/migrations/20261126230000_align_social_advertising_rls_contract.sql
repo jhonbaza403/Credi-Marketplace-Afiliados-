@@ -17,7 +17,6 @@ USING (
    AND (starts_at IS NULL OR starts_at <= now())
    AND (ends_at IS NULL OR ends_at > now()))
   OR owner_id = (SELECT auth.uid())
-  OR (SELECT is_admin())
 );
 
 -- Public social content is visible only after publication and moderation.
@@ -53,6 +52,30 @@ USING (
   OR owner_id = (SELECT auth.uid())
   OR (SELECT is_admin())
 );
+
+DROP POLICY IF EXISTS advertisements_admin_select ON public.advertisements;
+CREATE POLICY advertisements_admin_select
+ON public.advertisements
+FOR SELECT TO authenticated
+USING ((SELECT is_admin()));
+
+DROP POLICY IF EXISTS feed_posts_admin_select ON public.feed_posts;
+CREATE POLICY feed_posts_admin_select
+ON public.feed_posts
+FOR SELECT TO authenticated
+USING ((SELECT is_admin()));
+
+DROP POLICY IF EXISTS reels_admin_select ON public.reels;
+CREATE POLICY reels_admin_select
+ON public.reels
+FOR SELECT TO authenticated
+USING ((SELECT is_admin()));
+
+DROP POLICY IF EXISTS stories_admin_select ON public.stories;
+CREATE POLICY stories_admin_select
+ON public.stories
+FOR SELECT TO authenticated
+USING ((SELECT is_admin()));
 
 -- One owner/admin write policy per table; the USING and WITH CHECK predicates
 -- preserve the same owner/admin boundary for all write operations.
