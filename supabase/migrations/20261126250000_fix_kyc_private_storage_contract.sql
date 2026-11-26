@@ -121,7 +121,7 @@ CREATE OR REPLACE FUNCTION public.submit_kyc_identity(
 )
 RETURNS uuid
 LANGUAGE sql
-SECURITY INVOKER
+SECURITY DEFINER
 SET search_path = ''
 AS $function$
   SELECT private.submit_kyc_identity($1,$2,$3,$4);
