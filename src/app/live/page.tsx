@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { BarChart3, CalendarClock, Camera, CircleStop, Eye, Heart, KeyRound, MessageCircle, Package, Radio, ShieldCheck, Sparkles, Users, Video } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
@@ -14,8 +13,10 @@ type Room={id:string;host_user_id:string;conversation_id?:string|null;title:stri
 type Product={room_id:string;product_id:string;position:number;is_pinned:boolean;pinned_at:string|null;products?:{id:string;title:string;price:number;image_url:string|null}|null}
 
 export default function LivePage(){
-  const searchParams = useSearchParams()
-  const conversationId = searchParams.get('conversation')
+  const [conversationId,setConversationId]=useState<string|null>(null)
+  useEffect(()=>{
+    setConversationId(new URLSearchParams(window.location.search).get('conversation'))
+  },[])
   const [rooms,setRooms]=useState<Room[]>([])
   const [discovery,setDiscovery]=useState<Room[]>([])
   const [title,setTitle]=useState('Nueva sesión Credi LIVE')
