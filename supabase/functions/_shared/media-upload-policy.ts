@@ -1,4 +1,7 @@
 export const MEDIA_UPLOAD_MAX_BYTES = 524288000;
+export const MEDIA_IMAGE_MAX_BYTES = 20 * 1024 * 1024;
+export const PRIVATE_CHAT_AUDIO_MAX_BYTES = 50 * 1024 * 1024;
+export const PRIVATE_CHAT_DOCUMENT_MAX_BYTES = 100 * 1024 * 1024;
 
 const MARKETPLACE_ALLOWED_MIME_TYPES: readonly string[] = [
   'image/jpeg',
@@ -34,4 +37,16 @@ export function getAllowedMediaUploadMimeTypes(context: string): readonly string
 
 export function isAllowedMediaUploadMimeType(context: string, contentType: string): boolean {
   return getAllowedMediaUploadMimeTypes(context).includes(contentType);
+}
+
+export function getMaxMediaUploadBytes(context: string, contentType: string): number {
+  if (contentType.startsWith('image/')) return MEDIA_IMAGE_MAX_BYTES;
+  if (contentType.startsWith('video/')) return MEDIA_UPLOAD_MAX_BYTES;
+  if (contentType.startsWith('audio/')) {
+    return context === 'credibusiness-chat' ? PRIVATE_CHAT_AUDIO_MAX_BYTES : MEDIA_UPLOAD_MAX_BYTES;
+  }
+  if (context === 'credibusiness-chat' && contentType === 'application/pdf') {
+    return PRIVATE_CHAT_DOCUMENT_MAX_BYTES;
+  }
+  return 0;
 }
