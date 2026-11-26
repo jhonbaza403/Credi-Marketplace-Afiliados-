@@ -8,7 +8,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { Paperclip, Search, Send, Smile, MessageCircle, X, Mic } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import { uploadMarketplaceMedia } from '@/lib/storage/marketplace-media'
+import { uploadCrediBusinessChatMedia } from '@/lib/storage/credibusiness-chat-media'
 import type { ChatConversation, ChatMessage } from '@/types/chat'
 
 type Profile = { id: string; full_name: string | null; email: string | null; avatar_url: string | null; role: string }
@@ -182,11 +182,10 @@ export default function CrediChat() {
     if (!selectedId || !userId) return
     setUploading(true); setError(null)
     try {
-      const media = await uploadMarketplaceMedia(file)
-      const type = media.kind === 'video' ? 'video' : media.kind === 'audio' ? 'audio' : 'image'
-      const { data: message, error: messageError } = await supabase.from('messages').insert({ conversation_id: selectedId, sender_id: userId, message_type: type, metadata: { file_name: media.name, public_url: media.url, storage_path: media.path, mime_type: media.contentType, size_bytes: media.size } }).select('id').single()
+      const media = await uploadCrediBusinessChatMedia(file)
+      const { data: message, error: messageError } = await supabase.from('messages').insert({ conversation_id: selectedId, sender_id: userId, message_type: media.kind, metadata: { file_name: media.name, public_url: media.url, storage_path: media.path, storage_bucket: media.bucket, mime_type: media.contentType, size_bytes: media.size } }).select('id').single()
       if (messageError || !message) throw messageError ?? new Error('No fue posible crear el mensaje multimedia.')
-      const { error: attachmentError } = await supabase.from('message_attachments').insert({ message_id: message.id, storage_path: media.path, public_url: media.url, file_name: media.name, mime_type: media.contentType, size_bytes: media.size })
+      const { error: attachmentError } = await supabase.from('message_attachments').insert({ message_id: message.id, storage_path: media.path, storage_bucket: media.bucket, public_url: media.url, file_name: media.name, mime_type: media.contentType, size_bytes: media.size })
       if (attachmentError) throw attachmentError
     } catch (e) { setError(e instanceof Error ? e.message : 'No fue posible cargar el archivo.') } finally { setUploading(false) }
   }
