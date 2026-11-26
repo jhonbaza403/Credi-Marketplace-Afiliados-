@@ -1,4 +1,4 @@
-DO $
+DO $$
 BEGIN
   -- This trigger function is introduced by a later reconciliation migration.
   -- A clean catalog must not fail while attempting to revoke a function that
@@ -7,4 +7,4 @@ BEGIN
     EXECUTE 'REVOKE ALL ON FUNCTION private.validate_settlement_binding_currency() FROM PUBLIC, anon, authenticated';
   END IF;
 END
-$;
+$$;
