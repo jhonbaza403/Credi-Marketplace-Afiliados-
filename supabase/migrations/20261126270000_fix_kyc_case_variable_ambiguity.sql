@@ -87,7 +87,7 @@ BEGIN
     UPDATE public.kyc_cases
     SET status='submitted',country=upper(trim(p_country)),document_type=p_document_type,
         document_number=trim(p_document_number),submitted_at=now(),updated_at=now(),rejection_reason=null
-    WHERE id=case_id AND user_id=u;
+    WHERE id=v_case_id AND user_id=u;
     DELETE FROM public.kyc_documents WHERE kyc_documents.case_id=v_case_id;
   END IF;
 
@@ -104,7 +104,7 @@ BEGIN
     mime:=lower(coalesce(meta->>'mimetype',meta->>'mime_type',''));
     sz:=(meta->>'size')::bigint;
     INSERT INTO public.kyc_documents(case_id,document_type,storage_path,mime_type,size_bytes)
-    VALUES(case_id,typ,path,mime,sz);
+    VALUES(v_case_id,typ,path,mime,sz);
   END LOOP;
 
   RETURN v_case_id;
