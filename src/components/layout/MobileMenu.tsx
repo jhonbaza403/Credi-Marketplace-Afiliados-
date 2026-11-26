@@ -2,11 +2,18 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
-import { Menu, X, Sparkles, MessageCircle } from 'lucide-react';
-import { CAPABILITY_DOMAINS, PORTAL_DOMAINS, PRIMARY_DOMAINS } from '@/config/portal';
+import { Menu, X, Sparkles, MessageCircle, ChevronDown } from 'lucide-react';
+import { PORTAL_DOMAINS, PORTAL_PILLARS, PRIMARY_DOMAINS } from '@/config/portal';
+
+const PRIMARY_LINKS = PRIMARY_DOMAINS.filter((domain) => domain.key !== 'sell');
+
+const PILLAR_GROUPS = PORTAL_PILLARS.map((pillar) => ({
+  ...pillar,
+  items: PORTAL_DOMAINS.filter((domain) => domain.pillar === pillar.key),
+}));
 
 function getPortalHref(key: string) {
-  return PORTAL_DOMAINS.find((domain) => domain.key === key)?.href ?? "/";
+  return PORTAL_DOMAINS.find((domain) => domain.key === key)?.href ?? '/';
 }
 
 export default function MobileMenu() {
@@ -26,32 +33,60 @@ export default function MobileMenu() {
       </button>
 
       {open && (
-        <div className="absolute left-0 right-0 top-full z-[100] border-t border-white/10 bg-[#07101f]/98 p-4 shadow-2xl backdrop-blur-xl">
+        <div className="absolute left-0 right-0 top-full z-[100] max-h-[calc(100dvh-72px)] overflow-y-auto border-t border-white/10 bg-[#07101f]/98 p-4 pb-6 shadow-2xl backdrop-blur-xl">
           <nav aria-label="Navegación móvil Credi" className="space-y-4">
             <div className="grid grid-cols-2 gap-2">
-              {PRIMARY_DOMAINS.map(({ label, href }) => (
-                <Link key={href} href={href} onClick={close} className="rounded-xl bg-white/5 px-3 py-3 text-sm font-black text-white/90">
+              {PRIMARY_LINKS.map(({ key, label, href }) => (
+                <Link
+                  key={key}
+                  href={href}
+                  onClick={close}
+                  className="rounded-xl bg-white/5 px-3 py-3 text-sm font-black text-white/90"
+                >
                   {label}
                 </Link>
               ))}
             </div>
 
-            <div>
-              <p className="px-1 pb-2 text-[10px] font-black uppercase tracking-[.18em] text-white/50">Capacidades</p>
-              <div className="grid grid-cols-2 gap-2">
-                {CAPABILITY_DOMAINS.filter((domain) => !["search", "login", "register", "orders", "dashboard", "profile", "settings", "affiliate_dashboard", "affiliate_links", "seller_dashboard", "create_product", "publish_b2b", "admin", "admin_compliance"].includes(domain.key)).map(({ label, href }) => (
-                  <Link key={href} href={href} onClick={close} className="rounded-xl bg-white/5 px-3 py-3 text-sm font-semibold text-white/80">
-                    {label}
-                  </Link>
-                ))}
-              </div>
+            <div className="space-y-2">
+              {PILLAR_GROUPS.map((pillar) => (
+                <details key={pillar.key} className="group rounded-2xl border border-white/10 bg-white/5">
+                  <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-black text-white [&::-webkit-details-marker]:hidden">
+                    <span>
+                      {pillar.title}
+                      <span className="mt-1 block text-xs font-normal text-white/55">{pillar.description}</span>
+                    </span>
+                    <ChevronDown className="size-4 shrink-0 transition-transform group-open:rotate-180" />
+                  </summary>
+                  <div className="grid grid-cols-1 gap-1 px-2 pb-2 sm:grid-cols-2">
+                    {pillar.items.map(({ key, label, href }) => (
+                      <Link
+                        key={key}
+                        href={href}
+                        onClick={close}
+                        className="rounded-xl px-3 py-3 text-sm font-semibold text-white/85 transition hover:bg-white/10"
+                      >
+                        {label}
+                      </Link>
+                    ))}
+                  </div>
+                </details>
+              ))}
             </div>
 
             <div className="grid grid-cols-2 gap-2">
-              <Link href={getPortalHref("sell")} onClick={close} className="inline-flex items-center justify-center gap-2 rounded-xl bg-white/10 px-3 py-3 text-sm font-black text-white">
+              <Link
+                href={getPortalHref('sell')}
+                onClick={close}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-white/10 px-3 py-3 text-sm font-black text-white"
+              >
                 <Sparkles className="size-4" /> Publicar
               </Link>
-              <Link href={getPortalHref("chat")} onClick={close} className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand-600 px-3 py-3 text-sm font-black text-white">
+              <Link
+                href={getPortalHref('chat')}
+                onClick={close}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand-600 px-3 py-3 text-sm font-black text-white"
+              >
                 <MessageCircle className="size-4" /> Chat
               </Link>
             </div>
