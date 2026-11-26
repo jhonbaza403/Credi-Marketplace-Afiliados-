@@ -252,7 +252,7 @@ export default function LivePage(){
             <p className="mt-3 text-[10px] text-[var(--muted)]">Las credenciales de distribución se recuperan en el backend y nunca se envían al navegador.</p>
           </section>}
 
-          {selected&&<LiveKitStudio roomId={selected.id}/>}
+          {selected && !['ended','cancelled'].includes(selected.status) && <LiveKitStudio roomId={selected.id}/>}
 
           {selected&&<div className="mt-6 grid gap-3 sm:grid-cols-4">{([
             [Users,selected.viewer_count,'Espectadores'],
