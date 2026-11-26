@@ -1,5 +1,40 @@
 BEGIN;
 
+-- Align the private chat bucket with the MIME types accepted by the shared
+-- upload policy. Additive only: abort if the bucket has unexpected settings.
+DO $bucket$
+DECLARE
+  expected text[] := ARRAY[
+    'image/jpeg','image/png','image/webp','image/gif',
+    'video/mp4','video/webm','video/quicktime',
+    'audio/aac','audio/flac','audio/m4a','audio/mp4','audio/mpeg',
+    'audio/ogg','audio/opus','audio/webm','audio/wav','audio/x-m4a','audio/x-wav',
+    'application/pdf','application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/vnd.ms-powerpoint',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    'text/plain','text/csv'
+  ];
+  current_types text[];
+BEGIN
+  SELECT allowed_mime_types INTO current_types
+  FROM storage.buckets
+  WHERE id='credichat-private' AND public=false AND file_size_limit=524288000
+  FOR UPDATE;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'PRIVATE_CHAT_BUCKET_CONFIGURATION_MISMATCH';
+  END IF;
+  IF NOT (current_types <@ expected) THEN
+    RAISE EXCEPTION 'PRIVATE_CHAT_BUCKET_HAS_UNEXPECTED_MIME_TYPES';
+  END IF;
+  UPDATE storage.buckets
+  SET allowed_mime_types=expected
+  WHERE id='credichat-private';
+END;
+$bucket$;
+
 CREATE OR REPLACE FUNCTION private.enforce_media_upload_actual_limits()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -62,13 +97,6 @@ BEGIN
     EXCEPTION WHEN invalid_text_representation THEN
       RAISE EXCEPTION 'PRIVATE_MEDIA_USER_PATH_INVALID' USING ERRCODE='23514';
     END;
-
-    IF NEW.owner IS NOT NULL AND NEW.owner <> v_user_id THEN
-      RAISE EXCEPTION 'PRIVATE_MEDIA_OWNER_MISMATCH' USING ERRCODE='42501';
-    END IF;
-    IF NEW.owner_id IS NOT NULL AND NEW.owner_id NOT IN (v_user_id::text,'service_role') THEN
-      RAISE EXCEPTION 'PRIVATE_MEDIA_OWNER_MISMATCH' USING ERRCODE='42501';
-    END IF;
 
     -- Serialize uploads per account so concurrent uploads cannot race past
     -- the plan quota. The Storage row is not inserted until this trigger ends.
