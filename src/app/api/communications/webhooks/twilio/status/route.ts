@@ -24,14 +24,18 @@ export async function POST(request: Request) {
     return Response.json({ error: "webhook_not_configured" }, { status: 503, headers: { "Cache-Control": "no-store" } });
   }
 
-  let form: FormData;
-  try { form = await request.formData(); }
-  catch { return Response.json({ error: "invalid_form_data" }, { status: 400 }); }
-
-  const params: Record<string, string[]> = {};
-  for (const [key, value] of form.entries()) {
-    if (typeof value === "string") (params[key] ??= []).push(value);
+  if (!(request.headers.get("content-type") ?? "").toLowerCase().includes("application/x-www-form-urlencoded")) {
+    return Response.json({ error: "form_urlencoded_required" }, { status: 415 });
   }
+  let rawBody: string;
+  try { rawBody = await request.text(); }
+  catch { return Response.json({ error: "invalid_form_data" }, { status: 400 }); }
+  if (Buffer.byteLength(rawBody, "utf8") > 256_000) {
+    return Response.json({ error: "payload_too_large" }, { status: 413 });
+  }
+  const form = new URLSearchParams(rawBody);
+  const params: Record<string, string[]> = {};
+  for (const [key, value] of form.entries()) (params[key] ??= []).push(value);
   if (!validSignature(expectedUrl, params, signature, token)) {
     return Response.json({ error: "invalid_webhook_signature" }, { status: 401, headers: { "Cache-Control": "no-store" } });
   }

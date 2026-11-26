@@ -18,7 +18,7 @@ SELECT ok(NOT has_table_privilege('anon','public.twilio_message_status_events','
 SELECT ok(NOT has_table_privilege('authenticated','public.twilio_message_status_events','SELECT'),'authenticated cannot read SMS status audit');
 SELECT ok(has_table_privilege('service_role','public.communication_webhook_events','INSERT'),'service role can persist Twilio events');
 SELECT ok(has_table_privilege('service_role','public.affiliate_webhook_events','INSERT'),'service role can persist affiliate events');
-SELECT has_index('public','twilio_sms_requests_user_created_idx','SMS requests have a per-user lookup index');
-SELECT has_index('public','twilio_message_status_events_sid_received_idx','SMS status events have a SID/time index');
+SELECT ok(to_regclass('public.twilio_sms_requests_user_created_idx') IS NOT NULL,'SMS requests have a per-user lookup index');
+SELECT ok(to_regclass('public.twilio_message_status_events_sid_received_idx') IS NOT NULL,'SMS status events have a SID/time index');
 SELECT * FROM finish();
 ROLLBACK;

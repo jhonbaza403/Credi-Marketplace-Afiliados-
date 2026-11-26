@@ -98,7 +98,7 @@ describe("external affiliate webhook", () => {
     const stale = String(Math.floor(Date.now() / 1000) - 600);
     const staleResponse = await affiliatePost(new Request("https://example.test/api/affiliate/webhook", {
       method: "POST",
-      headers: { "x-credi-timestamp": stale, "x-credi-event-id": "evt-123456", "x-credi-signature": `sha256=${affiliateSignature(stale, raw, "test-affiliate-secret")}` },
+      headers: { "content-type": "application/json", "x-credi-timestamp": stale, "x-credi-event-id": "evt-123456", "x-credi-signature": `sha256=${affiliateSignature(stale, raw, "test-affiliate-secret")}` },
       body: raw,
     }));
     expect(staleResponse.status).toBe(401);
@@ -106,7 +106,7 @@ describe("external affiliate webhook", () => {
     const timestamp = String(Math.floor(Date.now() / 1000));
     const invalidResponse = await affiliatePost(new Request("https://example.test/api/affiliate/webhook", {
       method: "POST",
-      headers: { "x-credi-timestamp": timestamp, "x-credi-event-id": "evt-123456", "x-credi-signature": "sha256=" + "0".repeat(64) },
+      headers: { "content-type": "application/json", "x-credi-timestamp": timestamp, "x-credi-event-id": "evt-123456", "x-credi-signature": "sha256=" + "0".repeat(64) },
       body: raw,
     }));
     expect(invalidResponse.status).toBe(401);
@@ -119,7 +119,7 @@ describe("external affiliate webhook", () => {
     const signature = "sha256=" + affiliateSignature(timestamp, raw, "test-affiliate-secret");
     const request = () => new Request("https://example.test/api/affiliate/webhook", {
       method: "POST",
-      headers: { "x-credi-timestamp": timestamp, "x-credi-event-id": "evt-123456", "x-credi-signature": signature },
+      headers: { "content-type": "application/json", "x-credi-timestamp": timestamp, "x-credi-event-id": "evt-123456", "x-credi-signature": signature },
       body: raw,
     });
 
