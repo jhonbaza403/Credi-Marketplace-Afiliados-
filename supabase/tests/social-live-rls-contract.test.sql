@@ -1,5 +1,22 @@
 BEGIN;
-SELECT plan(25);
+SELECT plan(29);
+
+SELECT ok(
+  EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='advertisements' AND policyname='advertisements_admin_select' AND roles @> ARRAY['authenticated']),
+  'advertisement moderation access is isolated to authenticated administrators'
+);
+SELECT ok(
+  EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='feed_posts' AND policyname='feed_posts_admin_select' AND roles @> ARRAY['authenticated']),
+  'feed moderation access is isolated to authenticated administrators'
+);
+SELECT ok(
+  EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='reels' AND policyname='reels_admin_select' AND roles @> ARRAY['authenticated']),
+  'reel moderation access is isolated to authenticated administrators'
+);
+SELECT ok(
+  EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='stories' AND policyname='stories_admin_select' AND roles @> ARRAY['authenticated']),
+  'story moderation access is isolated to authenticated administrators'
+);
 
 SELECT ok(
   NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='advertisements' AND policyname='advertisements_select_active_or_own'),
