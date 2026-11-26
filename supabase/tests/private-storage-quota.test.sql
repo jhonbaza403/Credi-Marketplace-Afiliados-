@@ -168,26 +168,26 @@ SELECT throws_ok(
 
 
 SELECT lives_ok(
-  $
+  $$
     INSERT INTO storage.objects (bucket_id, name, metadata)
     VALUES (
       'credichat-private',
       '00000000-0000-0000-0000-000000000009/private-docx-under-limit.docx',
       jsonb_build_object('size', 94371840, 'mimetype', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document')
     )
-  $,
+  $$,
   'private chat accepts DOCX below the 100 MiB per-file limit'
 );
 
 SELECT throws_ok(
-  $
+  $$
     INSERT INTO storage.objects (bucket_id, name, metadata)
     VALUES (
       'credichat-private',
       '00000000-0000-0000-0000-00000000000a/private-docx-over-limit.docx',
       jsonb_build_object('size', 105906176, 'mimetype', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document')
     )
-  $,
+  $$,
   '54000',
   'PRIVATE_MEDIA_FILE_TOO_LARGE',
   'private chat rejects DOCX larger than 100 MiB'
