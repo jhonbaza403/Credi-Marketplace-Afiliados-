@@ -38,6 +38,7 @@ DECLARE
   v_reserved_bytes bigint;
   v_existing private.media_upload_reservations%ROWTYPE;
   v_reservation_id uuid;
+  v_has_existing boolean := false;
 BEGIN
   IF p_user_id IS NULL
      OR p_source_path IS NULL
@@ -96,8 +97,9 @@ BEGIN
   FROM private.media_upload_reservations
   WHERE user_id=p_user_id AND source_path=p_source_path
   FOR UPDATE;
+  v_has_existing := FOUND;
 
-  IF FOUND THEN
+  IF v_has_existing THEN
     IF v_existing.status='completed' THEN
       RETURN v_existing.id;
     END IF;
@@ -154,7 +156,7 @@ BEGIN
     RAISE EXCEPTION 'PLAN_STORAGE_LIMIT_REACHED' USING ERRCODE='23514';
   END IF;
 
-  IF FOUND THEN
+  IF v_has_existing THEN
     UPDATE private.media_upload_reservations
     SET byte_size=v_size,mime_type=v_mime,status='reserved',
         final_path=NULL,created_at=now(),expires_at=now()+interval '30 minutes',
