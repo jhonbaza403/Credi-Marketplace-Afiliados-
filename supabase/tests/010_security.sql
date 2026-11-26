@@ -111,6 +111,48 @@ BEGIN
 END
 $$;
 
+-- ============================================================
+-- WALLET REFUND RPC CONTRACT
+-- ============================================================
+
+DO $
+DECLARE
+    v_private_oid oid := to_regprocedure('private.wallet_refund_order(uuid,numeric,text,text)');
+    v_public_oid oid := to_regprocedure('public.wallet_refund_order(uuid,numeric,text,text)');
+    v_private_definer boolean;
+    v_public_definer boolean;
+BEGIN
+    IF v_private_oid IS NULL OR v_public_oid IS NULL THEN
+        RAISE EXCEPTION 'WALLET REFUND RPC CONTRACT: required private implementation or public wrapper is missing';
+    END IF;
+
+    SELECT prosecdef INTO v_private_definer FROM pg_proc WHERE oid = v_private_oid;
+    SELECT prosecdef INTO v_public_definer FROM pg_proc WHERE oid = v_public_oid;
+
+    IF v_private_definer IS DISTINCT FROM true THEN
+        RAISE EXCEPTION 'WALLET REFUND RPC CONTRACT: private accounting implementation must remain SECURITY DEFINER';
+    END IF;
+
+    IF v_public_definer IS DISTINCT FROM false THEN
+        RAISE EXCEPTION 'WALLET REFUND RPC CONTRACT: public wrapper must remain SECURITY INVOKER';
+    END IF;
+
+    IF has_function_privilege('anon', v_private_oid, 'EXECUTE')
+       OR has_function_privilege('anon', v_public_oid, 'EXECUTE') THEN
+        RAISE EXCEPTION 'WALLET REFUND RPC CONTRACT: anon must not execute refund functions';
+    END IF;
+
+    IF NOT has_function_privilege('authenticated', v_private_oid, 'EXECUTE')
+       OR NOT has_function_privilege('authenticated', v_public_oid, 'EXECUTE') THEN
+        RAISE EXCEPTION 'WALLET REFUND RPC CONTRACT: authenticated execution grants are incomplete';
+    END IF;
+
+    IF has_schema_privilege('anon', 'private', 'USAGE') THEN
+        RAISE EXCEPTION 'WALLET REFUND RPC CONTRACT: anon must not have private schema usage';
+    END IF;
+END
+$;
+
 RAISE NOTICE 'TEST 010 — SECURITY: PASS';
 
 ROLLBACK;
