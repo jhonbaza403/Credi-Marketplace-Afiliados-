@@ -71,15 +71,22 @@ export async function POST(request:Request){
     if(eventType==='live_input.disconnected'){
       updates.status='ended'
       updates.ended_at=payload.data?.updated_at||new Date().toISOString()
+      next.cloudflare_replay_status='processing'
+      next.cloudflare_replay_checked_at=new Date().toISOString()
       try{
         const videos=await listInputVideos(inputId)
         const ready=videos.find(video=>video.readyToStream||video.status?.state==='ready')
         if(ready){
           updates.replay_url=`https://videodelivery.net/${ready.uid}/manifest/video.m3u8`
           next.cloudflare_replay_video_id=ready.uid
+          next.cloudflare_replay_status='ready'
+          next.cloudflare_replay_ready_at=new Date().toISOString()
         }
       }catch(error){
-        console.error('[live:webhook] replay lookup failed',error instanceof Error?error.message:'UNKNOWN')
+        // The room still ends even if the recording has not finished processing.
+        // The authenticated replay-sync endpoint retries until Stream reports ready.
+        next.cloudflare_replay_status='processing'
+        console.error('[live:webhook] replay lookup deferred',error instanceof Error?error.message:'UNKNOWN')
       }
     }
     if(eventType==='live_input.errored')next.cloudflare_last_error=payload.data?.live_input_errored?.error||null
