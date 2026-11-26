@@ -51,6 +51,13 @@ function matches(actual, route) {
   return a.length === r.length && r.every((x, i) => x.startsWith('[') || x === a[i])
 }
 
+function routeSpecificity(route) {
+  return route.split('/').filter(Boolean).reduce((score, segment) => {
+    if (segment.startsWith('[') && segment.endsWith(']')) return score
+    return score + 1
+  }, 0)
+}
+
 function findFetchCalls(source) {
   const calls = []
   for (const match of source.matchAll(/fetch\s*\(/g)) {
@@ -106,6 +113,10 @@ for (const file of files) {
   if (route) routes.set(route, methods(file))
 }
 
+const orderedRoutes = [...routes.entries()].sort(
+  ([left], [right]) => routeSpecificity(right) - routeSpecificity(left),
+)
+
 const refs = []
 const missing = []
 const mismatches = []
@@ -124,7 +135,9 @@ for (const file of source) {
       continue
     }
 
-    const entry = [...routes.entries()].find(([r]) => matches(route, r))
+    // Resolve the most specific route first so /resource/me is not shadowed
+    // by /resource/[id] merely because the dynamic file sorts earlier.
+    const entry = orderedRoutes.find(([r]) => matches(route, r))
     if (!entry) missing.push({ route, file: relativeFile })
     else if (!METHODS.has(method) || !entry[1].includes(method)) {
       mismatches.push({ route, method, allowed: entry[1], file: relativeFile })

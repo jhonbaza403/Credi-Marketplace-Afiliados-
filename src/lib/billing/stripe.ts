@@ -39,8 +39,12 @@ export async function stripeRequest<T>(path: string, init: RequestInit = {}): Pr
   return body as T;
 }
 
-export function verifyStripeWebhookSignature(rawBody: string, signatureHeader: string): boolean {
-  const secret = process.env.STRIPE_WEBHOOK_SECRET?.trim();
+export function verifyStripeWebhookSignature(
+  rawBody: string,
+  signatureHeader: string,
+  secretValue = process.env.STRIPE_BILLING_WEBHOOK_SECRET,
+): boolean {
+  const secret = secretValue?.trim();
   if (!secret || !signatureHeader) return false;
 
   const parts = signatureHeader.split(",");

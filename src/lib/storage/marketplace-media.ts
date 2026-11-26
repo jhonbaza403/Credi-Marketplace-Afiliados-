@@ -80,8 +80,11 @@ export async function uploadMarketplaceMedia(file: File, kind?: MarketplaceMedia
 
   if (uploadError) {
     const message = uploadError.message.toLowerCase()
-    if (message.includes('payload too large') || message.includes('file size') || message.includes('too large')) {
+    if (message.includes('media_upload_file_too_large') || message.includes('payload too large') || message.includes('file size') || message.includes('too large')) {
       throw new Error('El archivo supera el límite de almacenamiento. Prueba con un archivo más pequeño.')
+    }
+    if (message.includes('media_upload_mime_not_allowed')) {
+      throw new Error('El formato del archivo no está permitido por el almacenamiento.')
     }
     if (message.includes('mime') || message.includes('content type')) {
       throw new Error('Supabase rechazó el formato del archivo. Usa un formato admitido: JPG, PNG, WebP, GIF, MP4, WebM o MOV.')

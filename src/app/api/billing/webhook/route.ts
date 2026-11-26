@@ -1,6 +1,11 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { stripeRequest, verifyStripeWebhookSignature, type StripeEvent, type StripeSubscription } from '@/lib/billing/stripe'
 import { logger } from '@/lib/logging'
+import {
+  InvalidRequestBodyError,
+  readRequestBodyTextBounded,
+  RequestBodyTooLargeError,
+} from '@/lib/security/request-body'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -213,52 +218,13 @@ async function syncSubscription(event: StripeEvent, override?: StripeSubscriptio
   return local
 }
 
-async function orderEvent(event: StripeEvent) {
-  const object = event.data.object as BillingEventObject
-  const metadata = meta(object)
-  const orderId = metadata.order_id
-  if (!orderId) return false
-
-  const admin = createAdminClient()
-  const success =
-    event.type === 'checkout.session.completed' ||
-    event.type === 'checkout.session.async_payment_succeeded'
-
-  if (success) {
-    if (!object.id || !metadata.user_id || object.amount_total == null || !object.currency) {
-      throw new Error('checkout_session_financial_fields_missing')
-    }
-
-    const { error } = await admin.rpc('process_stripe_checkout_session', {
-      p_order_id: orderId,
-      p_session_id: object.id,
-      p_event_id: event.id,
-      p_amount_total: object.amount_total,
-      p_currency: object.currency,
-      p_buyer_id: metadata.user_id,
-    })
-    if (error) throw new Error(error.message || 'stripe_checkout_processing_failed')
-    return true
-  }
-
-  if (!object.id) return false
-
-  const { error } = await admin.rpc('process_stripe_checkout_failure', {
-    p_order_id: orderId,
-    p_session_id: object.id,
-  })
-  if (error) throw new Error(error.message || 'stripe_checkout_failure_processing_failed')
-  return true
-}
-
 async function checkoutEvent(event: StripeEvent, status: 'completed' | 'failed') {
   const object = event.data.object as BillingEventObject
   const metadata = meta(object)
 
-  if (metadata.order_id) {
-    await orderEvent(event)
-    return
-  }
+  // Order payments belong exclusively to /api/payments/webhook.
+  // Billing only acknowledges checkout intents and subscriptions.
+  if (metadata.order_id) return
 
   const checkoutId = String(object.id ?? '')
   if (!checkoutId || !metadata.user_id) return
@@ -351,13 +317,25 @@ export async function POST(request: Request) {
       return jsonResponse({ success: false, error: 'Webhook debe utilizar JSON.' }, 415, requestId)
     }
 
-    const rawBody = await request.text()
-    if (rawBody.length > 512_000) {
-      return jsonResponse({ success: false, error: 'Webhook demasiado grande.' }, 413, requestId)
+    let rawBody: string
+    try {
+      rawBody = await readRequestBodyTextBounded(
+        request.body,
+        request.headers.get('content-length'),
+        512_000,
+      )
+    } catch (error) {
+      if (error instanceof RequestBodyTooLargeError) {
+        return jsonResponse({ success: false, error: 'Webhook demasiado grande.' }, 413, requestId)
+      }
+      if (error instanceof InvalidRequestBodyError) {
+        return jsonResponse({ success: false, error: 'El cuerpo del webhook no es válido.' }, 400, requestId)
+      }
+      throw error
     }
 
     const signature = request.headers.get('stripe-signature')
-    if (!verifyStripeWebhookSignature(rawBody, signature ?? '')) {
+    if (!verifyStripeWebhookSignature(rawBody, signature ?? '', process.env.STRIPE_BILLING_WEBHOOK_SECRET)) {
       logger.warn('Invalid Stripe billing webhook signature', {
         requestId,
         action: 'stripe_billing_webhook_invalid_signature',

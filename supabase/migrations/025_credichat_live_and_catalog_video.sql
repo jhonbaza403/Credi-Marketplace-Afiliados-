@@ -1,7 +1,8 @@
 create table if not exists public.chat_live_rooms (
   id uuid primary key default gen_random_uuid(),
   host_user_id uuid not null references auth.users(id) on delete cascade,
-  conversation_id uuid references public.conversations(id) on delete set null,
+  -- The conversations table is created by the later timestamped core-chat migration.
+  conversation_id uuid,
   title text not null default 'Credi Live',
   status text not null default 'live' check (status in ('live','ended')),
   viewer_count integer not null default 0 check (viewer_count >= 0),
@@ -40,14 +41,11 @@ create policy chat_live_messages_insert_authenticated on public.chat_live_messag
 drop policy if exists chat_live_messages_update_own on public.chat_live_messages;
 create policy chat_live_messages_update_own on public.chat_live_messages for update to authenticated using (sender_id = auth.uid()) with check (sender_id = auth.uid());
 
-alter table public.business_catalogs add column if not exists video_media jsonb not null default '[]'::jsonb;
 
 create or replace function public.touch_credichat_conversation_updated_at()
 returns trigger language plpgsql security invoker set search_path = public
 as $$ begin update public.conversations set updated_at = now() where id = new.conversation_id; return new; end $$;
 
-drop trigger if exists trg_touch_credichat_conversation_on_message on public.messages;
-create trigger trg_touch_credichat_conversation_on_message after insert on public.messages for each row execute function public.touch_credichat_conversation_updated_at();
 
 -- Authorize Credi LIVE private Realtime topics.
 drop policy if exists credichat_live_broadcast_read on realtime.messages;

@@ -29,7 +29,12 @@ jobs:
           set -euo pipefail
 
           for attempt in $(seq 1 24); do
-            STATUS_JSON="$(gh api -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2026-03-10' "/repos/${REPOSITORY}/commits/${COMMIT_SHA}/status")"
+            if ! STATUS_JSON="$(gh api -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2026-03-10' "/repos/${REPOSITORY}/commits/${COMMIT_SHA}/status" 2>/dev/null)"               || ! printf '%s' "${STATUS_JSON}" | jq -e 'type == "object" and (.statuses | type == "array")' >/dev/null; then
+              echo "GitHub commit-status response was empty or invalid; retrying (${attempt}/24)."
+              sleep 10
+              continue
+            fi
+
             VERCEL_STATUS="$(printf '%s' "${STATUS_JSON}" | jq -c '[.statuses[] | select((.context // "") | ascii_downcase | startswith("vercel"))] | first // {}')"
             STATE="$(printf '%s' "${VERCEL_STATUS}" | jq -r '.state // ""')"
             TARGET="$(printf '%s' "${VERCEL_STATUS}" | jq -r '.target_url // ""')"
@@ -37,10 +42,15 @@ jobs:
 
             # Some Vercel/GitHub integrations publish a Check Run instead of a legacy commit status.
             if [ -z "${STATE}" ] || [ "${STATE}" = "pending" ]; then
-              CHECK_RUNS="$(gh api -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2026-03-10' "/repos/${REPOSITORY}/commits/${COMMIT_SHA}/check-runs")"
+              if ! CHECK_RUNS="$(gh api -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2026-03-10' "/repos/${REPOSITORY}/commits/${COMMIT_SHA}/check-runs" 2>/dev/null)"                 || ! printf '%s' "${CHECK_RUNS}" | jq -e 'type == "object" and (.check_runs | type == "array")' >/dev/null; then
+                echo "GitHub check-runs response was empty or invalid; retrying (${attempt}/24)."
+                sleep 10
+                continue
+              fi
+
               # Only trust checks produced by the Vercel GitHub App. Do not match
-            # this workflow's own "Validate Vercel Preview" check (GitHub Actions).
-            VERCEL_CHECK="$(printf '%s' "${CHECK_RUNS}" | jq -c '[.check_runs[] | select((((.app.slug // "") | ascii_downcase) | contains("vercel")) and (((.app.slug // "") | ascii_downcase) != "github-actions"))] | sort_by(.completed_at // .started_at // "") | last // {}')"
+              # this workflow's own "Validate Vercel Preview" check (GitHub Actions).
+              VERCEL_CHECK="$(printf '%s' "${CHECK_RUNS}" | jq -c '[.check_runs[] | select((((.app.slug // "") | ascii_downcase) | contains("vercel")) and (((.app.slug // "") | ascii_downcase) != "github-actions"))] | sort_by(.completed_at // .started_at // "") | last // {}')"
               CHECK_STATUS="$(printf '%s' "${VERCEL_CHECK}" | jq -r '.status // ""')"
               CHECK_CONCLUSION="$(printf '%s' "${VERCEL_CHECK}" | jq -r '.conclusion // ""')"
               CHECK_URL="$(printf '%s' "${VERCEL_CHECK}" | jq -r '.html_url // ""')"

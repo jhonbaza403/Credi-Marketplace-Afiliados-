@@ -1,194 +1,59 @@
-// ==========================================================
-// CREDI MARKETPLACE
-// Checkout Business Service
-// Next.js 16.3 · Supabase
-// ==========================================================
-
-
-import { createServerClient }
-from '@/lib/supabase/server';
-
-
-import {
- createPaymentIntent
-}
-from '@/services/payments/payment.service';
-
-
-
-export interface CheckoutItem {
-
- productId:string;
-
- quantity:number;
-
- price:number;
-
-}
-
-
+import { createOrder } from '@/lib/orders/create-order'
+import type { ServerOrderItem } from '@/lib/orders/validate-order'
 
 export interface CheckoutInput {
-
-
- userId:string;
-
-
- items:CheckoutItem[];
-
-
- currency:string;
-
-
- paymentProvider:string;
-
+  userId: string
+  items: Array<ServerOrderItem & { price?: number }>
+  currency?: string
+  paymentProvider?: string
+  affiliateRef?: string | null
+  region?: string | null
+  idempotencyKey?: string | null
 }
 
+export interface CheckoutResult {
+  order: Awaited<ReturnType<typeof createOrder>>
+  payment: {
+    provider: 'stripe'
+    status: 'requires_checkout'
+    endpoint: '/api/checkout'
+    requestBody: {
+      order_id: string
+      payment_method: 'stripe'
+      region: string
+    }
+  }
+}
 
-
-
-// ==========================================================
-// CREATE CHECKOUT
-// ==========================================================
-
-
-export async function createCheckout(
- input:CheckoutInput
-){
-
-
- const supabase =
- await createServerClient();
-
-
-
- /*
-    1.
-    Validar usuario
+/**
+ * Creates the order only. A provider checkout session must be created through
+ * POST /api/checkout, which verifies ownership, reads the persisted order total,
+ * creates payment_orchestrations and returns the signed provider checkout URL.
+ * The optional item.price is accepted for legacy callers but is never trusted.
  */
+export async function createCheckout(input: CheckoutInput): Promise<CheckoutResult> {
+  const provider = (input.paymentProvider ?? 'stripe').trim().toLowerCase()
+  if (provider !== 'stripe') throw new Error('PAYMENT_PROVIDER_NOT_IMPLEMENTED')
 
+  const order = await createOrder({
+    userId: input.userId,
+    items: input.items.map(({ productId, quantity }) => ({ productId, quantity })),
+    affiliateRef: input.affiliateRef,
+    region: input.region,
+    idempotencyKey: input.idempotencyKey,
+  })
 
- if(!input.userId){
-
-   throw new Error(
-    'User authentication required'
-   );
-
- }
-
-
-
- /*
-    2.
-    Validar carrito
- */
-
-
- if(
-   !input.items ||
-   input.items.length===0
- ){
-
-   throw new Error(
-    'Checkout requires products'
-   );
-
- }
-
-
-
-
- /*
-    3.
-    Crear orden pendiente
-
-    Usa RPC transaccional:
-    
-    create_pending_order_batch
-
- */
-
-
- const {
-   data:order,
-   error:orderError
-
- }
- =
- await supabase
- .rpc(
-   'create_pending_order_batch',
-   {
-
-    p_user_id:
-      input.userId,
-
-
-    p_items:
-      input.items
-
-   }
- );
-
-
-
-
- if(orderError){
-
-   throw new Error(
-    orderError.message
-   );
-
- }
-
-
-
-
- /*
-    4.
-    Crear intención de pago
-
- */
-
-
- const paymentIntent =
- await createPaymentIntent({
-
-   orderId:
-    order.id,
-
-
-   userId:
-    input.userId,
-
-
-   amount:
-    order.total,
-
-
-   currency:
-    input.currency,
-
-
-   provider:
-    input.paymentProvider
-
- });
-
-
-
-
-
- return {
-
-
-   order,
-
-
-   paymentIntent
-
-
- };
-
-
+  return {
+    order,
+    payment: {
+      provider: 'stripe',
+      status: 'requires_checkout',
+      endpoint: '/api/checkout',
+      requestBody: {
+        order_id: order.orderId,
+        payment_method: 'stripe',
+        region: input.region?.trim().toUpperCase() || 'GLOBAL',
+      },
+    },
+  }
 }

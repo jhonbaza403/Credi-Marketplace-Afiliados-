@@ -55,13 +55,24 @@ export async function GET(request: Request) {
   }
 
   const authentication: HealthState = configured(supabaseUrl, supabaseKey) ? "configured" : "unconfigured"
-  const storage: HealthState = configured(supabaseUrl, supabaseKey) ? "configured" : "unconfigured"
-  const messaging: HealthState = configured(supabaseUrl, supabaseKey) ? "configured" : "unconfigured"
-  const media: HealthState = configured(supabaseUrl, supabaseKey) ? "configured" : "unconfigured"
-  const payments: HealthState = providerState(process.env.STRIPE_SECRET_KEY, process.env.STRIPE_WEBHOOK_SECRET)
-  const ai: HealthState = providerState(process.env.GEMINI_API_KEY)
-  const webhooks: HealthState = providerState(process.env.STRIPE_WEBHOOK_SECRET)
-  const notifications: HealthState = configured(supabaseUrl, supabaseKey) ? "configured" : "unconfigured"
+  // "configured" means credentials exist; only the database probe above is
+  // actively exercised here. Unknown is deliberately not presented as healthy.
+  const storage: HealthState = "unknown"
+  const messaging: HealthState = providerState(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN)
+  const media: HealthState = "unknown"
+  const payments: HealthState = providerState(process.env.STRIPE_SECRET_KEY)
+  const ai: HealthState = process.env.OPENAI_API_KEY?.trim() || process.env.GEMINI_API_KEY?.trim()
+    ? "configured"
+    : "unconfigured"
+  const stripePaymentsWebhook: HealthState = providerState(process.env.STRIPE_PAYMENTS_WEBHOOK_SECRET)
+  const stripeBillingWebhook: HealthState = providerState(process.env.STRIPE_BILLING_WEBHOOK_SECRET)
+  const cloudflareWebhook: HealthState = providerState(process.env.CLOUDFLARE_STREAM_WEBHOOK_SECRET)
+  const cloudflareStream: HealthState = providerState(process.env.CLOUDFLARE_ACCOUNT_ID, process.env.CLOUDFLARE_API_TOKEN)
+  const livekit: HealthState = providerState(process.env.LIVEKIT_URL, process.env.LIVEKIT_API_KEY, process.env.LIVEKIT_API_SECRET)
+  const webhooks: HealthState = [stripePaymentsWebhook, stripeBillingWebhook, cloudflareWebhook].every((state) => state === "configured")
+    ? "configured"
+    : "unconfigured"
+  const notifications: HealthState = "unknown"
   const email: HealthState = "unknown"
   const backgroundJobs: HealthState = "unknown"
 
@@ -86,6 +97,11 @@ export async function GET(request: Request) {
         notifications,
         email,
         webhooks,
+        stripe_payments_webhook: stripePaymentsWebhook,
+        stripe_billing_webhook: stripeBillingWebhook,
+        cloudflare_stream_webhook: cloudflareWebhook,
+        cloudflare_stream: cloudflareStream,
+        livekit,
         background_jobs: backgroundJobs,
       },
       databaseError: process.env.NODE_ENV === "development" ? databaseError : null,

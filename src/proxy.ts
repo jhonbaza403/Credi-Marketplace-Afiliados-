@@ -225,8 +225,20 @@ export async function proxy(request: NextRequest) {
     response.headers.set("X-Request-ID", requestId);
     return response;
   } catch (error) {
-    console.error("[proxy] Access check failed", error);
-    return copySessionCookies(response, buildSecurityRedirect(request, "mfa"));
+    console.error("[proxy] Access check unavailable", error instanceof Error ? error.message : "UNKNOWN");
+    const unavailable = new NextResponse(
+      "Credi no puede verificar los requisitos de acceso en este momento. Inténtalo de nuevo.",
+      {
+        status: 503,
+        headers: {
+          "Cache-Control": "no-store",
+          "Content-Type": "text/plain; charset=utf-8",
+          "Retry-After": "30",
+          "X-Request-ID": requestId,
+        },
+      },
+    );
+    return copySessionCookies(response, unavailable);
   }
 }
 

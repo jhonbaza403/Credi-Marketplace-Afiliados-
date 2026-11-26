@@ -225,3 +225,55 @@ jobs:
           echo "Credi Marketplace CI: PASSED"
           echo "Node.js: $(node --version)"
           echo "npm:     $(npm --version)"
+
+  supabase-edge-functions:
+    name: Supabase Edge Functions — Typecheck & Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.8
+
+      - name: Typecheck Supabase Edge Functions
+        run: deno check --node-modules-dir=auto supabase/functions/health/index.ts supabase/functions/media-upload/index.ts supabase/functions/kyc-upload/index.ts
+
+      - name: Test KYC upload policy
+        run: deno test --node-modules-dir=auto supabase/functions/_shared/kyc-upload-policy.test.ts
+
+      - name: Test media upload policy
+        run: deno test --node-modules-dir=auto supabase/functions/_shared/media-upload-policy.test.ts
+
+  supabase-migrations:
+    name: Supabase migrations — local PostgreSQL
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v3
+        with:
+          version: 2.122.1
+
+      - name: Start isolated local Supabase stack
+        run: supabase start
+
+      - name: Apply the complete migration catalog to local PostgreSQL
+        run: supabase db reset --local
+
+      - name: Run pgTAP database contract tests
+        run: supabase test db --local
+
+      - name: Stop isolated local Supabase stack
+        if: always()
+        run: supabase stop --no-backup || true

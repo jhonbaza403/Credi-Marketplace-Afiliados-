@@ -31,18 +31,52 @@ export async function POST(request: Request) {
     .not("status", "in", "(rejected,expired)")
     .maybeSingle();
 
-  if (existing) {
+  if (existing && ["submitted", "in_review", "approved", "suspended"].includes(existing.status)) {
     return NextResponse.json({ case: existing, reused: true }, { status: 200 });
+  }
+
+  if (existing) {
+    const { data: updated, error: updateError } = await supabase
+      .from("kyc_cases")
+      .update({
+        status: "pending",
+        country: parsed.data.country,
+        document_type: parsed.data.documentType,
+        document_number: parsed.data.documentNumber,
+        submitted_at: null,
+        updated_at: new Date().toISOString(),
+        rejection_reason: null,
+      })
+      .eq("id", existing.id)
+      .eq("user_id", auth.user.id)
+      .select("id,status,country,document_type,submitted_at,created_at,updated_at")
+      .single();
+
+    if (updateError || !updated) {
+      return NextResponse.json({ error: "No fue posible actualizar el caso KYC", details: updateError?.message }, { status: 500 });
+    }
+
+    const admin = createAdminClient();
+    await admin.from("compliance_events").insert({
+      subject_type: "kyc",
+      subject_id: updated.id,
+      actor_id: auth.user.id,
+      event_type: "case_reopened_for_documents",
+      previous_status: existing.status,
+      new_status: "pending",
+    });
+    return NextResponse.json({ case: updated, reused: true }, { status: 200 });
   }
 
   const { data: created, error } = await supabase
     .from("kyc_cases")
     .insert({
       user_id: auth.user.id,
-      status: "submitted",
+      status: "pending",
       country: parsed.data.country,
       document_type: parsed.data.documentType,
-      submitted_at: new Date().toISOString(),
+      document_number: parsed.data.documentNumber,
+      submitted_at: null,
     })
     .select("id,status,country,document_type,submitted_at,created_at,updated_at")
     .single();
@@ -65,9 +99,9 @@ export async function POST(request: Request) {
     subject_type: "kyc",
     subject_id: created.id,
     actor_id: auth.user.id,
-    event_type: "case_submitted",
+    event_type: "case_created",
     previous_status: "not_started",
-    new_status: "submitted",
+    new_status: "pending",
   });
 
   if (checksError || eventError) {

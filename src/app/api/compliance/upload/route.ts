@@ -4,13 +4,12 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { documentUploadMetaSchema } from "@/lib/compliance/validation";
+import { isAllowedComplianceUpload } from "@/lib/compliance/kyc-upload-policy";
 
 export const runtime = "nodejs";
 
-const MAX_BYTES = 10 * 1024 * 1024;
-const KYC_TYPES = new Set(["id_front", "id_back", "passport", "drivers_license", "selfie", "address_proof", "other"]);
+const KYC_TYPES = new Set(["id_front", "id_back", "passport", "drivers_license", "selfie", "profile_photo", "left_photo", "right_photo", "address_proof", "other"]);
 const KYB_TYPES = new Set(["incorporation", "bylaws", "tax_certificate", "registry_extract", "proof_of_address", "other"]);
-const ALLOWED_MIME = new Set(["image/jpeg", "image/png", "image/webp", "application/pdf"]);
 
 function safeName(name: string) {
   const ext = name.toLowerCase().split(".").pop() || "bin";
@@ -37,14 +36,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Archivo o metadatos inválidos" }, { status: 400 });
   }
 
-  if (file.size <= 0 || file.size > MAX_BYTES || !ALLOWED_MIME.has(file.type)) {
-    return NextResponse.json({ error: "Archivo no permitido. Máximo 10 MB y formatos JPG, PNG, WEBP o PDF." }, { status: 400 });
-  }
-
   const isKyc = meta.data.caseType === "kyc";
   const validTypes = isKyc ? KYC_TYPES : KYB_TYPES;
   if (!validTypes.has(meta.data.documentType)) {
     return NextResponse.json({ error: "Tipo de documento no permitido" }, { status: 400 });
+  }
+  if (!isAllowedComplianceUpload(meta.data.caseType, meta.data.documentType, file.type, file.size)) {
+    return NextResponse.json({ error: "Archivo no permitido. Máximo 10 MB; PDF solo para documentos de identidad." }, { status: 400 });
   }
 
   const table = isKyc ? "kyc_cases" : "kyb_cases";
@@ -90,6 +88,31 @@ export async function POST(request: Request) {
   if (dbError || !document) {
     await admin.storage.from(bucket).remove([objectPath]);
     return NextResponse.json({ error: "No fue posible registrar el documento", details: dbError?.message }, { status: 500 });
+  }
+
+  if (isKyc && meta.data.documentType === "id_front") {
+    const submittedAt = new Date().toISOString();
+    const { error: statusError } = await admin
+      .from("kyc_cases")
+      .update({ status: "submitted", submitted_at: submittedAt, updated_at: submittedAt })
+      .eq("id", meta.data.caseId)
+      .eq("user_id", auth.user.id)
+      .eq("status", "pending");
+
+    if (statusError) {
+      await admin.from("kyc_documents").delete().eq("id", document.id);
+      await admin.storage.from(bucket).remove([objectPath]);
+      return NextResponse.json({ error: "No fue posible enviar el caso KYC", details: statusError.message }, { status: 500 });
+    }
+
+    await admin.from("compliance_events").insert({
+      subject_type: "kyc",
+      subject_id: meta.data.caseId,
+      actor_id: auth.user.id,
+      event_type: "case_submitted",
+      previous_status: "pending",
+      new_status: "submitted",
+    });
   }
 
   return NextResponse.json({ document }, { status: 201 });

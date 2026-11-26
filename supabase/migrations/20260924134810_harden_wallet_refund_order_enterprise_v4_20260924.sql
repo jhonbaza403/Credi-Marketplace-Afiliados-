@@ -119,6 +119,31 @@ begin
 end
 $$;
 
-revoke all on function private.wallet_refund_order(uuid,numeric,text,text) from public, anon, authenticated;
-revoke all on function public.wallet_refund_order(uuid,numeric,text,text) from public, anon;
-grant execute on function public.wallet_refund_order(uuid,numeric,text,text) to authenticated;
+-- Keep the accounting implementation private and expose one restricted RPC
+-- entry point. SECURITY DEFINER is required here because the authenticated role
+-- must not receive direct EXECUTE on private.wallet_refund_order.
+REVOKE ALL ON FUNCTION private.wallet_refund_order(uuid,numeric,text,text)
+  FROM PUBLIC, anon, authenticated;
+
+CREATE OR REPLACE FUNCTION public.wallet_refund_order(
+  p_order_id uuid,
+  p_amount numeric,
+  p_reason text,
+  p_idempotency_key text
+) RETURNS jsonb
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = ''
+AS $function$
+  SELECT private.wallet_refund_order(
+    p_order_id,
+    p_amount,
+    p_reason,
+    p_idempotency_key
+  );
+$function$;
+
+REVOKE ALL ON FUNCTION public.wallet_refund_order(uuid,numeric,text,text)
+  FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.wallet_refund_order(uuid,numeric,text,text)
+  TO authenticated;

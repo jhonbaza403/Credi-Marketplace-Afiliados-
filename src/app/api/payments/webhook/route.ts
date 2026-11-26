@@ -2,6 +2,11 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { verifyStripeWebhookSignature } from '@/lib/payments/stripe'
 import { logger } from '@/lib/logging'
+import {
+  InvalidRequestBodyError,
+  readRequestBodyTextBounded,
+  RequestBodyTooLargeError,
+} from '@/lib/security/request-body'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -45,13 +50,25 @@ export async function POST(request: Request) {
       return jsonResponse({ success: false, error: 'Webhook debe utilizar JSON.' }, 415, requestId)
     }
 
-    const rawBody = await request.text()
-    if (rawBody.length > 512_000) {
-      return jsonResponse({ success: false, error: 'Webhook demasiado grande.' }, 413, requestId)
+    let rawBody: string
+    try {
+      rawBody = await readRequestBodyTextBounded(
+        request.body,
+        request.headers.get('content-length'),
+        512_000,
+      )
+    } catch (error) {
+      if (error instanceof RequestBodyTooLargeError) {
+        return jsonResponse({ success: false, error: 'Webhook demasiado grande.' }, 413, requestId)
+      }
+      if (error instanceof InvalidRequestBodyError) {
+        return jsonResponse({ success: false, error: 'El cuerpo del webhook no es válido.' }, 400, requestId)
+      }
+      throw error
     }
 
     const signature = request.headers.get('stripe-signature')
-    if (!verifyStripeWebhookSignature(rawBody, signature)) {
+    if (!verifyStripeWebhookSignature(rawBody, signature, process.env.STRIPE_PAYMENTS_WEBHOOK_SECRET)) {
       logger.warn('Invalid Stripe webhook signature', {
         requestId,
         action: 'stripe_webhook_invalid_signature',
@@ -186,7 +203,7 @@ export async function POST(request: Request) {
       const orderId = session?.metadata?.order_id
       const userId = session?.metadata?.user_id
 
-      if (event.type === 'checkout.session.completed') {
+      if (event.type === 'checkout.session.completed' || event.type === 'checkout.session.async_payment_succeeded') {
         if (!session?.id || !orderId || !userId || session.payment_status !== 'paid') {
           throw new Error('checkout_session_not_payable')
         }

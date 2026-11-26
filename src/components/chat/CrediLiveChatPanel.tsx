@@ -50,9 +50,10 @@ export default function CrediLiveChatPanel() {
     }
     const nextRoom = data as LiveRoom
     setRoom(nextRoom)
-    const { data: history, error: historyError } = await supabase.from('chat_live_messages').select('id,room_id,sender_id,body,created_at').eq('room_id', nextRoom.id).is('deleted_at', null).order('created_at', { ascending: false }).limit(80)
-    if (historyError) throw historyError
-    setMessages(((history ?? []) as LiveMessage[]).reverse())
+    const historyResponse = await fetch('/api/live/chat?roomId=' + encodeURIComponent(nextRoom.id), { cache: 'no-store' })
+    const historyData = await historyResponse.json().catch(() => ({})) as { messages?: LiveMessage[]; error?: string }
+    if (!historyResponse.ok) throw new Error(historyData.error || 'No fue posible cargar el chat LIVE.')
+    setMessages(historyData.messages ?? [])
     void currentUserId
   }, [conversationId, supabase])
 
@@ -77,6 +78,14 @@ export default function CrediLiveChatPanel() {
         const incoming = payload as LiveMessage
         setMessages((current) => current.some((item: LiveMessage) => item.id === incoming.id) ? current : [...current, incoming].slice(-120))
       })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_live_messages', filter: 'room_id=eq.' + room.id }, (payload: unknown) => {
+        const incoming = (payload as { new?: LiveMessage }).new
+        if (!incoming?.id) return
+        setMessages((current) => current.some((item) => item.id === incoming.id) ? current : [...current, incoming].slice(-120))
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'chat_live_rooms', filter: 'id=eq.' + room.id }, () => {
+        void loadRoom(userId).catch((caught) => setError(caught instanceof Error ? caught.message : 'No fue posible actualizar el LIVE.'))
+      })
       .on('presence', { event: 'sync' }, () => {
         const state = channel.presenceState()
         setPresenceCount(Object.values(state as Record<string, PresenceEntry[]>).reduce((total, entries) => total + entries.length, 0))
@@ -85,27 +94,44 @@ export default function CrediLiveChatPanel() {
         if (status === 'SUBSCRIBED') await channel.track({ user_id: userId, joined_at: new Date().toISOString() })
       })
     return () => { void supabase.removeChannel(channel) }
-  }, [open, room, supabase, userId])
+  }, [open, room, supabase, userId, loadRoom])
 
   async function startLive() {
     if (!userId || busy) return
-    setBusy(true)
-    setError(null)
-    try {
-      const { data, error: insertError } = await supabase.from('chat_live_rooms').insert({ host_user_id: userId, conversation_id: conversationId, title: 'Credi Live', status: 'live' }).select('id,host_user_id,conversation_id,title,status,started_at').single()
-      if (insertError || !data) throw insertError ?? new Error('No fue posible iniciar el LIVE.')
-      setRoom(data as LiveRoom)
-      setOpen(true)
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'No fue posible iniciar el LIVE.')
-    } finally { setBusy(false) }
+    const destination = conversationId
+      ? '/live?conversation=' + encodeURIComponent(conversationId)
+      : '/live'
+    window.location.assign(destination)
   }
 
   async function endLive() {
-    if (!room || room.host_user_id !== userId) return
-    const { error: updateError } = await supabase.from('chat_live_rooms').update({ status: 'ended', ended_at: new Date().toISOString() }).eq('id', room.id).eq('host_user_id', userId)
-    if (updateError) return setError(updateError.message)
-    setRoom(null); setMessages([]); setOpen(false)
+    if (!room || room.host_user_id !== userId || busy) return
+    setBusy(true)
+    setError(null)
+    try {
+      const stopResponse = await fetch('/api/live/egress', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ roomId: room.id, action: 'stop' }),
+      })
+      const stopData = await stopResponse.json().catch(() => ({})) as { error?: string }
+      if (!stopResponse.ok) throw new Error(stopData.error || 'No fue posible detener la distribución LIVE.')
+
+      const endResponse = await fetch('/api/live', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ roomId: room.id, action: 'end' }),
+      })
+      const endData = await endResponse.json().catch(() => ({})) as { error?: string }
+      if (!endResponse.ok) throw new Error(endData.error || 'No fue posible finalizar la sala LIVE.')
+      setRoom(null)
+      setMessages([])
+      setOpen(false)
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'No fue posible finalizar el LIVE.')
+    } finally {
+      setBusy(false)
+    }
   }
 
   async function sendLiveMessage() {
@@ -113,11 +139,16 @@ export default function CrediLiveChatPanel() {
     if (!room || !userId || !body || body.length > 280 || busy) return
     setBusy(true); setError(null)
     try {
-      const { data, error: insertError } = await supabase.from('chat_live_messages').insert({ room_id: room.id, sender_id: userId, body }).select('id,room_id,sender_id,body,created_at').single()
-      if (insertError || !data) throw insertError ?? new Error('No fue posible enviar el comentario.')
-      setMessages((current) => [...current, data as LiveMessage].slice(-120))
+      const response = await fetch('/api/live/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ roomId: room.id, body }),
+      })
+      const data = await response.json().catch(() => ({})) as { success?: boolean; message?: LiveMessage; error?: string }
+      if (!response.ok || !data.message) throw new Error(data.error || 'No fue posible enviar el comentario.')
+      setMessages((current) => current.some((item) => item.id === data.message!.id) ? current : [...current, data.message!].slice(-120))
       setDraft('')
-    } catch (e) { setError(e instanceof Error ? e.message : 'No fue posible enviar el comentario.') }
+    } catch (caught) { setError(caught instanceof Error ? caught.message : 'No fue posible enviar el comentario.') }
     finally { setBusy(false) }
   }
 
