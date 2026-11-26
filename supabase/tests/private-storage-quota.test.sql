@@ -1,6 +1,6 @@
 BEGIN;
 
-SELECT plan(12);
+SELECT plan(15);
 
 SELECT ok(
   EXISTS (
@@ -32,6 +32,20 @@ SELECT ok(
   AND NOT has_function_privilege('authenticated', 'private.enforce_credichat_private_storage_quota()', 'EXECUTE')
   AND NOT has_function_privilege('service_role', 'private.enforce_credichat_private_storage_quota()', 'EXECUTE'),
   'API roles cannot invoke the internal Storage trigger function directly'
+);
+
+SELECT ok(
+  EXISTS (
+    SELECT 1 FROM storage.buckets
+    WHERE id='credichat-private'
+      AND public=false
+      AND allowed_mime_types @> ARRAY[
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+      ]::text[]
+  ),
+  'private chat bucket allows approved office documents while remaining private'
 );
 
 SELECT lives_ok(
@@ -150,6 +164,33 @@ SELECT throws_ok(
   '54000',
   'PRIVATE_MEDIA_FILE_TOO_LARGE',
   'private chat rejects audio larger than 50 MiB'
+);
+
+
+SELECT lives_ok(
+  $
+    INSERT INTO storage.objects (bucket_id, name, metadata)
+    VALUES (
+      'credichat-private',
+      '00000000-0000-0000-0000-000000000009/private-docx-under-limit.docx',
+      jsonb_build_object('size', 94371840, 'mimetype', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+    )
+  $,
+  'private chat accepts DOCX below the 100 MiB per-file limit'
+);
+
+SELECT throws_ok(
+  $
+    INSERT INTO storage.objects (bucket_id, name, metadata)
+    VALUES (
+      'credichat-private',
+      '00000000-0000-0000-0000-00000000000a/private-docx-over-limit.docx',
+      jsonb_build_object('size', 105906176, 'mimetype', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+    )
+  $,
+  '54000',
+  'PRIVATE_MEDIA_FILE_TOO_LARGE',
+  'private chat rejects DOCX larger than 100 MiB'
 );
 
 SELECT * FROM finish();
