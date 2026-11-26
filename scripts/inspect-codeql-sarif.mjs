@@ -25,10 +25,30 @@ if (files.length === 0) {
     const results = (sarif.runs ?? []).flatMap((run) => {
       const rules = run.tool?.driver?.rules ?? []
       return (run.results ?? []).map((result) => {
-        const rule = rules[result.ruleIndex] ?? {}
+        const rule = rules[result.ruleIndex] ?? rules.find((candidate) => candidate.id === result.ruleId) ?? {}
         const properties = rule.properties ?? {}
-        const severityValue = Number(properties['security-severity'] ?? result.properties?.['security-severity'] ?? 0)
-        const severity = severityValue >= 9 ? 'critical' : severityValue >= 7 ? 'high' : severityValue >= 4 ? 'medium' : severityValue > 0 ? 'low' : (result.level ?? 'note')
+        // CodeQL query-pack metadata fallback for the known findings reported by
+        // the pinned JavaScript security-and-quality query pack.
+        const knownRuleMetadata = {
+          'js/insufficient-password-hash': { securitySeverity: 8.1, cwe: ['CWE-916'] },
+          'js/user-controlled-bypass': { securitySeverity: 7.8, cwe: ['CWE-807', 'CWE-290'] },
+        }
+        const fallback = knownRuleMetadata[result.ruleId] ?? {}
+        const rawSeverity = properties['security-severity']
+          ?? result.properties?.['security-severity']
+          ?? fallback.securitySeverity
+          ?? 0
+        const severityValue = Number(rawSeverity)
+        const severity = severityValue >= 9 ? 'critical'
+          : severityValue >= 7 ? 'high'
+          : severityValue >= 4 ? 'medium'
+          : severityValue > 0 ? 'low'
+          : (result.level ?? 'note')
+        const cweTags = (properties.tags ?? [])
+          .filter((tag) => typeof tag === 'string')
+          .map((tag) => tag.match(/external\/cwe\/(cwe-\d+)/i)?.[1]?.toUpperCase())
+          .filter(Boolean)
+        const cwe = [...new Set([...cweTags, ...(fallback.cwe ?? [])])]
         const primary = result.locations?.[0]?.physicalLocation
         const flows = (result.codeFlows ?? []).flatMap((codeFlow) =>
           (codeFlow.threadFlows ?? []).flatMap((thread) =>
@@ -49,7 +69,8 @@ if (files.length === 0) {
           ruleId: result.ruleId ?? rule.id ?? 'unknown',
           ruleName: rule.name ?? rule.shortDescription?.text ?? result.ruleId ?? 'Unknown rule',
           severity,
-          securitySeverity: properties['security-severity'] ?? result.properties?.['security-severity'] ?? null,
+          securitySeverity: severityValue > 0 ? severityValue : null,
+          cwe,
           message: result.message?.text ?? '',
           file: primary?.artifactLocation?.uri ?? null,
           line: primary?.region?.startLine ?? null,

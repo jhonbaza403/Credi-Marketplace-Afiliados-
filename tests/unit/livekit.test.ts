@@ -12,9 +12,8 @@ function signedWebhook(body: string, secret: string, apiKey: string) {
   const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url')
   const payload = Buffer.from(JSON.stringify({ iss: apiKey, nbf: now - 1, exp: now + 60, sha256: createHash('sha256').update(body).digest('base64') })).toString('base64url')
   const unsigned = header + '.' + payload
-  // HS256 is the LiveKit JWT signature algorithm under test, not a password hash.
-  // codeql[js/insufficient-password-hash]
   const signature = createHmac('sha256', secret).update(unsigned).digest('base64url')
+  // lgtm[js/insufficient-password-hash] Test fixture uses LiveKit's protocol-required HS256 JWT MAC.
   return 'Bearer ' + unsigned + '.' + signature
 }
 
@@ -31,14 +30,13 @@ describe('LiveKit server integration', () => {
     const token = createLiveKitJwt({ sub: 'user-123', video: { roomJoin: true, room: 'credi-live-room', canPublish: false } }, 600)
     const [header, payload, signature] = token.split('.')
     const claims = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'))
-    // HS256 is the LiveKit JWT signature algorithm under test, not a password hash.
-    // codeql[js/insufficient-password-hash]
     const expected = createHmac('sha256', secret).update(header + '.' + payload).digest('base64url')
     expect(JSON.parse(Buffer.from(header, 'base64url').toString('utf8')).alg).toBe('HS256')
     expect(claims.iss).toBe(apiKey)
     expect(claims.sub).toBe('user-123')
     expect(claims.video.canPublish).toBe(false)
     expect(claims.exp - claims.iat).toBe(600)
+    // lgtm[js/insufficient-password-hash] Assertion validates LiveKit's protocol-required HS256 JWT MAC.
     expect(signature).toBe(expected)
   })
   it('normalizes the API host and deterministic Credi room names', () => {
