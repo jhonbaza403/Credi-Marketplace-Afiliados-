@@ -49,10 +49,10 @@ La integración Git de Vercel es la encargada de crear los despliegues reales. E
 
 Las variables de la aplicación se configuran en **Vercel Project Settings → Environment Variables**, separadas por Production, Preview y Development según el uso. El template local `.env.example` contiene nombres y placeholders; no es la fuente de valores productivos.
 
-Variables centrales:
+Variables centrales (los secretos de firma de Stripe son independientes por endpoint):
 
 - Públicas necesarias para conectar el cliente Supabase: `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`.
-- Server-only cuando cada función esté habilitada: claves de Supabase servidor, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` y claves de proveedores AI o media.
+- Server-only cuando cada función esté habilitada: claves de Supabase servidor, `STRIPE_SECRET_KEY`, `STRIPE_PAYMENTS_WEBHOOK_SECRET`, `STRIPE_BILLING_WEBHOOK_SECRET` y claves de proveedores AI o media.
 - `VERCEL_GIT_COMMIT_SHA` y `VERCEL_GIT_PREVIOUS_SHA` son datos del sistema que Vercel inyecta. No deben copiarse a GitHub Secrets ni configurarse manualmente para el ignore command.
 
 Las variables `NEXT_PUBLIC_*` se exponen al navegador; nunca deben contener claves secretas. No se deben imprimir valores secretos en logs ni sincronizarlos mediante un commit.
