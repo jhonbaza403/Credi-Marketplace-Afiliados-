@@ -150,7 +150,8 @@ BEGIN
 END;
 $function$;
 
-REVOKE ALL ON FUNCTION private.enforce_media_upload_actual_limits() FROM PUBLIC,anon,authenticated,service_role;
+REVOKE ALL ON FUNCTION private.enforce_media_upload_actual_limits() FROM PUBLIC,anon;
+GRANT EXECUTE ON FUNCTION private.enforce_media_upload_actual_limits() TO authenticated,service_role;
 
 DROP TRIGGER IF EXISTS enforce_media_upload_actual_limits ON storage.objects;
 CREATE TRIGGER enforce_media_upload_actual_limits
