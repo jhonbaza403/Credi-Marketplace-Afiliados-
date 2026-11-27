@@ -2,6 +2,10 @@ name: Credi Production E2E
 
 on:
   workflow_dispatch:
+  schedule:
+    # Read-only operational verification; dedicated test account, operation and LIVE room.
+    - cron: "23 6 * * *"
+  deployment_status:
 
 permissions:
   contents: read
@@ -17,13 +21,19 @@ env:
 
 jobs:
   production-e2e:
-    name: Real LIVE + media + financial journey
+    name: Read-only Production smoke test — financial trace + LIVE replay
+    if: >-
+      github.event_name != 'deployment_status' ||
+      (github.event.deployment_status.state == 'success' &&
+       github.event.deployment.environment == 'Production')
     runs-on: ubuntu-latest
     timeout-minutes: 25
 
     steps:
-      - name: Checkout
+      - name: Checkout deployed commit (or scheduled/manual default ref)
         uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.deployment.sha || github.sha }}
 
       - name: Validate required production E2E secrets
         shell: bash
@@ -53,5 +63,11 @@ jobs:
       - name: Install Playwright
         run: npx playwright install --with-deps chromium
 
-      - name: Run real production journey
+      # This suite is intentionally GET-only: it must not create orders, move
+      # balances, trigger Stripe payments/refunds, upload files, or open LIVE rooms.
+      # E2E_OPERATION_ID and E2E_LIVE_ROOM_ID must identify dedicated test fixtures.
+      - name: Run read-only production smoke test
         run: npx playwright test tests/e2e/production-journey.spec.ts --reporter=line
+      - name: Remove temporary authentication state
+        if: always()
+        run: rm -f "${E2E_STORAGE_STATE_PATH}"
