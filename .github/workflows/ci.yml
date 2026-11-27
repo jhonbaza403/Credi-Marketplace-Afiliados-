@@ -2,12 +2,7 @@ name: Credi Marketplace CI
 
 on:
   push:
-    branches:
-      - main
-      - develop
   pull_request:
-    branches:
-      - main
 
 concurrency:
   group: credi-marketplace-ci-${{ github.workflow }}-${{ github.ref }}

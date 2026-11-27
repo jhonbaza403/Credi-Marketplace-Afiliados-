@@ -1,7 +1,11 @@
-name: Credi Production E2E
+name: Credi Production Smoke Test
 
 on:
   workflow_dispatch:
+  schedule:
+    # Daily read-only check of the deployed public surface.
+    - cron: "23 6 * * *"
+  deployment_status:
 
 permissions:
   contents: read
@@ -11,47 +15,49 @@ env:
   NEXT_TELEMETRY_DISABLED: "1"
   NODE_ENV: test
   PLAYWRIGHT_BASE_URL: ${{ secrets.E2E_BASE_URL }}
-  E2E_STORAGE_STATE_PATH: /tmp/credi-e2e-storage-state.json
-  E2E_OPERATION_ID: ${{ secrets.E2E_OPERATION_ID }}
-  E2E_LIVE_ROOM_ID: ${{ secrets.E2E_LIVE_ROOM_ID }}
 
 jobs:
-  production-e2e:
-    name: Real LIVE + media + financial journey
+  production-smoke:
+    name: Read-only Production smoke test — public routes + health
+    if: >-
+      github.event_name != 'deployment_status' ||
+      (github.event.deployment_status.state == 'success' &&
+       (github.event.deployment.environment == 'Production' ||
+        github.event.deployment.environment == 'production'))
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 15
 
     steps:
-      - name: Checkout
+      - name: Checkout deployed commit (or scheduled/manual default ref)
         uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.deployment.sha || github.sha }}
 
-      - name: Validate required production E2E secrets
+      - name: Validate Production smoke target
         shell: bash
-        env:
-          E2E_STORAGE_STATE_JSON: ${{ secrets.E2E_STORAGE_STATE_JSON }}
         run: |
           set -euo pipefail
-          test -n "${PLAYWRIGHT_BASE_URL}" || { echo "::error::Missing E2E_BASE_URL"; exit 1; }
-          test -n "${E2E_OPERATION_ID}" || { echo "::error::Missing E2E_OPERATION_ID"; exit 1; }
-          test -n "${E2E_LIVE_ROOM_ID}" || { echo "::error::Missing E2E_LIVE_ROOM_ID"; exit 1; }
-          test -n "${E2E_STORAGE_STATE_JSON}" || { echo "::error::Missing E2E_STORAGE_STATE_JSON"; exit 1; }
-          printf '%s' "${E2E_STORAGE_STATE_JSON}" > "${E2E_STORAGE_STATE_PATH}"
-          node -e "JSON.parse(require('fs').readFileSync(process.env.E2E_STORAGE_STATE_PATH, 'utf8'));"
+          test -n "${PLAYWRIGHT_BASE_URL}" || {
+            echo "::error::Missing E2E_BASE_URL secret; refusing to run against an inferred URL."
+            exit 1
+          }
 
-      - name: Setup Node 24
+      - name: Setup Node.js 24
         uses: actions/setup-node@v6
         with:
           node-version: 24
           cache: npm
 
-      - name: Install npm
+      - name: Install pinned npm
         run: npm install --global npm@11.19.1
 
       - name: Install dependencies
         run: npm ci --ignore-scripts --no-audit --no-fund
 
-      - name: Install Playwright
+      - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium
 
-      - name: Run real production journey
-        run: npx playwright test tests/e2e/production-journey.spec.ts --reporter=line
+      # Public-route and health checks use GET only. This workflow must never
+      # create orders, charge/refund money, alter balances, upload media or open LIVE rooms.
+      - name: Run read-only Production smoke tests
+        run: npx playwright test tests/e2e/public-routes.spec.ts --reporter=line

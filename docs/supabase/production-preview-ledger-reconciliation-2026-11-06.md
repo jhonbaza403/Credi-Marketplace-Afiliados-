@@ -128,3 +128,42 @@ A second read-only comparison covered `marketing_daily_metrics`, `marketing_even
 - The earlier grant comparison still shows Preview-only explicit `anon` table grants on both social tables. Remove those only in a reviewed forward migration after confirming the application uses authenticated access as intended.
 
 Together with the earlier marketing comparison, the following Preview columns remain wider/unconstrained than Production and require a data range/scale preflight before any narrowing: `marketing_ad_sets.daily_budget`, `marketing_campaigns.daily_budget`, `marketing_campaigns.lifetime_budget`, `marketing_conversion_events.event_value`, `marketing_experiment_variants.allocation_percent`, `marketing_daily_metrics.spend`, `marketing_daily_metrics.revenue`, and `marketing_events.value`.
+
+
+## Live reconciliation addendum — 2026-11-26 (read-only snapshot)
+
+This addendum supersedes the older migration-count snapshot above. It records a later direct read-only comparison; it does not mark any version repaired or applied.
+
+| Evidence | Production | Preview |
+|---|---:|---:|
+| Remote versions recorded | 231 | 249 |
+| Shared versions | 219 | 219 |
+| Environment-exclusive versions | 12 | 30 |
+| Remote versions without source file on main | 6 | 7 |
+
+The current main migration catalog contains 248 SQL files with 248 unique version prefixes. The latest comparison therefore still identifies 13 remote version records without a matching source file in main (6 Production + 7 Preview). Candidate source files are present in the draft PR #103 workstream, but they must be checked by exact version prefix, full SQL content, and resulting schema effects before they are treated as canonical.
+
+### Required reconciliation register
+
+The per-version register must be completed from fresh CLI exports before any ledger operation. The minimum columns are:
+
+| Project | Version | Local source path | SHA-256 | Schema effects verified | Data effects verified | Classification | Repair decision |
+|---|---|---|---|---|---|---|---|
+| Production | pending exact export | pending | pending | pending | pending | unclassified | none |
+| Preview | pending exact export | pending | pending | pending | pending | unclassified | none |
+
+Allowed classifications:
+- **Promotable:** reviewed, environment-independent SQL with a tested forward migration plan.
+- **Environment-specific:** preview/test configuration or data that must not be promoted.
+- **Superseded/duplicate:** its effects are already represented by a later canonical migration; requires documented proof and no blind replay.
+- **Unresolved:** missing SQL, uncertain effects, financial/security behavior, or any mismatch requiring schema/data inspection.
+
+### Backup and safety status
+
+- A fresh full pg_dump (schema + data) for both hosted projects has not been produced by this workstream.
+- No remote schema diff, migration repair, db push, DDL, grant change, or data mutation is authorized or claimed here.
+- Do not use the older 225/242 and 6/23 counts as the current baseline.
+- Do not infer that a missing local source is safe to mark applied; first compare every object, trigger, policy, grant, bucket, and data transformation created by that version.
+- The official CLI must be run separately against Production and Preview after verified backups. Preserve the exports, CLI version, project ref, timestamp, branch commit, and output logs as the audit evidence.
+
+**Closure gate:** every remote version has one canonical source or an explicit environment-specific/obsolete disposition; both supabase db reset and supabase test db pass from the canonical branch; no remote ledger repair is performed until the register is complete and reviewed.
