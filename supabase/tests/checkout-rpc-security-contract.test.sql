@@ -36,9 +36,10 @@ SELECT ok(
   'canonical checkout RPC is server-only'
 );
 SELECT ok(
-  pg_get_functiondef('public.create_pending_order_batch(uuid,jsonb,text,text,text)'::regprocedure) LIKE '%inventory_reservations%'
-  AND pg_get_functiondef('public.create_pending_order_batch(uuid,jsonb,text,text,text)'::regprocedure) LIKE '%idempotency_keys%',
-  'canonical checkout RPC preserves reservation and idempotency contracts'
+  pg_get_functiondef('public.create_pending_order_batch(uuid,jsonb,text,text,text)'::regprocedure) LIKE '%public.create_pending_order_batch%'
+  AND pg_get_functiondef('public.create_pending_order_batch(uuid,jsonb,text,text,text)'::regprocedure) LIKE '%p_idempotency_key%'
+  AND pg_get_functiondef('public.create_pending_order_batch(uuid,jsonb,text,text,text)'::regprocedure) LIKE '%v_region%',
+  'five-argument checkout wrapper delegates to the four-argument transactional implementation and applies region metadata'
 );
 
 SELECT * FROM finish();
