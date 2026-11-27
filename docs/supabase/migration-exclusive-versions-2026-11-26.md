@@ -84,6 +84,23 @@ The following names appear in both remote ledgers with different version identif
 
 For each pair, compare the complete source SQL and its effects. If the SQL is identical, select one canonical source version and document how the other version is represented; do not automatically mark either version applied or reverted. If SQL differs, retain both as distinct changes until effects are understood.
 
+## Local source comparison for same-name pairs — 2026-11-27
+
+The eight version-pairs listed above were fetched from this PR branch using their exact migration paths and compared byte-for-byte. All 16 files exist on this branch and each same-name pair has identical SQL text:
+
+| Migration name | Production source version | Preview source version | Branch source comparison |
+|---|---|---|---|
+| index_uncovered_foreign_keys_reconciliation | 20261106130552 | 20261106130555 | Identical |
+| restrict_private_operational_tables | 20261106130607 | 20261106130610 | Identical |
+| align_client_table_privileges | 20261126224654 | 20261126224643 | Identical |
+| align_social_advertising_rls_contract | 20261126225508 | 20261126225456 | Identical |
+| fix_wallet_refund_rpc_security_parity | 20261126225519 | 20261126225518 | Identical |
+| align_checkout_legacy_rpc | 20261126225548 | 20261126225547 | Identical |
+| fix_kyc_private_storage_contract | 20261126225559 | 20261126225557 | Identical |
+| fix_kyc_case_variable_ambiguity | 20261126225706 | 20261126225704 | Identical |
+
+**Important scope limitation:** this proves equality of the two local SQL source files in the current PR branch only. It does not prove that either source file is the exact SQL payload originally applied remotely, nor that the migrations are safe to mark reverted/applied. Obtain the original migration contents or a trusted deployment artifact from each environment and compare object/data effects before repairing either ledger.
+
 ## Evidence still required before any repair
 
 For every row above, collect:
