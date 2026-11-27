@@ -65,9 +65,12 @@ assert(deploy.includes('workflows:\n      - "Credi Marketplace CI"'), "Deploymen
 assert(deploy.includes("Vercel – credi-marketplace-afiliados"), "Production deployment validation must recognize the canonical Vercel status context");
 assert(preview.includes("ascii_downcase | startswith(\"vercel\")") && preview.includes("/check-runs") && preview.includes("contains(\"vercel\")"), "Pull-request preview validation must recognize both Vercel commit statuses and Vercel Check Runs");
 assert(preview.includes("build-rate-limit") && preview.includes("deployment build limit"), "Preview gate must explain provider-side Vercel build rate limits without reporting a false pass");
-assert(productionE2E.includes("workflow_dispatch:"), "Production E2E must remain manually triggered");
-for (const secret of ["E2E_BASE_URL", "E2E_OPERATION_ID", "E2E_LIVE_ROOM_ID", "E2E_STORAGE_STATE_JSON"]) {
-  assert(productionE2E.includes(`secrets.${secret}`), `Production E2E must validate its required secret: ${secret}`);
+assert(productionE2E.includes("workflow_dispatch:"), "Production smoke test must remain manually triggerable");
+assert(productionE2E.includes("schedule:"), "Production smoke test must run on a schedule");
+assert(productionE2E.includes("deployment_status:"), "Production smoke test must run after a successful deployment status");
+assert(productionE2E.includes("secrets.E2E_BASE_URL"), "Production smoke test must require the explicit target URL");
+for (const obsoleteSecret of ["E2E_OPERATION_ID", "E2E_LIVE_ROOM_ID", "E2E_STORAGE_STATE_JSON"]) {
+  assert(!productionE2E.includes(obsoleteSecret), `Read-only Production smoke test must not require obsolete mutation-journey secret: ${obsoleteSecret}`);
 }
 assert(admin.includes("secrets.VERCEL_TOKEN"), "Vercel administration workflow must require a dedicated VERCEL_TOKEN secret");
 assert(admin.includes('VERCEL_SCOPE: "bazwjhon-2554s-projects"'), "Vercel administration workflow must use the configured project scope");
