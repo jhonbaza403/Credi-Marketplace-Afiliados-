@@ -25,7 +25,7 @@ const contentSecurityPolicy = [
   "font-src 'self' data: https://fonts.gstatic.com",
   "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.livekit.cloud wss://*.livekit.cloud https://*.cloudflarestream.com https://videodelivery.net https://*.videodelivery.net https://generativelanguage.googleapis.com https://api.stripe.com https://*.twilio.com https://business.coinbase.com",
   "media-src 'self' blob: data: https://*.cloudflarestream.com https://videodelivery.net https://*.videodelivery.net",
-  "frame-src 'self' https://*.supabase.co https://js.stripe.com https://hooks.stripe.com https://*.cloudflarestream.com https://videodelivery.net https://*.videodelivery.net",
+  "frame-src 'self' https://*.supabase.co https://js.stripe.com https://checkout.stripe.com https://hooks.stripe.com https://*.cloudflarestream.com https://videodelivery.net https://*.videodelivery.net",
   "upgrade-insecure-requests",
 ].join("; ");
 
@@ -62,13 +62,13 @@ const nextConfig: NextConfig = {
       { source: "/seller/b2b/:path*", destination: "/b2b/:path*", permanent: true },
       { source: "/jobs", destination: "/services", permanent: true },
       { source: "/jobs/:path*", destination: "/services/:path*", permanent: true },
-      { source: "/explorar", destination: "/marketplace", permanent: false },
-      { source: "/servicios", destination: "/services", permanent: false },
-      { source: "/servicios/:path*", destination: "/services/:path*", permanent: false },
-      { source: "/productos", destination: "/products", permanent: false },
-      { source: "/ads", destination: "/marketing", permanent: false },
-      { source: "/publicidad", destination: "/marketing", permanent: false },
-      { source: "/productos/:path*", destination: "/products/:path*", permanent: false },
+      { source: "/explorar", destination: "/marketplace", permanent: true },
+      { source: "/servicios", destination: "/services", permanent: true },
+      { source: "/servicios/:path*", destination: "/services/:path*", permanent: true },
+      { source: "/productos", destination: "/products", permanent: true },
+      { source: "/ads", destination: "/marketing", permanent: true },
+      { source: "/publicidad", destination: "/marketing", permanent: true },
+      { source: "/productos/:path*", destination: "/products/:path*", permanent: true },
     ];
   },
   async headers() {
