@@ -59,12 +59,12 @@ SELECT set_config('request.jwt.claim.sub', 'f2c5b9d8-7a61-4b20-9a8e-6d4c2f1a0b33
 SELECT set_config('request.jwt.claim.role', 'authenticated', true);
 
 SELECT throws_ok(
-  $ SELECT public.wallet_refund_order(
+  $pg$ SELECT public.wallet_refund_order(
     '00000000-0000-0000-0000-000000000001'::uuid,
     1.00::numeric,
     'pgTAP unauthorized refund attempt',
     'pg-wallet-refund-denied-0001'
-  ) $,
+  ) $pg$,
   'P0001',
   'FORBIDDEN',
   'authenticated non-platform-owner is rejected before any refund or ledger mutation'
